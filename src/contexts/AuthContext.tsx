@@ -7,6 +7,7 @@ interface AuthContextType {
   session: Session | null;
   isAdmin: boolean;
   isLoading: boolean;
+  adminCheckComplete: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string, institution: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -31,6 +32,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [adminCheckComplete, setAdminCheckComplete] = useState(false);
 
   const checkAdminRole = async (userId: string) => {
     try {
@@ -63,10 +65,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // Defer admin check with setTimeout to avoid deadlock
         if (session?.user) {
           setTimeout(() => {
-            checkAdminRole(session.user.id).then(setIsAdmin);
+            checkAdminRole(session.user.id).then((result) => {
+              setIsAdmin(result);
+              setAdminCheckComplete(true);
+            });
           }, 0);
         } else {
           setIsAdmin(false);
+          setAdminCheckComplete(true);
         }
       }
     );
@@ -79,9 +85,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (session?.user) {
         checkAdminRole(session.user.id).then((isAdminResult) => {
           setIsAdmin(isAdminResult);
+          setAdminCheckComplete(true);
           setIsLoading(false);
         });
       } else {
+        setAdminCheckComplete(true);
         setIsLoading(false);
       }
     });
@@ -117,6 +125,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const signOut = async () => {
     await supabase.auth.signOut();
     setIsAdmin(false);
+    setAdminCheckComplete(false);
   };
 
   const value = {
@@ -124,6 +133,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     session,
     isAdmin,
     isLoading,
+    adminCheckComplete,
     signIn,
     signUp,
     signOut,
