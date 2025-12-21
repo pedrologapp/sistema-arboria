@@ -63,7 +63,7 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { email, password, fullName, institution, role } = await req.json();
+    const { email, password, fullName, institutionId, role } = await req.json();
 
     console.log('Creating user with email:', email);
 
@@ -82,7 +82,7 @@ serve(async (req) => {
       email_confirm: true, // Auto-confirm the email
       user_metadata: {
         full_name: fullName,
-        institution: institution || null
+        institution_id: institutionId || null
       }
     });
 
@@ -96,12 +96,11 @@ serve(async (req) => {
 
     console.log('User created successfully:', newUser.user.id);
 
-    // The profile should be created automatically by the trigger, but let's ensure
-    // Update the profile with institution if provided
-    if (institution) {
+    // Update the profile with institution_id if provided
+    if (institutionId) {
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
-        .update({ institution })
+        .update({ institution_id: institutionId })
         .eq('id', newUser.user.id);
 
       if (profileError) {

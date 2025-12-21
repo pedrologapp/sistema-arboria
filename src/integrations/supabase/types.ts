@@ -41,6 +41,7 @@ export type Database = {
           full_name: string | null
           id: string
           institution: string | null
+          institution_id: string | null
           updated_at: string
         }
         Insert: {
@@ -48,6 +49,7 @@ export type Database = {
           full_name?: string | null
           id: string
           institution?: string | null
+          institution_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -55,9 +57,18 @@ export type Database = {
           full_name?: string | null
           id?: string
           institution?: string | null
+          institution_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

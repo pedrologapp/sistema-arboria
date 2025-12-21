@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { SparklesCore } from '@/components/ui/sparkles';
+import { BGPattern } from '@/components/ui/bg-pattern';
 import { NeonButton } from '@/components/ui/neon-button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogOut, Home, User } from 'lucide-react';
@@ -42,17 +42,14 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen w-full bg-black relative">
-      {/* Background sparkles */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <SparklesCore
-          background="transparent"
-          minSize={0.2}
-          maxSize={0.6}
-          particleDensity={50}
-          className="w-full h-full"
-          particleColor="#FFFFFF"
-        />
-      </div>
+      {/* Background Grid Pattern */}
+      <BGPattern 
+        variant="grid" 
+        mask="fade-edges" 
+        size={24} 
+        fill="#252525" 
+        className="fixed inset-0" 
+      />
 
       <div className="relative z-10 p-8">
         {/* Header */}
@@ -63,7 +60,7 @@ const Dashboard = () => {
             </h1>
             <p className="text-white/60 mt-1">{profile?.institution || 'Sua casa te espera'}</p>
           </div>
-          <NeonButton onClick={handleSignOut} variant="ghost" className="gap-2">
+          <NeonButton onClick={handleSignOut} variant="ghost" className="gap-2 text-white hover:text-indigo-300">
             <LogOut className="w-4 h-4" />
             Sair
           </NeonButton>

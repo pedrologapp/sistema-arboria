@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { AdminHeader } from '@/components/AdminHeader';
 import { AdminMobileNav } from '@/components/AdminMobileNav';
-import { SparklesCore } from '@/components/ui/sparkles';
+import { BGPattern } from '@/components/ui/bg-pattern';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -10,17 +10,14 @@ interface AdminLayoutProps {
 export function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <div className="min-h-screen w-full bg-black">
-      {/* Background sparkles */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <SparklesCore
-          background="transparent"
-          minSize={0.2}
-          maxSize={0.6}
-          particleDensity={50}
-          className="w-full h-full"
-          particleColor="#FFFFFF"
-        />
-      </div>
+      {/* Background Grid Pattern */}
+      <BGPattern 
+        variant="grid" 
+        mask="fade-edges" 
+        size={24} 
+        fill="#252525" 
+        className="fixed inset-0" 
+      />
 
       {/* Desktop Header */}
       <div className="hidden md:block">
