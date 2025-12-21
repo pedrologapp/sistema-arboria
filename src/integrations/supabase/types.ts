@@ -37,27 +37,36 @@ export type Database = {
       }
       profiles: {
         Row: {
+          casa: string | null
           created_at: string
           full_name: string | null
           id: string
           institution: string | null
           institution_id: string | null
+          serie: string | null
+          turma: string | null
           updated_at: string
         }
         Insert: {
+          casa?: string | null
           created_at?: string
           full_name?: string | null
           id: string
           institution?: string | null
           institution_id?: string | null
+          serie?: string | null
+          turma?: string | null
           updated_at?: string
         }
         Update: {
+          casa?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
           institution?: string | null
           institution_id?: string | null
+          serie?: string | null
+          turma?: string | null
           updated_at?: string
         }
         Relationships: [

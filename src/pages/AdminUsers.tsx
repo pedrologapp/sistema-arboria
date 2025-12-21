@@ -5,13 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Plus, Mail, Lock, User, Building2 } from 'lucide-react';
+import { Plus, Mail, Lock, User, Building2, GraduationCap, Users, Home } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface UserProfile {
   id: string;
   full_name: string | null;
   institution: string | null;
+  serie: string | null;
+  turma: string | null;
+  casa: string | null;
   created_at: string;
 }
 
@@ -19,6 +22,19 @@ interface Institution {
   id: string;
   name: string;
 }
+
+const serieOptions = ['6º ano', '7º ano', '8º ano', '9º ano'];
+const turmaOptions = ['A', 'B', 'C', 'D'];
+const casaOptions = [
+  'Linguística',
+  'Lógico-matemática',
+  'Musical',
+  'Espacial',
+  'Corporal-cinestésica',
+  'Interpessoal',
+  'Intrapessoal',
+  'Naturalista'
+];
 
 const AdminUsers = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -28,6 +44,9 @@ const AdminUsers = () => {
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserFullName, setNewUserFullName] = useState('');
   const [newUserInstitutionId, setNewUserInstitutionId] = useState('');
+  const [newUserSerie, setNewUserSerie] = useState('');
+  const [newUserTurma, setNewUserTurma] = useState('');
+  const [newUserCasa, setNewUserCasa] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -62,6 +81,25 @@ const AdminUsers = () => {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate required fields
+    if (!newUserInstitutionId) {
+      toast.error('Por favor, selecione uma instituição');
+      return;
+    }
+    if (!newUserSerie) {
+      toast.error('Por favor, selecione a série');
+      return;
+    }
+    if (!newUserTurma) {
+      toast.error('Por favor, selecione a turma');
+      return;
+    }
+    if (!newUserCasa) {
+      toast.error('Por favor, selecione a casa');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -78,6 +116,9 @@ const AdminUsers = () => {
             full_name: newUserFullName,
             institution: institutionName,
             institution_id: newUserInstitutionId,
+            serie: newUserSerie,
+            turma: newUserTurma,
+            casa: newUserCasa,
           },
         },
       });
@@ -108,6 +149,9 @@ const AdminUsers = () => {
         setNewUserPassword('');
         setNewUserFullName('');
         setNewUserInstitutionId('');
+        setNewUserSerie('');
+        setNewUserTurma('');
+        setNewUserCasa('');
         setIsCreatingUser(false);
         fetchUsers();
       }
@@ -141,7 +185,7 @@ const AdminUsers = () => {
         </CardHeader>
         {isCreatingUser && (
           <CardContent>
-            <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-white/80">Email</Label>
                 <div className="relative">
@@ -195,7 +239,7 @@ const AdminUsers = () => {
                 <Label htmlFor="institution" className="text-white/80">Instituição</Label>
                 <div className="relative">
                   <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 z-10" />
-                  <Select value={newUserInstitutionId} onValueChange={setNewUserInstitutionId} required>
+                  <Select value={newUserInstitutionId} onValueChange={setNewUserInstitutionId}>
                     <SelectTrigger className="pl-10 bg-white/5 border-white/10 text-white">
                       <SelectValue placeholder="Selecione uma instituição" />
                     </SelectTrigger>
@@ -210,10 +254,67 @@ const AdminUsers = () => {
                 </div>
               </div>
 
-              <div className="md:col-span-2">
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Criando...' : 'Criar Usuário'}
-              </Button>
+              <div className="space-y-2">
+                <Label htmlFor="serie" className="text-white/80">Série</Label>
+                <div className="relative">
+                  <GraduationCap className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 z-10" />
+                  <Select value={newUserSerie} onValueChange={setNewUserSerie}>
+                    <SelectTrigger className="pl-10 bg-white/5 border-white/10 text-white">
+                      <SelectValue placeholder="Selecione a série" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-900 border-white/10">
+                      {serieOptions.map((serie) => (
+                        <SelectItem key={serie} value={serie} className="text-white hover:bg-white/10">
+                          {serie}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="turma" className="text-white/80">Turma</Label>
+                <div className="relative">
+                  <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 z-10" />
+                  <Select value={newUserTurma} onValueChange={setNewUserTurma}>
+                    <SelectTrigger className="pl-10 bg-white/5 border-white/10 text-white">
+                      <SelectValue placeholder="Selecione a turma" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-900 border-white/10">
+                      {turmaOptions.map((turma) => (
+                        <SelectItem key={turma} value={turma} className="text-white hover:bg-white/10">
+                          {turma}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2 md:col-span-2 lg:col-span-1">
+                <Label htmlFor="casa" className="text-white/80">Casa (Inteligência)</Label>
+                <div className="relative">
+                  <Home className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 z-10" />
+                  <Select value={newUserCasa} onValueChange={setNewUserCasa}>
+                    <SelectTrigger className="pl-10 bg-white/5 border-white/10 text-white">
+                      <SelectValue placeholder="Selecione a casa" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-900 border-white/10">
+                      {casaOptions.map((casa) => (
+                        <SelectItem key={casa} value={casa} className="text-white hover:bg-white/10">
+                          {casa}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 lg:col-span-3">
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? 'Criando...' : 'Criar Usuário'}
+                </Button>
               </div>
             </form>
           </CardContent>
@@ -233,15 +334,32 @@ const AdminUsers = () => {
               {users.map((userProfile) => (
                 <div
                   key={userProfile.id}
-                  className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10"
+                  className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10 gap-3"
                 >
-                  <div>
+                  <div className="flex-1">
                     <p className="text-white font-medium">
                       {userProfile.full_name || 'Sem nome'}
                     </p>
                     <p className="text-white/60 text-sm">
                       {userProfile.institution || 'Sem instituição'}
                     </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {userProfile.serie && (
+                      <span className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full">
+                        {userProfile.serie}
+                      </span>
+                    )}
+                    {userProfile.turma && (
+                      <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded-full">
+                        Turma {userProfile.turma}
+                      </span>
+                    )}
+                    {userProfile.casa && (
+                      <span className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full">
+                        {userProfile.casa}
+                      </span>
+                    )}
                   </div>
                   <div className="text-white/40 text-sm">
                     {new Date(userProfile.created_at).toLocaleDateString('pt-BR')}
