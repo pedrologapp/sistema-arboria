@@ -64,7 +64,7 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { email, password, fullName, institutionId, role } = await req.json();
+    const { email, password, fullName, institutionId, role, serie, turma, casa } = await req.json();
 
     console.log('Creating user with email:', email);
 
@@ -97,7 +97,10 @@ serve(async (req) => {
       email_confirm: true, // Auto-confirm the email
       user_metadata: {
         full_name: fullName,
-        institution_id: institutionId || null
+        institution_id: institutionId || null,
+        serie: serie || null,
+        turma: turma || null,
+        casa: casa || null
       }
     });
 
@@ -111,16 +114,19 @@ serve(async (req) => {
 
     console.log('User created successfully:', newUser.user.id);
 
-    // Update the profile with institution_id if provided
-    if (institutionId) {
-      const { error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .update({ institution_id: institutionId })
-        .eq('id', newUser.user.id);
+    // Update the profile with all fields
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .update({ 
+        institution_id: institutionId || null,
+        serie: serie || null,
+        turma: turma || null,
+        casa: casa || null
+      })
+      .eq('id', newUser.user.id);
 
-      if (profileError) {
-        console.error('Error updating profile:', profileError);
-      }
+    if (profileError) {
+      console.error('Error updating profile:', profileError);
     }
 
     // Add user role if specified (default is 'user')
@@ -160,6 +166,9 @@ serve(async (req) => {
                 <p style="margin: 8px 0;"><strong>Email:</strong> ${email}</p>
                 <p style="margin: 8px 0;"><strong>Senha temporária:</strong> ${password}</p>
                 <p style="margin: 8px 0;"><strong>Instituição:</strong> ${institutionName}</p>
+                <p style="margin: 8px 0;"><strong>Série:</strong> ${serie || 'Não informada'}</p>
+                <p style="margin: 8px 0;"><strong>Turma:</strong> ${turma || 'Não informada'}</p>
+                <p style="margin: 8px 0;"><strong>Casa:</strong> ${casa || 'Não informada'}</p>
               </div>
               
               <h3 style="color: #333;">📋 Como acessar:</h3>
