@@ -109,7 +109,7 @@ const AdminUsers = () => {
           <NeonButton
             onClick={() => setIsCreatingUser(!isCreatingUser)}
             size="sm"
-            className="gap-2"
+            className="gap-2 text-white hover:text-white"
           >
             <Plus className="w-4 h-4" />
             {isCreatingUser ? 'Cancelar' : 'Novo Usuário'}
