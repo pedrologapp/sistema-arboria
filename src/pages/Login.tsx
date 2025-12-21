@@ -123,9 +123,6 @@ const Login = () => {
                   className="pl-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-indigo-500/20"
                 />
               </div>
-              <p className="text-white/40 text-xs">
-                Digite "administrador" para acessar como admin
-              </p>
             </div>
 
             {/* Email */}
