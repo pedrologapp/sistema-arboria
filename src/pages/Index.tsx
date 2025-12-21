@@ -1,4 +1,6 @@
+import { Link } from "react-router-dom";
 import { SparklesCore } from "@/components/ui/sparkles";
+import { NeonButton } from "@/components/ui/neon-button";
 
 const Index = () => {
   return (
@@ -25,6 +27,15 @@ const Index = () => {
 
         {/* Radial gradient mask */}
         <div className="absolute inset-0 w-full h-full bg-black [mask-image:radial-gradient(350px_200px_at_top,transparent_20%,white)]" />
+      </div>
+
+      {/* Botão Entrar */}
+      <div className="relative z-20 mt-8">
+        <Link to="/login">
+          <NeonButton size="lg" className="text-white">
+            Entrar
+          </NeonButton>
+        </Link>
       </div>
     </div>
   );
