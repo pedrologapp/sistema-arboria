@@ -3,12 +3,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { NeonButton } from '@/components/ui/neon-button';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { User, Mail, Building2, Save, UserPlus, Lock, Eye, EyeOff, Trash2, Pencil, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
 
 interface Institution {
   id: string;
@@ -338,10 +337,10 @@ const AdminSettings = () => {
               </div>
             </div>
 
-            <NeonButton type="submit" disabled={isCreatingUser} className="gap-2">
+            <Button type="submit" disabled={isCreatingUser} className="gap-2">
               <UserPlus className="w-4 h-4" />
               {isCreatingUser ? 'Cadastrando...' : 'Cadastrar Usuário'}
-            </NeonButton>
+            </Button>
           </form>
         </CardContent>
       </Card>
@@ -367,10 +366,10 @@ const AdminSettings = () => {
               placeholder="Nome da nova instituição"
               className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-white/30"
             />
-            <NeonButton type="submit" disabled={isCreatingInstitution} className="gap-2">
+            <Button type="submit" disabled={isCreatingInstitution} className="gap-2">
               <Plus className="w-4 h-4" />
               {isCreatingInstitution ? 'Criando...' : 'Criar'}
-            </NeonButton>
+            </Button>
           </form>
 
           {/* List of institutions */}
@@ -497,10 +496,10 @@ const AdminSettings = () => {
               </div>
             </div>
 
-            <NeonButton type="submit" disabled={isLoading} className="gap-2">
+            <Button type="submit" disabled={isLoading} className="gap-2">
               <Save className="w-4 h-4" />
               {isLoading ? 'Salvando...' : 'Salvar Alterações'}
-            </NeonButton>
+            </Button>
           </form>
         </CardContent>
       </Card>

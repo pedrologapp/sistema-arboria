@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { NeonButton } from "@/components/ui/neon-button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -203,14 +203,14 @@ const Login = () => {
             </div>
 
             {/* Botão Entrar */}
-            <NeonButton
+            <Button
               type="submit"
               size="lg"
-              className="w-full text-white"
+              className="w-full"
               disabled={isLoading}
             >
               {isLoading ? 'Entrando...' : 'Entrar no Sistema'}
-            </NeonButton>
+            </Button>
           </form>
         </div>
       </div>
