@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -75,6 +76,20 @@ serve(async (req) => {
       });
     }
 
+    // Fetch institution name if provided
+    let institutionName = 'Não definida';
+    if (institutionId) {
+      const { data: institution } = await supabaseAdmin
+        .from('institutions')
+        .select('name')
+        .eq('id', institutionId)
+        .single();
+      
+      if (institution) {
+        institutionName = institution.name;
+      }
+    }
+
     // Create the user using admin API
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -123,6 +138,62 @@ serve(async (req) => {
     }
 
     console.log('User role added:', userRole);
+
+    // Send welcome email
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    if (resendApiKey) {
+      try {
+        const resend = new Resend(resendApiKey);
+        
+        const emailResponse = await resend.emails.send({
+          from: 'Sistema <onboarding@resend.dev>',
+          to: [email],
+          subject: 'Sua conta foi criada - Bem-vindo(a)!',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h1 style="color: #333; border-bottom: 2px solid #4f46e5; padding-bottom: 10px;">Olá, ${fullName}!</h1>
+              
+              <p style="font-size: 16px; color: #555;">Sua conta foi criada com sucesso em nosso sistema.</p>
+              
+              <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="margin-top: 0; color: #333;">📧 Seus dados de acesso:</h3>
+                <p style="margin: 8px 0;"><strong>Email:</strong> ${email}</p>
+                <p style="margin: 8px 0;"><strong>Senha temporária:</strong> ${password}</p>
+                <p style="margin: 8px 0;"><strong>Instituição:</strong> ${institutionName}</p>
+              </div>
+              
+              <h3 style="color: #333;">📋 Como acessar:</h3>
+              <ol style="color: #555; line-height: 1.8;">
+                <li>Acesse o sistema através do link de login</li>
+                <li>Use o email e senha informados acima</li>
+                <li>Após o primeiro login, recomendamos fortemente que você altere sua senha</li>
+              </ol>
+              
+              <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+                <p style="margin: 0; color: #856404;">
+                  <strong>⚠️ Importante:</strong> Por segurança, recomendamos que você altere sua senha no primeiro acesso.
+                </p>
+              </div>
+              
+              <p style="color: #555;">Se você tiver alguma dúvida, entre em contato com o administrador do sistema.</p>
+              
+              <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+              
+              <p style="color: #999; font-size: 12px;">
+                Este é um email automático, por favor não responda.
+              </p>
+            </div>
+          `,
+        });
+
+        console.log('Welcome email sent successfully:', emailResponse);
+      } catch (emailError) {
+        console.error('Error sending welcome email:', emailError);
+        // Don't fail the request if email fails, the user was created successfully
+      }
+    } else {
+      console.warn('RESEND_API_KEY not configured, skipping welcome email');
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 
