@@ -47,8 +47,7 @@ const Login = () => {
           </Link>
 
           {/* Título */}
-          <h1 className="text-3xl font-bold text-white mb-2">Bem-vindo de volta!</h1>
-          <p className="text-white/60 mb-8">Acesse sua conta para continuar</p>
+          <h1 className="text-3xl font-bold text-white mb-8">Sua casa te espera!</h1>
 
           {/* Formulário */}
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -174,18 +173,6 @@ const Login = () => {
         {/* Radial gradient overlay */}
         <div className="absolute inset-0 bg-black [mask-image:radial-gradient(500px_400px_at_center,transparent_30%,white)]" />
 
-        {/* Título */}
-        <div className="relative z-10 text-center">
-          <h2 className="text-5xl xl:text-6xl font-bold text-white leading-tight">
-            Sistema de Casas
-          </h2>
-          <h2 className="text-5xl xl:text-6xl font-bold text-white">
-            Arboria
-          </h2>
-          <p className="mt-6 text-white/50 text-lg max-w-sm mx-auto">
-            Gerencie suas casas de forma inteligente e eficiente
-          </p>
-        </div>
       </div>
     </div>
   );
