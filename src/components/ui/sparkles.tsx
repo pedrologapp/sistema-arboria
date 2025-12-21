@@ -54,12 +54,13 @@ const SparklesCoreComponent = (props: ParticlesProps) => {
   };
 
   const generatedId = useId();
+  const stableId = React.useMemo(() => id || generatedId, [id, generatedId]);
   
   return (
     <motion.div animate={controls} className={cn("opacity-0", className)}>
       {init && (
         <Particles
-          id={id || generatedId}
+          id={stableId}
           className={cn("h-full w-full")}
           particlesLoaded={particlesLoaded}
           options={{
