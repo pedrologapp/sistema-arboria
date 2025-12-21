@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { BGPattern } from "@/components/ui/bg-pattern";
 import { NeonButton } from "@/components/ui/neon-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +9,7 @@ import { Building2, Lock, Eye, EyeOff, ArrowLeft, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 const Login = () => {
-  const { user, isAdmin, signIn, isLoading: authLoading } = useAuth();
+  const { user, isAdmin, signIn, isLoading: authLoading, adminCheckComplete } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [instituicao, setInstituicao] = useState("");
@@ -28,16 +27,16 @@ const Login = () => {
     }
   }, []);
 
-  // Redirect if already logged in
+  // Redirect if already logged in - wait for admin check to complete
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!authLoading && user && adminCheckComplete) {
       if (isAdmin) {
         navigate('/admin');
       } else {
         navigate('/dashboard');
       }
     }
-  }, [user, isAdmin, authLoading, navigate]);
+  }, [user, isAdmin, authLoading, adminCheckComplete, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,14 +95,6 @@ const Login = () => {
     <div className="min-h-screen w-full bg-black flex">
       {/* Lado Esquerdo - Formulário */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 lg:px-16 py-12 relative">
-        {/* Grid Background */}
-        <BGPattern 
-          variant="grid" 
-          mask="fade-edges" 
-          size={24} 
-          fill="#252525" 
-          className="absolute inset-0" 
-        />
 
         <div className="relative z-10 max-w-md mx-auto w-full">
           {/* Link voltar */}
@@ -225,18 +216,7 @@ const Login = () => {
       </div>
 
       {/* Lado Direito - Branding */}
-      <div className="hidden lg:flex w-1/2 flex-col items-center justify-center relative overflow-hidden">
-        {/* Grid Background mais intenso */}
-        <BGPattern 
-          variant="grid" 
-          mask="fade-center" 
-          size={24} 
-          fill="#3f3f46" 
-          className="absolute inset-0" 
-        />
-
-        {/* Radial gradient overlay */}
-        <div className="absolute inset-0 bg-black [mask-image:radial-gradient(500px_400px_at_center,transparent_30%,white)]" />
+      <div className="hidden lg:flex w-1/2 flex-col items-center justify-center relative overflow-hidden bg-black">
       </div>
     </div>
   );

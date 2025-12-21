@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { BGPattern } from '@/components/ui/bg-pattern';
 import { NeonButton } from '@/components/ui/neon-button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogOut, Home, User } from 'lucide-react';
@@ -42,15 +41,6 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen w-full bg-black relative">
-      {/* Background Grid Pattern */}
-      <BGPattern 
-        variant="grid" 
-        mask="fade-edges" 
-        size={24} 
-        fill="#252525" 
-        className="fixed inset-0" 
-      />
-
       <div className="relative z-10 p-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
