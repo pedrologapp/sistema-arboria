@@ -19,7 +19,7 @@ type ParticlesProps = {
   particleDensity?: number;
 };
 
-export const SparklesCore = (props: ParticlesProps) => {
+const SparklesCoreComponent = (props: ParticlesProps) => {
   const {
     id,
     className,
@@ -253,3 +253,18 @@ export const SparklesCore = (props: ParticlesProps) => {
     </motion.div>
   );
 };
+
+export const SparklesCore = React.memo(SparklesCoreComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.id === nextProps.id &&
+    prevProps.className === nextProps.className &&
+    prevProps.background === nextProps.background &&
+    prevProps.minSize === nextProps.minSize &&
+    prevProps.maxSize === nextProps.maxSize &&
+    prevProps.speed === nextProps.speed &&
+    prevProps.particleColor === nextProps.particleColor &&
+    prevProps.particleDensity === nextProps.particleDensity
+  );
+});
+
+SparklesCore.displayName = "SparklesCore";
