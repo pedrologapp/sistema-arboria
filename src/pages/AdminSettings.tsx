@@ -8,6 +8,16 @@ import { toast } from 'sonner';
 import { User, Mail, Building2, Save, Trash2, Pencil, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface Institution {
   id: string;
@@ -34,6 +44,7 @@ const AdminSettings = () => {
   const [isCreatingInstitution, setIsCreatingInstitution] = useState(false);
   const [editingInstitution, setEditingInstitution] = useState<Institution | null>(null);
   const [editInstitutionName, setEditInstitutionName] = useState('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Fetch institutions
   const fetchInstitutions = async () => {
@@ -90,13 +101,17 @@ const AdminSettings = () => {
   };
 
   // Institution CRUD operations
-  const handleCreateInstitution = async (e: React.FormEvent) => {
+  const handleCreateInstitutionClick = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newInstitutionName.trim()) {
       toast.error('Digite o nome da instituição');
       return;
     }
+    setShowConfirmDialog(true);
+  };
 
+  const handleConfirmCreateInstitution = async () => {
+    setShowConfirmDialog(false);
     setIsCreatingInstitution(true);
     try {
       const { error } = await supabase
@@ -181,7 +196,7 @@ const AdminSettings = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Create new institution */}
-          <form onSubmit={handleCreateInstitution} className="flex gap-2">
+          <form onSubmit={handleCreateInstitutionClick} className="flex gap-2">
             <Input
               type="text"
               value={newInstitutionName}
@@ -326,6 +341,26 @@ const AdminSettings = () => {
           </form>
         </CardContent>
       </Card>
+
+      {/* Confirmation Dialog for Institution Creation */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent className="bg-gray-900 border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Confirmar Criação</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60">
+              Deseja criar a instituição "{newInstitutionName}"?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmCreateInstitution}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

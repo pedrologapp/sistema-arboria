@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Plus, Mail, Lock, User, Building2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface UserProfile {
   id: string;
@@ -14,17 +15,24 @@ interface UserProfile {
   created_at: string;
 }
 
+interface Institution {
+  id: string;
+  name: string;
+}
+
 const AdminUsers = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserFullName, setNewUserFullName] = useState('');
-  const [newUserInstitution, setNewUserInstitution] = useState('');
+  const [newUserInstitutionId, setNewUserInstitutionId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     fetchUsers();
+    fetchInstitutions();
   }, []);
 
   const fetchUsers = async () => {
@@ -41,11 +49,26 @@ const AdminUsers = () => {
     }
   };
 
+  const fetchInstitutions = async () => {
+    const { data, error } = await supabase
+      .from('institutions')
+      .select('id, name')
+      .order('name');
+
+    if (!error && data) {
+      setInstitutions(data);
+    }
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
+      // Find selected institution name
+      const selectedInstitution = institutions.find(i => i.id === newUserInstitutionId);
+      const institutionName = selectedInstitution?.name || '';
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: newUserEmail,
         password: newUserPassword,
@@ -53,7 +76,8 @@ const AdminUsers = () => {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
             full_name: newUserFullName,
-            institution: newUserInstitution,
+            institution: institutionName,
+            institution_id: newUserInstitutionId,
           },
         },
       });
@@ -83,7 +107,7 @@ const AdminUsers = () => {
         setNewUserEmail('');
         setNewUserPassword('');
         setNewUserFullName('');
-        setNewUserInstitution('');
+        setNewUserInstitutionId('');
         setIsCreatingUser(false);
         fetchUsers();
       }
@@ -170,16 +194,19 @@ const AdminUsers = () => {
               <div className="space-y-2">
                 <Label htmlFor="institution" className="text-white/80">Instituição</Label>
                 <div className="relative">
-                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                  <Input
-                    id="institution"
-                    type="text"
-                    placeholder="Nome da instituição"
-                    value={newUserInstitution}
-                    onChange={(e) => setNewUserInstitution(e.target.value)}
-                    required
-                    className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30"
-                  />
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 z-10" />
+                  <Select value={newUserInstitutionId} onValueChange={setNewUserInstitutionId} required>
+                    <SelectTrigger className="pl-10 bg-white/5 border-white/10 text-white">
+                      <SelectValue placeholder="Selecione uma instituição" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-900 border-white/10">
+                      {institutions.map((inst) => (
+                        <SelectItem key={inst.id} value={inst.id} className="text-white hover:bg-white/10">
+                          {inst.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
