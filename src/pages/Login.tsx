@@ -19,6 +19,15 @@ const Login = () => {
   const [lembrarMe, setLembrarMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Load remembered email on mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setLembrarMe(true);
+    }
+  }, []);
+
   // Redirect if already logged in
   useEffect(() => {
     if (!authLoading && user) {
@@ -52,6 +61,13 @@ const Login = () => {
           toast.error(error.message);
         }
         return;
+      }
+
+      // Save or remove email based on "remember me"
+      if (lembrarMe) {
+        localStorage.setItem('rememberedEmail', email);
+      } else {
+        localStorage.removeItem('rememberedEmail');
       }
 
       // Check if it's admin login
