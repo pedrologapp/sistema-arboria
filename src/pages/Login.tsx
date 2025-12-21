@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { SparklesCore } from "@/components/ui/sparkles";
+import { BGPattern } from "@/components/ui/bg-pattern";
 import { NeonButton } from "@/components/ui/neon-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,17 +96,14 @@ const Login = () => {
     <div className="min-h-screen w-full bg-black flex">
       {/* Lado Esquerdo - Formulário */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 lg:px-16 py-12 relative">
-        {/* Sparkles sutis no lado esquerdo */}
-        <div className="absolute inset-0 overflow-hidden">
-          <SparklesCore
-            background="transparent"
-            minSize={0.2}
-            maxSize={0.6}
-            particleDensity={100}
-            className="w-full h-full"
-            particleColor="#FFFFFF"
-          />
-        </div>
+        {/* Grid Background */}
+        <BGPattern 
+          variant="grid" 
+          mask="fade-edges" 
+          size={24} 
+          fill="#252525" 
+          className="absolute inset-0" 
+        />
 
         <div className="relative z-10 max-w-md mx-auto w-full">
           {/* Link voltar */}
@@ -229,14 +226,13 @@ const Login = () => {
 
       {/* Lado Direito - Branding */}
       <div className="hidden lg:flex w-1/2 flex-col items-center justify-center relative overflow-hidden">
-        {/* Sparkles intensos */}
-        <SparklesCore
-          background="transparent"
-          minSize={0.4}
-          maxSize={1}
-          particleDensity={800}
-          className="absolute inset-0 w-full h-full"
-          particleColor="#FFFFFF"
+        {/* Grid Background mais intenso */}
+        <BGPattern 
+          variant="grid" 
+          mask="fade-center" 
+          size={24} 
+          fill="#3f3f46" 
+          className="absolute inset-0" 
         />
 
         {/* Radial gradient overlay */}
