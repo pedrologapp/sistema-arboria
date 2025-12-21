@@ -1,24 +1,80 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { SparklesCore } from "@/components/ui/sparkles";
 import { NeonButton } from "@/components/ui/neon-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Building2, User, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Building2, Lock, Eye, EyeOff, ArrowLeft, Mail } from "lucide-react";
+import { toast } from "sonner";
 
 const Login = () => {
+  const { user, isAdmin, signIn, isLoading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [instituicao, setInstituicao] = useState("");
-  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [lembrarMe, setLembrarMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      if (isAdmin) {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [user, isAdmin, authLoading, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implementar lógica de login
-    console.log({ instituicao, nome, senha, lembrarMe });
+    
+    if (!email || !senha) {
+      toast.error('Por favor, preencha todos os campos');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { error } = await signIn(email, senha);
+
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          toast.error('Email ou senha incorretos');
+        } else if (error.message.includes('Email not confirmed')) {
+          toast.error('Por favor, confirme seu email antes de fazer login');
+        } else {
+          toast.error(error.message);
+        }
+        return;
+      }
+
+      // Check if it's admin login
+      if (instituicao.toLowerCase() === 'administrador') {
+        toast.success('Bem-vindo, Administrador!');
+      } else {
+        toast.success('Login realizado com sucesso!');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Erro ao fazer login');
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full bg-black flex">
@@ -61,27 +117,31 @@ const Login = () => {
                 <Input
                   id="instituicao"
                   type="text"
-                  placeholder="Nome da instituição"
+                  placeholder="Nome da instituição (ou 'administrador')"
                   value={instituicao}
                   onChange={(e) => setInstituicao(e.target.value)}
                   className="pl-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-indigo-500/20"
                 />
               </div>
+              <p className="text-white/40 text-xs">
+                Digite "administrador" para acessar como admin
+              </p>
             </div>
 
-            {/* Nome */}
+            {/* Email */}
             <div className="space-y-2">
-              <Label htmlFor="nome" className="text-white/80 text-sm">
-                Nome de usuário
+              <Label htmlFor="email" className="text-white/80 text-sm">
+                Email
               </Label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
                 <Input
-                  id="nome"
-                  type="text"
-                  placeholder="Seu nome de usuário"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
                   className="pl-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-indigo-500/20"
                 />
               </div>
@@ -100,6 +160,7 @@ const Login = () => {
                   placeholder="Sua senha"
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
+                  required
                   className="pl-11 pr-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-indigo-500/20"
                 />
                 <button
@@ -145,8 +206,9 @@ const Login = () => {
               type="submit"
               size="lg"
               className="w-full text-white"
+              disabled={isLoading}
             >
-              Entrar no Sistema
+              {isLoading ? 'Entrando...' : 'Entrar no Sistema'}
             </NeonButton>
           </form>
         </div>
@@ -164,10 +226,8 @@ const Login = () => {
           particleColor="#FFFFFF"
         />
 
-
         {/* Radial gradient overlay */}
         <div className="absolute inset-0 bg-black [mask-image:radial-gradient(500px_400px_at_center,transparent_30%,white)]" />
-
       </div>
     </div>
   );
