@@ -77,14 +77,14 @@ const SparklesCoreComponent = (props: ParticlesProps) => {
             interactivity: {
               events: {
                 onClick: {
-                  enable: true,
+                  enable: false,
                   mode: "push",
                 },
                 onHover: {
                   enable: false,
                   mode: "repulse",
                 },
-                resize: true as any,
+                resize: false as any,
               },
               modes: {
                 push: {
@@ -135,7 +135,7 @@ const SparklesCoreComponent = (props: ParticlesProps) => {
                 distance: {},
                 direction: "none",
                 drift: 0,
-                enable: true,
+                enable: false,
                 gravity: { acceleration: 9.81, enable: false, inverse: false, maxSpeed: 50 },
                 path: { clamp: true, delay: { value: 0 }, enable: false, options: {} },
                 outModes: { default: "out" },
