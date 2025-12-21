@@ -53,7 +53,7 @@ const Dashboard = () => {
           <Button 
             onClick={handleSignOut} 
             variant="outline" 
-            className="gap-2 border-white/20 text-white hover:bg-white/10 hover:text-white"
+            className="gap-2 bg-black border-white/20 text-white hover:bg-gray-900 hover:text-white"
           >
             <LogOut className="w-4 h-4" />
             Sair
