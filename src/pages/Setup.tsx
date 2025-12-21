@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { SparklesCore } from '@/components/ui/sparkles';
-import { NeonButton } from '@/components/ui/neon-button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -227,7 +227,7 @@ const Setup = () => {
             </div>
 
             <div className="pt-2">
-              <NeonButton
+              <Button
                 type="submit"
                 size="lg"
                 className="w-full gap-2"
@@ -235,7 +235,7 @@ const Setup = () => {
               >
                 <Shield className="w-5 h-5" />
                 {isLoading ? 'Criando...' : 'Criar Administrador'}
-              </NeonButton>
+              </Button>
             </div>
           </form>
 

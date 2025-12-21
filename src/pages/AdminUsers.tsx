@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { NeonButton } from '@/components/ui/neon-button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -106,14 +106,14 @@ const AdminUsers = () => {
       <Card className="bg-white/5 border-white/10 mb-8">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-white">Criar Novo Usuário</CardTitle>
-          <NeonButton
+          <Button
             onClick={() => setIsCreatingUser(!isCreatingUser)}
             size="sm"
-            className="gap-2 text-white hover:text-white"
+            className="gap-2"
           >
             <Plus className="w-4 h-4" />
             {isCreatingUser ? 'Cancelar' : 'Novo Usuário'}
-          </NeonButton>
+          </Button>
         </CardHeader>
         {isCreatingUser && (
           <CardContent>
@@ -184,9 +184,9 @@ const AdminUsers = () => {
               </div>
 
               <div className="md:col-span-2">
-                <NeonButton type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Criando...' : 'Criar Usuário'}
-                </NeonButton>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Criando...' : 'Criar Usuário'}
+              </Button>
               </div>
             </form>
           </CardContent>
