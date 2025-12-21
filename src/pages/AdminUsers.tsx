@@ -103,58 +103,41 @@ const AdminUsers = () => {
     setIsLoading(true);
 
     try {
-      // Find selected institution name
-      const selectedInstitution = institutions.find(i => i.id === newUserInstitutionId);
-      const institutionName = selectedInstitution?.name || '';
-
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newUserEmail,
-        password: newUserPassword,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            full_name: newUserFullName,
-            institution: institutionName,
-            institution_id: newUserInstitutionId,
-            serie: newUserSerie,
-            turma: newUserTurma,
-            casa: newUserCasa,
-          },
+      // Use edge function to create user without affecting admin session
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: newUserEmail,
+          password: newUserPassword,
+          fullName: newUserFullName,
+          institutionId: newUserInstitutionId,
+          role: 'user',
+          serie: newUserSerie,
+          turma: newUserTurma,
+          casa: newUserCasa,
         },
       });
 
-      if (authError) {
-        if (authError.message.includes('already registered')) {
-          toast.error('Este email já está cadastrado');
-        } else {
-          toast.error(authError.message);
-        }
+      if (error) {
+        console.error('Error creating user:', error);
+        toast.error(error.message || 'Erro ao criar usuário');
         return;
       }
 
-      if (authData.user) {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: authData.user.id,
-            role: 'user',
-          });
-
-        if (roleError) {
-          console.error('Error adding role:', roleError);
-        }
-
-        toast.success('Usuário criado com sucesso!');
-        setNewUserEmail('');
-        setNewUserPassword('');
-        setNewUserFullName('');
-        setNewUserInstitutionId('');
-        setNewUserSerie('');
-        setNewUserTurma('');
-        setNewUserCasa('');
-        setIsCreatingUser(false);
-        fetchUsers();
+      if (data?.error) {
+        toast.error(data.error);
+        return;
       }
+
+      toast.success('Usuário criado com sucesso!');
+      setNewUserEmail('');
+      setNewUserPassword('');
+      setNewUserFullName('');
+      setNewUserInstitutionId('');
+      setNewUserSerie('');
+      setNewUserTurma('');
+      setNewUserCasa('');
+      setIsCreatingUser(false);
+      fetchUsers();
     } catch (error) {
       console.error('Error creating user:', error);
       toast.error('Erro ao criar usuário');

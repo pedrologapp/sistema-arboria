@@ -50,7 +50,11 @@ const Dashboard = () => {
             </h1>
             <p className="text-white/60 mt-1">{profile?.institution || 'Sua casa te espera'}</p>
           </div>
-          <Button onClick={handleSignOut} variant="ghost" className="gap-2">
+          <Button 
+            onClick={handleSignOut} 
+            variant="outline" 
+            className="gap-2 border-white/20 text-white hover:bg-white/10 hover:text-white"
+          >
             <LogOut className="w-4 h-4" />
             Sair
           </Button>
