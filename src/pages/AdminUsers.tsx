@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Plus, Mail, Lock, User, Building2, GraduationCap, Users, Home, Search, FileDown, Pencil, X, Upload, HelpCircle, Download } from 'lucide-react';
+import { Plus, Mail, Lock, User, Building2, GraduationCap, Users, Home, Search, FileDown, Pencil, X, Upload, HelpCircle, Download, AlertTriangle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
@@ -81,6 +81,9 @@ const AdminUsers = () => {
   const [editTurma, setEditTurma] = useState('');
   const [editCasa, setEditCasa] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [currentEmail, setCurrentEmail] = useState('');
+  const [showEmailChange, setShowEmailChange] = useState(false);
+  const [isLoadingEmail, setIsLoadingEmail] = useState(false);
 
   // Import states
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -191,8 +194,19 @@ const AdminUsers = () => {
     toast.success('PDF exportado com sucesso!');
   };
 
-  // Open edit dialog
-  const openEditDialog = (user: UserProfile) => {
+  // Helper function to get missing fields
+  const getMissingFields = (user: UserProfile): string[] => {
+    const missing: string[] = [];
+    if (!user.full_name) missing.push('Nome');
+    if (!user.institution) missing.push('Instituição');
+    if (!user.serie) missing.push('Série');
+    if (!user.turma) missing.push('Turma');
+    if (!user.casa) missing.push('Casa');
+    return missing;
+  };
+
+  // Open edit dialog and fetch current email
+  const openEditDialog = async (user: UserProfile) => {
     setEditingUser(user);
     setEditEmail('');
     setEditFullName(user.full_name || '');
@@ -200,7 +214,32 @@ const AdminUsers = () => {
     setEditSerie(user.serie || '');
     setEditTurma(user.turma || '');
     setEditCasa(user.casa || '');
+    setShowEmailChange(false);
+    setCurrentEmail('');
     setIsEditDialogOpen(true);
+    
+    // Fetch current email
+    setIsLoadingEmail(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data, error } = await supabase.functions.invoke('get-user-email', {
+        body: { userId: user.id },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`
+        }
+      });
+      
+      if (!error && data?.email) {
+        setCurrentEmail(data.email);
+      } else {
+        setCurrentEmail('Email não disponível');
+      }
+    } catch (error) {
+      console.error('Error fetching email:', error);
+      setCurrentEmail('Erro ao carregar email');
+    } finally {
+      setIsLoadingEmail(false);
+    }
   };
 
   // Handle update user
@@ -735,52 +774,72 @@ aluno2@email.com,Senha456,Outro Aluno,Nome da Instituição,7º ano,B,Musical`;
             </p>
           ) : (
             <div className="space-y-4">
-              {filteredAndSortedUsers.map((userProfile) => (
-                <div
-                  key={userProfile.id}
-                  className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10 gap-3"
-                >
-                  <div className="flex-1">
-                    <p className="text-white font-medium">
-                      {userProfile.full_name || 'Sem nome'}
-                    </p>
-                    <p className="text-white/60 text-sm">
-                      {userProfile.institution || 'Sem instituição'}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {userProfile.serie && (
-                      <span className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full">
-                        {userProfile.serie}
-                      </span>
-                    )}
-                    {userProfile.turma && (
-                      <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded-full">
-                        Turma {userProfile.turma}
-                      </span>
-                    )}
-                    {userProfile.casa && (
-                      <span className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full">
-                        {userProfile.casa}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-white/40 text-sm">
-                      {new Date(userProfile.created_at).toLocaleDateString('pt-BR')}
+              {filteredAndSortedUsers.map((userProfile) => {
+                const missingFields = getMissingFields(userProfile);
+                return (
+                  <div
+                    key={userProfile.id}
+                    className={`flex flex-col md:flex-row md:items-center justify-between p-4 bg-white/5 rounded-lg border gap-3 ${
+                      missingFields.length > 0 ? 'border-amber-500/50' : 'border-white/10'
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-white font-medium">
+                          {userProfile.full_name || 'Sem nome'}
+                        </p>
+                        {missingFields.length > 0 && (
+                          <div 
+                            className="flex items-center gap-1 text-amber-400"
+                            title={`Campos incompletos: ${missingFields.join(', ')}`}
+                          >
+                            <AlertTriangle className="w-4 h-4" />
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-white/60 text-sm">
+                        {userProfile.institution || 'Sem instituição'}
+                      </p>
+                      {missingFields.length > 0 && (
+                        <p className="text-amber-400/80 text-xs mt-1">
+                          Incompleto: {missingFields.join(', ')}
+                        </p>
+                      )}
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => openEditDialog(userProfile)}
-                      className="text-white/60 hover:text-white hover:bg-white/10"
-                      title="Editar usuário"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      {userProfile.serie && (
+                        <span className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full">
+                          {userProfile.serie}
+                        </span>
+                      )}
+                      {userProfile.turma && (
+                        <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded-full">
+                          Turma {userProfile.turma}
+                        </span>
+                      )}
+                      {userProfile.casa && (
+                        <span className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full">
+                          {userProfile.casa}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-white/40 text-sm">
+                        {new Date(userProfile.created_at).toLocaleDateString('pt-BR')}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => openEditDialog(userProfile)}
+                        className="text-white/60 hover:text-white hover:bg-white/10"
+                        title="Editar usuário"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -794,19 +853,55 @@ aluno2@email.com,Senha456,Outro Aluno,Nome da Instituição,7º ano,B,Musical`;
           </DialogHeader>
           
           <div className="space-y-4 py-4">
+            {/* Current Email Display */}
             <div className="space-y-2">
-              <Label htmlFor="editEmail" className="text-white/80">Novo Email (opcional)</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                <Input
-                  id="editEmail"
-                  type="email"
-                  placeholder="Deixe em branco para manter o atual"
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30"
-                />
+              <Label className="text-white/80">Email Atual</Label>
+              <div className="flex items-center gap-2 p-3 bg-white/5 rounded-lg border border-white/10">
+                <Mail className="w-4 h-4 text-white/40" />
+                {isLoadingEmail ? (
+                  <span className="text-white/50 italic">Carregando...</span>
+                ) : (
+                  <span className="text-white/70">{currentEmail}</span>
+                )}
               </div>
+              
+              {!showEmailChange ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowEmailChange(true)}
+                  className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 text-sm gap-1"
+                >
+                  <Pencil className="w-3 h-3" />
+                  Alterar email
+                </Button>
+              ) : (
+                <div className="space-y-2 mt-2 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                  <Label htmlFor="editEmail" className="text-blue-300 text-sm">Novo Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400/60" />
+                    <Input
+                      id="editEmail"
+                      type="email"
+                      placeholder="Digite o novo email"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                      className="pl-10 bg-white/5 border-blue-500/30 text-white placeholder:text-white/30"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setShowEmailChange(false); setEditEmail(''); }}
+                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs"
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    Cancelar alteração
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
