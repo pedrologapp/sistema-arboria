@@ -65,21 +65,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (!isMounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Defer admin check with setTimeout to avoid deadlock
-        if (session?.user) {
-          setTimeout(() => {
-            checkAdminRole(session.user.id).then((result) => {
+        // Reset admin check when auth state changes
+        if (event === 'SIGNED_IN' && session?.user) {
+          setAdminCheckComplete(false);
+          // Defer admin check with setTimeout to avoid deadlock
+          setTimeout(async () => {
+            if (!isMounted) return;
+            const result = await checkAdminRole(session.user.id);
+            if (isMounted) {
               setIsAdmin(result);
               setAdminCheckComplete(true);
-            });
+            }
           }, 0);
-        } else {
+        } else if (event === 'SIGNED_OUT') {
           setIsAdmin(false);
           setAdminCheckComplete(true);
         }
@@ -87,23 +95,31 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!isMounted) return;
+      
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        checkAdminRole(session.user.id).then((isAdminResult) => {
+        const isAdminResult = await checkAdminRole(session.user.id);
+        if (isMounted) {
           setIsAdmin(isAdminResult);
           setAdminCheckComplete(true);
           setIsLoading(false);
-        });
+        }
       } else {
-        setAdminCheckComplete(true);
-        setIsLoading(false);
+        if (isMounted) {
+          setAdminCheckComplete(true);
+          setIsLoading(false);
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
