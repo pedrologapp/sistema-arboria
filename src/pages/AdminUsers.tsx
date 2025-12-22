@@ -322,18 +322,47 @@ const AdminUsers = () => {
     }
   };
 
-  // Parse CSV file
+  // Parse CSV file with auto-detection of separator (, or ;)
   const parseCSV = (text: string): ImportUser[] => {
-    const lines = text.split('\n');
-    if (lines.length < 2) return [];
+    const lines = text.split('\n').filter(line => line.trim());
+    if (lines.length < 2) {
+      toast.error('Arquivo CSV vazio ou com apenas cabeçalho');
+      return [];
+    }
 
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/[\r\n]/g, ''));
+    // Auto-detect separator - Brazilian Excel uses semicolon
+    const firstLine = lines[0];
+    const separator = firstLine.includes(';') ? ';' : ',';
     
-    return lines.slice(1)
+    console.log('CSV separator detected:', separator);
+    console.log('First line:', firstLine);
+
+    // Parse headers - remove quotes, BOM, and normalize
+    const headers = firstLine
+      .replace(/^\uFEFF/, '') // Remove BOM
+      .split(separator)
+      .map(h => h.trim().toLowerCase().replace(/[\r\n]/g, '').replace(/"/g, ''));
+    
+    console.log('Headers found:', headers);
+
+    // Validate required headers
+    const requiredHeaders = ['email', 'senha', 'nome_completo', 'instituicao'];
+    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+    
+    if (missingHeaders.length > 0) {
+      toast.error(`Colunas obrigatórias não encontradas: ${missingHeaders.join(', ')}. Verifique se o arquivo está no formato correto.`);
+      return [];
+    }
+
+    const users = lines.slice(1)
       .filter(line => line.trim())
-      .map(line => {
-        const values = line.split(',').map(v => v.trim().replace(/[\r\n]/g, ''));
-        return {
+      .map((line, index) => {
+        // Handle quoted values that may contain the separator
+        const values = line
+          .split(separator)
+          .map(v => v.trim().replace(/[\r\n]/g, '').replace(/"/g, ''));
+        
+        const user: ImportUser = {
           email: values[headers.indexOf('email')] || '',
           senha: values[headers.indexOf('senha')] || '',
           nome_completo: values[headers.indexOf('nome_completo')] || '',
@@ -342,7 +371,12 @@ const AdminUsers = () => {
           turma: values[headers.indexOf('turma')] || undefined,
           casa: values[headers.indexOf('casa')] || undefined,
         };
+
+        console.log(`Row ${index + 1}:`, user);
+        return user;
       });
+
+    return users;
   };
 
   // Handle import
