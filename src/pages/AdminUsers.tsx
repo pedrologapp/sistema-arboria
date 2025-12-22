@@ -98,10 +98,25 @@ const AdminUsers = () => {
   }, []);
 
   const fetchUsers = async () => {
-    const { data, error } = await supabase
+    // Primeiro, buscar IDs dos administradores para excluí-los da lista
+    const { data: adminRoles } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'admin');
+    
+    const adminIds = adminRoles?.map(r => r.user_id) || [];
+    
+    // Buscar profiles excluindo os administradores
+    let query = supabase
       .from('profiles')
       .select('*')
       .order('created_at', { ascending: false });
+    
+    if (adminIds.length > 0) {
+      query = query.not('id', 'in', `(${adminIds.join(',')})`);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Error fetching users:', error);
