@@ -70,6 +70,8 @@ const AdminUsers = () => {
   const [filterSerie, setFilterSerie] = useState('');
   const [filterTurma, setFilterTurma] = useState('');
   const [filterCasa, setFilterCasa] = useState('');
+  const [filterInstitution, setFilterInstitution] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Edit user states
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -150,14 +152,19 @@ const AdminUsers = () => {
       );
     }
 
+    // Apply institution filter
+    if (filterInstitution && filterInstitution !== 'all') {
+      result = result.filter(u => u.institution === filterInstitution);
+    }
+
     // Apply filters
-    if (filterSerie) {
+    if (filterSerie && filterSerie !== 'all') {
       result = result.filter(u => u.serie === filterSerie);
     }
-    if (filterTurma) {
+    if (filterTurma && filterTurma !== 'all') {
       result = result.filter(u => u.turma === filterTurma);
     }
-    if (filterCasa) {
+    if (filterCasa && filterCasa !== 'all') {
       result = result.filter(u => u.casa === filterCasa);
     }
 
@@ -177,7 +184,7 @@ const AdminUsers = () => {
     });
 
     return result;
-  }, [users, searchTerm, filterSerie, filterTurma, filterCasa]);
+  }, [users, searchTerm, filterSerie, filterTurma, filterCasa, filterInstitution]);
 
   // Export to PDF
   const exportToPDF = () => {
@@ -307,6 +314,13 @@ const AdminUsers = () => {
     setFilterSerie('');
     setFilterTurma('');
     setFilterCasa('');
+    setFilterInstitution('');
+  };
+
+  // Handle suggestion click
+  const handleSuggestionClick = (user: UserProfile) => {
+    setSearchTerm(user.full_name || '');
+    setShowSuggestions(false);
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -680,102 +694,142 @@ aluno2@email.com,Senha456,Outro Aluno,Nome da Instituição,7º ano,B,Musical`;
           <CardTitle className="text-white">Usuários Cadastrados</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Search and Filters */}
-          <div className="flex flex-col lg:flex-row gap-4 mb-6">
-            {/* Search Field */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-              <Input
-                placeholder="Pesquisar por nome ou instituição..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30"
-              />
-            </div>
+          {/* Search Field - Full Width with Suggestions */}
+          <div className="relative mb-4">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+            <Input
+              placeholder="Pesquisar por nome ou instituição..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setShowSuggestions(e.target.value.length > 0);
+              }}
+              onFocus={() => setShowSuggestions(searchTerm.length > 0)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              className="pl-12 py-3 h-12 text-base bg-white/5 border-white/10 text-white placeholder:text-white/40 w-full"
+            />
+            
+            {/* Suggestions Dropdown */}
+            {showSuggestions && searchTerm && filteredAndSortedUsers.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-white/10 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                {filteredAndSortedUsers.slice(0, 8).map(user => (
+                  <button
+                    key={user.id}
+                    className="w-full px-4 py-3 text-left text-white hover:bg-white/10 flex items-center gap-3 border-b border-white/5 last:border-b-0"
+                    onMouseDown={() => handleSuggestionClick(user)}
+                  >
+                    <User className="w-5 h-5 text-white/40 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{user.full_name || 'Sem nome'}</p>
+                      <p className="text-xs text-white/40 truncate">
+                        {user.institution || 'Sem instituição'} • {user.serie || '-'} • Turma {user.turma || '-'}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-            {/* Filters */}
-            <div className="flex flex-wrap gap-2">
-              <Select value={filterSerie} onValueChange={setFilterSerie}>
-                <SelectTrigger className="w-[130px] bg-white/5 border-white/10 text-white">
-                  <SelectValue placeholder="Série" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-900 border-white/10">
-                  <SelectItem value="all" className="text-white hover:bg-white/10">Todas</SelectItem>
-                  {serieOptions.map((serie) => (
-                    <SelectItem key={serie} value={serie} className="text-white hover:bg-white/10">
-                      {serie}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* Filters Row */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <Select value={filterInstitution} onValueChange={setFilterInstitution}>
+              <SelectTrigger className="w-[200px] bg-white/5 border-white/10 text-white">
+                <SelectValue placeholder="Instituição" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border-white/10">
+                <SelectItem value="all" className="text-white hover:bg-white/10">Todas</SelectItem>
+                {institutions.map((inst) => (
+                  <SelectItem key={inst.id} value={inst.name} className="text-white hover:bg-white/10">
+                    {inst.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-              <Select value={filterTurma} onValueChange={setFilterTurma}>
-                <SelectTrigger className="w-[130px] bg-white/5 border-white/10 text-white">
-                  <SelectValue placeholder="Turma" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-900 border-white/10">
-                  <SelectItem value="all" className="text-white hover:bg-white/10">Todas</SelectItem>
-                  {turmaOptions.map((turma) => (
-                    <SelectItem key={turma} value={turma} className="text-white hover:bg-white/10">
-                      Turma {turma}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <Select value={filterSerie} onValueChange={setFilterSerie}>
+              <SelectTrigger className="w-[130px] bg-white/5 border-white/10 text-white">
+                <SelectValue placeholder="Série" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border-white/10">
+                <SelectItem value="all" className="text-white hover:bg-white/10">Todas</SelectItem>
+                {serieOptions.map((serie) => (
+                  <SelectItem key={serie} value={serie} className="text-white hover:bg-white/10">
+                    {serie}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-              <Select value={filterCasa} onValueChange={setFilterCasa}>
-                <SelectTrigger className="w-[180px] bg-white/5 border-white/10 text-white">
-                  <SelectValue placeholder="Casa" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-900 border-white/10">
-                  <SelectItem value="all" className="text-white hover:bg-white/10">Todas</SelectItem>
-                  {casaOptions.map((casa) => (
-                    <SelectItem key={casa} value={casa} className="text-white hover:bg-white/10">
-                      {casa}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <Select value={filterTurma} onValueChange={setFilterTurma}>
+              <SelectTrigger className="w-[130px] bg-white/5 border-white/10 text-white">
+                <SelectValue placeholder="Turma" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border-white/10">
+                <SelectItem value="all" className="text-white hover:bg-white/10">Todas</SelectItem>
+                {turmaOptions.map((turma) => (
+                  <SelectItem key={turma} value={turma} className="text-white hover:bg-white/10">
+                    Turma {turma}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-              {(searchTerm || filterSerie || filterTurma || filterCasa) && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={clearFilters}
-                  className="text-white/60 hover:text-white hover:bg-white/10"
-                  title="Limpar filtros"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              )}
+            <Select value={filterCasa} onValueChange={setFilterCasa}>
+              <SelectTrigger className="w-[180px] bg-white/5 border-white/10 text-white">
+                <SelectValue placeholder="Casa" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border-white/10">
+                <SelectItem value="all" className="text-white hover:bg-white/10">Todas</SelectItem>
+                {casaOptions.map((casa) => (
+                  <SelectItem key={casa} value={casa} className="text-white hover:bg-white/10">
+                    {casa}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
+            {(searchTerm || filterSerie || filterTurma || filterCasa || filterInstitution) && (
               <Button
-                onClick={() => setIsHelpDialogOpen(true)}
-                variant="outline"
-                className="gap-2 bg-black border-white/20 text-white hover:bg-gray-900"
+                variant="ghost"
+                size="icon"
+                onClick={clearFilters}
+                className="text-white/60 hover:text-white hover:bg-white/10"
+                title="Limpar filtros"
               >
-                <HelpCircle className="w-4 h-4" />
-                Instruções CSV
+                <X className="w-4 h-4" />
               </Button>
+            )}
+          </div>
 
-              <Button
-                onClick={() => setIsImportDialogOpen(true)}
-                variant="outline"
-                className="gap-2 bg-black border-white/20 text-white hover:bg-gray-900"
-              >
-                <Upload className="w-4 h-4" />
-                Importar CSV
-              </Button>
+          {/* Action Buttons Row */}
+          <div className="flex flex-wrap gap-2 mb-6">
+            <Button
+              onClick={() => setIsHelpDialogOpen(true)}
+              variant="outline"
+              className="gap-2 bg-black border-white/20 text-white hover:bg-gray-900"
+            >
+              <HelpCircle className="w-4 h-4" />
+              Instruções CSV
+            </Button>
 
-              <Button
-                onClick={exportToPDF}
-                variant="outline"
-                className="gap-2 bg-black border-white/20 text-white hover:bg-gray-900"
-              >
-                <FileDown className="w-4 h-4" />
-                Exportar PDF
-              </Button>
-            </div>
+            <Button
+              onClick={() => setIsImportDialogOpen(true)}
+              variant="outline"
+              className="gap-2 bg-black border-white/20 text-white hover:bg-gray-900"
+            >
+              <Upload className="w-4 h-4" />
+              Importar CSV
+            </Button>
+
+            <Button
+              onClick={exportToPDF}
+              variant="outline"
+              className="gap-2 bg-black border-white/20 text-white hover:bg-gray-900"
+            >
+              <FileDown className="w-4 h-4" />
+              Exportar PDF
+            </Button>
           </div>
 
           {/* Results count */}
