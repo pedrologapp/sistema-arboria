@@ -540,7 +540,7 @@ const AdminUsers = () => {
               <Button
                 onClick={exportToPDF}
                 variant="outline"
-                className="gap-2 border-white/20 text-white hover:bg-white/10"
+                className="gap-2 bg-black border-white/20 text-white hover:bg-gray-900"
               >
                 <FileDown className="w-4 h-4" />
                 Exportar PDF
