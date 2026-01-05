@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.get-user-email]
 verify_jwt = false
+
+[functions.admin-recovery]
+verify_jwt = false
