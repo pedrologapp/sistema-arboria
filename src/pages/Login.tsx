@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Building2, Lock, Eye, EyeOff, ArrowLeft, Mail } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const { user, isAdmin, signIn, isLoading: authLoading, adminCheckComplete } = useAuth();
@@ -48,8 +49,11 @@ const Login = () => {
 
     setIsLoading(true);
 
+    // Normalize email to prevent login issues from whitespace/case
+    const normalizedEmail = email.trim().toLowerCase();
+
     try {
-      const { error } = await signIn(email, senha);
+      const { error } = await signIn(normalizedEmail, senha);
 
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
@@ -194,12 +198,27 @@ const Login = () => {
                   Lembrar-me
                 </Label>
               </div>
-              <a
-                href="#"
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!email) {
+                    toast.error('Digite seu email para recuperar a senha');
+                    return;
+                  }
+                  const { error } = await supabase.auth.resetPasswordForEmail(
+                    email.trim().toLowerCase(),
+                    { redirectTo: `${window.location.origin}/redefinir-senha` }
+                  );
+                  if (error) {
+                    toast.error('Erro ao enviar email de recuperação');
+                  } else {
+                    toast.success('Email de recuperação enviado! Verifique sua caixa de entrada.');
+                  }
+                }}
                 className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
               >
                 Esqueci minha senha
-              </a>
+              </button>
             </div>
 
             {/* Botão Entrar */}
