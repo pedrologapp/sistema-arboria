@@ -9,8 +9,8 @@ const corsHeaders = {
 
 interface ImportUser {
   email: string;
-  senha: string;
-  nome_completo: string;
+  nome: string;
+  sobrenome: string;
   instituicao: string;
   serie?: string;
   turma?: string;
@@ -21,6 +21,17 @@ interface ImportError {
   line: number;
   email: string;
   error: string;
+}
+
+// Normalize surname to create password: remove accents, apostrophes, spaces, lowercase
+function normalizeSobrenome(sobrenome: string): string {
+  return sobrenome
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[''`]/g, '') // Remove apostrophes
+    .replace(/\s+/g, '') // Remove spaces
+    .toLowerCase()
+    .trim();
 }
 
 serve(async (req) => {
@@ -118,16 +129,12 @@ serve(async (req) => {
           errors.push({ line: lineNumber, email: user.email || '', error: 'Email é obrigatório' });
           continue;
         }
-        if (!user.senha || !user.senha.trim()) {
-          errors.push({ line: lineNumber, email: user.email, error: 'Senha é obrigatória' });
+        if (!user.nome || !user.nome.trim()) {
+          errors.push({ line: lineNumber, email: user.email, error: 'Nome é obrigatório' });
           continue;
         }
-        if (user.senha.length < 6) {
-          errors.push({ line: lineNumber, email: user.email, error: 'Senha deve ter no mínimo 6 caracteres' });
-          continue;
-        }
-        if (!user.nome_completo || !user.nome_completo.trim()) {
-          errors.push({ line: lineNumber, email: user.email, error: 'Nome completo é obrigatório' });
+        if (!user.sobrenome || !user.sobrenome.trim()) {
+          errors.push({ line: lineNumber, email: user.email, error: 'Sobrenome é obrigatório' });
           continue;
         }
         if (!user.instituicao || !user.instituicao.trim()) {
@@ -142,17 +149,31 @@ serve(async (req) => {
           continue;
         }
 
+        // Generate password from surname
+        const normalizedSobrenome = normalizeSobrenome(user.sobrenome);
+        const password = normalizedSobrenome + '123';
+        const fullName = `${user.nome.trim()} ${user.sobrenome.trim()}`;
+
+        // Validate password length
+        if (password.length < 6) {
+          errors.push({ line: lineNumber, email: user.email, error: 'Sobrenome muito curto para gerar senha válida (mínimo 3 letras)' });
+          continue;
+        }
+
         // Create the user using admin API
         const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
           email: user.email.trim(),
-          password: user.senha,
+          password,
           email_confirm: true,
           user_metadata: {
-            full_name: user.nome_completo.trim(),
+            nome: user.nome.trim(),
+            sobrenome: user.sobrenome.trim(),
+            full_name: fullName,
             institution_id: institutionId,
             serie: user.serie?.trim() || null,
             turma: user.turma?.trim() || null,
-            casa: user.casa?.trim() || null
+            casa: user.casa?.trim() || null,
+            must_change_password: true
           }
         });
 
@@ -168,10 +189,15 @@ serve(async (req) => {
         await supabaseAdmin
           .from('profiles')
           .update({ 
+            nome: user.nome.trim(),
+            sobrenome: user.sobrenome.trim(),
+            full_name: fullName,
             institution_id: institutionId,
+            institution: user.instituicao.trim(),
             serie: user.serie?.trim() || null,
             turma: user.turma?.trim() || null,
-            casa: user.casa?.trim() || null
+            casa: user.casa?.trim() || null,
+            must_change_password: true
           })
           .eq('id', newUser.user.id);
 
@@ -192,14 +218,14 @@ serve(async (req) => {
               subject: 'Sua conta foi criada - Bem-vindo(a)!',
               html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                  <h1 style="color: #333; border-bottom: 2px solid #4f46e5; padding-bottom: 10px;">Olá, ${user.nome_completo}!</h1>
+                  <h1 style="color: #333; border-bottom: 2px solid #4f46e5; padding-bottom: 10px;">Olá, ${fullName}!</h1>
                   
                   <p style="font-size: 16px; color: #555;">Sua conta foi criada com sucesso em nosso sistema.</p>
                   
                   <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
                     <h3 style="margin-top: 0; color: #333;">📧 Seus dados de acesso:</h3>
                     <p style="margin: 8px 0;"><strong>Email:</strong> ${user.email}</p>
-                    <p style="margin: 8px 0;"><strong>Senha temporária:</strong> ${user.senha}</p>
+                    <p style="margin: 8px 0;"><strong>Senha temporária:</strong> ${password}</p>
                     <p style="margin: 8px 0;"><strong>Instituição:</strong> ${user.instituicao}</p>
                     <p style="margin: 8px 0;"><strong>Série:</strong> ${user.serie || 'Não informada'}</p>
                     <p style="margin: 8px 0;"><strong>Turma:</strong> ${user.turma || 'Não informada'}</p>
@@ -210,12 +236,12 @@ serve(async (req) => {
                   <ol style="color: #555; line-height: 1.8;">
                     <li>Acesse o sistema através do link de login</li>
                     <li>Use o email e senha informados acima</li>
-                    <li>Após o primeiro login, recomendamos fortemente que você altere sua senha</li>
+                    <li>No primeiro acesso, você será obrigado a criar uma nova senha</li>
                   </ol>
                   
                   <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
                     <p style="margin: 0; color: #856404;">
-                      <strong>⚠️ Importante:</strong> Por segurança, recomendamos que você altere sua senha no primeiro acesso.
+                      <strong>⚠️ Importante:</strong> Você deverá alterar sua senha no primeiro acesso.
                     </p>
                   </div>
                   

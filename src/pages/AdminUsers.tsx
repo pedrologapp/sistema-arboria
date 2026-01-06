@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Plus, Mail, Lock, User, Building2, GraduationCap, Users, Home, Search, FileDown, Pencil, X, Upload, HelpCircle, Download, AlertTriangle } from 'lucide-react';
+import { Plus, Mail, User, Building2, GraduationCap, Users, Home, Search, FileDown, Pencil, X, Upload, HelpCircle, Download, AlertTriangle, RotateCcw, Eye, EyeOff } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
@@ -15,6 +15,8 @@ import autoTable from 'jspdf-autotable';
 interface UserProfile {
   id: string;
   full_name: string | null;
+  nome: string | null;
+  sobrenome: string | null;
   institution: string | null;
   institution_id: string | null;
   serie: string | null;
@@ -31,12 +33,23 @@ interface Institution {
 
 interface ImportUser {
   email: string;
-  senha: string;
-  nome_completo: string;
+  nome: string;
+  sobrenome: string;
   instituicao: string;
   serie?: string;
   turma?: string;
   casa?: string;
+}
+
+// Normalize surname to create password preview
+function normalizeSobrenome(sobrenome: string): string {
+  return sobrenome
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[''`]/g, '')
+    .replace(/\s+/g, '')
+    .toLowerCase()
+    .trim();
 }
 
 const serieOptions = ['6º ano', '7º ano', '8º ano', '9º ano'];
@@ -57,13 +70,14 @@ const AdminUsers = () => {
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserPassword, setNewUserPassword] = useState('');
-  const [newUserFullName, setNewUserFullName] = useState('');
+  const [newUserNome, setNewUserNome] = useState('');
+  const [newUserSobrenome, setNewUserSobrenome] = useState('');
   const [newUserInstitutionId, setNewUserInstitutionId] = useState('');
   const [newUserSerie, setNewUserSerie] = useState('');
   const [newUserTurma, setNewUserTurma] = useState('');
   const [newUserCasa, setNewUserCasa] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPasswordPreview, setShowPasswordPreview] = useState(false);
 
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -77,7 +91,8 @@ const AdminUsers = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [editEmail, setEditEmail] = useState('');
-  const [editFullName, setEditFullName] = useState('');
+  const [editNome, setEditNome] = useState('');
+  const [editSobrenome, setEditSobrenome] = useState('');
   const [editInstitutionId, setEditInstitutionId] = useState('');
   const [editSerie, setEditSerie] = useState('');
   const [editTurma, setEditTurma] = useState('');
@@ -86,6 +101,7 @@ const AdminUsers = () => {
   const [currentEmail, setCurrentEmail] = useState('');
   const [showEmailChange, setShowEmailChange] = useState(false);
   const [isLoadingEmail, setIsLoadingEmail] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   // Import states
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -100,7 +116,6 @@ const AdminUsers = () => {
   }, []);
 
   const fetchUsers = async () => {
-    // Primeiro, buscar IDs dos administradores para excluí-los da lista
     const { data: adminRoles } = await supabase
       .from('user_roles')
       .select('user_id')
@@ -108,7 +123,6 @@ const AdminUsers = () => {
     
     const adminIds = adminRoles?.map(r => r.user_id) || [];
     
-    // Buscar profiles excluindo os administradores
     let query = supabase
       .from('profiles')
       .select('*')
@@ -139,25 +153,30 @@ const AdminUsers = () => {
     }
   };
 
+  // Preview password based on surname
+  const previewPassword = useMemo(() => {
+    if (!newUserSobrenome) return '';
+    return normalizeSobrenome(newUserSobrenome) + '123';
+  }, [newUserSobrenome]);
+
   // Filter and sort users
   const filteredAndSortedUsers = useMemo(() => {
     let result = [...users];
 
-    // Apply search filter
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase();
       result = result.filter(u =>
         u.full_name?.toLowerCase().includes(lowerSearch) ||
+        u.nome?.toLowerCase().includes(lowerSearch) ||
+        u.sobrenome?.toLowerCase().includes(lowerSearch) ||
         u.institution?.toLowerCase().includes(lowerSearch)
       );
     }
 
-    // Apply institution filter
     if (filterInstitution && filterInstitution !== 'all') {
       result = result.filter(u => u.institution === filterInstitution);
     }
 
-    // Apply filters
     if (filterSerie && filterSerie !== 'all') {
       result = result.filter(u => u.serie === filterSerie);
     }
@@ -168,7 +187,6 @@ const AdminUsers = () => {
       result = result.filter(u => u.casa === filterCasa);
     }
 
-    // Sort by serie, turma, casa, then name
     result.sort((a, b) => {
       const serieOrderA = serieOptions.indexOf(a.serie || '');
       const serieOrderB = serieOptions.indexOf(b.serie || '');
@@ -180,7 +198,9 @@ const AdminUsers = () => {
       const casaOrder = (a.casa || '').localeCompare(b.casa || '');
       if (casaOrder !== 0) return casaOrder;
 
-      return (a.full_name || '').localeCompare(b.full_name || '');
+      const nameA = a.full_name || `${a.nome || ''} ${a.sobrenome || ''}`;
+      const nameB = b.full_name || `${b.nome || ''} ${b.sobrenome || ''}`;
+      return nameA.localeCompare(nameB);
     });
 
     return result;
@@ -196,13 +216,16 @@ const AdminUsers = () => {
     doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 14, 30);
     doc.text(`Total: ${filteredAndSortedUsers.length} usuários`, 14, 36);
 
-    const tableData = filteredAndSortedUsers.map(user => [
-      user.full_name || 'Sem nome',
-      user.serie || '-',
-      user.turma || '-',
-      user.casa || '-',
-      user.institution || '-'
-    ]);
+    const tableData = filteredAndSortedUsers.map(user => {
+      const name = user.full_name || `${user.nome || ''} ${user.sobrenome || ''}`.trim() || 'Sem nome';
+      return [
+        name,
+        user.serie || '-',
+        user.turma || '-',
+        user.casa || '-',
+        user.institution || '-'
+      ];
+    });
 
     autoTable(doc, {
       head: [['Nome', 'Série', 'Turma', 'Casa', 'Instituição']],
@@ -219,7 +242,7 @@ const AdminUsers = () => {
   // Helper function to get missing fields
   const getMissingFields = (user: UserProfile): string[] => {
     const missing: string[] = [];
-    if (!user.full_name) missing.push('Nome');
+    if (!user.full_name && !user.nome && !user.sobrenome) missing.push('Nome');
     if (!user.institution) missing.push('Instituição');
     if (!user.serie) missing.push('Série');
     if (!user.turma) missing.push('Turma');
@@ -227,11 +250,21 @@ const AdminUsers = () => {
     return missing;
   };
 
+  // Get display name
+  const getDisplayName = (user: UserProfile): string => {
+    if (user.full_name) return user.full_name;
+    if (user.nome && user.sobrenome) return `${user.nome} ${user.sobrenome}`;
+    if (user.nome) return user.nome;
+    if (user.sobrenome) return user.sobrenome;
+    return 'Sem nome';
+  };
+
   // Open edit dialog and fetch current email
   const openEditDialog = async (user: UserProfile) => {
     setEditingUser(user);
     setEditEmail('');
-    setEditFullName(user.full_name || '');
+    setEditNome(user.nome || '');
+    setEditSobrenome(user.sobrenome || '');
     setEditInstitutionId(user.institution_id || '');
     setEditSerie(user.serie || '');
     setEditTurma(user.turma || '');
@@ -240,7 +273,6 @@ const AdminUsers = () => {
     setCurrentEmail('');
     setIsEditDialogOpen(true);
     
-    // Fetch current email
     setIsLoadingEmail(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -277,7 +309,8 @@ const AdminUsers = () => {
         body: {
           userId: editingUser.id,
           email: editEmail || undefined,
-          fullName: editFullName,
+          nome: editNome,
+          sobrenome: editSobrenome,
           institutionId: editInstitutionId,
           serie: editSerie,
           turma: editTurma,
@@ -308,6 +341,45 @@ const AdminUsers = () => {
     }
   };
 
+  // Handle reset password
+  const handleResetPassword = async () => {
+    if (!editingUser) return;
+
+    setIsResettingPassword(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { data, error } = await supabase.functions.invoke('reset-user-password', {
+        body: { userId: editingUser.id },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`
+        }
+      });
+
+      if (error) {
+        console.error('Error resetting password:', error);
+        toast.error(error.message || 'Erro ao resetar senha');
+        return;
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      toast.success(`Senha resetada para: ${data.newPassword}`, {
+        duration: 10000,
+        description: 'O usuário precisará trocar a senha no próximo login.'
+      });
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      toast.error('Erro ao resetar senha');
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   // Clear all filters
   const clearFilters = () => {
     setSearchTerm('');
@@ -319,14 +391,13 @@ const AdminUsers = () => {
 
   // Handle suggestion click
   const handleSuggestionClick = (user: UserProfile) => {
-    setSearchTerm(user.full_name || '');
+    setSearchTerm(getDisplayName(user));
     setShowSuggestions(false);
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate required fields
     if (!newUserInstitutionId) {
       toast.error('Por favor, selecione uma instituição');
       return;
@@ -343,16 +414,23 @@ const AdminUsers = () => {
       toast.error('Por favor, selecione a casa');
       return;
     }
+    if (!newUserNome.trim()) {
+      toast.error('Por favor, informe o nome');
+      return;
+    }
+    if (!newUserSobrenome.trim()) {
+      toast.error('Por favor, informe o sobrenome');
+      return;
+    }
 
     setIsLoading(true);
 
     try {
-      // Use edge function to create user without affecting admin session
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
           email: newUserEmail,
-          password: newUserPassword,
-          fullName: newUserFullName,
+          nome: newUserNome.trim(),
+          sobrenome: newUserSobrenome.trim(),
           institutionId: newUserInstitutionId,
           role: 'user',
           serie: newUserSerie,
@@ -372,10 +450,13 @@ const AdminUsers = () => {
         return;
       }
 
-      toast.success('Usuário criado com sucesso!');
+      toast.success(`Usuário criado! Senha: ${data.generatedPassword}`, {
+        duration: 10000,
+        description: 'O usuário precisará trocar a senha no primeiro login.'
+      });
       setNewUserEmail('');
-      setNewUserPassword('');
-      setNewUserFullName('');
+      setNewUserNome('');
+      setNewUserSobrenome('');
       setNewUserInstitutionId('');
       setNewUserSerie('');
       setNewUserTurma('');
@@ -398,23 +479,20 @@ const AdminUsers = () => {
       return [];
     }
 
-    // Auto-detect separator - Brazilian Excel uses semicolon
     const firstLine = lines[0];
     const separator = firstLine.includes(';') ? ';' : ',';
     
     console.log('CSV separator detected:', separator);
     console.log('First line:', firstLine);
 
-    // Parse headers - remove quotes, BOM, and normalize
     const headers = firstLine
-      .replace(/^\uFEFF/, '') // Remove BOM
+      .replace(/^\uFEFF/, '')
       .split(separator)
       .map(h => h.trim().toLowerCase().replace(/[\r\n]/g, '').replace(/"/g, ''));
     
     console.log('Headers found:', headers);
 
-    // Validate required headers
-    const requiredHeaders = ['email', 'senha', 'nome_completo', 'instituicao'];
+    const requiredHeaders = ['email', 'nome', 'sobrenome', 'instituicao'];
     const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
     
     if (missingHeaders.length > 0) {
@@ -425,15 +503,14 @@ const AdminUsers = () => {
     const users = lines.slice(1)
       .filter(line => line.trim())
       .map((line, index) => {
-        // Handle quoted values that may contain the separator
         const values = line
           .split(separator)
           .map(v => v.trim().replace(/[\r\n]/g, '').replace(/"/g, ''));
         
         const user: ImportUser = {
           email: values[headers.indexOf('email')] || '',
-          senha: values[headers.indexOf('senha')] || '',
-          nome_completo: values[headers.indexOf('nome_completo')] || '',
+          nome: values[headers.indexOf('nome')] || '',
+          sobrenome: values[headers.indexOf('sobrenome')] || '',
           instituicao: values[headers.indexOf('instituicao')] || '',
           serie: values[headers.indexOf('serie')] || undefined,
           turma: values[headers.indexOf('turma')] || undefined,
@@ -517,9 +594,9 @@ const AdminUsers = () => {
 
   // Download CSV template
   const downloadTemplate = () => {
-    const template = `email,senha,nome_completo,instituicao,serie,turma,casa
-exemplo@email.com,Senha123,Nome Completo do Aluno,Nome da Instituição,6º ano,A,Linguística
-aluno2@email.com,Senha456,Outro Aluno,Nome da Instituição,7º ano,B,Musical`;
+    const template = `email,nome,sobrenome,instituicao,serie,turma,casa
+exemplo@email.com,João,Silva,Nome da Instituição,6º ano,A,Linguística
+aluno2@email.com,Maria,Santos,Nome da Instituição,7º ano,B,Musical`;
     
     const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -570,37 +647,55 @@ aluno2@email.com,Senha456,Outro Aluno,Nome da Instituição,7º ano,B,Musical`;
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-white/80">Senha</Label>
+                <Label htmlFor="nome" className="text-white/80">Nome</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                   <Input
-                    id="password"
-                    type="password"
-                    placeholder="Senha segura"
-                    value={newUserPassword}
-                    onChange={(e) => setNewUserPassword(e.target.value)}
+                    id="nome"
+                    type="text"
+                    placeholder="Nome"
+                    value={newUserNome}
+                    onChange={(e) => setNewUserNome(e.target.value)}
                     required
-                    minLength={6}
                     className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="fullName" className="text-white/80">Nome Completo</Label>
+                <Label htmlFor="sobrenome" className="text-white/80">Sobrenome</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                   <Input
-                    id="fullName"
+                    id="sobrenome"
                     type="text"
-                    placeholder="Nome do usuário"
-                    value={newUserFullName}
-                    onChange={(e) => setNewUserFullName(e.target.value)}
+                    placeholder="Sobrenome"
+                    value={newUserSobrenome}
+                    onChange={(e) => setNewUserSobrenome(e.target.value)}
                     required
                     className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30"
                   />
                 </div>
               </div>
+
+              {/* Password Preview */}
+              {newUserSobrenome && (
+                <div className="md:col-span-2 lg:col-span-3">
+                  <div className="flex items-center gap-2 p-3 bg-green-500/10 rounded-lg border border-green-500/30">
+                    <span className="text-green-300 text-sm">Senha gerada automaticamente:</span>
+                    <code className="px-2 py-1 bg-black/30 rounded text-green-400 font-mono">
+                      {showPasswordPreview ? previewPassword : '••••••••'}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordPreview(!showPasswordPreview)}
+                      className="text-green-400 hover:text-green-300"
+                    >
+                      {showPasswordPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="institution" className="text-white/80">Instituição</Label>
@@ -694,7 +789,7 @@ aluno2@email.com,Senha456,Outro Aluno,Nome da Instituição,7º ano,B,Musical`;
           <CardTitle className="text-white">Usuários Cadastrados</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Search Field - Full Width with Suggestions */}
+          {/* Search Field */}
           <div className="relative mb-4">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
             <Input
@@ -709,7 +804,6 @@ aluno2@email.com,Senha456,Outro Aluno,Nome da Instituição,7º ano,B,Musical`;
               className="pl-12 py-3 h-12 text-base bg-white/5 border-white/10 text-white placeholder:text-white/40 w-full"
             />
             
-            {/* Suggestions Dropdown */}
             {showSuggestions && searchTerm && filteredAndSortedUsers.length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-white/10 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
                 {filteredAndSortedUsers.slice(0, 8).map(user => (
@@ -720,7 +814,7 @@ aluno2@email.com,Senha456,Outro Aluno,Nome da Instituição,7º ano,B,Musical`;
                   >
                     <User className="w-5 h-5 text-white/40 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{user.full_name || 'Sem nome'}</p>
+                      <p className="text-sm font-medium truncate">{getDisplayName(user)}</p>
                       <p className="text-xs text-white/40 truncate">
                         {user.institution || 'Sem instituição'} • {user.serie || '-'} • Turma {user.turma || '-'}
                       </p>
@@ -855,7 +949,7 @@ aluno2@email.com,Senha456,Outro Aluno,Nome da Instituição,7º ano,B,Musical`;
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <p className="text-white font-medium">
-                          {userProfile.full_name || 'Sem nome'}
+                          {getDisplayName(userProfile)}
                         </p>
                         {missingFields.length > 0 && (
                           <div 
@@ -891,11 +985,6 @@ aluno2@email.com,Senha456,Outro Aluno,Nome da Instituição,7º ano,B,Musical`;
                           {userProfile.casa}
                         </span>
                       )}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-white/40 text-sm">
-                        {new Date(userProfile.created_at).toLocaleDateString('pt-BR')}
-                      </div>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -973,18 +1062,35 @@ aluno2@email.com,Senha456,Outro Aluno,Nome da Instituição,7º ano,B,Musical`;
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="editFullName" className="text-white/80">Nome Completo</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                <Input
-                  id="editFullName"
-                  type="text"
-                  placeholder="Nome do usuário"
-                  value={editFullName}
-                  onChange={(e) => setEditFullName(e.target.value)}
-                  className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30"
-                />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editNome" className="text-white/80">Nome</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                  <Input
+                    id="editNome"
+                    type="text"
+                    placeholder="Nome"
+                    value={editNome}
+                    onChange={(e) => setEditNome(e.target.value)}
+                    className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="editSobrenome" className="text-white/80">Sobrenome</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                  <Input
+                    id="editSobrenome"
+                    type="text"
+                    placeholder="Sobrenome"
+                    value={editSobrenome}
+                    onChange={(e) => setEditSobrenome(e.target.value)}
+                    className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30"
+                  />
+                </div>
               </div>
             </div>
 
@@ -1053,6 +1159,23 @@ aluno2@email.com,Senha456,Outro Aluno,Nome da Instituição,7º ano,B,Musical`;
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Reset Password Button */}
+            <div className="pt-2 border-t border-white/10">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleResetPassword}
+                disabled={isResettingPassword}
+                className="w-full gap-2 border-amber-500/50 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300"
+              >
+                <RotateCcw className="w-4 h-4" />
+                {isResettingPassword ? 'Resetando...' : 'Resetar Senha (sobrenome+123)'}
+              </Button>
+              <p className="text-white/40 text-xs mt-2 text-center">
+                A senha será redefinida para o sobrenome do usuário + "123"
+              </p>
+            </div>
           </div>
 
           <DialogFooter>
@@ -1084,7 +1207,7 @@ aluno2@email.com,Senha456,Outro Aluno,Nome da Instituição,7º ano,B,Musical`;
             <div>
               <h4 className="text-white font-semibold mb-2">Formato do Arquivo CSV:</h4>
               <p className="text-white/70 text-sm mb-3">
-                O arquivo deve conter as seguintes colunas separadas por vírgula:
+                O arquivo deve conter as seguintes colunas separadas por vírgula ou ponto e vírgula:
               </p>
               
               <div className="overflow-x-auto">
@@ -1103,14 +1226,14 @@ aluno2@email.com,Senha456,Outro Aluno,Nome da Instituição,7º ano,B,Musical`;
                       <td className="py-2 px-3">Email válido</td>
                     </tr>
                     <tr className="border-b border-white/10">
-                      <td className="py-2 px-3 font-mono text-blue-300">senha</td>
+                      <td className="py-2 px-3 font-mono text-blue-300">nome</td>
                       <td className="py-2 px-3 text-center text-green-400">✓ Sim</td>
-                      <td className="py-2 px-3">Mínimo 6 caracteres</td>
+                      <td className="py-2 px-3">Primeiro nome do usuário</td>
                     </tr>
                     <tr className="border-b border-white/10">
-                      <td className="py-2 px-3 font-mono text-blue-300">nome_completo</td>
+                      <td className="py-2 px-3 font-mono text-blue-300">sobrenome</td>
                       <td className="py-2 px-3 text-center text-green-400">✓ Sim</td>
-                      <td className="py-2 px-3">Nome do usuário</td>
+                      <td className="py-2 px-3">Sobrenome (usado para gerar senha)</td>
                     </tr>
                     <tr className="border-b border-white/10">
                       <td className="py-2 px-3 font-mono text-blue-300">instituicao</td>
@@ -1137,6 +1260,17 @@ aluno2@email.com,Senha456,Outro Aluno,Nome da Instituição,7º ano,B,Musical`;
               </div>
             </div>
 
+            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+              <h4 className="text-green-300 font-semibold mb-2">🔐 Senha Automática:</h4>
+              <p className="text-green-200/80 text-sm">
+                A senha é gerada automaticamente a partir do <strong>sobrenome</strong> do usuário + "123".
+                <br />
+                Exemplo: Sobrenome "Silva" → Senha: <code className="px-1 bg-black/30 rounded">silva123</code>
+                <br />
+                Acentos e caracteres especiais são removidos automaticamente.
+              </p>
+            </div>
+
             <div>
               <h4 className="text-white font-semibold mb-2">Casas (Inteligências) Disponíveis:</h4>
               <div className="flex flex-wrap gap-2">
@@ -1151,10 +1285,10 @@ aluno2@email.com,Senha456,Outro Aluno,Nome da Instituição,7º ano,B,Musical`;
             <div>
               <h4 className="text-white font-semibold mb-2">Exemplo de CSV:</h4>
               <pre className="bg-black/50 p-4 rounded-lg text-sm overflow-x-auto text-green-300 font-mono">
-{`email,senha,nome_completo,instituicao,serie,turma,casa
-joao@email.com,Senha123,João Silva,Escola Municipal ABC,6º ano,A,Linguística
-maria@email.com,Senha456,Maria Santos,Escola Municipal ABC,7º ano,B,Musical
-pedro@email.com,Senha789,Pedro Oliveira,Escola Municipal ABC,8º ano,C,Naturalista`}
+{`email,nome,sobrenome,instituicao,serie,turma,casa
+joao@email.com,João,Silva,Escola Municipal ABC,6º ano,A,Linguística
+maria@email.com,Maria,Santos,Escola Municipal ABC,7º ano,B,Musical
+pedro@email.com,Pedro,Oliveira,Escola Municipal ABC,8º ano,C,Naturalista`}
               </pre>
             </div>
 
@@ -1162,8 +1296,7 @@ pedro@email.com,Senha789,Pedro Oliveira,Escola Municipal ABC,8º ano,C,Naturalis
               <h4 className="text-yellow-300 font-semibold mb-2">⚠️ Importante:</h4>
               <ul className="text-yellow-200/80 text-sm space-y-1 list-disc list-inside">
                 <li>O nome da instituição deve ser exatamente igual ao cadastrado no sistema</li>
-                <li>Cada usuário receberá um email com suas credenciais de acesso</li>
-                <li>Senhas devem ter no mínimo 6 caracteres</li>
+                <li>Os usuários precisarão trocar a senha no primeiro acesso</li>
                 <li>Use UTF-8 para caracteres especiais (acentos)</li>
               </ul>
             </div>

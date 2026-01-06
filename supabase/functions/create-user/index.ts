@@ -7,6 +7,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Normalize surname to create password: remove accents, apostrophes, spaces, lowercase
+function normalizeSobrenome(sobrenome: string): string {
+  return sobrenome
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[''`]/g, '') // Remove apostrophes
+    .replace(/\s+/g, '') // Remove spaces
+    .toLowerCase()
+    .trim();
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -64,17 +75,24 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { email, password, fullName, institutionId, role, serie, turma, casa } = await req.json();
+    const { email, nome, sobrenome, institutionId, role, serie, turma, casa } = await req.json();
 
     console.log('Creating user with email:', email);
 
     // Validate required fields
-    if (!email || !password || !fullName) {
-      return new Response(JSON.stringify({ error: 'Email, senha e nome completo são obrigatórios' }), {
+    if (!email || !nome || !sobrenome) {
+      return new Response(JSON.stringify({ error: 'Email, nome e sobrenome são obrigatórios' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Generate password from surname
+    const normalizedSobrenome = normalizeSobrenome(sobrenome);
+    const password = normalizedSobrenome + '123';
+    const fullName = `${nome.trim()} ${sobrenome.trim()}`;
+
+    console.log('Generated password for user (base):', normalizedSobrenome);
 
     // Fetch institution name if provided
     let institutionName = 'Não definida';
@@ -96,11 +114,14 @@ serve(async (req) => {
       password,
       email_confirm: true, // Auto-confirm the email
       user_metadata: {
+        nome: nome.trim(),
+        sobrenome: sobrenome.trim(),
         full_name: fullName,
         institution_id: institutionId || null,
         serie: serie || null,
         turma: turma || null,
-        casa: casa || null
+        casa: casa || null,
+        must_change_password: true
       }
     });
 
@@ -118,10 +139,15 @@ serve(async (req) => {
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .update({ 
+        nome: nome.trim(),
+        sobrenome: sobrenome.trim(),
+        full_name: fullName,
         institution_id: institutionId || null,
+        institution: institutionName !== 'Não definida' ? institutionName : null,
         serie: serie || null,
         turma: turma || null,
-        casa: casa || null
+        casa: casa || null,
+        must_change_password: true
       })
       .eq('id', newUser.user.id);
 
@@ -175,12 +201,12 @@ serve(async (req) => {
               <ol style="color: #555; line-height: 1.8;">
                 <li>Acesse o sistema através do link de login</li>
                 <li>Use o email e senha informados acima</li>
-                <li>Após o primeiro login, recomendamos fortemente que você altere sua senha</li>
+                <li>No primeiro acesso, você será obrigado a criar uma nova senha</li>
               </ol>
               
               <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
                 <p style="margin: 0; color: #856404;">
-                  <strong>⚠️ Importante:</strong> Por segurança, recomendamos que você altere sua senha no primeiro acesso.
+                  <strong>⚠️ Importante:</strong> Você deverá alterar sua senha no primeiro acesso.
                 </p>
               </div>
               
@@ -209,8 +235,11 @@ serve(async (req) => {
       user: {
         id: newUser.user.id,
         email: newUser.user.email,
+        nome: nome.trim(),
+        sobrenome: sobrenome.trim(),
         fullName,
-        role: userRole
+        role: userRole,
+        generatedPassword: password
       }
     }), {
       status: 200,
