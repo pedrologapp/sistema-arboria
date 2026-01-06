@@ -43,7 +43,10 @@ export type Database = {
           id: string
           institution: string | null
           institution_id: string | null
+          must_change_password: boolean | null
+          nome: string | null
           serie: string | null
+          sobrenome: string | null
           turma: string | null
           updated_at: string
         }
@@ -54,7 +57,10 @@ export type Database = {
           id: string
           institution?: string | null
           institution_id?: string | null
+          must_change_password?: boolean | null
+          nome?: string | null
           serie?: string | null
+          sobrenome?: string | null
           turma?: string | null
           updated_at?: string
         }
@@ -65,7 +71,10 @@ export type Database = {
           id?: string
           institution?: string | null
           institution_id?: string | null
+          must_change_password?: boolean | null
+          nome?: string | null
           serie?: string | null
+          sobrenome?: string | null
           turma?: string | null
           updated_at?: string
         }

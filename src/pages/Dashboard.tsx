@@ -4,17 +4,21 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, Home, User } from 'lucide-react';
+import { LogOut, Home, User, Loader2 } from 'lucide-react';
 
 interface Profile {
   full_name: string | null;
+  nome: string | null;
+  sobrenome: string | null;
   institution: string | null;
+  must_change_password: boolean | null;
 }
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [isCheckingPassword, setIsCheckingPassword] = useState(true);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -22,22 +26,42 @@ const Dashboard = () => {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('full_name, institution')
+        .select('full_name, nome, sobrenome, institution, must_change_password')
         .eq('id', user.id)
         .maybeSingle();
 
       if (!error && data) {
         setProfile(data);
+        
+        // Redirect to password change if required
+        if (data.must_change_password) {
+          navigate('/alterar-senha');
+          return;
+        }
       }
+      
+      setIsCheckingPassword(false);
     };
 
     fetchProfile();
-  }, [user]);
+  }, [user, navigate]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
   };
+
+  // Show loading while checking password requirement
+  if (isCheckingPassword) {
+    return (
+      <div className="min-h-screen w-full bg-black flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-white animate-spin" />
+      </div>
+    );
+  }
+
+  const displayName = profile?.full_name || 
+    (profile?.nome && profile?.sobrenome ? `${profile.nome} ${profile.sobrenome}` : 'Usuário');
 
   return (
     <div className="min-h-screen w-full bg-black relative">
@@ -46,7 +70,7 @@ const Dashboard = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white">
-              Bem-vindo, {profile?.full_name || 'Usuário'}!
+              Bem-vindo, {displayName}!
             </h1>
             <p className="text-white/60 mt-1">{profile?.institution || 'Sua casa te espera'}</p>
           </div>
@@ -71,7 +95,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-lg font-medium text-white">
-                {profile?.full_name || 'Sem nome'}
+                {displayName}
               </div>
               <p className="text-white/60 text-sm">{user?.email}</p>
             </CardContent>

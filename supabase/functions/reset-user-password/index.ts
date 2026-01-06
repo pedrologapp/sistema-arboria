@@ -6,6 +6,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Normalize surname to create password: remove accents, apostrophes, spaces, lowercase
+function normalizeSobrenome(sobrenome: string): string {
+  return sobrenome
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[''`]/g, '') // Remove apostrophes
+    .replace(/\s+/g, '') // Remove spaces
+    .toLowerCase()
+    .trim();
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -53,13 +64,13 @@ serve(async (req) => {
     if (roleError || !roleData) {
       console.error("User is not an admin:", roleError);
       return new Response(
-        JSON.stringify({ error: "Apenas administradores podem atualizar usuários" }),
+        JSON.stringify({ error: "Apenas administradores podem resetar senhas" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Get the request body
-    const { userId, email, nome, sobrenome, institutionId, serie, turma, casa } = await req.json();
+    const { userId } = await req.json();
 
     if (!userId) {
       return new Response(
@@ -68,8 +79,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("Updating user:", userId);
-    console.log("New data:", { email, nome, sobrenome, institutionId, serie, turma, casa });
+    console.log("Resetting password for user:", userId);
 
     // Create admin client for privileged operations
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
@@ -79,74 +89,65 @@ serve(async (req) => {
       },
     });
 
-    // Update email in auth.users if provided
-    if (email) {
-      console.log("Updating email to:", email);
-      const { error: emailError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-        email: email,
-      });
+    // Get user's profile to get sobrenome
+    const { data: profile, error: profileFetchError } = await supabaseAdmin
+      .from("profiles")
+      .select("sobrenome")
+      .eq("id", userId)
+      .single();
 
-      if (emailError) {
-        console.error("Error updating email:", emailError);
-        return new Response(
-          JSON.stringify({ error: `Erro ao atualizar email: ${emailError.message}` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+    if (profileFetchError || !profile) {
+      console.error("Error fetching profile:", profileFetchError);
+      return new Response(
+        JSON.stringify({ error: "Usuário não encontrado" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Get institution name if institutionId is provided
-    let institutionName = null;
-    if (institutionId) {
-      const { data: institutionData } = await supabaseAdmin
-        .from("institutions")
-        .select("name")
-        .eq("id", institutionId)
-        .single();
-      
-      if (institutionData) {
-        institutionName = institutionData.name;
-      }
+    if (!profile.sobrenome) {
+      return new Response(
+        JSON.stringify({ error: "Usuário não possui sobrenome cadastrado" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Build full_name from nome and sobrenome if both are provided
-    let fullName: string | undefined;
-    if (nome !== undefined && sobrenome !== undefined) {
-      fullName = `${nome.trim()} ${sobrenome.trim()}`;
+    // Generate new password from surname
+    const normalizedSobrenome = normalizeSobrenome(profile.sobrenome);
+    const newPassword = normalizedSobrenome + '123';
+
+    console.log("New password base:", normalizedSobrenome);
+
+    // Update password in auth.users
+    const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      password: newPassword,
+    });
+
+    if (passwordError) {
+      console.error("Error updating password:", passwordError);
+      return new Response(
+        JSON.stringify({ error: `Erro ao resetar senha: ${passwordError.message}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Update profile data
-    const updateData: Record<string, unknown> = {};
-    if (nome !== undefined) updateData.nome = nome.trim();
-    if (sobrenome !== undefined) updateData.sobrenome = sobrenome.trim();
-    if (fullName !== undefined) updateData.full_name = fullName;
-    if (institutionId !== undefined) {
-      updateData.institution_id = institutionId;
-      updateData.institution = institutionName;
-    }
-    if (serie !== undefined) updateData.serie = serie;
-    if (turma !== undefined) updateData.turma = turma;
-    if (casa !== undefined) updateData.casa = casa;
+    // Update profile to require password change
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .update({ must_change_password: true })
+      .eq("id", userId);
 
-    if (Object.keys(updateData).length > 0) {
-      console.log("Updating profile with:", updateData);
-      const { error: profileError } = await supabaseAdmin
-        .from("profiles")
-        .update(updateData)
-        .eq("id", userId);
-
-      if (profileError) {
-        console.error("Error updating profile:", profileError);
-        return new Response(
-          JSON.stringify({ error: `Erro ao atualizar perfil: ${profileError.message}` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+    if (profileError) {
+      console.error("Error updating profile:", profileError);
+      // Don't fail - password was already reset
     }
 
-    console.log("User updated successfully");
+    console.log("Password reset successfully for user:", userId);
     return new Response(
-      JSON.stringify({ success: true, message: "Usuário atualizado com sucesso" }),
+      JSON.stringify({ 
+        success: true, 
+        message: "Senha resetada com sucesso",
+        newPassword 
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

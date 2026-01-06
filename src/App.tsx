@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Setup from "./pages/Setup";
 import Dashboard from "./pages/Dashboard";
+import AlterarSenha from "./pages/AlterarSenha";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
 import AdminSettings from "./pages/AdminSettings";
@@ -32,6 +33,11 @@ const App = () => (
             <Route path="/setup" element={<Setup />} />
             <Route path="/recuperar-admin" element={<RecoverAdmin />} />
             <Route path="/redefinir-senha" element={<ResetPassword />} />
+            <Route path="/alterar-senha" element={
+              <ProtectedRoute>
+                <AlterarSenha />
+              </ProtectedRoute>
+            } />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
