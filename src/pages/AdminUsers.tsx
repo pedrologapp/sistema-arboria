@@ -24,6 +24,7 @@ interface UserProfile {
   casa: string | null;
   created_at: string;
   email?: string;
+  must_change_password?: boolean;
 }
 
 interface Institution {
@@ -206,37 +207,85 @@ const AdminUsers = () => {
     return result;
   }, [users, searchTerm, filterSerie, filterTurma, filterCasa, filterInstitution]);
 
-  // Export to PDF
-  const exportToPDF = () => {
-    const doc = new jsPDF();
+  // Export to PDF with emails
+  const exportToPDF = async () => {
+    toast.info('Carregando dados para exportação...');
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data, error } = await supabase.functions.invoke('get-users-with-emails', {
+        headers: { Authorization: `Bearer ${session?.access_token}` }
+      });
 
-    doc.setFontSize(18);
-    doc.text('Relatório de Usuários', 14, 22);
-    doc.setFontSize(10);
-    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 14, 30);
-    doc.text(`Total: ${filteredAndSortedUsers.length} usuários`, 14, 36);
+      if (error || !data?.users) {
+        console.error('Error fetching users with emails:', error);
+        toast.error('Erro ao carregar dados para exportação');
+        return;
+      }
 
-    const tableData = filteredAndSortedUsers.map(user => {
-      const name = user.full_name || `${user.nome || ''} ${user.sobrenome || ''}`.trim() || 'Sem nome';
-      return [
-        name,
-        user.serie || '-',
-        user.turma || '-',
-        user.casa || '-',
-        user.institution || '-'
-      ];
-    });
+      const usersWithEmails = data.users as UserProfile[];
+      
+      // Apply current filters
+      let filtered = usersWithEmails;
+      if (searchTerm) {
+        const lowerSearch = searchTerm.toLowerCase();
+        filtered = filtered.filter(u =>
+          u.full_name?.toLowerCase().includes(lowerSearch) ||
+          u.nome?.toLowerCase().includes(lowerSearch) ||
+          u.sobrenome?.toLowerCase().includes(lowerSearch)
+        );
+      }
+      if (filterInstitution && filterInstitution !== 'all') {
+        filtered = filtered.filter(u => u.institution === filterInstitution);
+      }
+      if (filterSerie && filterSerie !== 'all') {
+        filtered = filtered.filter(u => u.serie === filterSerie);
+      }
+      if (filterTurma && filterTurma !== 'all') {
+        filtered = filtered.filter(u => u.turma === filterTurma);
+      }
+      if (filterCasa && filterCasa !== 'all') {
+        filtered = filtered.filter(u => u.casa === filterCasa);
+      }
 
-    autoTable(doc, {
-      head: [['Nome', 'Série', 'Turma', 'Casa', 'Instituição']],
-      body: tableData,
-      startY: 42,
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [79, 70, 229] }
-    });
+      const doc = new jsPDF({ orientation: 'landscape' });
 
-    doc.save('usuarios.pdf');
-    toast.success('PDF exportado com sucesso!');
+      doc.setFontSize(18);
+      doc.text('Relatório de Usuários', 14, 22);
+      doc.setFontSize(10);
+      doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 14, 30);
+      doc.text(`Total: ${filtered.length} usuários`, 14, 36);
+
+      const tableData = filtered.map(user => {
+        const name = user.full_name || `${user.nome || ''} ${user.sobrenome || ''}`.trim() || 'Sem nome';
+        const senhaRef = user.sobrenome ? normalizeSobrenome(user.sobrenome) + '123' : 'N/A';
+        const status = user.must_change_password === false ? 'Trocou senha' : 'Senha padrão';
+        return [
+          name,
+          user.email || '-',
+          user.serie || '-',
+          user.turma || '-',
+          user.casa || '-',
+          user.institution || '-',
+          senhaRef,
+          status
+        ];
+      });
+
+      autoTable(doc, {
+        head: [['Nome', 'Email', 'Série', 'Turma', 'Casa', 'Instituição', 'Senha Ref', 'Status']],
+        body: tableData,
+        startY: 42,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [79, 70, 229] }
+      });
+
+      doc.save('usuarios.pdf');
+      toast.success('PDF exportado com sucesso!');
+    } catch (err) {
+      console.error('Error exporting PDF:', err);
+      toast.error('Erro ao exportar PDF');
+    }
   };
 
   // Helper function to get missing fields
