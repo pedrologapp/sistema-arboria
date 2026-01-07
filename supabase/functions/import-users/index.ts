@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -114,10 +113,6 @@ Deno.serve(async (req: Request) => {
     const errors: ImportError[] = [];
     let successCount = 0;
 
-    // Get Resend API key for sending emails
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    const resend = resendApiKey ? new Resend(resendApiKey) : null;
-
     for (let i = 0; i < users.length; i++) {
       const user = users[i];
       const lineNumber = i + 2; // +2 because of header row and 0-indexing
@@ -207,58 +202,6 @@ Deno.serve(async (req: Request) => {
             user_id: newUser.user.id,
             role: 'user'
           });
-
-        // Send welcome email
-        if (resend) {
-          try {
-            await resend.emails.send({
-              from: 'Sistema <onboarding@resend.dev>',
-              to: [user.email.trim()],
-              subject: 'Sua conta foi criada - Bem-vindo(a)!',
-              html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                  <h1 style="color: #333; border-bottom: 2px solid #4f46e5; padding-bottom: 10px;">Olá, ${fullName}!</h1>
-                  
-                  <p style="font-size: 16px; color: #555;">Sua conta foi criada com sucesso em nosso sistema.</p>
-                  
-                  <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <h3 style="margin-top: 0; color: #333;">📧 Seus dados de acesso:</h3>
-                    <p style="margin: 8px 0;"><strong>Email:</strong> ${user.email}</p>
-                    <p style="margin: 8px 0;"><strong>Senha temporária:</strong> ${password}</p>
-                    <p style="margin: 8px 0;"><strong>Instituição:</strong> ${user.instituicao}</p>
-                    <p style="margin: 8px 0;"><strong>Série:</strong> ${user.serie || 'Não informada'}</p>
-                    <p style="margin: 8px 0;"><strong>Turma:</strong> ${user.turma || 'Não informada'}</p>
-                    <p style="margin: 8px 0;"><strong>Casa:</strong> ${user.casa || 'Não informada'}</p>
-                  </div>
-                  
-                  <h3 style="color: #333;">📋 Como acessar:</h3>
-                  <ol style="color: #555; line-height: 1.8;">
-                    <li>Acesse o sistema através do link de login</li>
-                    <li>Use o email e senha informados acima</li>
-                    <li>No primeiro acesso, você será obrigado a criar uma nova senha</li>
-                  </ol>
-                  
-                  <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
-                    <p style="margin: 0; color: #856404;">
-                      <strong>⚠️ Importante:</strong> Você deverá alterar sua senha no primeiro acesso.
-                    </p>
-                  </div>
-                  
-                  <p style="color: #555;">Se você tiver alguma dúvida, entre em contato com o administrador do sistema.</p>
-                  
-                  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                  
-                  <p style="color: #999; font-size: 12px;">
-                    Este é um email automático, por favor não responda.
-                  </p>
-                </div>
-              `,
-            });
-          } catch (emailError) {
-            console.error(`Error sending email to ${user.email}:`, emailError);
-            // Don't fail the import if email fails
-          }
-        }
 
         successCount++;
       } catch (error) {
