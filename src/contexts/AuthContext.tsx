@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const checkAdminRole = async (userId: string) => {
     try {
-      // Verificar na tabela user_roles
+      // Verificar APENAS na tabela user_roles (seguro)
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
@@ -44,20 +44,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         .eq('role', 'admin')
         .maybeSingle();
 
-      if (roleData) return true;
-
-      // Verificar se instituição é "administrador"
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('institution')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (profileData?.institution?.toLowerCase() === 'administrador') {
-        return true;
-      }
-
-      return false;
+      return !!roleData;
     } catch (error) {
       console.error('Error checking admin role:', error);
       return false;
