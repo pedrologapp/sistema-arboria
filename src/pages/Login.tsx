@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Lock, Eye, EyeOff, ArrowLeft, Mail, HelpCircle } from "lucide-react";
+import { Lock, Eye, EyeOff, ArrowLeft, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -204,14 +204,6 @@ const Login = () => {
               >
                 Esqueci minha senha
               </button>
-            </div>
-
-            {/* Dica de senha padrão */}
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-white/5 border border-white/10">
-              <HelpCircle className="w-4 h-4 text-indigo-400 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-white/50">
-                <span className="text-white/70 font-medium">Primeiro acesso?</span> A senha padrão é seu sobrenome (sem acentos, minúsculo) + 123. Ex: silva123
-              </p>
             </div>
 
             {/* Botão Entrar */}
