@@ -53,22 +53,20 @@ function normalizeSobrenome(sobrenome: string): string {
     .trim();
 }
 
+interface Inteligencia {
+  id: number;
+  nome: string;
+  codigo: string;
+  emoji: string | null;
+}
+
 const serieOptions = ['6º ano', '7º ano', '8º ano', '9º ano'];
 const turmaOptions = ['A', 'B', 'C', 'D'];
-const casaOptions = [
-  'Linguística',
-  'Lógico-matemática',
-  'Musical',
-  'Espacial',
-  'Corporal-cinestésica',
-  'Interpessoal',
-  'Intrapessoal',
-  'Naturalista'
-];
 
 const AdminUsers = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [inteligencias, setInteligencias] = useState<Inteligencia[]>([]);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserNome, setNewUserNome] = useState('');
@@ -114,7 +112,19 @@ const AdminUsers = () => {
   useEffect(() => {
     fetchUsers();
     fetchInstitutions();
+    fetchInteligencias();
   }, []);
+
+  const fetchInteligencias = async () => {
+    const { data, error } = await supabase
+      .from('inteligencias')
+      .select('id, nome, codigo, emoji')
+      .order('ordem');
+
+    if (!error && data) {
+      setInteligencias(data);
+    }
+  };
 
   const fetchUsers = async () => {
     const { data: adminRoles } = await supabase
@@ -812,9 +822,9 @@ aluno2@email.com,Maria,Santos,Nome da Instituição,7º ano,B,Musical`;
                       <SelectValue placeholder="Selecione a casa" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-900 border-white/10">
-                      {casaOptions.map((casa) => (
-                        <SelectItem key={casa} value={casa} className="text-white hover:bg-white/10">
-                          {casa}
+                      {inteligencias.map((int) => (
+                        <SelectItem key={int.id} value={int.nome} className="text-white hover:bg-white/10">
+                          {int.emoji} {int.nome}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -924,9 +934,9 @@ aluno2@email.com,Maria,Santos,Nome da Instituição,7º ano,B,Musical`;
               </SelectTrigger>
               <SelectContent className="bg-gray-900 border-white/10">
                 <SelectItem value="all" className="text-white hover:bg-white/10">Todas</SelectItem>
-                {casaOptions.map((casa) => (
-                  <SelectItem key={casa} value={casa} className="text-white hover:bg-white/10">
-                    {casa}
+                {inteligencias.map((int) => (
+                  <SelectItem key={int.id} value={int.nome} className="text-white hover:bg-white/10">
+                    {int.emoji} {int.nome}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1200,9 +1210,9 @@ aluno2@email.com,Maria,Santos,Nome da Instituição,7º ano,B,Musical`;
                   <SelectValue placeholder="Selecione a casa" />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-900 border-white/10">
-                  {casaOptions.map((casa) => (
-                    <SelectItem key={casa} value={casa} className="text-white hover:bg-white/10">
-                      {casa}
+                  {inteligencias.map((int) => (
+                    <SelectItem key={int.id} value={int.nome} className="text-white hover:bg-white/10">
+                      {int.emoji} {int.nome}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1320,13 +1330,28 @@ aluno2@email.com,Maria,Santos,Nome da Instituição,7º ano,B,Musical`;
               </p>
             </div>
 
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+              <h4 className="text-blue-300 font-semibold mb-2">🤖 O que acontece automaticamente:</h4>
+              <ul className="text-blue-200/80 text-sm space-y-1 list-disc list-inside">
+                <li>A Casa (texto) é convertida para <code className="px-1 bg-black/30 rounded">casa_id</code></li>
+                <li>A turma é criada automaticamente se não existir (ex: "6º A")</li>
+                <li>O aluno é matriculado na turma correspondente</li>
+                <li>Todos os triggers são executados automaticamente</li>
+              </ul>
+            </div>
+
             <div>
               <h4 className="text-white font-semibold mb-2">Casas (Inteligências) Disponíveis:</h4>
-              <div className="flex flex-wrap gap-2">
-                {casaOptions.map(casa => (
-                  <span key={casa} className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full">
-                    {casa}
-                  </span>
+              <p className="text-white/60 text-sm mb-3">
+                Você pode usar o <strong>nome</strong> ou o <strong>código</strong> da casa:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {inteligencias.map(int => (
+                  <div key={int.id} className="flex items-center gap-2 px-3 py-2 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                    <span className="text-lg">{int.emoji}</span>
+                    <span className="text-purple-300 text-sm font-medium">{int.nome}</span>
+                    <code className="text-purple-400/70 text-xs ml-auto">({int.codigo})</code>
+                  </div>
                 ))}
               </div>
             </div>
@@ -1336,9 +1361,12 @@ aluno2@email.com,Maria,Santos,Nome da Instituição,7º ano,B,Musical`;
               <pre className="bg-black/50 p-4 rounded-lg text-sm overflow-x-auto text-green-300 font-mono">
 {`email,nome,sobrenome,instituicao,serie,turma,casa
 joao@email.com,João,Silva,Escola Municipal ABC,6º ano,A,Linguística
-maria@email.com,Maria,Santos,Escola Municipal ABC,7º ano,B,Musical
-pedro@email.com,Pedro,Oliveira,Escola Municipal ABC,8º ano,C,Naturalista`}
+maria@email.com,Maria,Santos,Escola Municipal ABC,7º ano,B,musical
+pedro@email.com,Pedro,Oliveira,Escola Municipal ABC,8º ano,C,naturalista`}
               </pre>
+              <p className="text-white/50 text-xs mt-2">
+                💡 Note que "musical" e "naturalista" (códigos) também funcionam!
+              </p>
             </div>
 
             <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
@@ -1347,6 +1375,8 @@ pedro@email.com,Pedro,Oliveira,Escola Municipal ABC,8º ano,C,Naturalista`}
                 <li>O nome da instituição deve ser exatamente igual ao cadastrado no sistema</li>
                 <li>Os usuários precisarão trocar a senha no primeiro acesso</li>
                 <li>Use UTF-8 para caracteres especiais (acentos)</li>
+                <li>Se série e turma estiverem preenchidos, a turma será criada automaticamente</li>
+                <li>O campo casa aceita nome ou código (ex: "Linguística" ou "linguistica")</li>
               </ul>
             </div>
           </div>
