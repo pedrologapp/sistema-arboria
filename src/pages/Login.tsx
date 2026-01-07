@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Building2, Lock, Eye, EyeOff, ArrowLeft, Mail } from "lucide-react";
+import { Lock, Eye, EyeOff, ArrowLeft, Mail, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,11 +13,11 @@ const Login = () => {
   const { user, isAdmin, signIn, isLoading: authLoading, adminCheckComplete } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
-  const [instituicao, setInstituicao] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [lembrarMe, setLembrarMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   // Load remembered email on mount
   useEffect(() => {
@@ -42,12 +42,19 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Prevent double submit
+    if (isSubmittingRef.current || isLoading) return;
+    
     if (!email || !senha) {
       toast.error('Por favor, preencha todos os campos');
       return;
     }
 
+    isSubmittingRef.current = true;
     setIsLoading(true);
+    
+    // Dismiss any previous toasts
+    toast.dismiss();
 
     // Normalize email to prevent login issues from whitespace/case
     const normalizedEmail = email.trim().toLowerCase();
@@ -57,7 +64,7 @@ const Login = () => {
 
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
-          toast.error('Email ou senha incorretos');
+          toast.error('Email ou senha incorretos. Primeira vez? A senha padrão é: sobrenome123 (ex: silva123)');
         } else if (error.message.includes('Email not confirmed')) {
           toast.error('Por favor, confirme seu email antes de fazer login');
         } else {
@@ -68,22 +75,18 @@ const Login = () => {
 
       // Save or remove email based on "remember me"
       if (lembrarMe) {
-        localStorage.setItem('rememberedEmail', email);
+        localStorage.setItem('rememberedEmail', normalizedEmail);
       } else {
         localStorage.removeItem('rememberedEmail');
       }
 
-      // Check if it's admin login
-      if (instituicao.toLowerCase() === 'administrador') {
-        toast.success('Bem-vindo, Administrador!');
-      } else {
-        toast.success('Login realizado com sucesso!');
-      }
+      toast.success('Login realizado com sucesso!');
     } catch (error) {
       console.error('Login error:', error);
       toast.error('Erro ao fazer login');
     } finally {
       setIsLoading(false);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -115,24 +118,6 @@ const Login = () => {
 
           {/* Formulário */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Instituição */}
-            <div className="space-y-2">
-              <Label htmlFor="instituicao" className="text-white/80 text-sm">
-                Instituição
-              </Label>
-              <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                <Input
-                  id="instituicao"
-                  type="text"
-                  placeholder="Nome da instituição (ou 'administrador')"
-                  value={instituicao}
-                  onChange={(e) => setInstituicao(e.target.value)}
-                  className="pl-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-indigo-500/20"
-                />
-              </div>
-            </div>
-
             {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email" className="text-white/80 text-sm">
@@ -221,6 +206,14 @@ const Login = () => {
               </button>
             </div>
 
+            {/* Dica de senha padrão */}
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-white/5 border border-white/10">
+              <HelpCircle className="w-4 h-4 text-indigo-400 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-white/50">
+                <span className="text-white/70 font-medium">Primeiro acesso?</span> A senha padrão é seu sobrenome (sem acentos, minúsculo) + 123. Ex: silva123
+              </p>
+            </div>
+
             {/* Botão Entrar */}
             <Button
               type="submit"
@@ -230,6 +223,16 @@ const Login = () => {
             >
               {isLoading ? 'Entrando...' : 'Entrar no Sistema'}
             </Button>
+
+            {/* Link para recuperação admin */}
+            <div className="text-center">
+              <Link
+                to="/recuperar-admin"
+                className="text-xs text-white/40 hover:text-white/60 transition-colors"
+              >
+                Acesso administrativo?
+              </Link>
+            </div>
           </form>
         </div>
       </div>
