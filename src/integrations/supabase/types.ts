@@ -68,6 +68,63 @@ export type Database = {
           },
         ]
       }
+      fases: {
+        Row: {
+          ano_letivo: number
+          ativo: boolean | null
+          created_at: string | null
+          data_fim: string
+          data_inicio: string
+          id: string
+          institution_id: string
+          inteligencia_id: number
+          numero_fase: number
+          semana_atual: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          ano_letivo: number
+          ativo?: boolean | null
+          created_at?: string | null
+          data_fim: string
+          data_inicio: string
+          id?: string
+          institution_id: string
+          inteligencia_id: number
+          numero_fase: number
+          semana_atual?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          ano_letivo?: number
+          ativo?: boolean | null
+          created_at?: string | null
+          data_fim?: string
+          data_inicio?: string
+          id?: string
+          institution_id?: string
+          inteligencia_id?: number
+          numero_fase?: number
+          semana_atual?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fases_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fases_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "inteligencias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       institution_settings: {
         Row: {
           ano_letivo_atual: number | null
@@ -316,6 +373,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sinais: {
+        Row: {
+          codigo: string
+          descricao: string | null
+          emoji: string
+          id: number
+          label_pt: string
+          ordem: number | null
+          peso_inteligencia: number | null
+          pilar: string
+          valencia: string
+        }
+        Insert: {
+          codigo: string
+          descricao?: string | null
+          emoji: string
+          id: number
+          label_pt: string
+          ordem?: number | null
+          peso_inteligencia?: number | null
+          pilar: string
+          valencia: string
+        }
+        Update: {
+          codigo?: string
+          descricao?: string | null
+          emoji?: string
+          id?: number
+          label_pt?: string
+          ordem?: number | null
+          peso_inteligencia?: number | null
+          pilar?: string
+          valencia?: string
+        }
+        Relationships: []
       }
       turmas: {
         Row: {
