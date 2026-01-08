@@ -60,6 +60,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "aluno_turma_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
             foreignKeyName: "aluno_turma_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
@@ -126,6 +133,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bonus_solicitacoes_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
             foreignKeyName: "bonus_solicitacoes_avaliado_por_fkey"
             columns: ["avaliado_por"]
             isOneToOne: false
@@ -133,11 +147,32 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bonus_solicitacoes_avaliado_por_fkey"
+            columns: ["avaliado_por"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
             foreignKeyName: "bonus_solicitacoes_casa_id_fkey"
             columns: ["casa_id"]
             isOneToOne: false
             referencedRelation: "inteligencias"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bonus_solicitacoes_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "bonus_solicitacoes_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
           },
           {
             foreignKeyName: "bonus_solicitacoes_institution_id_fkey"
@@ -154,11 +189,32 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bonus_solicitacoes_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "bonus_solicitacoes_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
+          },
+          {
             foreignKeyName: "bonus_solicitacoes_solicitado_por_fkey"
             columns: ["solicitado_por"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bonus_solicitacoes_solicitado_por_fkey"
+            columns: ["solicitado_por"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
           },
         ]
       }
@@ -264,11 +320,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "entregas_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
             foreignKeyName: "entregas_avaliado_por_fkey"
             columns: ["avaliado_por"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_avaliado_por_fkey"
+            columns: ["avaliado_por"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
           },
           {
             foreignKeyName: "entregas_missao_id_fkey"
@@ -333,6 +403,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inteligencias"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fases_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "fases_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
           },
         ]
       }
@@ -480,6 +564,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "inteligencia_evidencias_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
             foreignKeyName: "inteligencia_evidencias_entrega_id_fkey"
             columns: ["entrega_id"]
             isOneToOne: false
@@ -499,6 +590,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inteligencias"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inteligencia_evidencias_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "inteligencia_evidencias_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
           },
           {
             foreignKeyName: "inteligencia_evidencias_observacao_id_fkey"
@@ -549,11 +654,32 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "inteligencia_historico_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
             foreignKeyName: "inteligencia_historico_inteligencia_id_fkey"
             columns: ["inteligencia_id"]
             isOneToOne: false
             referencedRelation: "inteligencias"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inteligencia_historico_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "inteligencia_historico_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
           },
         ]
       }
@@ -600,11 +726,32 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "inteligencia_scores_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
             foreignKeyName: "inteligencia_scores_inteligencia_id_fkey"
             columns: ["inteligencia_id"]
             isOneToOne: false
             referencedRelation: "inteligencias"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inteligencia_scores_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "inteligencia_scores_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
           },
         ]
       }
@@ -664,6 +811,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missao_destinatarios_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
           },
           {
             foreignKeyName: "missao_destinatarios_missao_id_fkey"
@@ -753,11 +907,32 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "missoes_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "missoes_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
+          },
+          {
             foreignKeyName: "missoes_criado_por_fkey"
             columns: ["criado_por"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missoes_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
           },
           {
             foreignKeyName: "missoes_fase_id_fkey"
@@ -833,6 +1008,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "observacoes_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
             foreignKeyName: "observacoes_fase_id_fkey"
             columns: ["fase_id"]
             isOneToOne: false
@@ -854,6 +1036,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "observacoes_inteligencia_expressa_fkey"
+            columns: ["inteligencia_expressa"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "observacoes_inteligencia_expressa_fkey"
+            columns: ["inteligencia_expressa"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
+          },
+          {
             foreignKeyName: "observacoes_inteligencia_fase_fkey"
             columns: ["inteligencia_fase"]
             isOneToOne: false
@@ -861,11 +1057,32 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "observacoes_inteligencia_fase_fkey"
+            columns: ["inteligencia_fase"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "observacoes_inteligencia_fase_fkey"
+            columns: ["inteligencia_fase"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
+          },
+          {
             foreignKeyName: "observacoes_professor_id_fkey"
             columns: ["professor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "observacoes_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
           },
           {
             foreignKeyName: "observacoes_sinal_id_fkey"
@@ -935,6 +1152,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pontos_gerais_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
             foreignKeyName: "pontos_gerais_casa_id_fkey"
             columns: ["casa_id"]
             isOneToOne: false
@@ -942,11 +1166,32 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pontos_gerais_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "pontos_gerais_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
+          },
+          {
             foreignKeyName: "pontos_gerais_concedido_por_fkey"
             columns: ["concedido_por"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pontos_gerais_concedido_por_fkey"
+            columns: ["concedido_por"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
           },
           {
             foreignKeyName: "pontos_gerais_entrega_id_fkey"
@@ -1017,6 +1262,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "professor_casa_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "professor_casa_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
+          },
+          {
             foreignKeyName: "professor_casa_institution_id_fkey"
             columns: ["institution_id"]
             isOneToOne: false
@@ -1029,6 +1288,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professor_casa_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
           },
         ]
       }
@@ -1085,6 +1351,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inteligencias"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "profiles_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
           },
           {
             foreignKeyName: "profiles_institution_id_fkey"
@@ -1207,7 +1487,102 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      perfil_inteligencias_aluno: {
+        Row: {
+          aluno_id: string | null
+          ano_letivo: number | null
+          eh_casa_do_aluno: boolean | null
+          inteligencia_codigo: string | null
+          inteligencia_cor: string | null
+          inteligencia_emoji: string | null
+          inteligencia_id: number | null
+          inteligencia_nome: string | null
+          score_atual: number | null
+          total_evidencias: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inteligencia_scores_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inteligencia_scores_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+        ]
+      }
+      ranking_alunos_por_casa: {
+        Row: {
+          aluno_id: string | null
+          aluno_nome: string | null
+          ano_letivo: number | null
+          casa_emoji: string | null
+          casa_id: number | null
+          casa_nome: string | null
+          institution_id: string | null
+          missoes_completadas: number | null
+          posicao_na_casa: number | null
+          total_pontos: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "inteligencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "profiles_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
+          },
+          {
+            foreignKeyName: "profiles_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ranking_casas: {
+        Row: {
+          ano_letivo: number | null
+          casa_cor: string | null
+          casa_emoji: string | null
+          casa_id: number | null
+          casa_nome: string | null
+          institution_id: string | null
+          posicao: number | null
+          total_alunos_ativos: number | null
+          total_pontos: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pontos_gerais_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       ensure_turma_exists: {
