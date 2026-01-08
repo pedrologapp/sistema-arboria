@@ -68,6 +68,100 @@ export type Database = {
           },
         ]
       }
+      bonus_solicitacoes: {
+        Row: {
+          aluno_id: string | null
+          avaliado_por: string | null
+          casa_id: number | null
+          created_at: string | null
+          data_avaliacao: string | null
+          feedback_avaliador: string | null
+          id: string
+          institution_id: string
+          inteligencia_id: number | null
+          motivo: string
+          pontos: number
+          solicitado_por: string
+          status: string | null
+          tipo: string
+        }
+        Insert: {
+          aluno_id?: string | null
+          avaliado_por?: string | null
+          casa_id?: number | null
+          created_at?: string | null
+          data_avaliacao?: string | null
+          feedback_avaliador?: string | null
+          id?: string
+          institution_id: string
+          inteligencia_id?: number | null
+          motivo: string
+          pontos: number
+          solicitado_por: string
+          status?: string | null
+          tipo: string
+        }
+        Update: {
+          aluno_id?: string | null
+          avaliado_por?: string | null
+          casa_id?: number | null
+          created_at?: string | null
+          data_avaliacao?: string | null
+          feedback_avaliador?: string | null
+          id?: string
+          institution_id?: string
+          inteligencia_id?: number | null
+          motivo?: string
+          pontos?: number
+          solicitado_por?: string
+          status?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bonus_solicitacoes_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bonus_solicitacoes_avaliado_por_fkey"
+            columns: ["avaliado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bonus_solicitacoes_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "inteligencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bonus_solicitacoes_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bonus_solicitacoes_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "inteligencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bonus_solicitacoes_solicitado_por_fkey"
+            columns: ["solicitado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entrega_arquivos: {
         Row: {
           created_at: string | null
@@ -336,6 +430,183 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      inteligencia_evidencias: {
+        Row: {
+          aluno_id: string
+          ano_letivo: number
+          created_at: string | null
+          entrega_id: string | null
+          fase_id: string
+          id: string
+          inteligencia_id: number
+          observacao_id: string | null
+          peso: number
+          pontos: number
+          tipo: string
+        }
+        Insert: {
+          aluno_id: string
+          ano_letivo: number
+          created_at?: string | null
+          entrega_id?: string | null
+          fase_id: string
+          id?: string
+          inteligencia_id: number
+          observacao_id?: string | null
+          peso: number
+          pontos: number
+          tipo: string
+        }
+        Update: {
+          aluno_id?: string
+          ano_letivo?: number
+          created_at?: string | null
+          entrega_id?: string | null
+          fase_id?: string
+          id?: string
+          inteligencia_id?: number
+          observacao_id?: string | null
+          peso?: number
+          pontos?: number
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inteligencia_evidencias_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inteligencia_evidencias_entrega_id_fkey"
+            columns: ["entrega_id"]
+            isOneToOne: false
+            referencedRelation: "entregas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inteligencia_evidencias_fase_id_fkey"
+            columns: ["fase_id"]
+            isOneToOne: false
+            referencedRelation: "fases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inteligencia_evidencias_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "inteligencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inteligencia_evidencias_observacao_id_fkey"
+            columns: ["observacao_id"]
+            isOneToOne: false
+            referencedRelation: "observacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inteligencia_historico: {
+        Row: {
+          aluno_id: string
+          ano_letivo: number
+          created_at: string | null
+          fase_numero: number
+          id: string
+          inteligencia_id: number
+          score_apos_formula: number
+          score_fase: number
+        }
+        Insert: {
+          aluno_id: string
+          ano_letivo: number
+          created_at?: string | null
+          fase_numero: number
+          id?: string
+          inteligencia_id: number
+          score_apos_formula: number
+          score_fase: number
+        }
+        Update: {
+          aluno_id?: string
+          ano_letivo?: number
+          created_at?: string | null
+          fase_numero?: number
+          id?: string
+          inteligencia_id?: number
+          score_apos_formula?: number
+          score_fase?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inteligencia_historico_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inteligencia_historico_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "inteligencias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inteligencia_scores: {
+        Row: {
+          aluno_id: string
+          ano_letivo: number
+          fase_atual: number | null
+          id: string
+          inteligencia_id: number
+          score_atual: number
+          score_ultima_fase: number | null
+          total_evidencias: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          aluno_id: string
+          ano_letivo: number
+          fase_atual?: number | null
+          id?: string
+          inteligencia_id: number
+          score_atual?: number
+          score_ultima_fase?: number | null
+          total_evidencias?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          aluno_id?: string
+          ano_letivo?: number
+          fase_atual?: number | null
+          id?: string
+          inteligencia_id?: number
+          score_atual?: number
+          score_ultima_fase?: number | null
+          total_evidencias?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inteligencia_scores_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inteligencia_scores_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "inteligencias"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       inteligencias: {
         Row: {
@@ -608,6 +879,94 @@ export type Database = {
             columns: ["turma_id"]
             isOneToOne: false
             referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pontos_gerais: {
+        Row: {
+          aluno_id: string
+          ano_letivo: number
+          casa_id: number
+          concedido_por: string | null
+          created_at: string | null
+          descricao: string | null
+          entrega_id: string | null
+          id: string
+          institution_id: string
+          missao_id: string | null
+          pontos: number
+          tipo: string
+        }
+        Insert: {
+          aluno_id: string
+          ano_letivo: number
+          casa_id: number
+          concedido_por?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          entrega_id?: string | null
+          id?: string
+          institution_id: string
+          missao_id?: string | null
+          pontos: number
+          tipo: string
+        }
+        Update: {
+          aluno_id?: string
+          ano_letivo?: number
+          casa_id?: number
+          concedido_por?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          entrega_id?: string | null
+          id?: string
+          institution_id?: string
+          missao_id?: string | null
+          pontos?: number
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pontos_gerais_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pontos_gerais_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "inteligencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pontos_gerais_concedido_por_fkey"
+            columns: ["concedido_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pontos_gerais_entrega_id_fkey"
+            columns: ["entrega_id"]
+            isOneToOne: false
+            referencedRelation: "entregas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pontos_gerais_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pontos_gerais_missao_id_fkey"
+            columns: ["missao_id"]
+            isOneToOne: false
+            referencedRelation: "missoes"
             referencedColumns: ["id"]
           },
         ]
