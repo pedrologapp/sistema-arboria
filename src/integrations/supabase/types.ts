@@ -504,6 +504,114 @@ export type Database = {
           },
         ]
       }
+      observacoes: {
+        Row: {
+          aluno_id: string
+          created_at: string | null
+          data_observacao: string
+          fase_id: string
+          foi_cross_im: boolean | null
+          id: string
+          institution_id: string
+          inteligencia_expressa: number
+          inteligencia_fase: number
+          intensidade: string | null
+          observacao_texto: string | null
+          professor_id: string
+          sinal_id: number
+          turma_id: string
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string | null
+          data_observacao?: string
+          fase_id: string
+          foi_cross_im?: boolean | null
+          id?: string
+          institution_id: string
+          inteligencia_expressa: number
+          inteligencia_fase: number
+          intensidade?: string | null
+          observacao_texto?: string | null
+          professor_id: string
+          sinal_id: number
+          turma_id: string
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string | null
+          data_observacao?: string
+          fase_id?: string
+          foi_cross_im?: boolean | null
+          id?: string
+          institution_id?: string
+          inteligencia_expressa?: number
+          inteligencia_fase?: number
+          intensidade?: string | null
+          observacao_texto?: string | null
+          professor_id?: string
+          sinal_id?: number
+          turma_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "observacoes_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "observacoes_fase_id_fkey"
+            columns: ["fase_id"]
+            isOneToOne: false
+            referencedRelation: "fases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "observacoes_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "observacoes_inteligencia_expressa_fkey"
+            columns: ["inteligencia_expressa"]
+            isOneToOne: false
+            referencedRelation: "inteligencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "observacoes_inteligencia_fase_fkey"
+            columns: ["inteligencia_fase"]
+            isOneToOne: false
+            referencedRelation: "inteligencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "observacoes_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "observacoes_sinal_id_fkey"
+            columns: ["sinal_id"]
+            isOneToOne: false
+            referencedRelation: "sinais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "observacoes_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professor_casa: {
         Row: {
           ano_letivo: number
