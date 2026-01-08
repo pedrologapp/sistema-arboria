@@ -1375,6 +1375,99 @@ export type Database = {
           },
         ]
       }
+      score_ajustes_log: {
+        Row: {
+          ajustado_por: string
+          aluno_id: string
+          created_at: string | null
+          id: string
+          institution_id: string
+          inteligencia_id: number
+          motivo: string
+          score_anterior: number
+          score_novo: number
+        }
+        Insert: {
+          ajustado_por: string
+          aluno_id: string
+          created_at?: string | null
+          id?: string
+          institution_id: string
+          inteligencia_id: number
+          motivo: string
+          score_anterior: number
+          score_novo: number
+        }
+        Update: {
+          ajustado_por?: string
+          aluno_id?: string
+          created_at?: string | null
+          id?: string
+          institution_id?: string
+          inteligencia_id?: number
+          motivo?: string
+          score_anterior?: number
+          score_novo?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_ajustes_log_ajustado_por_fkey"
+            columns: ["ajustado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_ajustes_log_ajustado_por_fkey"
+            columns: ["ajustado_por"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
+            foreignKeyName: "score_ajustes_log_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_ajustes_log_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
+            foreignKeyName: "score_ajustes_log_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_ajustes_log_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "inteligencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_ajustes_log_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "score_ajustes_log_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
+          },
+        ]
+      }
       sinais: {
         Row: {
           codigo: string
