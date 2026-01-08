@@ -68,6 +68,123 @@ export type Database = {
           },
         ]
       }
+      entrega_arquivos: {
+        Row: {
+          created_at: string | null
+          entrega_id: string
+          id: string
+          nome_original: string
+          nome_storage: string
+          tamanho_bytes: number | null
+          tipo_arquivo: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          entrega_id: string
+          id?: string
+          nome_original: string
+          nome_storage: string
+          tamanho_bytes?: number | null
+          tipo_arquivo?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          entrega_id?: string
+          id?: string
+          nome_original?: string
+          nome_storage?: string
+          tamanho_bytes?: number | null
+          tipo_arquivo?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entrega_arquivos_entrega_id_fkey"
+            columns: ["entrega_id"]
+            isOneToOne: false
+            referencedRelation: "entregas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entregas: {
+        Row: {
+          aluno_id: string
+          avaliado_por: string | null
+          created_at: string | null
+          data_avaliacao: string | null
+          data_entrega: string | null
+          entregue_no_prazo: boolean | null
+          feedback_professor: string | null
+          id: string
+          missao_id: string
+          nota: number | null
+          numero_tentativa: number | null
+          pontos_concedidos: number | null
+          status: string | null
+          texto_resposta: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          aluno_id: string
+          avaliado_por?: string | null
+          created_at?: string | null
+          data_avaliacao?: string | null
+          data_entrega?: string | null
+          entregue_no_prazo?: boolean | null
+          feedback_professor?: string | null
+          id?: string
+          missao_id: string
+          nota?: number | null
+          numero_tentativa?: number | null
+          pontos_concedidos?: number | null
+          status?: string | null
+          texto_resposta?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          aluno_id?: string
+          avaliado_por?: string | null
+          created_at?: string | null
+          data_avaliacao?: string | null
+          data_entrega?: string | null
+          entregue_no_prazo?: boolean | null
+          feedback_professor?: string | null
+          id?: string
+          missao_id?: string
+          nota?: number | null
+          numero_tentativa?: number | null
+          pontos_concedidos?: number | null
+          status?: string | null
+          texto_resposta?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entregas_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_avaliado_por_fkey"
+            columns: ["avaliado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_missao_id_fkey"
+            columns: ["missao_id"]
+            isOneToOne: false
+            referencedRelation: "missoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fases: {
         Row: {
           ano_letivo: number
@@ -249,6 +366,143 @@ export type Database = {
           ordem?: number | null
         }
         Relationships: []
+      }
+      missao_destinatarios: {
+        Row: {
+          aluno_id: string
+          created_at: string | null
+          id: string
+          missao_id: string
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string | null
+          id?: string
+          missao_id: string
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string | null
+          id?: string
+          missao_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "missao_destinatarios_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missao_destinatarios_missao_id_fkey"
+            columns: ["missao_id"]
+            isOneToOne: false
+            referencedRelation: "missoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      missoes: {
+        Row: {
+          casa_id: number | null
+          criado_por: string
+          data_criacao: string | null
+          data_liberacao: string
+          data_prazo: string
+          descricao: string | null
+          fase_id: string | null
+          id: string
+          institution_id: string
+          instrucoes: string | null
+          para_todos_da_casa: boolean | null
+          permite_entrega_atrasada: boolean | null
+          pontos_base: number
+          requer_arquivo: boolean | null
+          requer_texto: boolean | null
+          serie_filtro: number | null
+          status: string | null
+          tipo: string
+          titulo: string
+          turma_filtro: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          casa_id?: number | null
+          criado_por: string
+          data_criacao?: string | null
+          data_liberacao: string
+          data_prazo: string
+          descricao?: string | null
+          fase_id?: string | null
+          id?: string
+          institution_id: string
+          instrucoes?: string | null
+          para_todos_da_casa?: boolean | null
+          permite_entrega_atrasada?: boolean | null
+          pontos_base?: number
+          requer_arquivo?: boolean | null
+          requer_texto?: boolean | null
+          serie_filtro?: number | null
+          status?: string | null
+          tipo?: string
+          titulo: string
+          turma_filtro?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          casa_id?: number | null
+          criado_por?: string
+          data_criacao?: string | null
+          data_liberacao?: string
+          data_prazo?: string
+          descricao?: string | null
+          fase_id?: string | null
+          id?: string
+          institution_id?: string
+          instrucoes?: string | null
+          para_todos_da_casa?: boolean | null
+          permite_entrega_atrasada?: boolean | null
+          pontos_base?: number
+          requer_arquivo?: boolean | null
+          requer_texto?: boolean | null
+          serie_filtro?: number | null
+          status?: string | null
+          tipo?: string
+          titulo?: string
+          turma_filtro?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "missoes_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "inteligencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missoes_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missoes_fase_id_fkey"
+            columns: ["fase_id"]
+            isOneToOne: false
+            referencedRelation: "fases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missoes_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       professor_casa: {
         Row: {
