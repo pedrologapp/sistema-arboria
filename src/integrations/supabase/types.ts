@@ -1941,6 +1941,7 @@ export type Database = {
           aluno_id: string | null
           ano_letivo: number | null
           eh_casa_do_aluno: boolean | null
+          inteligencia_brasao_url: string | null
           inteligencia_codigo: string | null
           inteligencia_cor: string | null
           inteligencia_emoji: string | null
