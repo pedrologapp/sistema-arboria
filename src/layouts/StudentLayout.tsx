@@ -29,7 +29,7 @@ const StudentLayoutContent = ({ children }: StudentLayoutProps) => {
       <StudentHeader />
       
       {/* Main content area with padding for header and nav */}
-      <main className="pt-14 pb-24 px-4 max-w-lg mx-auto">
+      <main className="pt-[72px] pb-24 px-4 max-w-lg mx-auto">
         {children}
       </main>
       
