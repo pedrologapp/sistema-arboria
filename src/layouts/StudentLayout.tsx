@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { StudentProvider, useStudent } from '@/contexts/StudentContext';
 import StudentHeader from '@/components/aluno/StudentHeader';
 import BottomNav from '@/components/aluno/BottomNav';
+import { useUpdateActivity } from '@/hooks/useUpdateActivity';
 
 interface StudentLayoutProps {
   children: ReactNode;
@@ -10,6 +11,9 @@ interface StudentLayoutProps {
 // This component is rendered INSIDE StudentProvider, so it can safely use useStudent
 const StudentLayoutContent = ({ children }: StudentLayoutProps) => {
   const { isLoading } = useStudent();
+  
+  // Atualizar última atividade do usuário
+  useUpdateActivity();
 
   // Show loading while context initializes
   if (isLoading) {

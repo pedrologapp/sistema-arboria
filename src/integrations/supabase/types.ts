@@ -1666,6 +1666,7 @@ export type Database = {
           serie: string | null
           sobrenome: string | null
           turma: string | null
+          ultima_atividade: string | null
           updated_at: string
         }
         Insert: {
@@ -1682,6 +1683,7 @@ export type Database = {
           serie?: string | null
           sobrenome?: string | null
           turma?: string | null
+          ultima_atividade?: string | null
           updated_at?: string
         }
         Update: {
@@ -1698,6 +1700,7 @@ export type Database = {
           serie?: string | null
           sobrenome?: string | null
           turma?: string | null
+          ultima_atividade?: string | null
           updated_at?: string
         }
         Relationships: [
