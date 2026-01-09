@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -591,8 +592,48 @@ const MissaoDetalhePage = () => {
         <h2 className="text-sm font-semibold text-white/60 flex items-center gap-2 pt-2">
           📋 INSTRUÇÕES
         </h2>
-        <div className="text-white/80 whitespace-pre-wrap leading-relaxed">
-          {missao.instrucoes || 'Siga as orientações do professor para completar esta missão.'}
+        <div className="prose prose-invert prose-sm max-w-none">
+          <ReactMarkdown
+            components={{
+              p: ({ children }) => (
+                <p className="text-white/80 mb-4 leading-relaxed">{children}</p>
+              ),
+              strong: ({ children }) => (
+                <strong className="text-white font-semibold">{children}</strong>
+              ),
+              em: ({ children }) => (
+                <em className="text-white/70 italic">{children}</em>
+              ),
+              ul: ({ children }) => (
+                <ul className="list-disc list-inside space-y-1 text-white/80 mb-4 ml-2">{children}</ul>
+              ),
+              ol: ({ children }) => (
+                <ol className="list-decimal list-inside space-y-1 text-white/80 mb-4 ml-2">{children}</ol>
+              ),
+              li: ({ children }) => (
+                <li className="text-white/80">{children}</li>
+              ),
+              hr: () => (
+                <hr className="border-white/10 my-4" />
+              ),
+              h1: ({ children }) => (
+                <h1 className="text-lg font-bold text-white mb-3">{children}</h1>
+              ),
+              h2: ({ children }) => (
+                <h2 className="text-base font-semibold text-white mb-2">{children}</h2>
+              ),
+              h3: ({ children }) => (
+                <h3 className="text-sm font-semibold text-white/90 mb-2">{children}</h3>
+              ),
+              blockquote: ({ children }) => (
+                <blockquote className="border-l-2 border-white/30 pl-4 italic text-white/70 my-4">
+                  {children}
+                </blockquote>
+              ),
+            }}
+          >
+            {missao.instrucoes || 'Siga as orientações do professor para completar esta missão.'}
+          </ReactMarkdown>
         </div>
       </motion.div>
 
