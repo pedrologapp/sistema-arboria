@@ -218,6 +218,74 @@ export type Database = {
           },
         ]
       }
+      canais_casa: {
+        Row: {
+          apenas_lideranca: boolean | null
+          casa_id: number
+          created_at: string | null
+          descricao: string | null
+          icone: string | null
+          id: string
+          institution_id: string
+          nome: string
+          ordem: number | null
+          tipo: string | null
+        }
+        Insert: {
+          apenas_lideranca?: boolean | null
+          casa_id: number
+          created_at?: string | null
+          descricao?: string | null
+          icone?: string | null
+          id?: string
+          institution_id: string
+          nome: string
+          ordem?: number | null
+          tipo?: string | null
+        }
+        Update: {
+          apenas_lideranca?: boolean | null
+          casa_id?: number
+          created_at?: string | null
+          descricao?: string | null
+          icone?: string | null
+          id?: string
+          institution_id?: string
+          nome?: string
+          ordem?: number | null
+          tipo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canais_casa_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "inteligencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canais_casa_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "canais_casa_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
+          },
+          {
+            foreignKeyName: "canais_casa_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cargos_casa: {
         Row: {
           aluno_id: string
@@ -311,6 +379,78 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ranking_alunos_por_casa"
             referencedColumns: ["aluno_id"]
+          },
+        ]
+      }
+      conversa_participantes: {
+        Row: {
+          conversa_id: string
+          id: string
+          ultima_leitura: string | null
+          usuario_id: string
+        }
+        Insert: {
+          conversa_id: string
+          id?: string
+          ultima_leitura?: string | null
+          usuario_id: string
+        }
+        Update: {
+          conversa_id?: string
+          id?: string
+          ultima_leitura?: string | null
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversa_participantes_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "conversas_privadas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversa_participantes_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversa_participantes_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+        ]
+      }
+      conversas_privadas: {
+        Row: {
+          created_at: string | null
+          id: string
+          institution_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          institution_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          institution_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversas_privadas_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -883,6 +1023,120 @@ export type Database = {
           ordem?: number | null
         }
         Relationships: []
+      }
+      mensagens_canal: {
+        Row: {
+          autor_id: string
+          canal_id: string
+          conteudo: string
+          created_at: string | null
+          editada: boolean | null
+          fixada: boolean | null
+          id: string
+          institution_id: string
+          tipo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          autor_id: string
+          canal_id: string
+          conteudo: string
+          created_at?: string | null
+          editada?: boolean | null
+          fixada?: boolean | null
+          id?: string
+          institution_id: string
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          autor_id?: string
+          canal_id?: string
+          conteudo?: string
+          created_at?: string | null
+          editada?: boolean | null
+          fixada?: boolean | null
+          id?: string
+          institution_id?: string
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensagens_canal_autor_id_fkey"
+            columns: ["autor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensagens_canal_autor_id_fkey"
+            columns: ["autor_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
+            foreignKeyName: "mensagens_canal_canal_id_fkey"
+            columns: ["canal_id"]
+            isOneToOne: false
+            referencedRelation: "canais_casa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensagens_canal_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mensagens_privadas: {
+        Row: {
+          autor_id: string
+          conteudo: string
+          conversa_id: string
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          autor_id: string
+          conteudo: string
+          conversa_id: string
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          autor_id?: string
+          conteudo?: string
+          conversa_id?: string
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensagens_privadas_autor_id_fkey"
+            columns: ["autor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensagens_privadas_autor_id_fkey"
+            columns: ["autor_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
+            foreignKeyName: "mensagens_privadas_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "conversas_privadas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       missao_destinatarios: {
         Row: {
