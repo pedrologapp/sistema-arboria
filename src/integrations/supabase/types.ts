@@ -1687,6 +1687,13 @@ export type Database = {
         }
         Returns: string
       }
+      fechar_fase: {
+        Args: { p_fase_id: string }
+        Returns: {
+          alunos_processados: number
+          fase_numero: number
+        }[]
+      }
       get_alunos_minha_casa: {
         Args: { p_serie?: number; p_turma_letra?: string }
         Returns: {
