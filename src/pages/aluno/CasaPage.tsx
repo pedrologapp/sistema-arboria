@@ -16,17 +16,6 @@ interface MembroComCargo {
   cargo: 'lider' | 'coordenador' | 'embaixador' | 'membro';
 }
 
-interface RankingCasa {
-  casa_id: number;
-  casa_nome: string;
-  casa_emoji: string | null;
-  casa_cor: string | null;
-  total_pontos: number;
-  posicao: number;
-  total_alunos_ativos: number;
-  brasao_url?: string | null;
-}
-
 // Descrições padrão para cada inteligência
 const descricoesPadrao: Record<string, string> = {
   'linguistica': 'Somos especialistas em palavras, comunicação e expressão. Nossa casa valoriza a arte de contar histórias, escrever e debater ideias com eloquência.',
@@ -40,16 +29,34 @@ const descricoesPadrao: Record<string, string> = {
 };
 
 const cargoConfig = {
-  lider: { emoji: '🦅', label: 'LÍDER', borderColor: '#F59E0B', bgColor: 'rgba(245, 158, 11, 0.1)' },
-  coordenador: { emoji: '⭐', label: 'COORDENADORES', borderColor: '#F59E0B', bgColor: 'rgba(245, 158, 11, 0.05)' },
-  embaixador: { emoji: '🌍', label: 'EMBAIXADOR', borderColor: '#06B6D4', bgColor: 'rgba(6, 182, 212, 0.05)' },
+  lider: { 
+    emoji: '🦅', 
+    label: 'LÍDER', 
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+    bgGradient: 'linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(245, 158, 11, 0.02))',
+    glowColor: 'rgba(245, 158, 11, 0.15)'
+  },
+  coordenador: { 
+    emoji: '⭐', 
+    label: 'COORDENADORES', 
+    borderColor: 'rgba(245, 158, 11, 0.2)',
+    bgGradient: 'linear-gradient(135deg, rgba(245, 158, 11, 0.05), transparent)',
+    glowColor: 'rgba(245, 158, 11, 0.08)'
+  },
+  embaixador: { 
+    emoji: '🌍', 
+    label: 'EMBAIXADOR', 
+    borderColor: 'rgba(6, 182, 212, 0.2)',
+    bgGradient: 'linear-gradient(135deg, rgba(6, 182, 212, 0.05), transparent)',
+    glowColor: 'rgba(6, 182, 212, 0.08)'
+  },
 };
 
 const CasaPage = () => {
   const { user } = useAuth();
   const { casa, casaColor, profile, isLoading: contextLoading, refreshData } = useStudent();
   const [membros, setMembros] = useState<MembroComCargo[]>([]);
-  const [rankingCasas, setRankingCasas] = useState<RankingCasa[]>([]);
+  const [pontosTotaisCasa, setPontosTotaisCasa] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -60,13 +67,14 @@ const CasaPage = () => {
     }
 
     try {
-      // Fetch ranking das casas, membros, cargos e inteligências em paralelo
-      const [rankingCasasRes, membrosRes, cargosRes, inteligenciasRes] = await Promise.all([
+      // Fetch ranking da própria casa, membros e cargos em paralelo
+      const [rankingCasaRes, membrosRes, cargosRes] = await Promise.all([
         supabase
           .from('ranking_casas')
-          .select('casa_id, casa_nome, casa_emoji, casa_cor, total_pontos, posicao, total_alunos_ativos')
+          .select('total_pontos')
+          .eq('casa_id', casa.id)
           .eq('institution_id', profile.institution_id)
-          .order('posicao', { ascending: true }),
+          .single(),
         supabase
           .from('ranking_alunos_por_casa')
           .select('aluno_id, aluno_nome, total_pontos, posicao_na_casa')
@@ -81,25 +89,12 @@ const CasaPage = () => {
           .eq('institution_id', profile.institution_id)
           .eq('ano_letivo', 2025)
           .eq('ativo', true),
-        supabase
-          .from('inteligencias')
-          .select('id, brasao_url'),
       ]);
 
-      if (rankingCasasRes.error) throw rankingCasasRes.error;
       if (membrosRes.error) throw membrosRes.error;
 
-      // Criar mapa de inteligências para brasões
-      const inteligenciasMap = Object.fromEntries(
-        inteligenciasRes.data?.map(i => [i.id, i.brasao_url]) || []
-      );
-
-      // Adicionar brasao_url ao ranking
-      const rankingComBrasao = (rankingCasasRes.data || []).map(r => ({
-        ...r,
-        brasao_url: inteligenciasMap[r.casa_id] || null
-      }));
-      setRankingCasas(rankingComBrasao);
+      // Set pontos totais da casa
+      setPontosTotaisCasa(rankingCasaRes.data?.total_pontos || 0);
 
       // Buscar avatars dos membros
       const alunoIds = membrosRes.data?.map(m => m.aluno_id).filter(Boolean) || [];
@@ -154,10 +149,9 @@ const CasaPage = () => {
   if (contextLoading || isLoading) {
     return (
       <div className="py-6 space-y-6">
-        <div className="h-48 bg-white/10 rounded-2xl animate-pulse" />
-        <div className="h-24 bg-white/10 rounded-xl animate-pulse" />
-        <div className="h-64 bg-white/10 rounded-xl animate-pulse" />
-        <div className="h-48 bg-white/10 rounded-xl animate-pulse" />
+        <div className="h-48 bg-white/5 rounded-2xl animate-pulse" />
+        <div className="h-24 bg-white/5 rounded-xl animate-pulse" />
+        <div className="h-48 bg-white/5 rounded-xl animate-pulse" />
       </div>
     );
   }
@@ -165,28 +159,24 @@ const CasaPage = () => {
   if (!casa) {
     return (
       <div className="py-6">
-        <div className="p-6 rounded-xl border border-white/10 bg-white/5 text-center">
+        <div 
+          className="p-6 rounded-2xl text-center"
+          style={{
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+          }}
+        >
           <p className="text-white/60">Você ainda não foi atribuído a uma casa.</p>
         </div>
       </div>
     );
   }
 
-  // Find my house in ranking
-  const myCasaRanking = rankingCasas.find(c => c.casa_id === casa.id);
-  const posicaoCasa = myCasaRanking?.posicao || 0;
-  const pontosTotaisCasa = myCasaRanking?.total_pontos || 0;
   const totalMembros = membros.length;
-
-  // Max points for progress bar calculation
-  const maxPontos = Math.max(...rankingCasas.map(c => c.total_pontos || 0), 1);
 
   // Get description
   const codigoNormalizado = casa.codigo?.toLowerCase().replace(/_/g, '-') || '';
   const descricao = casa.descricao || descricoesPadrao[codigoNormalizado] || 'Uma casa dedicada ao desenvolvimento desta inteligência única.';
-
-  // Ordinal suffix
-  const getOrdinalSuffix = (n: number) => n === 1 ? 'º' : 'º';
 
   // Separar membros por cargo
   const lider = membros.find(m => m.cargo === 'lider');
@@ -214,16 +204,15 @@ const CasaPage = () => {
         animate={{ opacity: 1, y: 0 }}
         className="p-8 rounded-2xl text-center relative overflow-hidden"
         style={{
-          background: `linear-gradient(180deg, ${casaColor}50 0%, ${casaColor}15 100%)`,
-          borderWidth: 1,
-          borderColor: `${casaColor}40`,
+          background: `linear-gradient(180deg, ${casaColor}25 0%, ${casaColor}08 100%)`,
+          border: `1px solid ${casaColor}20`,
         }}
       >
         {/* Background glow */}
         <div
-          className="absolute inset-0 opacity-20"
+          className="absolute inset-0 opacity-15"
           style={{
-            background: `radial-gradient(circle at 50% 0%, ${casaColor} 0%, transparent 70%)`,
+            background: `radial-gradient(circle at 50% 0%, ${casaColor} 0%, transparent 60%)`,
           }}
         />
 
@@ -241,21 +230,16 @@ const CasaPage = () => {
 
           {/* House Name */}
           <h1 className="text-2xl font-bold mb-1">Casa {casa.nome}</h1>
-          <p className="text-white/60 text-sm mb-4">{casa.codigo?.replace(/_/g, ' ')}</p>
+          <p className="text-white/50 text-sm mb-6">{casa.codigo?.replace(/_/g, ' ')}</p>
 
-          {/* Ranking Position */}
-          <div className="flex items-center justify-center gap-2 mb-2">
+          {/* Total Points - Destaque Principal */}
+          <div className="flex items-center justify-center gap-3">
             <Trophy className="w-5 h-5" style={{ color: casaColor }} />
-            <span className="text-lg font-medium">
-              {posicaoCasa}{getOrdinalSuffix(posicaoCasa)} lugar no ranking
+            <span className="text-3xl font-bold" style={{ color: casaColor }}>
+              {pontosTotaisCasa.toLocaleString('pt-BR')}
             </span>
+            <span className="text-white/40 text-sm">pontos da casa</span>
           </div>
-
-          {/* Total Points */}
-          <p className="text-3xl font-bold" style={{ color: casaColor }}>
-            {pontosTotaisCasa.toLocaleString('pt-BR')}
-          </p>
-          <p className="text-white/40 text-sm">pontos</p>
         </div>
       </motion.div>
 
@@ -265,96 +249,19 @@ const CasaPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2 text-white/80">
           <BookOpen className="w-5 h-5" style={{ color: casaColor }} />
           Sobre Nossa Casa
         </h2>
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-          <p className="text-white/80 leading-relaxed">{descricao}</p>
-        </div>
-      </motion.section>
-
-      {/* Ranking das Casas */}
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-          <Trophy className="w-5 h-5" style={{ color: casaColor }} />
-          Ranking das Casas
-        </h2>
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
-          {rankingCasas.map((casaRank, index) => {
-            const isMyHouse = casaRank.casa_id === casa?.id;
-            const percentage = maxPontos > 0 ? (casaRank.total_pontos / maxPontos) * 100 : 0;
-
-            return (
-              <motion.div
-                key={casaRank.casa_id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + index * 0.05 }}
-                className={cn(
-                  'flex items-center gap-3 p-2 rounded-lg transition-all',
-                  isMyHouse && 'bg-white/5'
-                )}
-                style={{
-                  boxShadow: isMyHouse ? `0 0 0 2px ${casaColor}` : undefined,
-                }}
-              >
-                {/* Position */}
-                <span className="w-8 text-center font-bold text-white/60">
-                  {casaRank.posicao}º
-                </span>
-
-                {/* Brasão Mini */}
-                <CasaBrasao
-                  brasaoUrl={casaRank.brasao_url}
-                  emoji={casaRank.casa_emoji}
-                  nome={casaRank.casa_nome}
-                  size="mini"
-                />
-
-                {/* Name and Progress */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={cn('text-sm truncate', isMyHouse && 'font-semibold')}>
-                      {casaRank.casa_nome}
-                    </span>
-                    {isMyHouse && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-white/10 shrink-0">
-                        ← Nós
-                      </span>
-                    )}
-                  </div>
-                  <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${percentage}%` }}
-                      transition={{ duration: 0.8, delay: 0.5 + index * 0.05 }}
-                      className="h-full rounded-full"
-                      style={{ backgroundColor: casaRank.casa_cor || '#888' }}
-                    />
-                  </div>
-                </div>
-
-                {/* Points */}
-                <div className="text-right shrink-0">
-                  <span className="font-semibold" style={{ color: casaRank.casa_cor || '#888' }}>
-                    {(casaRank.total_pontos || 0).toLocaleString('pt-BR')}
-                  </span>
-                  <span className="text-white/40 text-xs ml-1">pts</span>
-                </div>
-              </motion.div>
-            );
-          })}
-
-          {rankingCasas.length === 0 && (
-            <div className="text-center text-white/60 py-4">
-              Nenhuma casa no ranking ainda.
-            </div>
-          )}
+        <div 
+          className="rounded-2xl p-5"
+          style={{
+            background: 'rgba(255, 255, 255, 0.03)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+          }}
+        >
+          <p className="text-white/70 leading-relaxed">{descricao}</p>
         </div>
       </motion.section>
 
@@ -362,9 +269,9 @@ const CasaPage = () => {
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.2 }}
       >
-        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2 text-white/80">
           <Users className="w-5 h-5" style={{ color: casaColor }} />
           Membros da Casa
           <span className="text-sm font-normal text-white/40">({totalMembros})</span>
@@ -407,10 +314,16 @@ const CasaPage = () => {
           {/* Demais Membros */}
           {membrosSemCargo.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-white/60 flex items-center gap-2 mb-2">
+              <h3 className="text-sm font-semibold text-white/50 flex items-center gap-2 mb-2">
                 👤 DEMAIS MEMBROS
               </h3>
-              <div className="rounded-xl border border-white/10 bg-white/5 overflow-hidden">
+              <div 
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                }}
+              >
                 {membrosSemCargo.map((membro, index) => (
                   <MembroItem
                     key={membro.aluno_id}
@@ -427,7 +340,13 @@ const CasaPage = () => {
 
           {/* Fallback se não houver membros */}
           {membros.length === 0 && (
-            <div className="rounded-xl border border-white/10 bg-white/5 p-6 text-center text-white/60">
+            <div 
+              className="rounded-2xl p-6 text-center text-white/50"
+              style={{
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+              }}
+            >
               Nenhum membro no ranking ainda.
             </div>
           )}
@@ -445,7 +364,7 @@ function CargoSection({
   casaColor,
   showMedals,
 }: {
-  config: { emoji: string; label: string; borderColor: string; bgColor: string };
+  config: { emoji: string; label: string; borderColor: string; bgGradient: string; glowColor: string };
   membros: MembroComCargo[];
   currentUserId?: string;
   casaColor: string;
@@ -455,15 +374,16 @@ function CargoSection({
     <div>
       <h3
         className="text-sm font-semibold flex items-center gap-2 mb-2"
-        style={{ color: config.borderColor }}
+        style={{ color: config.borderColor.replace('0.3', '0.8').replace('0.2', '0.7') }}
       >
         {config.emoji} {config.label}
       </h3>
       <div
-        className="rounded-xl overflow-hidden"
+        className="rounded-2xl overflow-hidden"
         style={{
-          border: `2px solid ${config.borderColor}`,
-          backgroundColor: config.bgColor,
+          background: config.bgGradient,
+          border: `1px solid ${config.borderColor}`,
+          boxShadow: `0 0 20px ${config.glowColor}`,
         }}
       >
         {membros.map((membro, index) => (
@@ -508,10 +428,10 @@ function MembroItem({
     <motion.div
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: 0.4 + index * 0.03 }}
+      transition={{ delay: 0.3 + index * 0.03 }}
       className={cn(
         'flex items-center gap-3 p-3 border-b border-white/5 last:border-b-0',
-        isCurrentUser && 'bg-white/10'
+        isCurrentUser && 'bg-white/5'
       )}
     >
       {/* Medalha ou Posição */}
@@ -557,7 +477,7 @@ function MembroItem({
 
       {/* Indicador "Você" */}
       {isCurrentUser && (
-        <span className="text-xs text-white/60 shrink-0">← Você</span>
+        <span className="text-xs text-white/50 shrink-0">← Você</span>
       )}
     </motion.div>
   );
