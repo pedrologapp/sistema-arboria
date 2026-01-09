@@ -44,6 +44,21 @@ interface RankingInfo {
   missoes_completadas: number;
 }
 
+interface FaseAtual {
+  id: string;
+  numero_fase: number;
+  semana_atual: number | null;
+  data_inicio: string;
+  data_fim: string;
+  inteligencia: {
+    id: number;
+    nome: string;
+    codigo: string;
+    emoji: string | null;
+    cor_hex: string | null;
+  } | null;
+}
+
 interface StudentContextType {
   profile: Profile | null;
   casa: Casa | null;
@@ -51,6 +66,7 @@ interface StudentContextType {
   institutionName: string | null;
   ranking: RankingInfo;
   inteligenciaScores: InteligenciaScore[];
+  faseAtual: FaseAtual | null;
   isLoading: boolean;
   error: string | null;
   refreshData: () => Promise<void>;
@@ -83,6 +99,7 @@ export const StudentProvider = ({ children }: StudentProviderProps) => {
   const [institutionName, setInstitutionName] = useState<string | null>(null);
   const [ranking, setRanking] = useState<RankingInfo>(defaultRanking);
   const [inteligenciaScores, setInteligenciaScores] = useState<InteligenciaScore[]>([]);
+  const [faseAtual, setFaseAtual] = useState<FaseAtual | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -119,7 +136,7 @@ export const StudentProvider = ({ children }: StudentProviderProps) => {
         }
       }
 
-      // 3. Fetch institution name
+      // 3. Fetch institution name and fase atual
       if (profileData?.institution_id) {
         const { data: instData } = await supabase
           .from('institutions')
@@ -129,6 +146,42 @@ export const StudentProvider = ({ children }: StudentProviderProps) => {
 
         if (instData) {
           setInstitutionName(instData.name);
+        }
+
+        // 3.5. Fetch fase atual
+        const { data: faseData } = await supabase
+          .from('fases')
+          .select(`
+            id,
+            numero_fase,
+            semana_atual,
+            data_inicio,
+            data_fim,
+            inteligencia:inteligencias!inteligencia_id (
+              id,
+              nome,
+              codigo,
+              emoji,
+              cor_hex
+            )
+          `)
+          .eq('institution_id', profileData.institution_id)
+          .eq('ativo', true)
+          .maybeSingle();
+
+        if (faseData) {
+          const inteligenciaData = Array.isArray(faseData.inteligencia) 
+            ? faseData.inteligencia[0] 
+            : faseData.inteligencia;
+          
+          setFaseAtual({
+            id: faseData.id,
+            numero_fase: faseData.numero_fase,
+            semana_atual: faseData.semana_atual,
+            data_inicio: faseData.data_inicio,
+            data_fim: faseData.data_fim,
+            inteligencia: inteligenciaData,
+          });
         }
       }
 
@@ -189,6 +242,7 @@ export const StudentProvider = ({ children }: StudentProviderProps) => {
     institutionName,
     ranking,
     inteligenciaScores,
+    faseAtual,
     isLoading,
     error,
     refreshData: fetchStudentData,
