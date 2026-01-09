@@ -286,6 +286,52 @@ export type Database = {
           },
         ]
       }
+      canal_leituras: {
+        Row: {
+          canal_id: string
+          created_at: string | null
+          id: string
+          ultima_leitura: string | null
+          usuario_id: string
+        }
+        Insert: {
+          canal_id: string
+          created_at?: string | null
+          id?: string
+          ultima_leitura?: string | null
+          usuario_id: string
+        }
+        Update: {
+          canal_id?: string
+          created_at?: string | null
+          id?: string
+          ultima_leitura?: string | null
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canal_leituras_canal_id_fkey"
+            columns: ["canal_id"]
+            isOneToOne: false
+            referencedRelation: "canais_casa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canal_leituras_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canal_leituras_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+        ]
+      }
       cargos_casa: {
         Row: {
           aluno_id: string
