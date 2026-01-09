@@ -261,7 +261,7 @@ const CasaPage = () => {
             border: '1px solid rgba(255, 255, 255, 0.06)',
           }}
         >
-          <p className="font-fantasy italic text-white/75 text-lg leading-loose">
+          <p className="font-fantasy italic text-white/75 text-sm leading-relaxed">
             "{descricao}"
           </p>
         </div>
