@@ -348,9 +348,169 @@ const CasaPage = () => {
           )}
         </div>
       </motion.section>
+
+      {/* Ranking de Pontuação */}
+      <RankingSection
+        membros={membros}
+        userId={user?.id}
+        casaColor={casaColor}
+      />
     </div>
   );
 };
+
+// Componente de Ranking de Pontuação
+function RankingSection({
+  membros,
+  userId,
+  casaColor,
+}: {
+  membros: MembroComCargo[];
+  userId: string | undefined;
+  casaColor: string;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  
+  // Ordenar por posição na casa (ranking de pontos)
+  const rankingOrdenado = [...membros].sort((a, b) => a.posicao_na_casa - b.posicao_na_casa);
+  
+  // Top 8 ou todos
+  const exibir = showAll ? rankingOrdenado : rankingOrdenado.slice(0, 8);
+  
+  // Posição do usuário
+  const minhaPosicao = rankingOrdenado.findIndex(m => m.aluno_id === userId) + 1;
+  const meusDados = rankingOrdenado.find(m => m.aluno_id === userId);
+  const mostraMinhaPosicaoSeparada = !showAll && minhaPosicao > 8 && meusDados;
+
+  const getMedalha = (posicao: number, pontos: number) => {
+    if (pontos <= 0) return null;
+    if (posicao === 1) return '🥇';
+    if (posicao === 2) return '🥈';
+    if (posicao === 3) return '🥉';
+    return null;
+  };
+
+  if (rankingOrdenado.length === 0) {
+    return null;
+  }
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 }}
+    >
+      <h2 className="text-lg font-semibold mb-3 flex items-center gap-2 text-white/80">
+        <Trophy className="w-5 h-5" style={{ color: casaColor }} />
+        Ranking de Pontuação
+      </h2>
+
+      <div 
+        className="rounded-xl overflow-hidden"
+        style={{
+          background: 'rgba(255, 255, 255, 0.02)',
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+        }}
+      >
+        {/* Lista do ranking */}
+        <div className="divide-y divide-white/5">
+          {exibir.map((membro) => {
+            const posicao = membro.posicao_na_casa;
+            const isMe = membro.aluno_id === userId;
+            const medal = getMedalha(posicao, membro.total_pontos);
+
+            return (
+              <div
+                key={membro.aluno_id}
+                className={cn(
+                  'flex items-center justify-between py-2.5 px-3',
+                  isMe ? 'bg-white/10' : 'hover:bg-white/5'
+                )}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {/* Posição ou Medalha */}
+                  <span className={cn(
+                    'w-6 text-center shrink-0',
+                    medal ? 'text-base' : 'text-sm text-white/40'
+                  )}>
+                    {medal || posicao}
+                  </span>
+
+                  {/* Avatar */}
+                  <div className="w-6 h-6 rounded-full bg-white/10 overflow-hidden shrink-0">
+                    {membro.avatar_url ? (
+                      <img src={membro.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="flex items-center justify-center w-full h-full text-xs text-white/60">
+                        {membro.aluno_nome.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Nome */}
+                  <span className={cn(
+                    'text-sm truncate',
+                    isMe ? 'text-white font-medium' : 'text-white/80'
+                  )}>
+                    {membro.aluno_nome}
+                    {isMe && <span className="text-white/40 ml-1">(você)</span>}
+                  </span>
+                </div>
+
+                {/* Pontos com cor especial para top 3 */}
+                <span className={cn(
+                  'text-sm font-medium shrink-0',
+                  posicao === 1 ? 'text-yellow-400' :
+                  posicao === 2 ? 'text-gray-300' :
+                  posicao === 3 ? 'text-orange-400' :
+                  'text-white/60'
+                )}>
+                  {membro.total_pontos.toLocaleString('pt-BR')} pts
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Minha posição (se não estiver no top 8) */}
+        {mostraMinhaPosicaoSeparada && meusDados && (
+          <div className="border-t border-white/10 px-3 py-2">
+            <div className="flex items-center justify-between py-2 px-3 bg-white/10 rounded-lg">
+              <div className="flex items-center gap-3">
+                <span className="w-6 text-center text-sm text-white/40">{minhaPosicao}</span>
+                <div className="w-6 h-6 rounded-full bg-white/10 overflow-hidden">
+                  {meusDados.avatar_url ? (
+                    <img src={meusDados.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="flex items-center justify-center w-full h-full text-xs">
+                      {meusDados.aluno_nome.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <span className="text-white text-sm font-medium">
+                  {meusDados.aluno_nome} <span className="text-white/40">(você)</span>
+                </span>
+              </div>
+              <span className="text-white/60 text-sm font-medium">
+                {meusDados.total_pontos.toLocaleString('pt-BR')} pts
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Botão ver mais */}
+        {rankingOrdenado.length > 8 && !showAll && (
+          <button 
+            onClick={() => setShowAll(true)}
+            className="w-full py-3 text-sm text-white/50 hover:text-white hover:bg-white/5 transition-colors border-t border-white/5"
+          >
+            Ver ranking completo ({rankingOrdenado.length} membros)
+          </button>
+        )}
+      </div>
+    </motion.section>
+  );
+}
 
 // Componente compacto para membro (estilo Discord)
 function MembroItemCompacto({
