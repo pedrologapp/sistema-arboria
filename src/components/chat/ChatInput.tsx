@@ -49,7 +49,7 @@ export const ChatInput = forwardRef<HTMLDivElement, ChatInputProps>(({
         rows={1}
         className="
           flex-1 bg-transparent text-white placeholder:text-white/40
-          text-sm resize-none outline-none
+          text-base resize-none outline-none
           min-h-[24px] max-h-[120px]
         "
         style={{ height: 'auto' }}
