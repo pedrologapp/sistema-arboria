@@ -382,14 +382,6 @@ function RankingSection({
   const meusDados = rankingOrdenado.find(m => m.aluno_id === userId);
   const mostraMinhaPosicaoSeparada = !showAll && minhaPosicao > 8 && meusDados;
 
-  const getMedalha = (posicao: number, pontos: number) => {
-    if (pontos <= 0) return null;
-    if (posicao === 1) return '🥇';
-    if (posicao === 2) return '🥈';
-    if (posicao === 3) return '🥉';
-    return null;
-  };
-
   if (rankingOrdenado.length === 0) {
     return null;
   }
@@ -417,7 +409,6 @@ function RankingSection({
           {exibir.map((membro) => {
             const posicao = membro.posicao_na_casa;
             const isMe = membro.aluno_id === userId;
-            const medal = getMedalha(posicao, membro.total_pontos);
 
             return (
               <div
@@ -428,12 +419,9 @@ function RankingSection({
                 )}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  {/* Posição ou Medalha */}
-                  <span className={cn(
-                    'w-6 text-center shrink-0',
-                    medal ? 'text-base' : 'text-sm text-white/40'
-                  )}>
-                    {medal || posicao}
+                  {/* Posição - APENAS NÚMERO */}
+                  <span className="w-6 text-center shrink-0 text-sm text-white/60">
+                    {posicao}
                   </span>
 
                   {/* Avatar */}
@@ -457,14 +445,8 @@ function RankingSection({
                   </span>
                 </div>
 
-                {/* Pontos com cor especial para top 3 */}
-                <span className={cn(
-                  'text-sm font-medium shrink-0',
-                  posicao === 1 ? 'text-yellow-400' :
-                  posicao === 2 ? 'text-gray-300' :
-                  posicao === 3 ? 'text-orange-400' :
-                  'text-white/60'
-                )}>
+                {/* Pontos - cor uniforme */}
+                <span className="text-sm font-medium shrink-0 text-green-400">
                   {membro.total_pontos.toLocaleString('pt-BR')} pts
                 </span>
               </div>
