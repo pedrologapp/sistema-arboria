@@ -13,6 +13,7 @@ interface Profile {
   institution_id: string | null;
   institution: string | null;
   must_change_password: boolean | null;
+  avatar_url: string | null;
 }
 
 interface Casa {

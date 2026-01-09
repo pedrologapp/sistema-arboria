@@ -7,16 +7,17 @@ import {
   Bell, 
   Palette,
   Shield,
-  ChevronRight
+  ChevronRight,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useStudent } from '@/contexts/StudentContext';
-
+import AvatarUpload from '@/components/aluno/AvatarUpload';
 const ConfiguracoesPage = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
-  const { casaColor } = useStudent();
+  const { signOut, user } = useAuth();
+  const { profile, casa, casaColor, refreshData } = useStudent();
 
   const handleLogout = async () => {
     await signOut();
@@ -42,6 +43,51 @@ const ConfiguracoesPage = () => {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-xl font-bold">Configurações</h1>
+      </motion.div>
+
+      {/* Profile Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+      >
+        <h2 className="text-sm font-semibold text-white/60 flex items-center gap-2 mb-3">
+          <User className="w-4 h-4" />
+          MEU PERFIL
+        </h2>
+        
+        <div 
+          className="rounded-xl border p-6"
+          style={{ 
+            borderColor: `${casaColor}30`,
+            background: `linear-gradient(135deg, ${casaColor}10 0%, transparent 100%)`
+          }}
+        >
+          <div className="flex flex-col items-center">
+            {user?.id && (
+              <AvatarUpload
+                userId={user.id}
+                currentAvatarUrl={profile?.avatar_url || null}
+                casaColor={casaColor}
+                onUploadSuccess={refreshData}
+              />
+            )}
+            
+            <div className="text-center mt-4">
+              <p className="font-medium text-lg">
+                {profile?.full_name || `${profile?.nome || ''} ${profile?.sobrenome || ''}`.trim() || 'Aluno'}
+              </p>
+              {casa && (
+                <p className="text-sm" style={{ color: casaColor }}>
+                  {casa.emoji} {casa.nome}
+                </p>
+              )}
+              <p className="text-xs text-white/50 mt-1">
+                {profile?.serie} {profile?.turma ? `• Turma ${profile.turma}` : ''}
+              </p>
+            </div>
+          </div>
+        </div>
       </motion.div>
 
       {/* Security Section */}
