@@ -564,43 +564,45 @@ const MissaoDetalhePage = () => {
 
       <div className="h-px bg-white/10" />
 
-      {/* Contexto */}
-      {missao.descricao && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="space-y-2"
-        >
-          <h2 className="text-sm font-semibold text-white/60 flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            CONTEXTO
-          </h2>
-          <p className="text-white/80 whitespace-pre-wrap leading-relaxed">
-            {missao.descricao}
-          </p>
-        </motion.div>
-      )}
+      {/* Contexto - sempre visível */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="space-y-2"
+      >
+        <h2 className="text-sm font-semibold text-white/60 flex items-center gap-2">
+          <FileText className="w-4 h-4" />
+          📖 CONTEXTO
+        </h2>
+        <p className="text-white/80 whitespace-pre-wrap leading-relaxed">
+          {missao.descricao || 'Nenhum contexto adicional para esta missão.'}
+        </p>
+      </motion.div>
 
-      {/* Instruções */}
-      {missao.instrucoes && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-2"
-        >
-          <div className="h-px bg-white/10" />
-          <h2 className="text-sm font-semibold text-white/60 flex items-center gap-2 pt-2">
-            📋 INSTRUÇÕES
-          </h2>
-          <div className="text-white/80 whitespace-pre-wrap leading-relaxed">
-            {missao.instrucoes}
-          </div>
-        </motion.div>
-      )}
+      {/* Instruções - sempre visível */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="space-y-2"
+      >
+        <div className="h-px bg-white/10" />
+        <h2 className="text-sm font-semibold text-white/60 flex items-center gap-2 pt-2">
+          📋 INSTRUÇÕES
+        </h2>
+        <div className="text-white/80 whitespace-pre-wrap leading-relaxed">
+          {missao.instrucoes || 'Siga as orientações do professor para completar esta missão.'}
+        </div>
+      </motion.div>
 
+      {/* Separador antes da seção de entrega */}
       <div className="h-px bg-white/10" />
+
+      {/* Título da seção de entrega */}
+      <h2 className="text-sm font-semibold text-white/60 flex items-center gap-2">
+        📨 SUA ENTREGA
+      </h2>
 
       {/* Status da entrega existente */}
       {entrega && (
