@@ -67,6 +67,7 @@ const PerfilPage = () => {
     cor: score.inteligencia_cor || '#888888',
     score: score.score_atual,
     ehMinhaCasa: score.eh_casa_do_aluno,
+    brasaoUrl: score.inteligencia_brasao_url,
   }));
 
   // Sort: "Minha Casa" first, then by score descending
@@ -204,6 +205,7 @@ const PerfilPage = () => {
               ehMinhaCasa={inteligencia.ehMinhaCasa}
               onClick={() => handleInteligenciaClick(inteligencia)}
               index={index}
+              brasaoUrl={inteligencia.brasaoUrl}
             />
           ))}
         </div>

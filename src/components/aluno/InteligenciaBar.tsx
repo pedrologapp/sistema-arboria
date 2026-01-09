@@ -11,31 +11,19 @@ interface InteligenciaBarProps {
   ehMinhaCasa: boolean;
   onClick: () => void;
   index: number;
+  brasaoUrl?: string | null;
 }
 
 const InteligenciaBar = ({
   nome,
-  codigo,
   emoji,
   cor,
   score,
   ehMinhaCasa,
   onClick,
   index,
+  brasaoUrl,
 }: InteligenciaBarProps) => {
-  // Map codigo to brasao URL
-  const brasaoMap: Record<string, string> = {
-    'LIN': '/brasoes/linguistica.png',
-    'LOG': '/brasoes/logico_matematica.png',
-    'ESP': '/brasoes/espacial.png',
-    'MUS': '/brasoes/musical.png',
-    'COR': '/brasoes/corporal_cinestesica.png',
-    'NAT': '/brasoes/naturalista.png',
-    'INT': '/brasoes/interpessoal.png',
-    'INTRA': '/brasoes/intrapessoal.png',
-  };
-
-  const brasaoUrl = brasaoMap[codigo] || null;
 
   // Abbreviated names for mobile
   const nomeAbreviado = nome.length > 12 ? nome.slice(0, 11) + '.' : nome;
