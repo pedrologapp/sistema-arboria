@@ -1377,7 +1377,7 @@ export type Database = {
       }
       score_ajustes_log: {
         Row: {
-          ajustado_por: string
+          ajustado_por: string | null
           aluno_id: string
           created_at: string | null
           id: string
@@ -1388,7 +1388,7 @@ export type Database = {
           score_novo: number
         }
         Insert: {
-          ajustado_por: string
+          ajustado_por?: string | null
           aluno_id: string
           created_at?: string | null
           id?: string
@@ -1399,7 +1399,7 @@ export type Database = {
           score_novo: number
         }
         Update: {
-          ajustado_por?: string
+          ajustado_por?: string | null
           aluno_id?: string
           created_at?: string | null
           id?: string
