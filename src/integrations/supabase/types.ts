@@ -1707,6 +1707,28 @@ export type Database = {
           turma: string
         }[]
       }
+      get_missoes_do_aluno: {
+        Args: { p_aluno_id: string }
+        Returns: {
+          atrasada: boolean
+          casa_cor: string
+          casa_emoji: string
+          casa_id: number
+          casa_nome: string
+          data_liberacao: string
+          data_prazo: string
+          descricao: string
+          id: string
+          ja_entregou: boolean
+          permite_atrasada: boolean
+          pontos_base: number
+          requer_arquivo: boolean
+          requer_texto: boolean
+          status_entrega: string
+          tipo: string
+          titulo: string
+        }[]
+      }
       get_user_institution_id: { Args: never; Returns: string }
       has_role: {
         Args: {
