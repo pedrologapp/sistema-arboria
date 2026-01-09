@@ -91,39 +91,66 @@ const MembrosPage = () => {
 
   // Função para iniciar conversa privada
   const iniciarConversa = async (outroUsuarioId: string) => {
-    if (!profile?.id || !profile?.institution_id) return;
+    console.log('=== INICIANDO CONVERSA (MembrosPage) ===');
+    console.log('1. Outro usuário ID:', outroUsuarioId);
+    console.log('2. Meu ID:', profile?.id);
+    console.log('3. Institution ID:', profile?.institution_id);
+
+    if (!profile?.id || !profile?.institution_id) {
+      console.error('❌ ERRO: userId ou institution_id não definido!');
+      toast.error('Erro: dados do usuário não carregados');
+      return;
+    }
 
     try {
       // 1. Buscar conversas do usuário atual
-      const { data: minhasConversas } = await supabase
+      console.log('4. Buscando minhas conversas...');
+      const { data: minhasConversas, error: erroMinhas } = await supabase
         .from('conversa_participantes')
         .select('conversa_id')
         .eq('usuario_id', profile.id);
 
+      console.log('5. Minhas conversas:', minhasConversas);
+      if (erroMinhas) console.error('ERRO ao buscar minhas conversas:', erroMinhas);
+
       if (minhasConversas?.length) {
         // 2. Verificar se o outro usuário está em alguma dessas conversas
-        const { data: conversaComum } = await supabase
+        console.log('6. Verificando se existe conversa com o outro...');
+        const { data: conversaComum, error: erroComum } = await supabase
           .from('conversa_participantes')
           .select('conversa_id')
           .eq('usuario_id', outroUsuarioId)
-          .in('conversa_id', minhasConversas.map(c => c.conversa_id));
+          .in('conversa_id', minhasConversas.map(c => c.conversa_id))
+          .limit(1)
+          .maybeSingle();
 
-        if (conversaComum?.length) {
-          navigate(`/aluno/chat/dm/${conversaComum[0].conversa_id}`);
+        console.log('7. Conversa existente:', conversaComum);
+        if (erroComum) console.error('ERRO ao buscar conversa existente:', erroComum);
+
+        if (conversaComum) {
+          console.log('8. ✅ Conversa já existe! Navegando para:', conversaComum.conversa_id);
+          navigate(`/aluno/chat/dm/${conversaComum.conversa_id}`);
           return;
         }
       }
 
       // 3. Criar nova conversa
+      console.log('9. Criando nova conversa...');
       const { data: novaConversa, error: erroConversa } = await supabase
         .from('conversas_privadas')
         .insert({ institution_id: profile.institution_id })
         .select()
         .single();
 
-      if (erroConversa) throw erroConversa;
+      console.log('10. Nova conversa:', novaConversa);
+      if (erroConversa) {
+        console.error('❌ ERRO ao criar conversa:', erroConversa);
+        toast.error('Erro ao criar conversa: ' + erroConversa.message);
+        return;
+      }
 
       // 4. Adicionar participantes
+      console.log('11. Adicionando participantes...');
       const { error: erroParticipantes } = await supabase
         .from('conversa_participantes')
         .insert([
@@ -131,11 +158,16 @@ const MembrosPage = () => {
           { conversa_id: novaConversa.id, usuario_id: outroUsuarioId }
         ]);
 
-      if (erroParticipantes) throw erroParticipantes;
+      if (erroParticipantes) {
+        console.error('❌ ERRO ao adicionar participantes:', erroParticipantes);
+        toast.error('Erro ao adicionar participantes: ' + erroParticipantes.message);
+        return;
+      }
 
+      console.log('12. ✅ SUCESSO! Navegando para:', novaConversa.id);
       navigate(`/aluno/chat/dm/${novaConversa.id}`);
     } catch (error) {
-      console.error('Erro ao iniciar conversa:', error);
+      console.error('❌ ERRO GERAL:', error);
       toast.error('Erro ao iniciar conversa');
     }
   };
