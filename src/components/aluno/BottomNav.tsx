@@ -19,7 +19,7 @@ const BottomNav = () => {
   const navItems: NavItemConfig[] = [
     { id: 'missoes', icon: <Target />, label: 'Missões', path: '/aluno/missoes' },
     { id: 'casa', icon: <Home />, label: 'Casa', path: '/aluno/casa' },
-    { id: 'chat', icon: <MessageCircle />, label: 'Chat', path: '/aluno/chat', disabled: true },
+    { id: 'chat', icon: <MessageCircle />, label: 'Chat', path: '/aluno/chat' },
     { id: 'perfil', icon: <User />, label: 'Perfil', path: '/aluno/perfil' },
   ];
 

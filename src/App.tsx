@@ -25,6 +25,9 @@ import MissoesPage from "./pages/aluno/MissoesPage";
 import MissaoDetalhePage from "./pages/aluno/MissaoDetalhePage";
 import CasaPage from "./pages/aluno/CasaPage";
 import ChatPage from "./pages/aluno/ChatPage";
+import CanalChatPage from "./pages/aluno/CanalChatPage";
+import DmChatPage from "./pages/aluno/DmChatPage";
+import MembrosPage from "./pages/aluno/MembrosPage";
 import PerfilPage from "./pages/aluno/PerfilPage";
 import ConfiguracoesPage from "./pages/aluno/ConfiguracoesPage";
 
@@ -104,6 +107,27 @@ const App = () => (
               <StudentProtectedRoute>
                 <StudentLayout>
                   <ChatPage />
+                </StudentLayout>
+              </StudentProtectedRoute>
+            } />
+            <Route path="/aluno/chat/canal/:canalId" element={
+              <StudentProtectedRoute>
+                <StudentLayout>
+                  <CanalChatPage />
+                </StudentLayout>
+              </StudentProtectedRoute>
+            } />
+            <Route path="/aluno/chat/dm/:conversaId" element={
+              <StudentProtectedRoute>
+                <StudentLayout>
+                  <DmChatPage />
+                </StudentLayout>
+              </StudentProtectedRoute>
+            } />
+            <Route path="/aluno/chat/membros" element={
+              <StudentProtectedRoute>
+                <StudentLayout>
+                  <MembrosPage />
                 </StudentLayout>
               </StudentProtectedRoute>
             } />
