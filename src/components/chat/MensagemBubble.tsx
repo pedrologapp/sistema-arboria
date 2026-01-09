@@ -54,7 +54,7 @@ export const MensagemBubble = ({
   if (agruparComAnterior) {
     return (
       <div className="group flex hover:bg-white/5 px-2 py-0.5">
-        <div className="pl-[52px]">
+        <div className="pl-[48px]">
           <p className="text-white/90 text-sm whitespace-pre-wrap break-words">
             {mensagem.conteudo}
           </p>
@@ -65,11 +65,11 @@ export const MensagemBubble = ({
 
   // Mensagem com header completo
   return (
-    <div className={`group flex gap-3 hover:bg-white/5 px-2 pt-3 pb-1 ${
+    <div className={`group flex gap-3 hover:bg-white/5 px-2 pt-2 pb-1 ${
       isAnuncio ? 'bg-yellow-500/10 border-l-2 border-yellow-500' : ''
     }`}>
       {/* Avatar */}
-      <Avatar className="h-10 w-10 flex-shrink-0">
+      <Avatar className="h-9 w-9 flex-shrink-0">
         <AvatarImage src={mensagem.autor?.avatar_url || undefined} />
         <AvatarFallback 
           className="text-white font-medium"
