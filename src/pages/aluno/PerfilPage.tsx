@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, Trophy, Target, Medal, Settings } from 'lucide-react';
+import { User, Trophy, Target, Settings } from 'lucide-react';
 import { useStudent } from '@/contexts/StudentContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { CasaBrasao } from '@/components/CasaBrasao';
@@ -50,13 +50,6 @@ const PerfilPage = () => {
 
   const fullName = profile?.full_name || `${profile?.nome || ''} ${profile?.sobrenome || ''}`.trim() || 'Aluno';
 
-  // Get position emoji
-  const getPosicaoEmoji = (posicao: number) => {
-    if (posicao === 1) return '🥇';
-    if (posicao === 2) return '🥈';
-    if (posicao === 3) return '🥉';
-    return `${posicao}º`;
-  };
 
   // Map scores to a format compatible with InteligenciaBar
   const inteligenciasFormatted = inteligenciaScores.map((score) => ({
@@ -158,15 +151,12 @@ const PerfilPage = () => {
             </div>
             
             <div className="text-right">
-              <div className="flex items-center gap-2 justify-end">
-                <Medal className="w-5 h-5 text-white/40" />
-                <span className="text-2xl font-bold">
-                  {ranking?.posicao_na_casa 
-                    ? getPosicaoEmoji(ranking.posicao_na_casa)
-                    : '-'
-                  }
-                </span>
-              </div>
+              <p className="text-2xl font-bold text-white">
+                {ranking?.posicao_na_casa 
+                  ? `${ranking.posicao_na_casa}º`
+                  : '-'
+                }
+              </p>
               <p className="text-xs text-white/40">na casa</p>
             </div>
           </div>

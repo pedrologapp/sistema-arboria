@@ -193,13 +193,33 @@ export const StudentProvider = ({ children }: StudentProviderProps) => {
         .eq('aluno_id', user.id)
         .maybeSingle();
 
-      if (rankingData) {
-        setRanking({
-          total_pontos: rankingData.total_pontos || 0,
-          posicao_na_casa: rankingData.posicao_na_casa || 0,
-          missoes_completadas: rankingData.missoes_completadas || 0,
-        });
+      // 4.1 Calcular posição correta baseada em pontos (workaround para bug da view)
+      let posicaoCalculada = rankingData?.posicao_na_casa || 0;
+      
+      if (profileData?.casa_id && profileData?.institution_id) {
+        const { data: membrosCasa } = await supabase
+          .from('ranking_alunos_por_casa')
+          .select('aluno_id, total_pontos')
+          .eq('casa_id', profileData.casa_id)
+          .eq('institution_id', profileData.institution_id);
+
+        if (membrosCasa && membrosCasa.length > 0) {
+          // Ordenar por pontos (maior primeiro)
+          const ordenado = [...membrosCasa].sort((a, b) => 
+            (b.total_pontos || 0) - (a.total_pontos || 0)
+          );
+          
+          // Encontrar posição do aluno atual (index + 1)
+          const minhaPosicao = ordenado.findIndex(m => m.aluno_id === user.id) + 1;
+          posicaoCalculada = minhaPosicao || 1;
+        }
       }
+
+      setRanking({
+        total_pontos: rankingData?.total_pontos || 0,
+        posicao_na_casa: posicaoCalculada,
+        missoes_completadas: rankingData?.missoes_completadas || 0,
+      });
 
       // 5. Fetch inteligencia scores from view
       const { data: scoresData } = await supabase
