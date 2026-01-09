@@ -1690,8 +1690,8 @@ export type Database = {
       fechar_fase: {
         Args: { p_fase_id: string }
         Returns: {
-          alunos_processados: number
-          fase_numero: number
+          numero_da_fase: number
+          total_alunos: number
         }[]
       }
       get_alunos_minha_casa: {
