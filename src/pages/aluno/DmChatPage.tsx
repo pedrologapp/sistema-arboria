@@ -9,8 +9,7 @@ import { useStudent } from '@/contexts/StudentContext';
 import { useEffect, useRef } from 'react';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { StatusIndicator } from '@/components/chat/StatusIndicator';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { MensagemBubble } from '@/components/chat/MensagemBubble';
 
 interface MensagemPrivada {
   id: string;
@@ -31,33 +30,17 @@ interface OutroParticipante {
   ultima_atividade: string | null;
 }
 
-const MensagemDm = ({ 
-  mensagem, 
-  isMe,
-  casaColor 
-}: { 
-  mensagem: MensagemPrivada; 
-  isMe: boolean;
-  casaColor: string;
-}) => {
-  return (
-    <div className={cn('flex mb-3', isMe ? 'justify-end' : 'justify-start')}>
-      <div 
-        className={cn(
-          'max-w-[75%] px-3 py-2 rounded-2xl',
-          isMe 
-            ? 'rounded-br-md text-white' 
-            : 'bg-white/10 text-white rounded-bl-md'
-        )}
-        style={isMe ? { backgroundColor: casaColor } : undefined}
-      >
-        <p className="text-sm whitespace-pre-wrap break-words">{mensagem.conteudo}</p>
-        <span className="text-xs opacity-60 mt-1 block text-right">
-          {format(new Date(mensagem.created_at), 'HH:mm')}
-        </span>
-      </div>
-    </div>
-  );
+// Função para agrupar mensagens do mesmo autor
+const deveAgrupar = (atual: MensagemPrivada, anterior: MensagemPrivada | null): boolean => {
+  if (!anterior) return false;
+  if (atual.autor?.id !== anterior.autor?.id) return false;
+  
+  const diffMinutos = (
+    new Date(atual.created_at).getTime() - 
+    new Date(anterior.created_at).getTime()
+  ) / 60000;
+  
+  return diffMinutos < 5;
 };
 
 const DmChatPage = () => {
@@ -245,12 +228,25 @@ const DmChatPage = () => {
           </div>
         ) : mensagens && mensagens.length > 0 ? (
           <>
-            {mensagens.map((msg) => (
-              <MensagemDm 
-                key={msg.id} 
-                mensagem={msg} 
+            {mensagens.map((msg, index) => (
+              <MensagemBubble
+                key={msg.id}
+                mensagem={{
+                  id: msg.id,
+                  conteudo: msg.conteudo,
+                  created_at: msg.created_at,
+                  tipo: null,
+                  fixada: null,
+                  autor: msg.autor ? {
+                    id: msg.autor.id,
+                    full_name: msg.autor.full_name,
+                    avatar_url: msg.autor.avatar_url,
+                    cargos_casa: []
+                  } : { id: '', full_name: 'Usuário', avatar_url: null, cargos_casa: [] }
+                }}
                 isMe={msg.autor?.id === profile?.id}
                 casaColor={casaColor || '#6366F1'}
+                agruparComAnterior={deveAgrupar(msg, mensagens[index - 1] || null)}
               />
             ))}
             <div ref={bottomRef} />
