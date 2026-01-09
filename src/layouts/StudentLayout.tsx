@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { StudentProvider } from '@/contexts/StudentContext';
+import { StudentProvider, useStudent } from '@/contexts/StudentContext';
 import StudentHeader from '@/components/aluno/StudentHeader';
 import BottomNav from '@/components/aluno/BottomNav';
 
@@ -7,7 +7,19 @@ interface StudentLayoutProps {
   children: ReactNode;
 }
 
+// This component is rendered INSIDE StudentProvider, so it can safely use useStudent
 const StudentLayoutContent = ({ children }: StudentLayoutProps) => {
+  const { isLoading } = useStudent();
+
+  // Show loading while context initializes
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       <StudentHeader />
