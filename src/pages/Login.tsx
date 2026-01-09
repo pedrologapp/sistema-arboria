@@ -34,7 +34,8 @@ const Login = () => {
       if (isAdmin) {
         navigate('/admin');
       } else {
-        navigate('/dashboard');
+        // Alunos vão para /aluno/missoes
+        navigate('/aluno/missoes');
       }
     }
   }, [user, isAdmin, authLoading, adminCheckComplete, navigate]);
