@@ -134,15 +134,15 @@ const MembrosPage = () => {
         }
       }
 
-      // 3. Criar nova conversa
+      // 3. Criar nova conversa - gerar UUID no frontend para evitar problema de RLS no SELECT
       console.log('9. Criando nova conversa...');
-      const { data: novaConversa, error: erroConversa } = await supabase
+      const novaConversaId = crypto.randomUUID();
+      
+      const { error: erroConversa } = await supabase
         .from('conversas_privadas')
-        .insert({ institution_id: profile.institution_id })
-        .select()
-        .single();
+        .insert({ id: novaConversaId, institution_id: profile.institution_id });
 
-      console.log('10. Nova conversa:', novaConversa);
+      console.log('10. Nova conversa ID:', novaConversaId);
       if (erroConversa) {
         console.error('❌ ERRO ao criar conversa:', erroConversa);
         toast.error('Erro ao criar conversa: ' + erroConversa.message);
@@ -154,8 +154,8 @@ const MembrosPage = () => {
       const { error: erroParticipantes } = await supabase
         .from('conversa_participantes')
         .insert([
-          { conversa_id: novaConversa.id, usuario_id: profile.id },
-          { conversa_id: novaConversa.id, usuario_id: outroUsuarioId }
+          { conversa_id: novaConversaId, usuario_id: profile.id },
+          { conversa_id: novaConversaId, usuario_id: outroUsuarioId }
         ]);
 
       if (erroParticipantes) {
@@ -164,8 +164,8 @@ const MembrosPage = () => {
         return;
       }
 
-      console.log('12. ✅ SUCESSO! Navegando para:', novaConversa.id);
-      navigate(`/aluno/chat/dm/${novaConversa.id}`);
+      console.log('12. ✅ SUCESSO! Navegando para:', novaConversaId);
+      navigate(`/aluno/chat/dm/${novaConversaId}`);
     } catch (error) {
       console.error('❌ ERRO GERAL:', error);
       toast.error('Erro ao iniciar conversa');
