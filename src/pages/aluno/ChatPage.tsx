@@ -237,6 +237,13 @@ const ChatPage = () => {
             </span>
           </div>
         </div>
+        <button
+          onClick={() => navigate('/aluno/chat/membros')}
+          className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+          title="Ver todos os membros"
+        >
+          <Users className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Campo de busca */}
