@@ -209,7 +209,7 @@ const CanalChatPage = () => {
 
       {/* Área de mensagens */}
       <ScrollArea className="flex-1 px-1">
-        <div className="py-4 space-y-1">
+        <div className="py-4">
           {loadingMensagens ? (
             <div className="text-center text-white/40 py-8">
               Carregando mensagens...
