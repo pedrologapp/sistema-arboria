@@ -2143,6 +2143,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      user_participa_conversa: {
+        Args: { p_conversa_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "professor"
