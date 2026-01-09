@@ -3,6 +3,7 @@ import { User, Mail, GraduationCap, Home, KeyRound, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import { useStudent } from '@/contexts/StudentContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { CasaBrasao } from '@/components/CasaBrasao';
 
 const PerfilPage = () => {
   const navigate = useNavigate();
@@ -78,7 +79,12 @@ const PerfilPage = () => {
               <p className="font-medium flex items-center gap-2">
                 {casa ? (
                   <>
-                    <span>{casa.emoji}</span>
+                    <CasaBrasao
+                      brasaoUrl={casa.brasao_url}
+                      emoji={casa.emoji}
+                      nome={casa.nome}
+                      size="medium"
+                    />
                     <span style={{ color: casaColor }}>{casa.nome}</span>
                   </>
                 ) : (

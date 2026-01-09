@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { CasaBrasao } from '@/components/CasaBrasao';
 
 interface RankingMembro {
   aluno_id: string;
@@ -81,7 +82,12 @@ const CasaPage = () => {
         }}
       >
         <div className="flex items-center gap-4">
-          <span className="text-5xl">{casa.emoji}</span>
+          <CasaBrasao
+            brasaoUrl={casa.brasao_url}
+            emoji={casa.emoji}
+            nome={casa.nome}
+            size="large"
+          />
           <div>
             <h1 className="text-2xl font-bold">Casa {casa.nome}</h1>
             <p className="text-white/60 text-sm">{casa.descricao}</p>
@@ -158,7 +164,12 @@ const CasaPage = () => {
                 <div key={score.inteligencia_id}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      <span>{score.inteligencia_emoji}</span>
+                      <CasaBrasao
+                        brasaoUrl={score.inteligencia_brasao_url}
+                        emoji={score.inteligencia_emoji}
+                        nome={score.inteligencia_nome}
+                        size="mini"
+                      />
                       <span className={cn('text-sm', isMyCasa ? 'font-semibold' : 'text-white/80')}>
                         {score.inteligencia_nome}
                       </span>

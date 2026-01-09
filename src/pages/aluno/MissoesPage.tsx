@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { CasaBrasao } from '@/components/CasaBrasao';
 
 interface Missao {
   id: string;
@@ -95,7 +96,13 @@ const MissoesPage = () => {
         </h1>
         {casa && (
           <p className="text-white/60 flex items-center gap-2 mt-1">
-            <span>{casa.emoji}</span>
+            <CasaBrasao
+              brasaoUrl={casa.brasao_url}
+              emoji={casa.emoji}
+              nome={casa.nome}
+              size="mini"
+              className="w-6 h-6"
+            />
             <span>Casa {casa.nome}</span>
           </p>
         )}
