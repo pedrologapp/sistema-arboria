@@ -94,10 +94,18 @@ const PerfilPage = () => {
         </button>
 
         <div
-          className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
+          className="w-20 h-20 rounded-full flex items-center justify-center mb-4 overflow-hidden"
           style={{ backgroundColor: `${casaColor}20` }}
         >
-          <User className="w-10 h-10" style={{ color: casaColor }} />
+          {profile?.avatar_url ? (
+            <img 
+              src={profile.avatar_url} 
+              alt={fullName}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <User className="w-10 h-10" style={{ color: casaColor }} />
+          )}
         </div>
         <h1 className="text-xl font-bold">{fullName}</h1>
         
