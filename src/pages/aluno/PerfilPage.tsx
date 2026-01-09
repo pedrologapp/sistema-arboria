@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, KeyRound, LogOut, Trophy, Target, Medal } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { User, Trophy, Target, Medal, Settings } from 'lucide-react';
 import { useStudent } from '@/contexts/StudentContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { CasaBrasao } from '@/components/CasaBrasao';
@@ -25,13 +24,8 @@ const PerfilPage = () => {
   } | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const handleLogout = async () => {
-    await signOut();
-    navigate('/login');
-  };
-
-  const handleChangePassword = () => {
-    navigate('/alterar-senha');
+  const handleOpenSettings = () => {
+    navigate('/aluno/configuracoes');
   };
 
   const handleInteligenciaClick = (inteligencia: typeof selectedInteligencia) => {
@@ -88,8 +82,17 @@ const PerfilPage = () => {
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center text-center"
+        className="relative flex flex-col items-center text-center"
       >
+        {/* Settings Icon */}
+        <button
+          onClick={handleOpenSettings}
+          className="absolute top-0 right-0 p-2 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+          aria-label="Configurações"
+        >
+          <Settings className="w-5 h-5" />
+        </button>
+
         <div
           className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
           style={{ backgroundColor: `${casaColor}20` }}
@@ -202,31 +205,6 @@ const PerfilPage = () => {
         </p>
       </motion.div>
 
-      {/* Actions */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="space-y-3 pt-4"
-      >
-        <Button
-          variant="outline"
-          className="w-full justify-start gap-3 h-12 border-white/10 bg-transparent hover:bg-white/5"
-          onClick={handleChangePassword}
-        >
-          <KeyRound className="w-5 h-5" />
-          Alterar Senha
-        </Button>
-
-        <Button
-          variant="outline"
-          className="w-full justify-start gap-3 h-12 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-          onClick={handleLogout}
-        >
-          <LogOut className="w-5 h-5" />
-          Sair
-        </Button>
-      </motion.div>
 
       {/* Intelligence Drawer */}
       <InteligenciaDrawer

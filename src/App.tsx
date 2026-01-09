@@ -26,6 +26,7 @@ import MissaoDetalhePage from "./pages/aluno/MissaoDetalhePage";
 import CasaPage from "./pages/aluno/CasaPage";
 import ChatPage from "./pages/aluno/ChatPage";
 import PerfilPage from "./pages/aluno/PerfilPage";
+import ConfiguracoesPage from "./pages/aluno/ConfiguracoesPage";
 
 const queryClient = new QueryClient();
 
@@ -110,6 +111,13 @@ const App = () => (
               <StudentProtectedRoute>
                 <StudentLayout>
                   <PerfilPage />
+                </StudentLayout>
+              </StudentProtectedRoute>
+            } />
+            <Route path="/aluno/configuracoes" element={
+              <StudentProtectedRoute>
+                <StudentLayout>
+                  <ConfiguracoesPage />
                 </StudentLayout>
               </StudentProtectedRoute>
             } />
