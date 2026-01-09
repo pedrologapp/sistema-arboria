@@ -22,6 +22,7 @@ interface Casa {
   emoji: string | null;
   cor_hex: string | null;
   descricao: string | null;
+  brasao_url: string | null;
 }
 
 interface InteligenciaScore {
@@ -30,6 +31,7 @@ interface InteligenciaScore {
   inteligencia_codigo: string;
   inteligencia_emoji: string | null;
   inteligencia_cor: string | null;
+  inteligencia_brasao_url: string | null;
   score_atual: number;
   total_evidencias: number;
   eh_casa_do_aluno: boolean;
@@ -158,6 +160,7 @@ export const StudentProvider = ({ children }: StudentProviderProps) => {
           inteligencia_codigo: s.inteligencia_codigo || '',
           inteligencia_emoji: s.inteligencia_emoji,
           inteligencia_cor: s.inteligencia_cor,
+          inteligencia_brasao_url: (s as Record<string, unknown>).inteligencia_brasao_url as string | null || null,
           score_atual: Number(s.score_atual) || 0,
           total_evidencias: s.total_evidencias || 0,
           eh_casa_do_aluno: s.eh_casa_do_aluno || false,

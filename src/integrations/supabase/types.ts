@@ -757,6 +757,7 @@ export type Database = {
       }
       inteligencias: {
         Row: {
+          brasao_url: string | null
           codigo: string
           cor_hex: string | null
           descricao: string | null
@@ -766,6 +767,7 @@ export type Database = {
           ordem: number | null
         }
         Insert: {
+          brasao_url?: string | null
           codigo: string
           cor_hex?: string | null
           descricao?: string | null
@@ -775,6 +777,7 @@ export type Database = {
           ordem?: number | null
         }
         Update: {
+          brasao_url?: string | null
           codigo?: string
           cor_hex?: string | null
           descricao?: string | null
