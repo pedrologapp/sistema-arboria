@@ -6,7 +6,7 @@ interface StudentHeaderProps {
 }
 
 const StudentHeader = ({ notificationCount = 0 }: StudentHeaderProps) => {
-  const { institutionName, isLoading } = useStudent();
+  const { faseAtual, isLoading } = useStudent();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-black/80 backdrop-blur-lg border-b border-white/10">
@@ -17,18 +17,26 @@ const StudentHeader = ({ notificationCount = 0 }: StudentHeaderProps) => {
           <span className="font-semibold text-white">Arbória</span>
         </div>
 
-        {/* Institution name */}
-        <div className="flex-1 text-center">
+        {/* Fase Atual - Badge colorido */}
+        <div className="flex-1 flex justify-center">
           {isLoading ? (
-            <div className="h-4 w-24 mx-auto bg-white/10 rounded animate-pulse" />
-          ) : (
-            <span className="text-sm text-white/60 truncate max-w-[150px] inline-block">
-              {institutionName || ''}
-            </span>
-          )}
+            <div className="h-6 w-32 bg-white/10 rounded-full animate-pulse" />
+          ) : faseAtual?.inteligencia ? (
+            <div 
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
+              style={{ 
+                backgroundColor: `${faseAtual.inteligencia.cor_hex}20`,
+                color: faseAtual.inteligencia.cor_hex || '#fff',
+                border: `1px solid ${faseAtual.inteligencia.cor_hex}40`
+              }}
+            >
+              <span>{faseAtual.inteligencia.emoji}</span>
+              <span>Fase {faseAtual.inteligencia.nome}</span>
+            </div>
+          ) : null}
         </div>
 
-        {/* Notifications */}
+        {/* Notificações */}
         <button className="relative p-2 text-white/60 hover:text-white transition-colors">
           <Bell className="w-5 h-5" />
           {notificationCount > 0 && (
