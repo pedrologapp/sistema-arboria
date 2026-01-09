@@ -1,3 +1,4 @@
+// StudentContext - Contexto global para dados do aluno
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
