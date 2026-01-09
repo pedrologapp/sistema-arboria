@@ -1,14 +1,26 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Hash } from 'lucide-react';
+import { ArrowLeft, Hash, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useQuery } from '@tanstack/react-query';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useStudent } from '@/contexts/StudentContext';
+import { useEffect, useRef, useMemo } from 'react';
+import { MensagemBubble } from '@/components/chat/MensagemBubble';
+import { MensagemFixada } from '@/components/chat/MensagemFixada';
+import { ChatInput } from '@/components/chat/ChatInput';
 
 const CanalChatPage = () => {
   const { canalId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { casa, profile } = useStudent();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { data: canal, isLoading } = useQuery({
+  const casaColor = casa?.cor_hex || '#6366f1';
+
+  // Buscar dados do canal
+  const { data: canal, isLoading: loadingCanal } = useQuery({
     queryKey: ['canal', canalId],
     queryFn: async () => {
       const { data } = await supabase
@@ -21,39 +33,231 @@ const CanalChatPage = () => {
     enabled: !!canalId,
   });
 
-  return (
-    <div className="py-4 space-y-4">
-      <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate('/aluno/chat')}
-          className="text-white/60 hover:text-white"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        {canal?.icone ? (
-          <span className="text-lg">{canal.icone}</span>
-        ) : (
-          <Hash className="w-5 h-5 text-white/60" />
-        )}
-        <h1 className="text-lg font-bold text-white">
-          {isLoading ? 'Carregando...' : `# ${canal?.nome || 'Canal'}`}
-        </h1>
+  // Contagem de membros online
+  const { data: onlineCount } = useQuery({
+    queryKey: ['canal-online', canal?.casa_id],
+    queryFn: async () => {
+      const cincoMinutosAtras = new Date(Date.now() - 5 * 60000).toISOString();
+      const { count } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('casa_id', canal!.casa_id)
+        .gte('ultima_atividade', cincoMinutosAtras);
+      return count || 0;
+    },
+    enabled: !!canal?.casa_id,
+    refetchInterval: 60000,
+  });
+
+  // Buscar mensagens do canal
+  const { data: mensagens, isLoading: loadingMensagens } = useQuery({
+    queryKey: ['mensagens-canal', canalId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('mensagens_canal')
+        .select(`
+          *,
+          autor:profiles!mensagens_canal_autor_id_fkey(
+            id, full_name, avatar_url,
+            cargos_casa(cargo, ativo)
+          )
+        `)
+        .eq('canal_id', canalId!)
+        .order('created_at', { ascending: true })
+        .limit(100);
+      return data || [];
+    },
+    enabled: !!canalId,
+  });
+
+  // Buscar cargos do usuário atual
+  const { data: meusCargos } = useQuery({
+    queryKey: ['meus-cargos', profile?.id, casa?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('cargos_casa')
+        .select('cargo, ativo')
+        .eq('aluno_id', profile!.id)
+        .eq('casa_id', casa!.id)
+        .eq('ativo', true);
+      return data || [];
+    },
+    enabled: !!profile?.id && !!casa?.id,
+  });
+
+  // Verificar se pode postar
+  const podePostar = useMemo(() => {
+    if (!canal?.apenas_lideranca) return true;
+    
+    const cargosLideranca = ['lider', 'vice', 'coordenador', 'embaixador'];
+    return meusCargos?.some(c => cargosLideranca.includes(c.cargo)) || false;
+  }, [canal?.apenas_lideranca, meusCargos]);
+
+  // Separar mensagens fixadas
+  const mensagensFixadas = useMemo(() => {
+    return mensagens?.filter(m => m.fixada) || [];
+  }, [mensagens]);
+
+  // Mensagens normais (não fixadas)
+  const mensagensNormais = useMemo(() => {
+    return mensagens?.filter(m => !m.fixada) || [];
+  }, [mensagens]);
+
+  // Função para verificar se deve agrupar mensagens
+  const deveAgrupar = (atual: typeof mensagens[0], anterior: typeof mensagens[0] | null) => {
+    if (!anterior) return false;
+    if (atual.autor?.id !== anterior.autor?.id) return false;
+    
+    const diffMinutos = (new Date(atual.created_at).getTime() - 
+                         new Date(anterior.created_at).getTime()) / 60000;
+    return diffMinutos < 5;
+  };
+
+  // Realtime: escutar novas mensagens
+  useEffect(() => {
+    if (!canalId) return;
+    
+    const channel = supabase
+      .channel(`canal-${canalId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'mensagens_canal',
+        filter: `canal_id=eq.${canalId}`
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['mensagens-canal', canalId] });
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [canalId, queryClient]);
+
+  // Scroll automático para última mensagem
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [mensagens]);
+
+  // Enviar mensagem
+  const enviarMensagem = async (conteudo: string) => {
+    if (!conteudo.trim() || !canalId || !profile?.id || !profile?.institution_id) return;
+    
+    await supabase.from('mensagens_canal').insert({
+      canal_id: canalId,
+      institution_id: profile.institution_id,
+      autor_id: profile.id,
+      conteudo: conteudo.trim()
+    });
+  };
+
+  if (loadingCanal) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="animate-pulse text-white/60">Carregando...</div>
       </div>
-      
-      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
-        <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-140px)]">
+      {/* Header */}
+      <div className="flex items-center justify-between py-3 border-b border-white/10">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/aluno/chat')}
+            className="text-white/60 hover:text-white"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
           {canal?.icone ? (
-            <span className="text-3xl">{canal.icone}</span>
+            <span className="text-lg">{canal.icone}</span>
           ) : (
-            <Hash className="w-8 h-8 text-white/40" />
+            <Hash className="w-5 h-5 text-white/60" />
+          )}
+          <h1 className="text-lg font-bold text-white">
+            #{canal?.nome || 'Canal'}
+          </h1>
+        </div>
+        
+        <div className="flex items-center gap-1.5 text-white/60 text-sm">
+          <Users className="w-4 h-4" />
+          <span>{onlineCount || 0}</span>
+        </div>
+      </div>
+
+      {/* Mensagens Fixadas */}
+      {mensagensFixadas.length > 0 && (
+        <div className="py-3 space-y-2">
+          {mensagensFixadas.map(msg => (
+            <MensagemFixada
+              key={msg.id}
+              mensagem={msg}
+              casaColor={casaColor}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Área de mensagens */}
+      <ScrollArea className="flex-1 px-1" ref={scrollRef}>
+        <div className="py-4 space-y-1">
+          {loadingMensagens ? (
+            <div className="text-center text-white/40 py-8">
+              Carregando mensagens...
+            </div>
+          ) : mensagensNormais.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div 
+                className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
+                style={{ backgroundColor: `${casaColor}20` }}
+              >
+                {canal?.icone ? (
+                  <span className="text-2xl">{canal.icone}</span>
+                ) : (
+                  <Hash className="w-6 h-6" style={{ color: casaColor }} />
+                )}
+              </div>
+              <h3 className="text-white font-medium mb-1">
+                Início do #{canal?.nome}
+              </h3>
+              <p className="text-white/50 text-sm max-w-xs">
+                {canal?.descricao || 'Seja o primeiro a enviar uma mensagem!'}
+              </p>
+            </div>
+          ) : (
+            mensagensNormais.map((msg, index) => (
+              <MensagemBubble
+                key={msg.id}
+                mensagem={msg}
+                isMe={msg.autor?.id === profile?.id}
+                casaColor={casaColor}
+                agruparComAnterior={deveAgrupar(msg, mensagensNormais[index - 1] || null)}
+              />
+            ))
           )}
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Em breve!</h2>
-        <p className="text-white/60 max-w-xs">
-          O chat de canal está sendo preparado. Você poderá conversar com membros da sua casa aqui.
-        </p>
+      </ScrollArea>
+
+      {/* Input ou mensagem de restrição */}
+      <div className="pt-3 pb-2">
+        {podePostar ? (
+          <ChatInput
+            onEnviar={enviarMensagem}
+            casaColor={casaColor}
+          />
+        ) : (
+          <div className="text-center py-3 px-4 bg-white/5 rounded-xl text-white/50 text-sm">
+            {canal?.apenas_lideranca 
+              ? 'Apenas a liderança pode postar neste canal'
+              : 'Você está no modo observador'
+            }
+          </div>
+        )}
       </div>
     </div>
   );
