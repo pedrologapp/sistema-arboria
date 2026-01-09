@@ -1,12 +1,4 @@
-import { cn } from '@/lib/utils';
-import { StatusIndicator } from './StatusIndicator';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MessageCircle } from 'lucide-react';
-
-interface CargoInfo {
-  cargo: string;
-  ativo: boolean;
-}
+import { getStatusOnline } from '@/utils/statusOnline';
 
 interface Membro {
   id: string;
@@ -15,7 +7,7 @@ interface Membro {
   full_name: string | null;
   avatar_url: string | null;
   ultima_atividade: string | null;
-  cargos_casa?: CargoInfo[];
+  cargos_casa?: { cargo: string; ativo: boolean }[];
 }
 
 interface MembroCardProps {
@@ -25,80 +17,54 @@ interface MembroCardProps {
   casaColor?: string;
 }
 
-const CARGO_INFO: Record<string, { emoji: string; label: string }> = {
-  lider: { emoji: '🦅', label: 'Líder' },
-  vice: { emoji: '👑', label: 'Vice-Líder' },
-  coordenador: { emoji: '⭐', label: 'Coordenador' },
-  embaixador: { emoji: '🌍', label: 'Embaixador' },
+const CARGO_EMOJI: Record<string, string> = {
+  lider: '🦅 Líder',
+  vice: '👑 Vice-Líder',
+  coordenador: '⭐ Coordenador',
+  embaixador: '🌍 Embaixador',
 };
 
-export const MembroCard = ({ membro, isMe, onIniciarConversa, casaColor }: MembroCardProps) => {
+export const MembroCard = ({ membro, isMe, onIniciarConversa }: MembroCardProps) => {
+  const status = getStatusOnline(membro.ultima_atividade);
   const nomeExibido = membro.nome || membro.full_name || 'Usuário';
-  const nomeCompleto = membro.nome && membro.sobrenome 
-    ? `${membro.nome} ${membro.sobrenome}` 
-    : nomeExibido;
-  const iniciais = nomeExibido.slice(0, 2).toUpperCase();
-  
   const cargoAtivo = membro.cargos_casa?.find(c => c.ativo);
-  const cargoInfo = cargoAtivo?.cargo ? CARGO_INFO[cargoAtivo.cargo] : null;
-  
+  const cargoLabel = cargoAtivo?.cargo ? CARGO_EMOJI[cargoAtivo.cargo] : null;
+
   return (
-    <div
-      className={cn(
-        "flex items-center justify-between p-3 rounded-lg transition-all",
-        "bg-white/5 hover:bg-white/10",
-        isMe && "ring-1 ring-white/20"
-      )}
-    >
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        {/* Avatar com indicador de status */}
-        <div className="relative flex-shrink-0">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={membro.avatar_url || undefined} alt={nomeCompleto} />
-            <AvatarFallback className="bg-white/10 text-white/70 text-sm">
-              {iniciais}
-            </AvatarFallback>
-          </Avatar>
-          {/* Status indicator no canto do avatar */}
-          <div className="absolute -bottom-0.5 -right-0.5 border-2 border-background rounded-full">
-            <StatusIndicator 
-              ultimaAtividade={membro.ultima_atividade} 
-              size="sm" 
-            />
-          </div>
+    <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/5 transition-colors">
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        {/* Status indicator */}
+        <div 
+          className="w-2 h-2 rounded-full flex-shrink-0"
+          style={{ backgroundColor: status.cor }}
+        />
+        
+        {/* Avatar pequeno */}
+        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs text-white/70 flex-shrink-0">
+          {nomeExibido.charAt(0).toUpperCase()}
         </div>
         
-        {/* Informações do membro */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-white/90 font-medium truncate">
-              {nomeCompleto}
-            </span>
-            {isMe && (
-              <span className="text-white/40 text-xs">(você)</span>
-            )}
-          </div>
-          {cargoInfo && (
-            <span className="text-sm text-white/60">
-              {cargoInfo.emoji} {cargoInfo.label}
-            </span>
-          )}
-        </div>
+        {/* Nome + Cargo na mesma linha */}
+        <span className="text-white text-sm truncate">{nomeExibido}</span>
+        
+        {cargoLabel && (
+          <span className="text-white/60 text-sm flex-shrink-0">
+            {cargoLabel}
+          </span>
+        )}
+        
+        {isMe && (
+          <span className="text-white/40 text-xs flex-shrink-0">(você)</span>
+        )}
       </div>
       
-      {/* Botão de DM (não mostrar para si mesmo) */}
+      {/* Botão DM */}
       {!isMe && (
         <button 
           onClick={() => onIniciarConversa(membro.id)}
-          className={cn(
-            "p-2 rounded-lg transition-colors flex-shrink-0",
-            "bg-white/10 hover:bg-white/20 active:scale-95"
-          )}
-          style={{ 
-            backgroundColor: casaColor ? `${casaColor}20` : undefined,
-          }}
+          className="p-1.5 rounded hover:bg-white/10 text-white/60 hover:text-white transition-colors flex-shrink-0"
         >
-          <MessageCircle className="w-4 h-4 text-white/70" />
+          💬
         </button>
       )}
     </div>
