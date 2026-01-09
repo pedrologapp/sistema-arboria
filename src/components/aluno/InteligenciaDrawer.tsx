@@ -87,12 +87,14 @@ const InteligenciaDrawer = ({
 
       setHistorico(historicoComInicio);
 
-      // Fetch recent evidences
+      // Fetch recent conquests (ONLY missions - privacy filter)
+      // Teachers' observations are confidential and not shown to students
       const { data: evidenciasData, count } = await supabase
         .from('inteligencia_evidencias')
         .select('tipo, pontos, created_at', { count: 'exact' })
         .eq('aluno_id', alunoId)
         .eq('inteligencia_id', inteligencia.id)
+        .in('tipo', ['missao_propria', 'missao_cross'])
         .order('created_at', { ascending: false })
         .limit(5);
 
@@ -107,12 +109,10 @@ const InteligenciaDrawer = ({
 
   const getTipoLabel = (tipo: string) => {
     const labels: Record<string, string> = {
-      'missao_propria': 'Missão da casa',
-      'missao_cross': 'Missão cross-IM',
-      'obs_propria': 'Observação',
-      'obs_cross': 'Observação cross-IM',
+      'missao_propria': 'Missão da sua casa',
+      'missao_cross': 'Missão de outra casa',
     };
-    return labels[tipo] || tipo;
+    return labels[tipo] || 'Missão';
   };
 
   // Map codigo to brasao URL
@@ -224,7 +224,7 @@ const InteligenciaDrawer = ({
           {/* Recent Evidence */}
           <div>
             <h3 className="text-sm font-semibold text-white/60 mb-3 flex items-center gap-2">
-              📋 ÚLTIMAS EVIDÊNCIAS
+              🏆 ÚLTIMAS CONQUISTAS
             </h3>
             
             {isLoading ? (
@@ -264,14 +264,14 @@ const InteligenciaDrawer = ({
                 
                 {totalEvidencias > 5 && (
                   <p className="text-xs text-white/40 text-center pt-2">
-                    Total de {totalEvidencias} evidências
+                    Total de {totalEvidencias} conquistas
                   </p>
                 )}
               </div>
             ) : (
               <div className="text-center py-6 text-white/40">
-                <p>Nenhuma evidência registrada ainda</p>
-                <p className="text-xs mt-1">Complete missões e participe das aulas!</p>
+                <p>Nenhuma conquista registrada ainda</p>
+                <p className="text-xs mt-1">Complete missões para ganhar pontos!</p>
               </div>
             )}
           </div>
@@ -279,8 +279,8 @@ const InteligenciaDrawer = ({
           {/* Info Text */}
           <div className="text-xs text-white/40 text-center pb-4">
             <p>
-              O score evolui a cada fase com base nas suas missões e 
-              observações dos professores.
+              O score evolui a cada fase com base no seu desempenho 
+              nas missões e atividades.
             </p>
           </div>
         </div>
