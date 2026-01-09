@@ -166,7 +166,7 @@ const CasaPage = () => {
                         <span className="text-xs px-1.5 py-0.5 rounded bg-white/10">Minha Casa</span>
                       )}
                     </div>
-                    <span className="text-sm text-white/60">{Math.round(score.score_atual)}</span>
+                    <span className="text-sm text-white/60">{Math.round(score.score_atual)}%</span>
                   </div>
                   <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                     <div
