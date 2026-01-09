@@ -61,7 +61,10 @@ export const MembroCard = ({ membro, isMe, onIniciarConversa }: MembroCardProps)
       {/* Botão DM */}
       {!isMe && (
         <button 
-          onClick={() => onIniciarConversa(membro.id)}
+          onClick={() => {
+            console.log('🔵 Botão DM clicado! Membro:', membro.id, nomeExibido);
+            onIniciarConversa(membro.id);
+          }}
           className="p-1.5 rounded hover:bg-white/10 text-white/60 hover:text-white transition-colors flex-shrink-0"
         >
           💬
