@@ -254,14 +254,16 @@ const CasaPage = () => {
           Sobre Nossa Casa
         </h2>
         <div 
-          className="rounded-2xl p-5"
+          className="rounded-2xl p-6 text-center"
           style={{
             background: 'rgba(255, 255, 255, 0.03)',
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255, 255, 255, 0.06)',
           }}
         >
-          <p className="text-white/70 leading-relaxed">{descricao}</p>
+          <p className="font-fantasy italic text-white/75 text-lg leading-loose">
+            "{descricao}"
+          </p>
         </div>
       </motion.section>
 
