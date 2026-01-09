@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent } from 'react';
+import { useState, KeyboardEvent, forwardRef } from 'react';
 import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -9,12 +9,12 @@ interface ChatInputProps {
   placeholder?: string;
 }
 
-export const ChatInput = ({ 
+export const ChatInput = forwardRef<HTMLDivElement, ChatInputProps>(({ 
   onEnviar, 
   casaColor, 
   disabled = false,
   placeholder = 'Digite sua mensagem...'
-}: ChatInputProps) => {
+}, ref) => {
   const [mensagem, setMensagem] = useState('');
   const [enviando, setEnviando] = useState(false);
 
@@ -39,7 +39,7 @@ export const ChatInput = ({
   };
 
   return (
-    <div className="flex items-end gap-2 p-3 bg-white/5 rounded-xl border border-white/10">
+    <div ref={ref} className="flex items-end gap-2 p-3 bg-white/5 rounded-xl border border-white/10">
       <textarea
         value={mensagem}
         onChange={(e) => setMensagem(e.target.value)}
@@ -74,4 +74,6 @@ export const ChatInput = ({
       </Button>
     </div>
   );
-};
+});
+
+ChatInput.displayName = 'ChatInput';

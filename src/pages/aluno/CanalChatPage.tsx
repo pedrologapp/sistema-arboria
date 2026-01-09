@@ -5,17 +5,17 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, forwardRef } from 'react';
 import { MensagemBubble } from '@/components/chat/MensagemBubble';
 import { MensagemFixada } from '@/components/chat/MensagemFixada';
 import { ChatInput } from '@/components/chat/ChatInput';
 
-const CanalChatPage = () => {
+const CanalChatPage = forwardRef<HTMLDivElement>((_, ref) => {
   const { canalId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { casa, profile } = useStudent();
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   const casaColor = casa?.cor_hex || '#6366f1';
 
@@ -136,9 +136,7 @@ const CanalChatPage = () => {
 
   // Scroll automático para última mensagem
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [mensagens]);
 
   // Enviar mensagem
@@ -162,7 +160,7 @@ const CanalChatPage = () => {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)]">
+    <div ref={ref} className="flex flex-col h-[calc(100vh-140px)]">
       {/* Header */}
       <div className="flex items-center justify-between py-3 border-b border-white/10">
         <div className="flex items-center gap-3">
@@ -204,7 +202,7 @@ const CanalChatPage = () => {
       )}
 
       {/* Área de mensagens */}
-      <ScrollArea className="flex-1 px-1" ref={scrollRef}>
+      <ScrollArea className="flex-1 px-1">
         <div className="py-4 space-y-1">
           {loadingMensagens ? (
             <div className="text-center text-white/40 py-8">
@@ -240,6 +238,7 @@ const CanalChatPage = () => {
               />
             ))
           )}
+          <div ref={bottomRef} />
         </div>
       </ScrollArea>
 
@@ -261,6 +260,8 @@ const CanalChatPage = () => {
       </div>
     </div>
   );
-};
+});
+
+CanalChatPage.displayName = 'CanalChatPage';
 
 export default CanalChatPage;
