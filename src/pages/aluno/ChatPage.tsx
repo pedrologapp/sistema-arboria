@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Plus, MessageCircle, Hash } from 'lucide-react';
+import { Search, MessageCircle, Hash, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { CanalItem } from '@/components/chat/CanalItem';
-import { DmItem } from '@/components/chat/DmItem';
+import { MembroCard } from '@/components/chat/MembroCard';
 import { Input } from '@/components/ui/input';
 import { getStatusOnline } from '@/utils/statusOnline';
 
@@ -75,107 +75,138 @@ const ChatPage = () => {
     enabled: canais.length > 0 && !!profile?.id,
   });
 
-  // Buscar DMs do usuário
-  const { data: conversas = [] } = useQuery({
-    queryKey: ['minhas-dms', profile?.id],
+  // Buscar membros da casa com cargos
+  const { data: membrosCasa = [] } = useQuery({
+    queryKey: ['membros-chat', casa?.id, profile?.institution_id],
     queryFn: async () => {
-      if (!profile?.id) return [];
-      
-      // Buscar participações do usuário
-      const { data: participacoes, error } = await supabase
-        .from('conversa_participantes')
-        .select(`
-          conversa_id,
-          ultima_leitura,
-          conversas_privadas!inner(id, updated_at)
-        `)
-        .eq('usuario_id', profile.id);
-      
-      if (error) throw error;
-      if (!participacoes?.length) return [];
-      
-      // Para cada conversa, buscar o outro participante
-      const conversasComDados = await Promise.all(
-        participacoes.map(async (p) => {
-          // Buscar outro participante
-          const { data: outroParticipante } = await supabase
-            .from('conversa_participantes')
-            .select('usuario_id')
-            .eq('conversa_id', p.conversa_id)
-            .neq('usuario_id', profile.id)
-            .single();
-          
-          if (!outroParticipante) return null;
-          
-          // Buscar dados do outro usuário
-          const { data: usuario } = await supabase
-            .from('profiles')
-            .select('id, nome, sobrenome, full_name, avatar_url, ultima_atividade')
-            .eq('id', outroParticipante.usuario_id)
-            .single();
-          
-          // Contar mensagens não lidas
-          const { count: naoLidas } = await supabase
-            .from('mensagens_privadas')
-            .select('*', { count: 'exact', head: true })
-            .eq('conversa_id', p.conversa_id)
-            .gt('created_at', p.ultima_leitura || '1970-01-01')
-            .neq('autor_id', profile.id);
-          
-          return {
-            conversaId: p.conversa_id,
-            usuario,
-            naoLidas: naoLidas || 0,
-          };
-        })
-      );
-      
-      return conversasComDados.filter(Boolean);
-    },
-    enabled: !!profile?.id,
-  });
-
-  // Buscar membros online da casa
-  const { data: membrosOnline = 0 } = useQuery({
-    queryKey: ['membros-online', casa?.id],
-    queryFn: async () => {
-      if (!casa?.id) return 0;
+      if (!casa?.id || !profile?.institution_id) return [];
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('ultima_atividade')
-        .eq('casa_id', casa.id);
+        .select(`
+          id,
+          full_name,
+          nome,
+          sobrenome,
+          avatar_url,
+          ultima_atividade,
+          cargos_casa(cargo, ativo)
+        `)
+        .eq('casa_id', casa.id)
+        .eq('institution_id', profile.institution_id);
       
       if (error) throw error;
-      
-      // Contar quantos estão online (menos de 5 min)
-      const online = (data || []).filter(m => {
-        const status = getStatusOnline(m.ultima_atividade);
-        return status.status === 'online';
-      });
-      
-      return online.length;
+      return data || [];
     },
-    enabled: !!casa?.id,
-    refetchInterval: 60000, // Atualizar a cada minuto
+    enabled: !!casa?.id && !!profile?.institution_id,
   });
 
-  // Filtrar canais e conversas pelo termo de busca
+  // Buscar membros online da casa
+  const membrosOnline = useMemo(() => {
+    return membrosCasa.filter(m => {
+      const status = getStatusOnline(m.ultima_atividade);
+      return status.status === 'online';
+    }).length;
+  }, [membrosCasa]);
+
+  // Agrupar membros por cargo
+  const { lideranca, membrosComuns } = useMemo(() => {
+    const lideranca = membrosCasa.filter(m => {
+      const cargoAtivo = m.cargos_casa?.find((c: { ativo: boolean }) => c.ativo);
+      return cargoAtivo?.cargo;
+    }).sort((a, b) => {
+      // Ordenar: líder > vice > coordenador > embaixador
+      const ordem = { lider: 1, vice: 2, coordenador: 3, embaixador: 4 };
+      const cargoA = a.cargos_casa?.find((c: { ativo: boolean }) => c.ativo)?.cargo || '';
+      const cargoB = b.cargos_casa?.find((c: { ativo: boolean }) => c.ativo)?.cargo || '';
+      return (ordem[cargoA as keyof typeof ordem] || 99) - (ordem[cargoB as keyof typeof ordem] || 99);
+    });
+    
+    const membrosComuns = membrosCasa.filter(m => {
+      const cargoAtivo = m.cargos_casa?.find((c: { ativo: boolean }) => c.ativo);
+      return !cargoAtivo?.cargo;
+    });
+    
+    return { lideranca, membrosComuns };
+  }, [membrosCasa]);
+
+  // Filtrar canais e membros pelo termo de busca
   const canaisFiltrados = useMemo(() => {
     if (!searchTerm) return canais;
     const termo = searchTerm.toLowerCase();
     return canais.filter(c => c.nome.toLowerCase().includes(termo));
   }, [canais, searchTerm]);
 
-  const conversasFiltradas = useMemo(() => {
-    if (!searchTerm) return conversas;
+  const liderancaFiltrada = useMemo(() => {
+    if (!searchTerm) return lideranca;
     const termo = searchTerm.toLowerCase();
-    return conversas.filter(c => {
-      const nome = c?.usuario?.nome?.toLowerCase() || '';
-      const fullName = c?.usuario?.full_name?.toLowerCase() || '';
+    return lideranca.filter(m => {
+      const nome = m.nome?.toLowerCase() || '';
+      const fullName = m.full_name?.toLowerCase() || '';
       return nome.includes(termo) || fullName.includes(termo);
     });
-  }, [conversas, searchTerm]);
+  }, [lideranca, searchTerm]);
+
+  const membrosComunsFiltrados = useMemo(() => {
+    if (!searchTerm) return membrosComuns;
+    const termo = searchTerm.toLowerCase();
+    return membrosComuns.filter(m => {
+      const nome = m.nome?.toLowerCase() || '';
+      const fullName = m.full_name?.toLowerCase() || '';
+      return nome.includes(termo) || fullName.includes(termo);
+    });
+  }, [membrosComuns, searchTerm]);
+
+  // Função para iniciar conversa com um membro
+  const iniciarConversa = async (outroUsuarioId: string) => {
+    if (!profile?.id || !profile?.institution_id) return;
+    
+    try {
+      // Buscar se já existe conversa entre os dois
+      const { data: minhasConversas } = await supabase
+        .from('conversa_participantes')
+        .select('conversa_id')
+        .eq('usuario_id', profile.id);
+      
+      if (minhasConversas?.length) {
+        // Verificar se o outro usuário está em alguma dessas conversas
+        for (const conv of minhasConversas) {
+          const { data: outroParticipante } = await supabase
+            .from('conversa_participantes')
+            .select('usuario_id')
+            .eq('conversa_id', conv.conversa_id)
+            .eq('usuario_id', outroUsuarioId)
+            .single();
+          
+          if (outroParticipante) {
+            // Conversa já existe, navegar para ela
+            navigate(`/aluno/chat/dm/${conv.conversa_id}`);
+            return;
+          }
+        }
+      }
+      
+      // Criar nova conversa
+      const { data: novaConversa, error: erroConversa } = await supabase
+        .from('conversas_privadas')
+        .insert({ institution_id: profile.institution_id })
+        .select()
+        .single();
+      
+      if (erroConversa || !novaConversa) throw erroConversa;
+      
+      // Adicionar participantes
+      await supabase.from('conversa_participantes').insert([
+        { conversa_id: novaConversa.id, usuario_id: profile.id },
+        { conversa_id: novaConversa.id, usuario_id: outroUsuarioId },
+      ]);
+      
+      // Navegar para a nova conversa
+      navigate(`/aluno/chat/dm/${novaConversa.id}`);
+    } catch (error) {
+      console.error('Erro ao iniciar conversa:', error);
+    }
+  };
 
   if (!casa) {
     return (
@@ -248,7 +279,7 @@ const ChatPage = () => {
       </div>
 
       {/* Seção: Mensagens Diretas */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex items-center gap-2 px-1">
           <MessageCircle className="w-4 h-4 text-white/40" />
           <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider">
@@ -256,34 +287,50 @@ const ChatPage = () => {
           </h2>
         </div>
         
-        {conversasFiltradas.length === 0 ? (
-          <p className="text-sm text-white/40 text-center py-4">
-            Nenhuma conversa ainda
-          </p>
-        ) : (
-          <div className="space-y-1">
-            {conversasFiltradas.map((conversa) => (
-              conversa?.usuario && (
-                <DmItem
-                  key={conversa.conversaId}
-                  usuario={conversa.usuario}
-                  naoLidas={conversa.naoLidas}
+        {/* Liderança */}
+        {liderancaFiltrada.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-xs text-white/50 px-1 flex items-center gap-1.5">
+              <span>🦅</span> LIDERANÇA
+            </h3>
+            <div className="space-y-1">
+              {liderancaFiltrada.map((membro) => (
+                <MembroCard
+                  key={membro.id}
+                  membro={membro}
+                  isMe={membro.id === profile?.id}
+                  onIniciarConversa={iniciarConversa}
                   casaColor={casaColor}
-                  onClick={() => navigate(`/aluno/chat/dm/${conversa.conversaId}`)}
                 />
-              )
-            ))}
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Botão Nova Conversa */}
-        <button
-          onClick={() => navigate('/aluno/chat/membros')}
-          className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed border-white/20 text-white/60 hover:bg-white/5 hover:text-white/80 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="text-sm font-medium">Nova conversa</span>
-        </button>
+        {/* Membros */}
+        <div className="space-y-2">
+          <h3 className="text-xs text-white/50 px-1 flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5" />
+            <span>MEMBROS ({membrosComunsFiltrados.length})</span>
+          </h3>
+          <div className="space-y-1">
+            {membrosComunsFiltrados.length === 0 ? (
+              <p className="text-sm text-white/40 text-center py-4">
+                Nenhum membro encontrado
+              </p>
+            ) : (
+              membrosComunsFiltrados.map((membro) => (
+                <MembroCard
+                  key={membro.id}
+                  membro={membro}
+                  isMe={membro.id === profile?.id}
+                  onIniciarConversa={iniciarConversa}
+                  casaColor={casaColor}
+                />
+              ))
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
