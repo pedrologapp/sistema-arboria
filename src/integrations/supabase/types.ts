@@ -218,6 +218,102 @@ export type Database = {
           },
         ]
       }
+      cargos_casa: {
+        Row: {
+          aluno_id: string
+          ano_letivo: number
+          ativo: boolean | null
+          cargo: string
+          casa_id: number
+          created_at: string | null
+          data_nomeacao: string | null
+          id: string
+          institution_id: string
+          nomeado_por: string | null
+        }
+        Insert: {
+          aluno_id: string
+          ano_letivo?: number
+          ativo?: boolean | null
+          cargo: string
+          casa_id: number
+          created_at?: string | null
+          data_nomeacao?: string | null
+          id?: string
+          institution_id: string
+          nomeado_por?: string | null
+        }
+        Update: {
+          aluno_id?: string
+          ano_letivo?: number
+          ativo?: boolean | null
+          cargo?: string
+          casa_id?: number
+          created_at?: string | null
+          data_nomeacao?: string | null
+          id?: string
+          institution_id?: string
+          nomeado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cargos_casa_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargos_casa_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
+            foreignKeyName: "cargos_casa_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "inteligencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargos_casa_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "cargos_casa_casa_id_fkey"
+            columns: ["casa_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
+          },
+          {
+            foreignKeyName: "cargos_casa_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargos_casa_nomeado_por_fkey"
+            columns: ["nomeado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargos_casa_nomeado_por_fkey"
+            columns: ["nomeado_por"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+        ]
+      }
       entrega_arquivos: {
         Row: {
           created_at: string | null
