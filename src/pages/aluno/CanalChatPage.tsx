@@ -53,18 +53,24 @@ const CanalChatPage = () => {
   const { data: mensagens, isLoading: loadingMensagens } = useQuery({
     queryKey: ['mensagens-canal', canalId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('mensagens_canal')
         .select(`
           *,
           autor:profiles!mensagens_canal_autor_id_fkey(
             id, full_name, avatar_url,
-            cargos_casa(cargo, ativo)
+            cargos_casa!cargos_casa_aluno_id_fkey(cargo, ativo)
           )
         `)
         .eq('canal_id', canalId!)
         .order('created_at', { ascending: true })
         .limit(100);
+      
+      if (error) {
+        console.error('Erro ao buscar mensagens:', error);
+        throw error;
+      }
+      
       return data || [];
     },
     enabled: !!canalId,
