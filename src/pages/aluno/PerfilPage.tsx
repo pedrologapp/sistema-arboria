@@ -94,7 +94,7 @@ const PerfilPage = () => {
       <div className="space-y-3">
         <Button
           variant="outline"
-          className="w-full justify-start gap-3 h-12 border-white/10 hover:bg-white/5"
+          className="w-full justify-start gap-3 h-12 border-white/10 bg-transparent hover:bg-white/5"
           onClick={handleChangePassword}
         >
           <KeyRound className="w-5 h-5" />
