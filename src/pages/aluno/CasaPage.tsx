@@ -186,18 +186,6 @@ const CasaPage = () => {
 
   return (
     <div className="py-6 space-y-6">
-      {/* Refresh Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-sm text-white/60 hover:text-white disabled:opacity-50"
-        >
-          <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
-          Atualizar
-        </button>
-      </div>
-
       {/* Hero Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -208,6 +196,15 @@ const CasaPage = () => {
           border: `1px solid ${casaColor}20`,
         }}
       >
+        {/* Refresh Button - Icon only */}
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="absolute top-3 right-3 z-20 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors text-white/50 hover:text-white disabled:opacity-50"
+        >
+          <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
+        </button>
+
         {/* Background glow */}
         <div
           className="absolute inset-0 opacity-15"
