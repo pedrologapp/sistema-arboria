@@ -44,10 +44,7 @@ export const CanalItem = ({ canal, naoLidas = 0, onClick, casaColor }: CanalItem
       
       {/* Badge de não lidas */}
       {naoLidas > 0 && (
-        <span 
-          className="min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold flex items-center justify-center text-white"
-          style={{ backgroundColor: casaColor || '#3B82F6' }}
-        >
+        <span className="min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold flex items-center justify-center text-white bg-red-500">
           {naoLidas > 99 ? '99+' : naoLidas}
         </span>
       )}

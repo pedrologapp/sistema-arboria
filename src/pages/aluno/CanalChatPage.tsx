@@ -145,6 +145,29 @@ const CanalChatPage = () => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [mensagens]);
 
+  // Marcar canal como lido ao entrar
+  useEffect(() => {
+    const marcarComoLido = async () => {
+      if (!canalId || !profile?.id) return;
+      
+      await supabase
+        .from('canal_leituras')
+        .upsert({
+          canal_id: canalId,
+          usuario_id: profile.id,
+          ultima_leitura: new Date().toISOString()
+        }, {
+          onConflict: 'canal_id,usuario_id'
+        });
+      
+      // Invalidar cache para atualizar badge na lista de canais
+      queryClient.invalidateQueries({ queryKey: ['mensagens-nao-lidas'] });
+      queryClient.invalidateQueries({ queryKey: ['canal-leituras'] });
+    };
+    
+    marcarComoLido();
+  }, [canalId, profile?.id, queryClient]);
+
   // Enviar mensagem
   const enviarMensagem = async (conteudo: string) => {
     if (!conteudo.trim() || !canalId || !profile?.id || !profile?.institution_id) return;
