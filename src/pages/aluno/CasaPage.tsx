@@ -264,7 +264,7 @@ const CasaPage = () => {
         </div>
       </motion.section>
 
-      {/* Membros da Casa - Com Hierarquia */}
+      {/* Membros da Casa - Layout Compacto Discord-style */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -276,76 +276,73 @@ const CasaPage = () => {
           <span className="text-sm font-normal text-white/40">({totalMembros})</span>
         </h2>
 
-        <div className="space-y-4">
+        <div 
+          className="rounded-xl overflow-hidden"
+          style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+          }}
+        >
           {/* Líder */}
           {lider && (
-            <CargoSection
-              config={cargoConfig.lider}
-              membros={[lider]}
-              currentUserId={user?.id}
-              casaColor={casaColor}
-              showMedals={false}
-            />
+            <>
+              <h3 className="text-xs font-medium text-amber-400/80 px-3 pt-3 pb-1">🦅 LÍDER</h3>
+              <MembroItemCompacto
+                membro={lider}
+                isCurrentUser={lider.aluno_id === user?.id}
+                casaColor={casaColor}
+              />
+            </>
           )}
 
           {/* Coordenadores */}
           {coordenadores.length > 0 && (
-            <CargoSection
-              config={cargoConfig.coordenador}
-              membros={coordenadores}
-              currentUserId={user?.id}
-              casaColor={casaColor}
-              showMedals={false}
-            />
+            <>
+              <h3 className="text-xs font-medium text-amber-400/60 px-3 pt-3 pb-1">⭐ COORDENADORES</h3>
+              {coordenadores.map(m => (
+                <MembroItemCompacto
+                  key={m.aluno_id}
+                  membro={m}
+                  isCurrentUser={m.aluno_id === user?.id}
+                  casaColor={casaColor}
+                />
+              ))}
+            </>
           )}
 
           {/* Embaixador */}
           {embaixador && (
-            <CargoSection
-              config={cargoConfig.embaixador}
-              membros={[embaixador]}
-              currentUserId={user?.id}
-              casaColor={casaColor}
-              showMedals={false}
-            />
+            <>
+              <h3 className="text-xs font-medium text-cyan-400/80 px-3 pt-3 pb-1">🌍 EMBAIXADOR</h3>
+              <MembroItemCompacto
+                membro={embaixador}
+                isCurrentUser={embaixador.aluno_id === user?.id}
+                casaColor={casaColor}
+              />
+            </>
           )}
 
           {/* Demais Membros */}
           {membrosSemCargo.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-white/50 flex items-center gap-2 mb-2">
-                👤 DEMAIS MEMBROS
+            <>
+              <h3 className="text-xs font-medium text-white/50 px-3 pt-3 pb-1">
+                👥 DEMAIS MEMBROS ({membrosSemCargo.length})
               </h3>
-              <div 
-                className="rounded-2xl overflow-hidden"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.02)',
-                  border: '1px solid rgba(255, 255, 255, 0.05)',
-                }}
-              >
-                {membrosSemCargo.map((membro, index) => (
-                  <MembroItem
-                    key={membro.aluno_id}
-                    membro={membro}
-                    isCurrentUser={membro.aluno_id === user?.id}
-                    casaColor={casaColor}
-                    showMedal={true}
-                    index={index}
-                  />
-                ))}
-              </div>
-            </div>
+              {membrosSemCargo.map(m => (
+                <MembroItemCompacto
+                  key={m.aluno_id}
+                  membro={m}
+                  isCurrentUser={m.aluno_id === user?.id}
+                  casaColor={casaColor}
+                  showMedal
+                />
+              ))}
+            </>
           )}
 
           {/* Fallback se não houver membros */}
           {membros.length === 0 && (
-            <div 
-              className="rounded-2xl p-6 text-center text-white/50"
-              style={{
-                background: 'rgba(255, 255, 255, 0.02)',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
-              }}
-            >
+            <div className="p-4 text-center text-white/50 text-sm">
               Nenhum membro no ranking ainda.
             </div>
           )}
@@ -355,130 +352,67 @@ const CasaPage = () => {
   );
 };
 
-// Componente para seção de cargo
-function CargoSection({
-  config,
-  membros,
-  currentUserId,
-  casaColor,
-  showMedals,
-}: {
-  config: { emoji: string; label: string; borderColor: string; bgGradient: string; glowColor: string };
-  membros: MembroComCargo[];
-  currentUserId?: string;
-  casaColor: string;
-  showMedals: boolean;
-}) {
-  return (
-    <div>
-      <h3
-        className="text-sm font-semibold flex items-center gap-2 mb-2"
-        style={{ color: config.borderColor.replace('0.3', '0.8').replace('0.2', '0.7') }}
-      >
-        {config.emoji} {config.label}
-      </h3>
-      <div
-        className="rounded-2xl overflow-hidden"
-        style={{
-          background: config.bgGradient,
-          border: `1px solid ${config.borderColor}`,
-          boxShadow: `0 0 20px ${config.glowColor}`,
-        }}
-      >
-        {membros.map((membro, index) => (
-          <MembroItem
-            key={membro.aluno_id}
-            membro={membro}
-            isCurrentUser={membro.aluno_id === currentUserId}
-            casaColor={casaColor}
-            showMedal={showMedals}
-            index={index}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Componente para item de membro
-function MembroItem({
+// Componente compacto para membro (estilo Discord)
+function MembroItemCompacto({
   membro,
   isCurrentUser,
   casaColor,
-  showMedal,
-  index,
+  showMedal = false,
 }: {
   membro: MembroComCargo;
   isCurrentUser: boolean;
   casaColor: string;
-  showMedal: boolean;
-  index: number;
+  showMedal?: boolean;
 }) {
-  const getMedal = (pos: number) => {
-    if (pos === 1) return '🥇';
-    if (pos === 2) return '🥈';
-    if (pos === 3) return '🥉';
+  // Medalha só para top 3 COM pontos > 0
+  const getMedal = (posicao: number, pontos: number) => {
+    if (pontos <= 0) return null;
+    if (posicao === 1) return '🥇';
+    if (posicao === 2) return '🥈';
+    if (posicao === 3) return '🥉';
     return null;
   };
 
-  const medal = showMedal ? getMedal(index + 1) : null;
+  const medal = showMedal ? getMedal(membro.posicao_na_casa, membro.total_pontos) : null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: 0.3 + index * 0.03 }}
+    <div
       className={cn(
-        'flex items-center gap-3 p-3 border-b border-white/5 last:border-b-0',
+        'flex items-center justify-between py-2 px-3 hover:bg-white/5 transition-colors',
         isCurrentUser && 'bg-white/5'
       )}
     >
-      {/* Medalha ou Posição */}
-      {showMedal && (
-        medal ? (
-          <span className="text-xl w-8 text-center">{medal}</span>
-        ) : (
-          <span className="w-8 text-center text-sm text-white/40 font-medium">
-            {index + 1}º
-          </span>
-        )
-      )}
+      <div className="flex items-center gap-2 min-w-0">
+        {/* Medalha (se tiver) */}
+        {medal && <span className="text-sm w-5 shrink-0">{medal}</span>}
 
-      {/* Avatar */}
-      <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden flex-shrink-0">
-        {membro.avatar_url ? (
-          <img
-            src={membro.avatar_url}
-            alt={membro.aluno_nome}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <span className="flex items-center justify-center w-full h-full text-xs text-white/60 font-medium">
-            {membro.aluno_nome.charAt(0).toUpperCase()}
-          </span>
-        )}
-      </div>
+        {/* Avatar pequeno 24px */}
+        <div className="w-6 h-6 rounded-full bg-white/10 overflow-hidden flex-shrink-0">
+          {membro.avatar_url ? (
+            <img
+              src={membro.avatar_url}
+              alt={membro.aluno_nome}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="flex items-center justify-center w-full h-full text-xs text-white/60">
+              {membro.aluno_nome.charAt(0).toUpperCase()}
+            </span>
+          )}
+        </div>
 
-      {/* Nome */}
-      <div className="flex-1 min-w-0">
-        <p className={cn('font-medium truncate', isCurrentUser && 'text-white')}>
-          {membro.aluno_nome}
-        </p>
+        {/* Nome */}
+        <span className="text-white text-sm truncate">{membro.aluno_nome}</span>
+
+        {/* Indicador "Você" */}
+        {isCurrentUser && <span className="text-white/40 text-xs shrink-0">← Você</span>}
       </div>
 
       {/* Pontos */}
-      <div className="text-right shrink-0">
-        <span className="font-semibold" style={{ color: casaColor }}>
-          {membro.total_pontos.toLocaleString('pt-BR')}
-        </span>
-        <span className="text-white/40 text-xs ml-1">pts</span>
-      </div>
-
-      {/* Indicador "Você" */}
-      {isCurrentUser && (
-        <span className="text-xs text-white/50 shrink-0">← Você</span>
-      )}
-    </motion.div>
+      <span className="text-white/60 text-sm shrink-0 ml-2">
+        {membro.total_pontos.toLocaleString('pt-BR')} pts
+      </span>
+    </div>
   );
 }
 
