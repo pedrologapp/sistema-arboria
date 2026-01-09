@@ -372,7 +372,8 @@ function RankingSection({
   const [showAll, setShowAll] = useState(false);
   
   // Ordenar por posição na casa (ranking de pontos)
-  const rankingOrdenado = [...membros].sort((a, b) => a.posicao_na_casa - b.posicao_na_casa);
+  // Ordenar por total_pontos (descendente) para calcular posição correta
+  const rankingOrdenado = [...membros].sort((a, b) => b.total_pontos - a.total_pontos);
   
   // Top 8 ou todos
   const exibir = showAll ? rankingOrdenado : rankingOrdenado.slice(0, 8);
@@ -406,8 +407,9 @@ function RankingSection({
       >
         {/* Lista do ranking */}
         <div className="divide-y divide-white/5">
-          {exibir.map((membro) => {
-            const posicao = membro.posicao_na_casa;
+          {exibir.map((membro, index) => {
+            // Posição baseada no índice do array ordenado por pontos
+            const posicao = index + 1;
             const isMe = membro.aluno_id === userId;
 
             return (
