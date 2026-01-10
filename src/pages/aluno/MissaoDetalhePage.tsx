@@ -819,13 +819,16 @@ const MissaoDetalhePage = () => {
                   Arraste ou clique para anexar
                 </p>
                 <p className="text-white/40 text-xs mt-1">
-                  PDF, DOC, imagens até 10MB
+                  PDF, imagens (PNG, JPG) e texto (TXT) até 10MB
+                </p>
+                <p className="text-amber-400/80 text-xs mt-1">
+                  ⚠️ Arquivos .docx não são aceitos
                 </p>
                 <input
                   ref={fileInputRef}
                   type="file"
                   multiple
-                  accept="image/*,.pdf,.doc,.docx,.txt"
+                  accept="image/*,.pdf,.txt"
                   onChange={(e) => handleFileSelect(e.target.files)}
                   className="hidden"
                   disabled={enviando}
