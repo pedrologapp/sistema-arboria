@@ -226,11 +226,11 @@ const MissoesSemanaPage = () => {
                 {isExtra ? 'Nenhuma missão extra' : `Nenhuma missão na Semana ${semana}`}
               </p>
               <button
-                onClick={() => navigate('/professor/missoes/nova')}
+                onClick={() => navigate(`/professor/missoes/nova${isExtra ? '?semana=extra' : ''}`)}
                 className="px-4 py-2 rounded-lg font-medium text-sm"
                 style={{ backgroundColor: isExtra ? '#facc15' : casaColor, color: isExtra ? '#000' : '#fff' }}
               >
-                Criar primeira missão
+                Criar missão
               </button>
             </div>
           )}
