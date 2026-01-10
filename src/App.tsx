@@ -55,6 +55,7 @@ import EntregasSeriePage from "./pages/professor/EntregasSeriePage";
 import EntregasSemanaPage from "./pages/professor/EntregasSemanaPage";
 import EntregasMissaoListaPage from "./pages/professor/EntregasMissaoListaPage";
 import EntregasMissaoPage from "./pages/professor/EntregasMissaoPage";
+import EntregasAlunoPage from "./pages/professor/EntregasAlunoPage";
 
 const queryClient = new QueryClient();
 
@@ -231,6 +232,13 @@ const App = () => (
               <ProfessorProtectedRoute>
                 <ProfessorLayout>
                   <EntregasMissaoPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/entregas/aluno/:alunoId" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <EntregasAlunoPage />
                 </ProfessorLayout>
               </ProfessorProtectedRoute>
             } />

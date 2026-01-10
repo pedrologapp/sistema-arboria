@@ -1,36 +1,122 @@
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import MissaoDetalhesModal from '@/components/professor/MissaoDetalhesModal';
+
+interface AlunoAvaliacao {
+  id: string;
+  nome: string;
+  sobrenome: string | null;
+  serie: string | null;
+  turma: string | null;
+  avatar_url: string | null;
+  status: 'pendente' | 'avaliado' | 'sem_entrega';
+  entregasPendentes: number;
+}
+
+const AlunoLinha = ({ 
+  aluno, 
+  onClick 
+}: { 
+  aluno: AlunoAvaliacao; 
+  onClick: () => void;
+}) => {
+  const cores = {
+    pendente: 'bg-red-500',
+    avaliado: 'bg-green-500',
+    sem_entrega: 'bg-white/20'
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 py-2.5 px-3 hover:bg-white/5 rounded-lg transition-colors"
+    >
+      {/* Bolinha de status */}
+      <div className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", cores[aluno.status])} />
+
+      {/* Avatar */}
+      {aluno.avatar_url ? (
+        <img
+          src={aluno.avatar_url}
+          alt={aluno.nome}
+          className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+        />
+      ) : (
+        <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+          {aluno.nome.charAt(0).toUpperCase()}
+        </div>
+      )}
+
+      {/* Nome + Série/Turma */}
+      <div className="flex-1 flex items-center min-w-0">
+        <span className="text-white text-sm font-medium truncate">
+          {aluno.nome} {aluno.sobrenome}
+        </span>
+        <span className="text-white/40 text-xs ml-2 flex-shrink-0">
+          {aluno.serie}º{aluno.turma}
+        </span>
+      </div>
+
+      {/* Badge de pendentes */}
+      {aluno.entregasPendentes > 0 && (
+        <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+          {aluno.entregasPendentes}
+        </span>
+      )}
+
+      {/* Seta */}
+      <ChevronRight className="w-4 h-4 text-white/20 flex-shrink-0" />
+    </button>
+  );
+};
 
 const EntregasMissaoListaPage = () => {
   const { serie, semana, casaId } = useParams();
   const navigate = useNavigate();
   const { profile, casaMentor } = useProfessor();
 
-  const isGeral = !casaId;
-  const tipoLabel = isGeral ? 'Geral' : 'Individual';
+  const [turmaFiltro, setTurmaFiltro] = useState<string | null>(null);
+  const [showMissaoModal, setShowMissaoModal] = useState(false);
 
-  // Buscar missões com entregas
-  const { data: missoes, isLoading } = useQuery({
-    queryKey: ['missoes-com-entregas', serie, semana, casaId, profile?.institution_id],
+  const isGeral = !casaId;
+  const isExtra = semana === 'extra';
+  const semanaNumber = isExtra ? 0 : Number(semana);
+  const tipoLabel = isGeral ? '📋 Geral' : `${casaMentor?.emoji || '🏠'} Individual`;
+
+  // Buscar nome da casa se for individual
+  const { data: casa } = useQuery({
+    queryKey: ['casa', casaId],
+    queryFn: async () => {
+      if (!casaId) return null;
+      const { data } = await supabase
+        .from('inteligencias')
+        .select('id, nome, emoji, cor_hex')
+        .eq('id', Number(casaId))
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!casaId
+  });
+
+  // Buscar missões da semana/tipo
+  const { data: missoes } = useQuery({
+    queryKey: ['missoes-avaliar', serie, semana, casaId, profile?.institution_id],
     queryFn: async () => {
       if (!profile?.institution_id) return [];
 
       let query = supabase
         .from('missoes')
-        .select(`
-          id,
-          titulo,
-          pontos_base,
-          tipo_missao,
-          casa_id,
-          serie_filtro
-        `)
+        .select('id, titulo, tipo_missao, pontos_base, descricao, instrucoes')
         .eq('institution_id', profile.institution_id)
-        .eq('semana', Number(semana));
+        .eq('semana', semanaNumber);
+
+      // Filtrar por série
+      query = query.or(`serie_filtro.eq.${serie},serie_filtro.is.null`);
 
       if (isGeral) {
         query = query.or('tipo_missao.eq.geral,tipo_missao.is.null');
@@ -38,126 +124,249 @@ const EntregasMissaoListaPage = () => {
         query = query.eq('tipo_missao', 'individual').eq('casa_id', Number(casaId));
       }
 
-      const { data: missoesData } = await query;
-
-      if (!missoesData || missoesData.length === 0) return [];
-
-      // Para cada missão, buscar entregas
-      const missoesComEntregas = await Promise.all(
-        missoesData.map(async (missao) => {
-          const { data: entregas } = await supabase
-            .from('entregas')
-            .select(`
-              id,
-              status,
-              nota,
-              aluno:profiles!entregas_aluno_id_fkey(serie)
-            `)
-            .eq('missao_id', missao.id);
-
-          // Filtrar por série do aluno
-          const entregasFiltradas = entregas?.filter(e => {
-            const alunoSerie = parseInt(e.aluno?.serie?.replace(/\D/g, '') || '0');
-            return alunoSerie === Number(serie);
-          }) || [];
-
-          const pendentes = entregasFiltradas.filter(e => e.status === 'pendente' || e.nota === null).length;
-          const avaliadas = entregasFiltradas.filter(e => e.nota !== null).length;
-          const total = entregasFiltradas.length;
-
-          return {
-            ...missao,
-            pendentes,
-            avaliadas,
-            total
-          };
-        })
-      );
-
-      // Filtrar apenas missões que têm entregas
-      return missoesComEntregas.filter(m => m.total > 0);
+      const { data } = await query;
+      return data || [];
     },
     enabled: !!profile?.institution_id
   });
 
+  // Buscar alunos com status de avaliação
+  const { data: alunos, isLoading } = useQuery({
+    queryKey: ['alunos-avaliar', serie, semana, casaId, profile?.institution_id],
+    queryFn: async (): Promise<AlunoAvaliacao[]> => {
+      if (!profile?.institution_id) return [];
+
+      // 1. Buscar alunos da série
+      let alunosQuery = supabase
+        .from('profiles')
+        .select('id, nome, sobrenome, serie, turma, avatar_url, casa_id')
+        .eq('institution_id', profile.institution_id)
+        .ilike('serie', `${serie}%`);
+
+      // Se for individual, filtrar por casa
+      if (!isGeral && casaId) {
+        alunosQuery = alunosQuery.eq('casa_id', Number(casaId));
+      }
+
+      const { data: alunosData } = await alunosQuery;
+
+      if (!alunosData || alunosData.length === 0) return [];
+
+      // 2. Buscar missões da semana/tipo
+      const missaoIds = missoes?.map(m => m.id) || [];
+
+      if (missaoIds.length === 0) {
+        // Se não há missões, todos os alunos estão "sem_entrega"
+        return alunosData.map(aluno => ({
+          id: aluno.id,
+          nome: aluno.nome || '',
+          sobrenome: aluno.sobrenome,
+          serie: aluno.serie,
+          turma: aluno.turma,
+          avatar_url: aluno.avatar_url,
+          status: 'sem_entrega' as const,
+          entregasPendentes: 0
+        }));
+      }
+
+      // 3. Buscar entregas dessas missões
+      const { data: entregas } = await supabase
+        .from('entregas')
+        .select('aluno_id, missao_id, status, nota')
+        .in('missao_id', missaoIds);
+
+      // 4. Calcular status de cada aluno
+      return alunosData.map(aluno => {
+        const entregasAluno = entregas?.filter(e => e.aluno_id === aluno.id) || [];
+
+        // Contar pendentes (nota IS NULL)
+        const pendentes = entregasAluno.filter(e => e.nota === null).length;
+
+        let status: 'pendente' | 'avaliado' | 'sem_entrega';
+
+        if (entregasAluno.length === 0) {
+          status = 'sem_entrega';
+        } else if (pendentes > 0) {
+          status = 'pendente';
+        } else {
+          status = 'avaliado';
+        }
+
+        return {
+          id: aluno.id,
+          nome: aluno.nome || '',
+          sobrenome: aluno.sobrenome,
+          serie: aluno.serie,
+          turma: aluno.turma,
+          avatar_url: aluno.avatar_url,
+          status,
+          entregasPendentes: pendentes
+        };
+      }).sort((a, b) => {
+        // Ordenar: pendentes primeiro, depois avaliados, depois sem entrega
+        const ordem = { pendente: 0, avaliado: 1, sem_entrega: 2 };
+        return ordem[a.status] - ordem[b.status];
+      });
+    },
+    enabled: !!profile?.institution_id && !!missoes
+  });
+
+  // Turmas disponíveis
+  const turmasDisponiveis = useMemo(() => {
+    if (!alunos) return [];
+    const turmas = [...new Set(alunos.map(a => a.turma).filter(Boolean))];
+    return turmas.sort() as string[];
+  }, [alunos]);
+
+  // Filtrar por turma
+  const alunosFiltrados = useMemo(() => {
+    if (!alunos) return [];
+    if (!turmaFiltro) return alunos;
+    return alunos.filter(a => a.turma === turmaFiltro);
+  }, [alunos, turmaFiltro]);
+
+  // Contadores
+  const pendentes = alunosFiltrados.filter(a => a.status === 'pendente').length;
+
+  const handleAlunoClick = (alunoId: string) => {
+    const params = new URLSearchParams();
+    params.append('serie', serie || '');
+    params.append('semana', semana || '');
+    params.append('tipo', isGeral ? 'geral' : 'casa');
+    if (casaId) params.append('casaId', casaId);
+
+    navigate(`/professor/entregas/aluno/${alunoId}?${params.toString()}`);
+  };
+
+  const handleVerMissao = () => {
+    if (missoes && missoes.length > 0) {
+      setShowMissaoModal(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0d0d0d] pb-24">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-white/10">
-        <button 
-          onClick={() => navigate(`/professor/entregas/serie/${serie}/semana/${semana}`)} 
-          className="text-white/60 hover:text-white transition-colors"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-        <h1 className="text-lg font-bold text-white">
-          {tipoLabel} • Semana {semana} • {serie}º
-        </h1>
-      </div>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
-        </div>
-      ) : (
-        <div className="p-4">
-          <p className="text-white/40 text-sm uppercase tracking-wide mb-3">
-            Missões com Entregas
-          </p>
-
-          {missoes && missoes.length > 0 ? (
-            <div className="space-y-3">
-              {missoes.map((missao) => (
-                <button
-                  key={missao.id}
-                  onClick={() => navigate(`/professor/entregas/missao/${missao.id}?serie=${serie}`)}
-                  className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-left hover:bg-white/10 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-medium mb-2 truncate">{missao.titulo}</h3>
-                      
-                      <div className="flex flex-wrap items-center gap-2 text-sm">
-                        {missao.pendentes > 0 && (
-                          <span className="text-red-400 flex items-center gap-1">
-                            🔴 {missao.pendentes} pendente{missao.pendentes !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                        {missao.avaliadas > 0 && (
-                          <span className="text-green-400 flex items-center gap-1">
-                            ✅ {missao.avaliadas} avaliada{missao.avaliadas !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Barra de progresso */}
-                      <div className="mt-3">
-                        <div className="flex items-center justify-between text-xs text-white/40 mb-1">
-                          <span>{missao.total} entrega{missao.total !== 1 ? 's' : ''}</span>
-                          <span>{missao.avaliadas}/{missao.total} avaliadas</span>
-                        </div>
-                        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-green-500 rounded-full transition-all"
-                            style={{ width: `${missao.total > 0 ? (missao.avaliadas / missao.total) * 100 : 0}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <ChevronRight className="w-5 h-5 text-white/30 flex-shrink-0 mt-1" />
-                  </div>
-                </button>
-              ))}
+      <div className="p-4 border-b border-white/10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(`/professor/entregas/serie/${serie}/semana/${semana}`)}
+              className="text-white/60 hover:text-white transition-colors"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <div>
+              <h1 className="text-white font-semibold flex items-center gap-2">
+                {isGeral ? '📋 Geral' : `${casa?.emoji || '🏠'} ${casa?.nome || 'Individual'}`}
+              </h1>
+              <p className="text-white/40 text-sm">
+                {isExtra ? '⭐ Extra' : `Semana ${semana}`} • {serie}º Ano
+              </p>
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-4xl mb-2">📭</p>
-              <p className="text-white/40">Nenhuma missão com entregas</p>
-            </div>
+          </div>
+
+          {/* Botão Ver Missão */}
+          {missoes && missoes.length > 0 && (
+            <button
+              onClick={handleVerMissao}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <Eye className="w-4 h-4" />
+              <span className="text-xs">Ver Missão</span>
+            </button>
           )}
         </div>
+      </div>
+
+      {/* Banner de pendentes */}
+      {pendentes > 0 && (
+        <div className="mx-4 mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+          <p className="text-red-400 text-sm text-center">
+            🔴 {pendentes} {pendentes === 1 ? 'aluno aguardando' : 'alunos aguardando'} avaliação
+          </p>
+        </div>
       )}
+
+      {/* Filtro por Turma */}
+      {turmasDisponiveis.length > 1 && (
+        <div className="p-4 border-b border-white/10">
+          <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Turma</p>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setTurmaFiltro(null)}
+              className={cn(
+                "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                turmaFiltro === null
+                  ? "bg-blue-600 text-white"
+                  : "bg-white/5 text-white/60 hover:bg-white/10"
+              )}
+            >
+              Todas
+            </button>
+            {turmasDisponiveis.map(turma => (
+              <button
+                key={turma}
+                onClick={() => setTurmaFiltro(turma)}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                  turmaFiltro === turma
+                    ? "bg-blue-600 text-white"
+                    : "bg-white/5 text-white/60 hover:bg-white/10"
+                )}
+              >
+                {turma}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Lista de Alunos */}
+      <div className="p-4">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
+          </div>
+        ) : alunosFiltrados.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-4xl mb-2">📭</p>
+            <p className="text-white/40">Nenhum aluno encontrado</p>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {alunosFiltrados.map(aluno => (
+              <AlunoLinha
+                key={aluno.id}
+                aluno={aluno}
+                onClick={() => handleAlunoClick(aluno.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Legenda */}
+      <div className="p-4 border-t border-white/10">
+        <div className="flex flex-wrap gap-4 justify-center text-xs text-white/40">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-red-500" /> Pendente
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-green-500" /> Avaliado
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-white/20" /> Sem entrega
+          </span>
+        </div>
+      </div>
+
+      {/* Modal Ver Missão */}
+      <MissaoDetalhesModal
+        isOpen={showMissaoModal}
+        onClose={() => setShowMissaoModal(false)}
+        missaoIds={missoes?.map(m => m.id) || []}
+      />
     </div>
   );
 };
