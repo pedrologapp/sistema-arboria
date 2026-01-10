@@ -98,26 +98,39 @@ const MissaoDetalhesPage = () => {
         .select('id, full_name, serie, turma, avatar_url, casa_id')
         .eq('institution_id', missao.institution_id);
 
-      // 2. Filtrar por série se especificado (usando ilike para compatibilidade com formato "6º ano")
+      // 2. Filtrar por série se especificado (converter para string e usar ilike)
       if (missao.serie_filtro) {
-        queryAlunos = queryAlunos.ilike('serie', `%${missao.serie_filtro}%`);
+        const serieStr = String(missao.serie_filtro);
+        console.log('🔢 Filtrando por série:', serieStr);
+        queryAlunos = queryAlunos.ilike('serie', `%${serieStr}%`);
       }
 
-      // 3. Filtrar por turma se especificado
+      // 3. Filtrar por turma se especificado (garantir trim correto, sem toUpperCase)
       if (missao.turma_filtro) {
-        const turmas = missao.turma_filtro.split(',').map(t => t.trim().toUpperCase());
-        queryAlunos = queryAlunos.in('turma', turmas);
+        const turmas = missao.turma_filtro
+          .split(',')
+          .map(t => t.trim())
+          .filter(t => t.length > 0);
+        console.log('📋 Filtrando por turmas:', turmas);
+        if (turmas.length > 0) {
+          queryAlunos = queryAlunos.in('turma', turmas);
+        }
       }
 
       // 4. IMPORTANTE: Só filtrar por casa se for missão INDIVIDUAL
       // Missões GERAIS são para TODOS os alunos da série/turma, independente da casa
       if (missao.tipo_missao === 'individual' && missao.casa_id) {
+        console.log('🏠 Filtrando por casa (individual):', missao.casa_id);
         queryAlunos = queryAlunos.eq('casa_id', missao.casa_id);
       }
 
       const { data: alunos, error: alunosError } = await queryAlunos;
       
-      console.log('👥 Alunos encontrados (antes de filtrar por role):', alunos?.length, alunos);
+      console.log('👥 Alunos encontrados (antes de filtrar por role):', {
+        total: alunos?.length || 0,
+        erro: alunosError?.message || null,
+        primeiros: alunos?.slice(0, 5)
+      });
       
       if (alunosError) {
         console.error('❌ Erro ao buscar alunos:', alunosError);
