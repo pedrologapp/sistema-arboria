@@ -1,4 +1,4 @@
-import { Plus, ChevronRight, BarChart3, Zap, Users } from 'lucide-react';
+import { Plus, ChevronRight, BarChart3, Zap, Users, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useProfessor } from '@/contexts/ProfessorContext';
@@ -20,9 +20,34 @@ interface AlunoLista {
   full_name?: string;
   serie: string | null;
   turma: string | null;
-  entregas?: number;      // Qtd de entregas nessa categoria
-  tempoMedio?: number;    // Tempo médio em horas
+  avatar_url?: string | null;
+  entregas?: number;
+  tempoMedio?: number;
 }
+
+// Configuração visual por categoria de engajamento
+const categoriasConfig: Record<string, { icone: string; corBg: string; subtitulo: string }> = {
+  green: { 
+    icone: '⚡', 
+    corBg: 'bg-green-500/20',
+    subtitulo: 'Entregaram em menos de 50% do prazo' 
+  },
+  blue: { 
+    icone: '🚶', 
+    corBg: 'bg-blue-500/20',
+    subtitulo: 'Entregaram entre 50% e 100% do prazo' 
+  },
+  orange: { 
+    icone: '🐢', 
+    corBg: 'bg-orange-500/20',
+    subtitulo: 'Entregaram após o prazo' 
+  },
+  red: { 
+    icone: '🔴', 
+    corBg: 'bg-red-500/20',
+    subtitulo: 'Ainda não entregaram' 
+  }
+};
 
 interface EngajamentoData {
   rapidos: { count: number; percent: number; alunos: AlunoLista[] };
@@ -37,6 +62,8 @@ const MissoesPage = () => {
   // Modal state
   const [modalAberto, setModalAberto] = useState(false);
   const [modalTitulo, setModalTitulo] = useState('');
+  const [modalSubtitulo, setModalSubtitulo] = useState('');
+  const [modalIcone, setModalIcone] = useState('');
   const [modalAlunos, setModalAlunos] = useState<AlunoLista[]>([]);
   const [modalCor, setModalCor] = useState('');
   
@@ -265,7 +292,7 @@ const MissoesPage = () => {
           data_entrega, 
           missao_id, 
           entregue_no_prazo,
-          aluno:profiles!entregas_aluno_id_fkey(id, nome, sobrenome, full_name, serie, turma)
+          aluno:profiles!entregas_aluno_id_fkey(id, nome, sobrenome, full_name, serie, turma, avatar_url)
         `)
         .in('missao_id', missaoIds)
         .eq('status', 'aprovada');
@@ -372,7 +399,7 @@ const MissoesPage = () => {
       // Total de alunos da casa
       const { data: alunos } = await supabase
         .from('profiles')
-        .select('id, nome, sobrenome, serie, turma')
+        .select('id, nome, sobrenome, serie, turma, avatar_url')
         .eq('casa_id', casaMentor!.id)
         .eq('institution_id', profile!.institution_id!)
         .not('casa_id', 'is', null);
@@ -445,6 +472,8 @@ const MissoesPage = () => {
     setModalTitulo(titulo);
     setModalAlunos(alunos);
     setModalCor(cor);
+    setModalIcone(categoriasConfig[cor]?.icone || '📋');
+    setModalSubtitulo(categoriasConfig[cor]?.subtitulo || '');
     setModalAberto(true);
   };
 
@@ -679,7 +708,30 @@ const MissoesPage = () => {
       <Dialog open={modalAberto} onOpenChange={setModalAberto}>
         <DialogContent className="max-w-sm mx-auto bg-[#1a1a1a] border-white/10 p-0 gap-0">
           <DialogHeader className="p-4 border-b border-white/10">
-            <DialogTitle className="text-white">{modalTitulo}</DialogTitle>
+            <div className="flex items-center gap-3">
+              {/* Ícone em círculo colorido */}
+              <div className={`w-10 h-10 rounded-full ${categoriasConfig[modalCor]?.corBg || 'bg-white/10'} flex items-center justify-center`}>
+                <span className="text-lg">{modalIcone}</span>
+              </div>
+              
+              {/* Título + Subtítulo */}
+              <div className="flex-1">
+                <DialogTitle className="text-white font-medium text-base">
+                  {modalTitulo}
+                </DialogTitle>
+                <p className="text-white/40 text-xs font-normal">
+                  {modalSubtitulo}
+                </p>
+              </div>
+              
+              {/* Botão fechar */}
+              <button 
+                onClick={() => setModalAberto(false)}
+                className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </DialogHeader>
           
           {/* Cabeçalho da lista */}
@@ -704,13 +756,21 @@ const MissoesPage = () => {
                     key={aluno.id}
                     className="flex items-center gap-2 py-2 px-4 hover:bg-white/5 transition-colors"
                   >
-                    {/* Avatar pequeno (28px) */}
-                    <div 
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
-                      style={{ backgroundColor: casaColor }}
-                    >
-                      {aluno.nome?.charAt(0).toUpperCase() || '?'}
-                    </div>
+                    {/* Avatar pequeno (28px) com foto ou inicial */}
+                    {aluno.avatar_url ? (
+                      <img 
+                        src={aluno.avatar_url} 
+                        alt={aluno.nome || 'Aluno'}
+                        className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div 
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
+                        style={{ backgroundColor: casaColor }}
+                      >
+                        {aluno.nome?.charAt(0).toUpperCase() || '?'}
+                      </div>
+                    )}
                     
                     {/* Nome + Série/Turma na mesma linha */}
                     <div className="flex-1 min-w-0 flex items-center">
