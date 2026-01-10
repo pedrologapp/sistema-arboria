@@ -10,7 +10,8 @@ import {
   Calendar,
   Target,
   Star,
-  Zap
+  Zap,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +21,8 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
+import FeedbackAprovadoModal from '@/components/aluno/FeedbackAprovadoModal';
+import FeedbackRefazerModal from '@/components/aluno/FeedbackRefazerModal';
 
 interface Missao {
   id: string;
@@ -149,6 +152,24 @@ const MissoesPage = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('todas');
+  const [buscandoEntrega, setBuscandoEntrega] = useState(false);
+
+  // Estado para modal de aprovada
+  const [modalAprovada, setModalAprovada] = useState<{
+    isOpen: boolean;
+    missaoTitulo: string;
+    nota: number;
+    pontos: number;
+    feedback: string | null;
+  } | null>(null);
+
+  // Estado para modal de refazer
+  const [modalRefazer, setModalRefazer] = useState<{
+    isOpen: boolean;
+    missaoId: string;
+    missaoTitulo: string;
+    feedback: string | null;
+  } | null>(null);
 
   const fetchMissoes = useCallback(async () => {
     if (!user?.id) return;
@@ -177,6 +198,74 @@ const MissoesPage = () => {
     setRefreshing(true);
     await fetchMissoes();
     setRefreshing(false);
+  };
+
+  // Handler para clique na missão
+  const handleMissaoClick = async (missao: Missao) => {
+    // Se missão aprovada → buscar entrega e abrir modal
+    if (missao.status_entrega === 'aprovada') {
+      setBuscandoEntrega(true);
+      try {
+        const { data: entrega } = await supabase
+          .from('entregas')
+          .select('nota, pontos_concedidos, feedback_professor')
+          .eq('missao_id', missao.id)
+          .eq('aluno_id', user?.id)
+          .order('numero_tentativa', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (entrega) {
+          setModalAprovada({
+            isOpen: true,
+            missaoTitulo: missao.titulo,
+            nota: entrega.nota || 0,
+            pontos: entrega.pontos_concedidos || 0,
+            feedback: entrega.feedback_professor
+          });
+        } else {
+          // Se não encontrar entrega, navegar normalmente
+          navigate(`/aluno/missoes/${missao.id}`);
+        }
+      } catch (err) {
+        console.error('Erro ao buscar entrega:', err);
+        navigate(`/aluno/missoes/${missao.id}`);
+      } finally {
+        setBuscandoEntrega(false);
+      }
+      return;
+    }
+
+    // Se missão refazer → buscar entrega e abrir modal
+    if (missao.ja_entregou && missao.status_entrega === 'refazer') {
+      setBuscandoEntrega(true);
+      try {
+        const { data: entrega } = await supabase
+          .from('entregas')
+          .select('feedback_professor')
+          .eq('missao_id', missao.id)
+          .eq('aluno_id', user?.id)
+          .order('numero_tentativa', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        setModalRefazer({
+          isOpen: true,
+          missaoId: missao.id,
+          missaoTitulo: missao.titulo,
+          feedback: entrega?.feedback_professor || null
+        });
+      } catch (err) {
+        console.error('Erro ao buscar entrega:', err);
+        navigate(`/aluno/missoes/${missao.id}`);
+      } finally {
+        setBuscandoEntrega(false);
+      }
+      return;
+    }
+
+    // Outros status → navegar normalmente
+    navigate(`/aluno/missoes/${missao.id}`);
   };
 
   // Filter counts
@@ -266,157 +355,193 @@ const MissoesPage = () => {
   }
 
   return (
-    <div className="py-6 space-y-5">
-      {/* Header with refresh */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">🎯 Minhas Missões</h1>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className={cn(
-            'p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors',
-            refreshing && 'opacity-50'
-          )}
-        >
-          <RefreshCw className={cn('w-5 h-5', refreshing && 'animate-spin')} />
-        </button>
-      </div>
+    <>
+      <div className="py-6 space-y-5">
+        {/* Header with refresh */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold">🎯 Minhas Missões</h1>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className={cn(
+              'p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors',
+              refreshing && 'opacity-50'
+            )}
+          >
+            <RefreshCw className={cn('w-5 h-5', refreshing && 'animate-spin')} />
+          </button>
+        </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-        {(Object.keys(filterLabels) as FilterType[]).map(filter => {
-          const count = filterCounts[filter];
-          const isActive = activeFilter === filter;
-          return (
-            <button
-              key={filter}
-              onClick={() => setActiveFilter(filter)}
-              className={cn(
-                'px-4 py-2 rounded-full text-sm whitespace-nowrap transition-all flex-shrink-0',
-                'border',
-                isActive
-                  ? 'text-white border-transparent'
-                  : 'bg-transparent border-white/20 text-white/60 hover:text-white hover:border-white/40'
-              )}
-              style={isActive ? { backgroundColor: casaColor } : undefined}
-            >
-              {filterLabels[filter]}
-              {count > 0 && (
-                <span className={cn(
-                  'ml-1.5 px-1.5 py-0.5 rounded-full text-xs',
-                  isActive ? 'bg-white/20' : 'bg-white/10'
-                )}>
-                  {count}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+        {/* Filter Tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+          {(Object.keys(filterLabels) as FilterType[]).map(filter => {
+            const count = filterCounts[filter];
+            const isActive = activeFilter === filter;
+            return (
+              <button
+                key={filter}
+                onClick={() => setActiveFilter(filter)}
+                className={cn(
+                  'px-4 py-2 rounded-full text-sm whitespace-nowrap transition-all flex-shrink-0',
+                  'border',
+                  isActive
+                    ? 'text-white border-transparent'
+                    : 'bg-transparent border-white/20 text-white/60 hover:text-white hover:border-white/40'
+                )}
+                style={isActive ? { backgroundColor: casaColor } : undefined}
+              >
+                {filterLabels[filter]}
+                {count > 0 && (
+                  <span className={cn(
+                    'ml-1.5 px-1.5 py-0.5 rounded-full text-xs',
+                    isActive ? 'bg-white/20' : 'bg-white/10'
+                  )}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
 
-      {/* Mission List */}
-      {filteredMissoes.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-8 rounded-xl border border-white/10 bg-white/5 text-center"
-        >
-          <div className="text-5xl mb-4">
-            {activeFilter === 'aprovadas' ? '🏆' : activeFilter === 'pendentes' ? '✅' : '📭'}
+        {/* Mission List */}
+        {filteredMissoes.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-8 rounded-xl border border-white/10 bg-white/5 text-center"
+          >
+            <div className="text-5xl mb-4">
+              {activeFilter === 'aprovadas' ? '🏆' : activeFilter === 'pendentes' ? '✅' : '📭'}
+            </div>
+            <h3 className="font-medium text-lg mb-2">
+              Nenhuma missão {getEmptyMessage(activeFilter)}
+            </h3>
+            <p className="text-white/60 text-sm">
+              {getEmptyDescription(activeFilter)}
+            </p>
+          </motion.div>
+        ) : (
+          <div className="space-y-3">
+            <AnimatePresence mode="popLayout">
+              {filteredMissoes.map((missao, index) => {
+                const statusConfig = getStatusConfig(missao);
+                const tipoConfig = getTipoConfig(missao.tipo);
+                const StatusIcon = statusConfig.icon;
+
+                return (
+                  <motion.button
+                    key={missao.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ delay: index * 0.05 }}
+                    onClick={() => handleMissaoClick(missao)}
+                    className={cn(
+                      'w-full p-4 rounded-xl border bg-white/5 text-left transition-all',
+                      'hover:bg-white/10 active:scale-[0.98]',
+                      missao.atrasada && !missao.ja_entregou 
+                        ? 'border-red-500/50 bg-red-500/5' 
+                        : 'border-white/10'
+                    )}
+                  >
+                    {/* Header: Type Badge + Points */}
+                    <div className="flex items-center justify-between mb-3">
+                      <span className={cn(
+                        'text-xs px-2.5 py-1 rounded-full flex items-center gap-1',
+                        tipoConfig.bgColor,
+                        tipoConfig.textColor
+                      )}>
+                        {tipoConfig.emoji} {missao.tipo}
+                      </span>
+                      <span 
+                        className="text-sm font-bold"
+                        style={{ color: casaColor }}
+                      >
+                        {missao.pontos_base} pts
+                      </span>
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="font-medium text-white mb-3 line-clamp-2">
+                      {missao.titulo}
+                    </h3>
+
+                    {/* Footer: Deadline + Status */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs text-white/60">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>Prazo: {format(new Date(missao.data_prazo), "dd/MM/yyyy", { locale: ptBR })}</span>
+                      </div>
+                      
+                      <div className={cn(
+                        'flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full',
+                        statusConfig.bgColor,
+                        statusConfig.color
+                      )}>
+                        <StatusIcon className="w-3.5 h-3.5" />
+                        <span>{statusConfig.label}</span>
+                      </div>
+                    </div>
+
+                    {/* Chevron indicator */}
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ChevronRight className="w-5 h-5 text-white/40" />
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </AnimatePresence>
           </div>
-          <h3 className="font-medium text-lg mb-2">
-            Nenhuma missão {getEmptyMessage(activeFilter)}
-          </h3>
-          <p className="text-white/60 text-sm">
-            {getEmptyDescription(activeFilter)}
-          </p>
-        </motion.div>
-      ) : (
-        <div className="space-y-3">
-          <AnimatePresence mode="popLayout">
-            {filteredMissoes.map((missao, index) => {
-              const statusConfig = getStatusConfig(missao);
-              const tipoConfig = getTipoConfig(missao.tipo);
-              const StatusIcon = statusConfig.icon;
+        )}
 
-              return (
-                <motion.button
-                  key={missao.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: index * 0.05 }}
-                  onClick={() => navigate(`/aluno/missoes/${missao.id}`)}
-                  className={cn(
-                    'w-full p-4 rounded-xl border bg-white/5 text-left transition-all',
-                    'hover:bg-white/10 active:scale-[0.98]',
-                    missao.atrasada && !missao.ja_entregou 
-                      ? 'border-red-500/50 bg-red-500/5' 
-                      : 'border-white/10'
-                  )}
-                >
-                  {/* Header: Type Badge + Points */}
-                  <div className="flex items-center justify-between mb-3">
-                    <span className={cn(
-                      'text-xs px-2.5 py-1 rounded-full flex items-center gap-1',
-                      tipoConfig.bgColor,
-                      tipoConfig.textColor
-                    )}>
-                      {tipoConfig.emoji} {missao.tipo}
-                    </span>
-                    <span 
-                      className="text-sm font-bold"
-                      style={{ color: casaColor }}
-                    >
-                      {missao.pontos_base} pts
-                    </span>
-                  </div>
+        {/* Summary footer */}
+        {missoes.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="pt-4 border-t border-white/10 text-center text-sm text-white/50"
+          >
+            {filterCounts.pendentes} pendente{filterCounts.pendentes !== 1 ? 's' : ''} • {filterCounts.aprovadas} aprovada{filterCounts.aprovadas !== 1 ? 's' : ''}
+          </motion.div>
+        )}
+      </div>
 
-                  {/* Title */}
-                  <h3 className="font-medium text-white mb-3 line-clamp-2">
-                    {missao.titulo}
-                  </h3>
+      {/* Modal de Missão Aprovada */}
+      {modalAprovada && (
+        <FeedbackAprovadoModal
+          isOpen={modalAprovada.isOpen}
+          onClose={() => setModalAprovada(null)}
+          missaoTitulo={modalAprovada.missaoTitulo}
+          nota={modalAprovada.nota}
+          pontosConquistados={modalAprovada.pontos}
+          feedbackProfessor={modalAprovada.feedback}
+        />
+      )}
 
-                  {/* Footer: Deadline + Status */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-xs text-white/60">
-                      <Calendar className="w-3.5 h-3.5" />
-                      <span>Prazo: {format(new Date(missao.data_prazo), "dd/MM/yyyy", { locale: ptBR })}</span>
-                    </div>
-                    
-                    <div className={cn(
-                      'flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full',
-                      statusConfig.bgColor,
-                      statusConfig.color
-                    )}>
-                      <StatusIcon className="w-3.5 h-3.5" />
-                      <span>{statusConfig.label}</span>
-                    </div>
-                  </div>
+      {/* Modal de Refazer */}
+      {modalRefazer && (
+        <FeedbackRefazerModal
+          isOpen={modalRefazer.isOpen}
+          onClose={() => setModalRefazer(null)}
+          onRefazer={() => {
+            const missaoId = modalRefazer.missaoId;
+            setModalRefazer(null);
+            navigate(`/aluno/missoes/${missaoId}`);
+          }}
+          missaoTitulo={modalRefazer.missaoTitulo}
+          feedbackProfessor={modalRefazer.feedback}
+        />
+      )}
 
-                  {/* Chevron indicator */}
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ChevronRight className="w-5 h-5 text-white/40" />
-                  </div>
-                </motion.button>
-              );
-            })}
-          </AnimatePresence>
+      {/* Loading overlay ao buscar entrega */}
+      {buscandoEntrega && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Loader2 className="w-8 h-8 animate-spin text-white" />
         </div>
       )}
-
-      {/* Summary footer */}
-      {missoes.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="pt-4 border-t border-white/10 text-center text-sm text-white/50"
-        >
-          {filterCounts.pendentes} pendente{filterCounts.pendentes !== 1 ? 's' : ''} • {filterCounts.aprovadas} aprovada{filterCounts.aprovadas !== 1 ? 's' : ''}
-        </motion.div>
-      )}
-    </div>
+    </>
   );
 };
 
