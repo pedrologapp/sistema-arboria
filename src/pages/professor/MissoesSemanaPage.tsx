@@ -93,27 +93,52 @@ const MissoesSemanaPage = () => {
         .in('missao_id', missaoIds)
         .in('aluno_id', alunoIds);
 
-      // Contar alunos que entregaram ao menos 1 missão geral
+      // === LÓGICA CORRIGIDA: Contar ENTREGAS totais (não alunos) ===
+      
+      // GERAL: Contar entregas únicas (aluno+missão) para missões gerais
       const missoesGerais = missoes?.filter(m => m.tipo_missao === 'geral').map(m => m.id) || [];
-      const entregasGerais = new Set(
-        entregas?.filter(e => missoesGerais.includes(e.missao_id)).map(e => e.aluno_id)
+      const totalMissoesGeraisCalc = missoesGerais.length;
+      
+      // Set com combinação aluno_id + missao_id para evitar contar múltiplas tentativas
+      const entregasGeraisUnicas = new Set(
+        entregas?.filter(e => missoesGerais.includes(e.missao_id))
+          .map(e => `${e.aluno_id}_${e.missao_id}`)
       );
+      
+      // Total esperado = missões × alunos
+      const totalEsperadoGeral = totalMissoesGeraisCalc * totalAlunos;
 
-      // Contar entregas por casa (missões individuais)
-      const porCasa: Record<number, { entregaram: number; total: number }> = {};
+      // INDIVIDUAL: Agrupar missões por casa primeiro
+      const missoesPorCasaMap: Record<number, string[]> = {};
       missoes?.filter(m => m.tipo_missao === 'individual' && m.inteligencia_cross).forEach(m => {
         const casaId = m.inteligencia_cross!;
-        const entregasCasa = new Set(
-          entregas?.filter(e => e.missao_id === m.id).map(e => e.aluno_id)
+        if (!missoesPorCasaMap[casaId]) missoesPorCasaMap[casaId] = [];
+        missoesPorCasaMap[casaId].push(m.id);
+      });
+
+      // Contar entregas para cada casa
+      const porCasa: Record<number, { entregaram: number; total: number }> = {};
+      Object.entries(missoesPorCasaMap).forEach(([casaIdStr, missaoIdsCasa]) => {
+        const casaId = Number(casaIdStr);
+        const totalMissoesCasa = missaoIdsCasa.length;
+        
+        // Contar entregas únicas (aluno+missão) para esta casa
+        const entregasCasaUnicas = new Set(
+          entregas?.filter(e => missaoIdsCasa.includes(e.missao_id))
+            .map(e => `${e.aluno_id}_${e.missao_id}`)
         );
+        
         porCasa[casaId] = {
-          entregaram: entregasCasa.size,
-          total: totalAlunos
+          entregaram: entregasCasaUnicas.size,           // Entregas feitas
+          total: totalMissoesCasa * totalAlunos           // Entregas esperadas
         };
       });
 
       return {
-        geral: { entregaram: entregasGerais.size, total: totalAlunos },
+        geral: { 
+          entregaram: entregasGeraisUnicas.size, 
+          total: totalEsperadoGeral 
+        },
         porCasa
       };
     },
