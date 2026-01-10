@@ -1,0 +1,356 @@
+import { useState, useMemo } from 'react';
+import { ArrowLeft, ChevronRight, Plus } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { useProfessor } from '@/contexts/ProfessorContext';
+import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
+import { CasaBrasao } from '@/components/CasaBrasao';
+
+type StatusAluno = 'completou' | 'aguardando' | 'pendente' | 'sem_missao';
+
+interface AlunoComStatus {
+  id: string;
+  nome: string;
+  sobrenome: string | null;
+  serie: string | null;
+  turma: string | null;
+  avatar_url: string | null;
+  status: StatusAluno;
+}
+
+interface Inteligencia {
+  id: number;
+  nome: string;
+  emoji: string;
+  cor_hex: string;
+  brasao_url: string | null;
+}
+
+const AlunosPorTipoPage = () => {
+  const { serie, semana, casaId } = useParams<{ serie: string; semana: string; casaId?: string }>();
+  const navigate = useNavigate();
+  const { casaMentor, casaColor, profile } = useProfessor();
+  const [turmaFiltro, setTurmaFiltro] = useState<string>('todas');
+
+  // Determina se é tipo geral ou individual
+  const tipo = casaId ? 'individual' : 'geral';
+
+  // Buscar dados da casa (se for individual)
+  const { data: casaInfo } = useQuery({
+    queryKey: ['casa-info', casaId],
+    queryFn: async () => {
+      if (!casaId) return null;
+      const { data, error } = await supabase
+        .from('inteligencias')
+        .select('id, nome, emoji, cor_hex, brasao_url')
+        .eq('id', Number(casaId))
+        .maybeSingle();
+      if (error) throw error;
+      return data as Inteligencia | null;
+    },
+    enabled: !!casaId
+  });
+
+  // Buscar alunos com status de missão
+  const { data: alunosComStatus, isLoading } = useQuery({
+    queryKey: ['alunos-status', profile?.institution_id, serie, semana, tipo, casaId, casaMentor?.id],
+    queryFn: async () => {
+      if (!profile?.institution_id || !casaMentor?.id) return [];
+
+      // 1. Buscar alunos da casa do mentor
+      let alunosQuery = supabase
+        .from('profiles')
+        .select('id, nome, sobrenome, serie, turma, avatar_url, casa_id')
+        .eq('institution_id', profile.institution_id)
+        .eq('casa_id', casaMentor.id)
+        .not('casa_id', 'is', null);
+
+      // Filtrar por série
+      if (serie) {
+        alunosQuery = alunosQuery.ilike('serie', `%${serie}%`);
+      }
+
+      const { data: alunos, error: alunosError } = await alunosQuery;
+      if (alunosError) throw alunosError;
+
+      if (!alunos || alunos.length === 0) return [];
+
+      // 2. Buscar missões da semana/tipo
+      let missoesQuery = supabase
+        .from('missoes')
+        .select('id')
+        .eq('institution_id', profile.institution_id)
+        .eq('casa_id', casaMentor.id)
+        .eq('semana', Number(semana))
+        .or(`serie_filtro.eq.${serie},serie_filtro.is.null`)
+        .eq('tipo_missao', tipo);
+
+      // Se for individual, filtrar pela inteligência cross
+      if (tipo === 'individual' && casaId) {
+        missoesQuery = missoesQuery.eq('inteligencia_cross', Number(casaId));
+      }
+
+      const { data: missoes, error: missoesError } = await missoesQuery;
+      if (missoesError) throw missoesError;
+
+      const missaoIds = missoes?.map(m => m.id) || [];
+
+      // 3. Buscar entregas dessas missões
+      let entregas: { aluno_id: string; missao_id: string; status: string | null; nota: number | null }[] = [];
+      if (missaoIds.length > 0) {
+        const { data, error: entregasError } = await supabase
+          .from('entregas')
+          .select('aluno_id, missao_id, status, nota')
+          .in('missao_id', missaoIds);
+        if (entregasError) throw entregasError;
+        entregas = data || [];
+      }
+
+      // 4. Calcular status de cada aluno
+      const resultado: AlunoComStatus[] = alunos.map(aluno => {
+        const entregasAluno = entregas.filter(e => e.aluno_id === aluno.id);
+        
+        let status: StatusAluno;
+        
+        if (missaoIds.length === 0) {
+          status = 'sem_missao';
+        } else {
+          const algumaPendente = missaoIds.some(mid => 
+            !entregasAluno.some(e => e.missao_id === mid)
+          );
+          const todasAvaliadas = entregasAluno.length > 0 && 
+            entregasAluno.every(e => e.nota !== null);
+          
+          if (algumaPendente) {
+            status = 'pendente';
+          } else if (!todasAvaliadas) {
+            status = 'aguardando';
+          } else {
+            status = 'completou';
+          }
+        }
+
+        return {
+          id: aluno.id,
+          nome: aluno.nome || '',
+          sobrenome: aluno.sobrenome,
+          serie: aluno.serie,
+          turma: aluno.turma,
+          avatar_url: aluno.avatar_url,
+          status
+        };
+      });
+
+      // Ordenar: pendentes primeiro, depois aguardando, depois completou
+      return resultado.sort((a, b) => {
+        const ordem: Record<StatusAluno, number> = { pendente: 0, aguardando: 1, completou: 2, sem_missao: 3 };
+        return ordem[a.status] - ordem[b.status];
+      });
+    },
+    enabled: !!profile?.institution_id && !!casaMentor?.id && !!serie && !!semana
+  });
+
+  // Filtrar por turma
+  const alunosFiltrados = useMemo(() => {
+    if (!alunosComStatus) return [];
+    if (turmaFiltro === 'todas') return alunosComStatus;
+    return alunosComStatus.filter(a => a.turma === turmaFiltro);
+  }, [alunosComStatus, turmaFiltro]);
+
+  // Extrair turmas únicas para o filtro
+  const turmasUnicas = useMemo(() => {
+    if (!alunosComStatus) return [];
+    const turmas = new Set(alunosComStatus.map(a => a.turma).filter(Boolean));
+    return Array.from(turmas).sort();
+  }, [alunosComStatus]);
+
+  // Título do header
+  const headerTitle = tipo === 'geral' 
+    ? 'Geral' 
+    : casaInfo?.nome || 'Carregando...';
+
+  const cores: Record<StatusAluno, string> = {
+    completou: 'bg-green-500',
+    aguardando: 'bg-yellow-500',
+    pendente: 'bg-red-500',
+    sem_missao: 'bg-white/20'
+  };
+
+  const handleAlunoClick = (alunoId: string) => {
+    const origem = tipo === 'geral' ? 'geral' : 'casa';
+    const params = new URLSearchParams({ origem });
+    if (casaId) params.append('casaId', casaId);
+    navigate(`/professor/missoes/serie/${serie}/semana/${semana}/aluno/${alunoId}?${params.toString()}`);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0d0d0d]">
+      {/* Header */}
+      <div className="p-4 border-b border-white/10">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => navigate(`/professor/missoes/serie/${serie}/semana/${semana}`)}
+            className="p-2 -ml-2 text-white/60 hover:text-white transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold text-white flex items-center gap-2">
+              {tipo === 'individual' && casaInfo && (
+                <CasaBrasao 
+                  brasaoUrl={casaInfo.brasao_url}
+                  emoji={casaInfo.emoji}
+                  nome={casaInfo.nome}
+                  size="mini"
+                />
+              )}
+              {tipo === 'geral' && '📋'}
+              {headerTitle}
+            </h1>
+            <p className="text-white/40 text-xs">Semana {semana} • {serie}º Ano</p>
+          </div>
+          <button
+            onClick={() => navigate('/professor/missoes/nova')}
+            className="p-2 rounded-lg transition-all"
+            style={{ backgroundColor: casaColor, color: '#fff' }}
+          >
+            <Plus size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* Filtro de Turma */}
+      {turmasUnicas.length > 1 && (
+        <div className="p-4 border-b border-white/10">
+          <p className="text-white/40 text-xs uppercase tracking-wide mb-2">Filtrar por Turma</p>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setTurmaFiltro('todas')}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                turmaFiltro === 'todas' 
+                  ? "bg-white/20 text-white" 
+                  : "bg-white/5 text-white/60 hover:bg-white/10"
+              )}
+            >
+              Todas
+            </button>
+            {turmasUnicas.map(turma => (
+              <button
+                key={turma}
+                onClick={() => setTurmaFiltro(turma || 'todas')}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                  turmaFiltro === turma 
+                    ? "bg-white/20 text-white" 
+                    : "bg-white/5 text-white/60 hover:bg-white/10"
+                )}
+              >
+                {turma}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Lista de Alunos */}
+      <div className="p-2">
+        {isLoading && (
+          <div className="space-y-2 p-2">
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="h-12 bg-white/5 rounded-lg animate-pulse" />
+            ))}
+          </div>
+        )}
+
+        {!isLoading && alunosFiltrados.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div 
+              className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+              style={{ backgroundColor: `${casaColor}20` }}
+            >
+              <span className="text-2xl">👥</span>
+            </div>
+            <p className="text-white/60 mb-2">Nenhum aluno encontrado</p>
+            <p className="text-white/40 text-sm">
+              {turmaFiltro !== 'todas' 
+                ? 'Tente outro filtro de turma' 
+                : 'Não há alunos nesta série/casa'}
+            </p>
+          </div>
+        )}
+
+        {!isLoading && alunosFiltrados.length > 0 && (
+          <div className="space-y-0.5">
+            {alunosFiltrados.map(aluno => (
+              <button
+                key={aluno.id}
+                onClick={() => handleAlunoClick(aluno.id)}
+                className="w-full flex items-center gap-3 py-2.5 px-3 hover:bg-white/5 rounded-lg transition-colors"
+              >
+                {/* Bolinha de status */}
+                <div className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", cores[aluno.status])} />
+                
+                {/* Avatar */}
+                {aluno.avatar_url ? (
+                  <img 
+                    src={aluno.avatar_url} 
+                    alt=""
+                    className="w-7 h-7 rounded-full object-cover flex-shrink-0" 
+                  />
+                ) : (
+                  <div 
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
+                    style={{ backgroundColor: casaColor }}
+                  >
+                    {aluno.nome?.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                
+                {/* Nome + Série/Turma */}
+                <div className="flex-1 flex items-center min-w-0">
+                  <span className="text-white text-sm font-medium truncate">
+                    {aluno.nome} {aluno.sobrenome}
+                  </span>
+                  <span className="text-white/40 text-xs ml-2 flex-shrink-0">
+                    {aluno.serie}º{aluno.turma}
+                  </span>
+                </div>
+                
+                {/* Seta */}
+                <ChevronRight className="w-4 h-4 text-white/20 flex-shrink-0" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Legenda */}
+      {!isLoading && alunosFiltrados.length > 0 && (
+        <div className="fixed bottom-20 left-0 right-0 p-4 bg-gradient-to-t from-[#0d0d0d] via-[#0d0d0d] to-transparent pointer-events-none">
+          <div className="flex items-center justify-center gap-4 text-xs text-white/40">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+              <span>Completou</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-yellow-500" />
+              <span>Aguardando</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-red-500" />
+              <span>Pendente</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-white/20" />
+              <span>Sem missão</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AlunosPorTipoPage;
