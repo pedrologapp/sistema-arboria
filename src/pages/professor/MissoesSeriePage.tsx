@@ -1,4 +1,4 @@
-import { ArrowLeft, Plus, Check, Lock } from 'lucide-react';
+import { ArrowLeft, Check, Lock } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useProfessor } from '@/contexts/ProfessorContext';
@@ -86,14 +86,6 @@ const MissoesSeriePage = () => {
           <ArrowLeft size={20} />
         </button>
         <h1 className="text-xl font-bold text-white flex-1">{serie}º Ano</h1>
-        <button
-          onClick={() => navigate('/professor/missoes/nova')}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all"
-          style={{ backgroundColor: casaColor, color: '#fff' }}
-        >
-          <Plus size={18} />
-          Nova
-        </button>
       </div>
 
       {/* Fase atual */}
