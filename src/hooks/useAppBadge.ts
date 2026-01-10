@@ -11,10 +11,18 @@ interface UseAppBadgeParams {
 
 export const useAppBadge = ({ userId, institutionId, role, casaMentorId }: UseAppBadgeParams) => {
   
+  // Log inicial para debug
+  useEffect(() => {
+    console.log('🔔 useAppBadge inicializado:', { userId, institutionId, role, casaMentorId });
+    console.log('🔔 Badging API suportada:', 'setAppBadge' in navigator);
+  }, [userId, institutionId, role, casaMentorId]);
+
   // Contar pendências baseado no role
-  const { data: badgeCount } = useQuery({
+  const { data: badgeCount, error, isLoading } = useQuery({
     queryKey: ['app-badge-count', userId, role, institutionId, casaMentorId],
     queryFn: async () => {
+      console.log('🔔 Buscando contagem para badge...', { userId, role });
+      
       if (role === 'professor') {
         // Professor: contar entregas pendentes de avaliação
         let missaoQuery = supabase
@@ -30,6 +38,7 @@ export const useAppBadge = ({ userId, institutionId, role, casaMentorId }: UseAp
 
         const { data: missoes } = await missaoQuery;
         const missaoIds = missoes?.map(m => m.id) || [];
+        console.log('🔔 Missões encontradas:', missaoIds.length);
 
         if (missaoIds.length === 0) return 0;
 
@@ -39,6 +48,7 @@ export const useAppBadge = ({ userId, institutionId, role, casaMentorId }: UseAp
           .in('missao_id', missaoIds)
           .eq('status', 'pendente');
 
+        console.log('🔔 Entregas pendentes:', count);
         return count || 0;
         
       } else {
@@ -54,6 +64,7 @@ export const useAppBadge = ({ userId, institutionId, role, casaMentorId }: UseAp
           (!m.ja_entregou && !m.atrasada) || m.status_entrega === 'refazer'
         );
         
+        console.log('🔔 Missões pendentes do aluno:', pendentes.length);
         return pendentes.length;
       }
     },
@@ -61,26 +72,46 @@ export const useAppBadge = ({ userId, institutionId, role, casaMentorId }: UseAp
     enabled: !!userId && !!institutionId
   });
 
+  // Log de erro
+  useEffect(() => {
+    if (error) {
+      console.error('🔔 Erro ao buscar badge count:', error);
+    }
+  }, [error]);
+
+  // Log de loading e resultado
+  useEffect(() => {
+    console.log('🔔 Badge count:', { isLoading, badgeCount, enabled: !!userId && !!institutionId });
+  }, [isLoading, badgeCount, userId, institutionId]);
+
   // Atualizar o badge do ícone do app
   useEffect(() => {
     const atualizarBadge = async () => {
-      if ('setAppBadge' in navigator) {
-        try {
-          if (badgeCount && badgeCount > 0) {
-            await (navigator as any).setAppBadge(badgeCount);
-            console.log('📱 Badge atualizado:', badgeCount);
-          } else {
-            await (navigator as any).clearAppBadge();
-            console.log('📱 Badge limpo');
-          }
-        } catch (error) {
-          console.warn('Badging API erro:', error);
+      if (!('setAppBadge' in navigator)) {
+        console.log('🔔 ❌ Badging API não suportada neste navegador/contexto');
+        return;
+      }
+
+      try {
+        if (badgeCount && badgeCount > 0) {
+          await (navigator as any).setAppBadge(badgeCount);
+          console.log('🔔 ✅ Badge atualizado:', badgeCount);
+        } else {
+          await (navigator as any).clearAppBadge();
+          console.log('🔔 ✅ Badge limpo');
         }
+      } catch (error) {
+        console.error('🔔 ❌ Erro ao atualizar badge:', error);
       }
     };
 
-    atualizarBadge();
-  }, [badgeCount]);
+    // Só tenta atualizar se tiver dados válidos
+    if (userId && institutionId) {
+      atualizarBadge();
+    } else {
+      console.log('🔔 ⏳ Aguardando dados do usuário para atualizar badge');
+    }
+  }, [badgeCount, userId, institutionId]);
 
   return badgeCount || 0;
 };
@@ -90,7 +121,7 @@ export const clearAppBadge = async () => {
   if ('clearAppBadge' in navigator) {
     try {
       await (navigator as any).clearAppBadge();
-      console.log('📱 Badge limpo manualmente');
+      console.log('🔔 Badge limpo manualmente');
     } catch (error) {
       console.warn('Erro ao limpar badge:', error);
     }

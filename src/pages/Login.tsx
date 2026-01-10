@@ -17,6 +17,7 @@ const Login = () => {
   const [senha, setSenha] = useState("");
   const [lembrarMe, setLembrarMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const isSubmittingRef = useRef(false);
 
   // Load remembered email on mount
@@ -32,6 +33,8 @@ const Login = () => {
   useEffect(() => {
     const checkRoleAndRedirect = async () => {
       if (!authLoading && user && adminCheckComplete) {
+        setIsRedirecting(true);
+        
         if (isAdmin) {
           navigate('/admin');
           return;
@@ -108,10 +111,16 @@ const Login = () => {
     }
   };
 
-  if (authLoading) {
+  // Mostrar loading enquanto verifica sessão ou está redirecionando
+  if (authLoading || isRedirecting || (user && !adminCheckComplete)) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+        <div className="text-center">
+          <div className="text-5xl mb-4">🌳</div>
+          <p className="text-white/80 font-medium mb-3">Projeto Arboria</p>
+          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-indigo-500 mx-auto mb-2"></div>
+          <p className="text-white/50 text-sm">Carregando...</p>
+        </div>
       </div>
     );
   }
