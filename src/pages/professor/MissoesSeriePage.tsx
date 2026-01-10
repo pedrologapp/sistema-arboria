@@ -1,24 +1,14 @@
-import { ArrowLeft, Plus, Check } from 'lucide-react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { ArrowLeft, Plus, Check, Lock } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
-interface Missao {
-  id: string;
-  titulo: string;
-  semana: number | null;
-  tipo_missao: string | null;
-  turma_filtro: string | null;
-  data_prazo: string;
-  status: string | null;
-  inteligencia_cross_rel: {
-    nome: string;
-    emoji: string;
-    cor_hex: string;
-  } | null;
+interface ContagemSemana {
+  missoes: number;
+  entregas: number;
+  total: number;
 }
 
 const MissoesSeriePage = () => {
@@ -26,49 +16,67 @@ const MissoesSeriePage = () => {
   const navigate = useNavigate();
   const { casaMentor, casaColor, profile, faseAtual } = useProfessor();
 
-  const { data: missoes, isLoading } = useQuery({
-    queryKey: ['missoes-serie', serie, casaMentor?.id],
+  // Contar missões e entregas por semana
+  const { data: contagemPorSemana, isLoading } = useQuery({
+    queryKey: ['contagem-semanas', serie, casaMentor?.id, profile?.institution_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // 1. Buscar missões da série para a casa do mentor
+      const { data: missoes, error: missaoError } = await supabase
         .from('missoes')
-        .select(`
-          id,
-          titulo,
-          semana,
-          tipo_missao,
-          turma_filtro,
-          data_prazo,
-          status,
-          inteligencia_cross_rel:inteligencias!missoes_inteligencia_cross_fkey(nome, emoji, cor_hex)
-        `)
-        .eq('casa_id', casaMentor!.id)
+        .select('id, semana')
         .eq('institution_id', profile!.institution_id!)
-        .or(`serie_filtro.eq.${serie},serie_filtro.is.null`)
-        .order('semana', { ascending: true, nullsFirst: false })
-        .order('tipo_missao', { ascending: true });
+        .eq('casa_id', casaMentor!.id)
+        .or(`serie_filtro.eq.${serie},serie_filtro.is.null`);
 
-      if (error) throw error;
-      return data as Missao[];
+      if (missaoError) throw missaoError;
+
+      // 2. Buscar entregas dessas missões
+      const missaoIds = missoes?.map(m => m.id) || [];
+      let entregas: { missao_id: string }[] = [];
+      
+      if (missaoIds.length > 0) {
+        const { data: entregasData, error: entregasError } = await supabase
+          .from('entregas')
+          .select('missao_id')
+          .in('missao_id', missaoIds);
+        
+        if (entregasError) throw entregasError;
+        entregas = entregasData || [];
+      }
+
+      // 3. Contar alunos da série na casa do mentor
+      const { count: totalAlunos, error: alunosError } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('institution_id', profile!.institution_id!)
+        .eq('casa_id', casaMentor!.id)
+        .ilike('serie', `%${serie}%`);
+
+      if (alunosError) throw alunosError;
+
+      // 4. Agrupar por semana
+      const contagem: Record<number, ContagemSemana> = {
+        1: { missoes: 0, entregas: 0, total: totalAlunos || 0 },
+        2: { missoes: 0, entregas: 0, total: totalAlunos || 0 },
+        3: { missoes: 0, entregas: 0, total: totalAlunos || 0 },
+        4: { missoes: 0, entregas: 0, total: totalAlunos || 0 },
+      };
+
+      missoes?.forEach(m => {
+        if (m.semana && contagem[m.semana]) {
+          contagem[m.semana].missoes++;
+          contagem[m.semana].entregas += entregas?.filter(e => e.missao_id === m.id).length || 0;
+        }
+      });
+
+      return contagem;
     },
     enabled: !!casaMentor?.id && !!profile?.institution_id && !!serie
   });
 
-  // Formatar título do card
-  const formatTituloCard = (missao: Missao) => {
-    let titulo = `Semana ${missao.semana || '?'} - ${
-      missao.tipo_missao === 'individual' ? 'Individual' : 'Geral'
-    }`;
-    
-    if (missao.inteligencia_cross_rel) {
-      titulo += ` - ${missao.inteligencia_cross_rel.nome} ${missao.inteligencia_cross_rel.emoji}`;
-    }
-    
-    return titulo;
-  };
-
   return (
     <div className="p-4 space-y-6">
-      {/* Header com voltar */}
+      {/* Header */}
       <div className="flex items-center gap-3">
         <button 
           onClick={() => navigate('/professor/missoes')}
@@ -94,61 +102,66 @@ const MissoesSeriePage = () => {
         </p>
       )}
 
+      {/* Título da seção */}
+      <p className="text-white/60 text-sm uppercase tracking-wide">
+        Selecione a Semana
+      </p>
+
       {/* Loading */}
       {isLoading && (
         <div className="space-y-3">
-          {[1, 2, 3].map(i => (
+          {[1, 2, 3, 4].map(i => (
             <div key={i} className="h-20 bg-white/5 rounded-xl animate-pulse" />
           ))}
         </div>
       )}
 
-      {/* Lista de missões */}
-      {!isLoading && missoes && missoes.length > 0 && (
-        <div className="space-y-2">
-          {missoes.map((missao) => (
-            <Link
-              key={missao.id}
-              to={`/professor/missoes/${missao.id}`}
-              className="flex items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors border border-white/5"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="text-white font-medium truncate">{formatTituloCard(missao)}</p>
-                <p className="text-white/40 text-sm mt-0.5">
-                  Turmas: {missao.turma_filtro || 'Todas'} • Prazo: {format(new Date(missao.data_prazo), 'dd/MM', { locale: ptBR })}
-                </p>
-              </div>
-              
-              {/* Indicador de status */}
-              {missao.status === 'liberada' && (
-                <span className="text-green-400 ml-3">
-                  <Check size={18} />
-                </span>
-              )}
-            </Link>
-          ))}
+      {/* Lista de Semanas */}
+      {!isLoading && (
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((semana) => {
+            const dados = contagemPorSemana?.[semana];
+            const temMissoes = dados && dados.missoes > 0;
+            const totalEsperado = (dados?.total || 0) * (dados?.missoes || 0);
+
+            return (
+              <button
+                key={semana}
+                onClick={() => navigate(`/professor/missoes/serie/${serie}/semana/${semana}`)}
+                className={cn(
+                  "w-full p-4 rounded-xl text-left transition-colors flex items-center justify-between border border-white/5",
+                  temMissoes 
+                    ? "bg-white/5 hover:bg-white/10" 
+                    : "bg-white/5 hover:bg-white/8"
+                )}
+              >
+                <div>
+                  <p className="text-white font-medium flex items-center gap-2">
+                    📅 Semana {semana}
+                  </p>
+                  <p className="text-white/40 text-sm mt-1">
+                    {temMissoes 
+                      ? `${dados.missoes} ${dados.missoes === 1 ? 'missão' : 'missões'} • ${dados.entregas}/${totalEsperado} entregaram`
+                      : 'Nenhuma missão ainda'
+                    }
+                  </p>
+                </div>
+                
+                {temMissoes ? (
+                  <Check size={18} className="text-green-400" />
+                ) : (
+                  <Lock size={18} className="text-white/20" />
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {/* Empty state */}
-      {!isLoading && missoes?.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div 
-            className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-            style={{ backgroundColor: `${casaColor}20` }}
-          >
-            <span className="text-2xl">📋</span>
-          </div>
-          <p className="text-white/60 mb-4">Nenhuma missão para o {serie}º ano</p>
-          <button
-            onClick={() => navigate('/professor/missoes/nova')}
-            className="px-4 py-2 rounded-lg font-medium text-sm"
-            style={{ backgroundColor: casaColor, color: '#fff' }}
-          >
-            Criar primeira missão
-          </button>
-        </div>
-      )}
+      {/* Dica */}
+      <p className="text-white/30 text-xs text-center mt-4">
+        Clique em uma semana para ver as missões
+      </p>
     </div>
   );
 };
