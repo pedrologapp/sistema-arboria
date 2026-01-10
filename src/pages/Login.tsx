@@ -30,14 +30,32 @@ const Login = () => {
 
   // Redirect if already logged in - wait for admin check to complete
   useEffect(() => {
-    if (!authLoading && user && adminCheckComplete) {
-      if (isAdmin) {
-        navigate('/admin');
-      } else {
-        // Alunos vão para /aluno/missoes
+    const checkRoleAndRedirect = async () => {
+      if (!authLoading && user && adminCheckComplete) {
+        if (isAdmin) {
+          navigate('/admin');
+          return;
+        }
+        
+        // Check if user is professor
+        const { data: professorRole } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'professor')
+          .maybeSingle();
+        
+        if (professorRole) {
+          navigate('/professor');
+          return;
+        }
+        
+        // Default: aluno goes to /aluno/missoes
         navigate('/aluno/missoes');
       }
-    }
+    };
+    
+    checkRoleAndRedirect();
   }, [user, isAdmin, authLoading, adminCheckComplete, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {

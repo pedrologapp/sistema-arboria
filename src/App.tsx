@@ -6,8 +6,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import StudentProtectedRoute from "@/components/StudentProtectedRoute";
+import ProfessorProtectedRoute from "@/components/ProfessorProtectedRoute";
 import { AdminLayout } from "@/components/AdminLayout";
 import StudentLayout from "@/layouts/StudentLayout";
+import ProfessorLayout from "@/layouts/ProfessorLayout";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Setup from "./pages/Setup";
@@ -30,6 +32,17 @@ import DmChatPage from "./pages/aluno/DmChatPage";
 import MembrosPage from "./pages/aluno/MembrosPage";
 import PerfilPage from "./pages/aluno/PerfilPage";
 import ConfiguracoesPage from "./pages/aluno/ConfiguracoesPage";
+
+// Professor pages
+import ProfessorDashboard from "./pages/professor/ProfessorDashboard";
+import ProfessorMissoesPage from "./pages/professor/MissoesPage";
+import NovaMissaoPage from "./pages/professor/NovaMissaoPage";
+import EditarMissaoPage from "./pages/professor/EditarMissaoPage";
+import EntregasPage from "./pages/professor/EntregasPage";
+import AvaliarEntregaPage from "./pages/professor/AvaliarEntregaPage";
+import CirculoPage from "./pages/professor/CirculoPage";
+import AlunosPage from "./pages/professor/AlunosPage";
+import PerfilAlunoPage from "./pages/professor/PerfilAlunoPage";
 
 const queryClient = new QueryClient();
 
@@ -78,6 +91,71 @@ const App = () => (
                   <AdminSettings />
                 </AdminLayout>
               </ProtectedRoute>
+            } />
+
+            {/* Professor Routes */}
+            <Route path="/professor" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <ProfessorDashboard />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/missoes" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <ProfessorMissoesPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/missoes/nova" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <NovaMissaoPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/missoes/:id" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <EditarMissaoPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/entregas" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <EntregasPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/entregas/:id" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <AvaliarEntregaPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/circulo" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <CirculoPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/alunos" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <AlunosPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/alunos/:id" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <PerfilAlunoPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
             } />
 
             {/* Aluno Routes */}
