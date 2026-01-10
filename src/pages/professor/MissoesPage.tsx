@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import MissoesAtivasModal from '@/components/professor/MissoesAtivasModal';
+import EntregasPorTurmaModal from '@/components/professor/EntregasPorTurmaModal';
 
 interface AlunoLista {
   id: string;
@@ -39,6 +40,9 @@ const MissoesPage = () => {
   
   // Modal de missões ativas
   const [showMissoesModal, setShowMissoesModal] = useState(false);
+  
+  // Modal de entregas por turma
+  const [showEntregasModal, setShowEntregasModal] = useState(false);
 
   // Contar missões liberadas por série (retorna tanto contagem por série quanto total único)
   const { data: contagemMissoes } = useQuery({
@@ -77,6 +81,92 @@ const MissoesPage = () => {
     semanaAtiva: faseAtual?.semana_atual || 1,
     missoesAtivas: contagemMissoes?.porSerie?.[serie] || 0
   }));
+
+  // Query para buscar entregas por série e turma
+  const { data: entregasPorTurma } = useQuery({
+    queryKey: ['entregas-por-turma', casaMentor?.id, profile?.institution_id],
+    queryFn: async () => {
+      // 1. Buscar alunos da casa agrupados por série e turma
+      const { data: alunos, error: errAlunos } = await supabase
+        .from('profiles')
+        .select('id, serie, turma')
+        .eq('casa_id', casaMentor!.id)
+        .eq('institution_id', profile!.institution_id!);
+
+      if (errAlunos) throw errAlunos;
+
+      // 2. Buscar missões liberadas
+      const { data: missoes, error: errMissoes } = await supabase
+        .from('missoes')
+        .select('id')
+        .eq('casa_id', casaMentor!.id)
+        .eq('institution_id', profile!.institution_id!)
+        .eq('status', 'liberada');
+
+      if (errMissoes) throw errMissoes;
+
+      const missaoIds = missoes?.map(m => m.id) || [];
+
+      // 3. Buscar entregas das missões ativas
+      let entregas: { aluno_id: string }[] = [];
+      if (missaoIds.length > 0) {
+        const { data, error: errEntregas } = await supabase
+          .from('entregas')
+          .select('aluno_id')
+          .in('missao_id', missaoIds);
+
+        if (errEntregas) throw errEntregas;
+        entregas = data || [];
+      }
+
+      // 4. Agrupar alunos por série e turma
+      const alunosPorSerieTurma: Record<number, Record<string, string[]>> = {};
+      
+      alunos?.forEach(aluno => {
+        const serie = parseInt(aluno.serie || '0');
+        const turma = aluno.turma || 'A';
+        
+        if (!alunosPorSerieTurma[serie]) {
+          alunosPorSerieTurma[serie] = {};
+        }
+        if (!alunosPorSerieTurma[serie][turma]) {
+          alunosPorSerieTurma[serie][turma] = [];
+        }
+        alunosPorSerieTurma[serie][turma].push(aluno.id);
+      });
+
+      // 5. Calcular entregas por turma
+      const alunosQueEntregaram = new Set(entregas.map(e => e.aluno_id));
+
+      // 6. Montar resultado
+      const resultado = [6, 7, 8, 9].map(serie => {
+        const turmasDaSerie = alunosPorSerieTurma[serie] || {};
+        
+        const turmas = Object.entries(turmasDaSerie)
+          .sort(([a], [b]) => a.localeCompare(b)) // Ordenar A, B, C...
+          .map(([turma, alunoIds]) => {
+            const total = alunoIds.length;
+            const entregaram = alunoIds.filter(id => alunosQueEntregaram.has(id)).length;
+            const percentual = total > 0 ? Math.round((entregaram / total) * 100) : 0;
+            
+            return {
+              turma,
+              entregaram,
+              total,
+              percentual
+            };
+          });
+
+        return {
+          serie,
+          turmas
+        };
+      });
+
+      return resultado;
+    },
+    enabled: !!casaMentor?.id && !!profile?.institution_id
+  });
 
 
   const { data: estatisticas } = useQuery({
@@ -390,8 +480,11 @@ const MissoesPage = () => {
             
             <button 
               className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+              onClick={() => setShowEntregasModal(true)}
             >
-              <p className="text-2xl font-bold text-white">
+              <p className={`font-bold text-white ${
+                (estatisticas?.percentualNoPrazo || 0) === 100 ? 'text-lg' : 'text-2xl'
+              }`}>
                 {estatisticas?.percentualNoPrazo || 0}%
               </p>
               <p className="text-[10px] text-white/40 font-medium">Entregas<br/>no prazo</p>
@@ -591,6 +684,13 @@ const MissoesPage = () => {
         isOpen={showMissoesModal}
         onClose={() => setShowMissoesModal(false)}
         dados={dadosMissoesModal}
+      />
+      
+      {/* Modal de Entregas por Turma */}
+      <EntregasPorTurmaModal
+        isOpen={showEntregasModal}
+        onClose={() => setShowEntregasModal(false)}
+        dados={entregasPorTurma || []}
       />
     </div>
   );
