@@ -1235,6 +1235,7 @@ export type Database = {
           data_liberacao: string
           data_prazo: string
           descricao: string | null
+          dicas: string | null
           fase_id: string | null
           id: string
           institution_id: string
@@ -1243,6 +1244,7 @@ export type Database = {
           para_todos_da_casa: boolean | null
           permite_entrega_atrasada: boolean | null
           pontos_base: number
+          reflexao: string | null
           requer_arquivo: boolean | null
           requer_texto: boolean | null
           semana: number | null
@@ -1261,6 +1263,7 @@ export type Database = {
           data_liberacao: string
           data_prazo: string
           descricao?: string | null
+          dicas?: string | null
           fase_id?: string | null
           id?: string
           institution_id: string
@@ -1269,6 +1272,7 @@ export type Database = {
           para_todos_da_casa?: boolean | null
           permite_entrega_atrasada?: boolean | null
           pontos_base?: number
+          reflexao?: string | null
           requer_arquivo?: boolean | null
           requer_texto?: boolean | null
           semana?: number | null
@@ -1287,6 +1291,7 @@ export type Database = {
           data_liberacao?: string
           data_prazo?: string
           descricao?: string | null
+          dicas?: string | null
           fase_id?: string | null
           id?: string
           institution_id?: string
@@ -1295,6 +1300,7 @@ export type Database = {
           para_todos_da_casa?: boolean | null
           permite_entrega_atrasada?: boolean | null
           pontos_base?: number
+          reflexao?: string | null
           requer_arquivo?: boolean | null
           requer_texto?: boolean | null
           semana?: number | null
