@@ -640,41 +640,59 @@ const MissoesPage = () => {
         </div>
       </div>
 
-      {/* Modal de Lista de Alunos */}
+      {/* Modal de Lista de Alunos - Layout Compacto */}
       <Dialog open={modalAberto} onOpenChange={setModalAberto}>
-        <DialogContent className="max-w-sm mx-auto bg-[#1a1a1a] border-white/10">
-          <DialogHeader>
+        <DialogContent className="max-w-sm mx-auto bg-[#1a1a1a] border-white/10 p-0 gap-0">
+          <DialogHeader className="p-4 border-b border-white/10">
             <DialogTitle className="text-white">{modalTitulo}</DialogTitle>
           </DialogHeader>
           
-          <div className="max-h-[60vh] overflow-y-auto space-y-2">
+          {/* Cabeçalho da lista */}
+          <div className="flex items-center px-4 py-2 border-b border-white/5">
+            <span className="text-white/30 text-xs uppercase">Aluno</span>
+          </div>
+          
+          {/* Lista compacta estilo Discord */}
+          <div className="max-h-[60vh] overflow-y-auto">
             {modalAlunos.length === 0 ? (
-              <p className="text-white/60 text-sm text-center py-4">
+              <p className="text-white/60 text-sm text-center py-8">
                 Nenhum aluno encontrado
               </p>
             ) : (
-              modalAlunos.map(aluno => (
-                <div 
-                  key={aluno.id}
-                  className="flex items-center gap-3 p-3 bg-white/5 rounded-lg"
-                >
+              <div className="py-1">
+                {modalAlunos.map(aluno => (
                   <div 
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm"
-                    style={{ backgroundColor: casaColor }}
+                    key={aluno.id}
+                    className="flex items-center gap-2 py-2 px-4 hover:bg-white/5 transition-colors"
                   >
-                    {aluno.nome?.charAt(0) || '?'}
+                    {/* Avatar pequeno (28px) */}
+                    <div 
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
+                      style={{ backgroundColor: casaColor }}
+                    >
+                      {aluno.nome?.charAt(0).toUpperCase() || '?'}
+                    </div>
+                    
+                    {/* Nome + Série/Turma na mesma linha */}
+                    <div className="flex-1 min-w-0 flex items-center">
+                      <span className="text-white text-sm font-medium truncate">
+                        {aluno.nome}
+                      </span>
+                      <span className="text-white/40 text-xs ml-2 flex-shrink-0">
+                        {aluno.serie}º{aluno.turma}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-white font-medium">
-                      {aluno.nome} {aluno.sobrenome}
-                    </p>
-                    <p className="text-white/60 text-xs">
-                      {aluno.serie}º {aluno.turma}
-                    </p>
-                  </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
+          </div>
+          
+          {/* Footer com contagem */}
+          <div className="p-4 border-t border-white/10">
+            <p className="text-white/40 text-xs text-center">
+              {modalAlunos.length} {modalAlunos.length === 1 ? 'aluno' : 'alunos'}
+            </p>
           </div>
         </DialogContent>
       </Dialog>
