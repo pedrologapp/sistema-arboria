@@ -41,57 +41,54 @@ const ProfessorBottomNav = () => {
   };
 
   return (
-    <nav className="fixed bottom-4 left-4 right-4 z-50 max-w-lg mx-auto">
-      <div 
-        className="relative flex justify-around items-center py-3 px-2 rounded-2xl border"
-        style={{
-          backgroundColor: 'rgba(26, 26, 26, 0.95)',
-          borderColor: 'rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)'
-        }}
-      >
-        {/* Limelight effect */}
-        <div
-          className="absolute top-0 h-1 rounded-full transition-all duration-300 ease-out"
-          style={{
-            width: `${100 / navItems.length}%`,
-            left: `${(activeIndex * 100) / navItems.length}%`,
-            backgroundColor: casaColor,
-            boxShadow: `0 0 20px ${casaColor}80, 0 0 40px ${casaColor}40`
-          }}
-        />
+    <nav className="fixed bottom-0 left-0 right-0 z-50 pb-safe">
+      <div className="mx-4 mb-4 max-w-lg mx-auto">
+        <div 
+          className="relative flex justify-around items-center py-3 px-2 rounded-full border border-white/10 bg-black/80 backdrop-blur-lg shadow-lg"
+        >
+          {/* Limelight effect - na parte inferior como no aluno */}
+          <div
+            className="absolute bottom-0 h-1 rounded-full transition-all duration-300 ease-out"
+            style={{
+              width: `${100 / navItems.length}%`,
+              left: `${(activeIndex * 100) / navItems.length}%`,
+              backgroundColor: casaColor,
+              boxShadow: `0 0 20px ${casaColor}80, 0 0 40px ${casaColor}40`
+            }}
+          />
 
-        {navItems.map((item, index) => {
-          const isActive = index === activeIndex;
-          
-          return (
-            <button
-              key={item.id}
-              onClick={() => handleNavClick(item)}
-              className="flex flex-col items-center gap-1 px-3 py-1 transition-all duration-200"
-              style={{
-                color: isActive ? casaColor : 'rgba(255, 255, 255, 0.5)'
-              }}
-            >
-              <div
-                className="transition-transform duration-200"
+          {navItems.map((item, index) => {
+            const isActive = index === activeIndex;
+            
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleNavClick(item)}
+                className="flex flex-col items-center gap-1 px-3 py-1 transition-all duration-200"
                 style={{
-                  transform: isActive ? 'scale(1.1)' : 'scale(1)'
+                  color: isActive ? casaColor : 'rgba(255, 255, 255, 0.5)'
                 }}
               >
-                {item.icon}
-              </div>
-              <span 
-                className="text-[10px] font-medium"
-                style={{
-                  opacity: isActive ? 1 : 0.7
-                }}
-              >
-                {item.label}
-              </span>
-            </button>
-          );
-        })}
+                <div
+                  className="transition-transform duration-200"
+                  style={{
+                    transform: isActive ? 'scale(1.1)' : 'scale(1)'
+                  }}
+                >
+                  {item.icon}
+                </div>
+                <span 
+                  className="text-[10px] font-medium"
+                  style={{
+                    opacity: isActive ? 1 : 0.7
+                  }}
+                >
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );
