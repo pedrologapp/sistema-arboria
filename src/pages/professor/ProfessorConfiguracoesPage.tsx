@@ -4,6 +4,7 @@ import { useProfessor } from '@/contexts/ProfessorContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { CasaBrasao } from '@/components/CasaBrasao';
 import { toast } from 'sonner';
 
 const ProfessorConfiguracoesPage = () => {
@@ -67,8 +68,14 @@ const ProfessorConfiguracoesPage = () => {
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-white">{fullName}</h3>
               {casaMentor && (
-                <p className="text-sm" style={{ color: casaColor }}>
-                  {casaMentor.emoji} Mentor - Casa {casaMentor.nome}
+                <p className="text-sm inline-flex items-center gap-1" style={{ color: casaColor }}>
+                  <CasaBrasao 
+                    brasaoUrl={casaMentor.brasao_url} 
+                    emoji={casaMentor.emoji} 
+                    nome={casaMentor.nome}
+                    size="mini"
+                  />
+                  Mentor - Casa {casaMentor.nome}
                 </p>
               )}
             </div>
