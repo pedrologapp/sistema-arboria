@@ -103,10 +103,13 @@ const DmChatPage = () => {
         .update({ ultima_leitura: new Date().toISOString() })
         .eq('conversa_id', conversaId)
         .eq('usuario_id', profile.id);
+      
+      // Invalidar query de DMs não lidas para atualizar badges
+      queryClient.invalidateQueries({ queryKey: ['dms-nao-lidas'] });
     };
     
     marcarComoLido();
-  }, [conversaId, profile?.id]);
+  }, [conversaId, profile?.id, queryClient]);
 
   // Realtime para novas mensagens
   useEffect(() => {

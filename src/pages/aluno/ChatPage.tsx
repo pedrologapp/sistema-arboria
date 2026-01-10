@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, MessageCircle, Hash, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 
 const ChatPage = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { profile, casa, casaColor } = useStudent();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -76,6 +77,91 @@ const ChatPage = () => {
     enabled: canais.length > 0 && !!profile?.id,
   });
 
+  // Buscar DMs não lidas
+  const { data: dmsNaoLidas = [] } = useQuery({
+    queryKey: ['dms-nao-lidas', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      
+      // Buscar conversas onde eu participo
+      const { data: participacoes } = await supabase
+        .from('conversa_participantes')
+        .select(`
+          conversa_id,
+          ultima_leitura,
+          conversa:conversas_privadas(updated_at)
+        `)
+        .eq('usuario_id', profile.id);
+      
+      if (!participacoes) return [];
+      
+      // Identificar conversas com mensagens não lidas
+      const naoLidas: { conversaId: string; outroUsuarioId: string }[] = [];
+      
+      for (const p of participacoes) {
+        const ultimaLeitura = new Date(p.ultima_leitura || '1970-01-01');
+        const conversaData = p.conversa as { updated_at: string | null } | null;
+        const ultimaMsg = new Date(conversaData?.updated_at || '1970-01-01');
+        
+        if (ultimaMsg > ultimaLeitura) {
+          // Buscar ID do outro participante
+          const { data: outro } = await supabase
+            .from('conversa_participantes')
+            .select('usuario_id')
+            .eq('conversa_id', p.conversa_id)
+            .neq('usuario_id', profile.id)
+            .single();
+          
+          if (outro) {
+            naoLidas.push({ 
+              conversaId: p.conversa_id, 
+              outroUsuarioId: outro.usuario_id 
+            });
+          }
+        }
+      }
+      
+      return naoLidas;
+    },
+    enabled: !!profile?.id,
+    staleTime: 10000,
+  });
+
+  // Realtime: escutar novas mensagens para atualizar badges
+  useEffect(() => {
+    if (!profile?.id || !casa?.id) return;
+    
+    const channel = supabase
+      .channel('global-chat-updates')
+      // Novas mensagens em canais
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'mensagens_canal'
+      }, (payload) => {
+        // Só atualizar se for mensagem de outro usuário
+        if (payload.new.autor_id !== profile.id) {
+          queryClient.invalidateQueries({ queryKey: ['mensagens-nao-lidas'] });
+          queryClient.invalidateQueries({ queryKey: ['canal-leituras'] });
+        }
+      })
+      // Novas mensagens em DMs
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'mensagens_privadas'
+      }, (payload) => {
+        if (payload.new.autor_id !== profile.id) {
+          queryClient.invalidateQueries({ queryKey: ['dms-nao-lidas'] });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id, casa?.id, queryClient]);
+
   // Buscar membros da casa com cargos
   const { data: membrosCasa = [] } = useQuery({
     queryKey: ['membros-chat', casa?.id, profile?.institution_id],
@@ -99,6 +185,7 @@ const ChatPage = () => {
       if (error) throw error;
       return data || [];
     },
+    staleTime: 30000,
     enabled: !!casa?.id && !!profile?.institution_id,
   });
 
@@ -341,6 +428,7 @@ const ChatPage = () => {
                   isMe={membro.id === profile?.id}
                   onIniciarConversa={iniciarConversa}
                   casaColor={casaColor}
+                  temDmNaoLida={dmsNaoLidas.some(dm => dm.outroUsuarioId === membro.id)}
                 />
               ))}
             </div>
@@ -366,6 +454,7 @@ const ChatPage = () => {
                   isMe={membro.id === profile?.id}
                   onIniciarConversa={iniciarConversa}
                   casaColor={casaColor}
+                  temDmNaoLida={dmsNaoLidas.some(dm => dm.outroUsuarioId === membro.id)}
                 />
               ))
             )}

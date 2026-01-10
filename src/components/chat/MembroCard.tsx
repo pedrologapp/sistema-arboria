@@ -15,6 +15,7 @@ interface MembroCardProps {
   isMe: boolean;
   onIniciarConversa: (usuarioId: string) => void;
   casaColor?: string;
+  temDmNaoLida?: boolean;
 }
 
 const CARGO_EMOJI: Record<string, string> = {
@@ -24,7 +25,7 @@ const CARGO_EMOJI: Record<string, string> = {
   embaixador: '🌍 Embaixador',
 };
 
-export const MembroCard = ({ membro, isMe, onIniciarConversa }: MembroCardProps) => {
+export const MembroCard = ({ membro, isMe, onIniciarConversa, temDmNaoLida = false }: MembroCardProps) => {
   const status = getStatusOnline(membro.ultima_atividade);
   const nomeExibido = membro.nome || membro.full_name || 'Usuário';
   const cargoAtivo = membro.cargos_casa?.find(c => c.ativo);
@@ -65,9 +66,13 @@ export const MembroCard = ({ membro, isMe, onIniciarConversa }: MembroCardProps)
             console.log('🔵 Botão DM clicado! Membro:', membro.id, nomeExibido);
             onIniciarConversa(membro.id);
           }}
-          className="p-1.5 rounded hover:bg-white/10 text-white/60 hover:text-white transition-colors flex-shrink-0"
+          className="relative p-1.5 rounded hover:bg-white/10 text-white/60 hover:text-white transition-colors flex-shrink-0"
         >
           💬
+          {/* Badge de não lida */}
+          {temDmNaoLida && (
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full" />
+          )}
         </button>
       )}
     </div>
