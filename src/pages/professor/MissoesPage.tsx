@@ -706,7 +706,7 @@ const MissoesPage = () => {
 
       {/* Modal de Lista de Alunos - Layout Compacto */}
       <Dialog open={modalAberto} onOpenChange={setModalAberto}>
-        <DialogContent className="max-w-sm mx-auto bg-[#1a1a1a] border-white/10 p-0 gap-0">
+        <DialogContent className="max-w-sm mx-auto bg-[#1a1a1a] border-white/10 p-0 gap-0" hideCloseButton>
         <DialogHeader className="p-4 border-b border-white/10">
           <div className="flex items-center justify-between">
             <div>
