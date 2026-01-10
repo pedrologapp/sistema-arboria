@@ -6,26 +6,25 @@ import ReactMarkdown from 'react-markdown';
 interface MissaoDetalhesModalProps {
   isOpen: boolean;
   onClose: () => void;
-  missaoId: string | null;
+  missaoIds: string[];
 }
 
-const MissaoDetalhesModal = ({ isOpen, onClose, missaoId }: MissaoDetalhesModalProps) => {
-  const { data: missao, isLoading } = useQuery({
-    queryKey: ['missao-modal', missaoId],
+const MissaoDetalhesModal = ({ isOpen, onClose, missaoIds }: MissaoDetalhesModalProps) => {
+  const { data: missoes, isLoading } = useQuery({
+    queryKey: ['missoes-modal', missaoIds],
     queryFn: async () => {
-      if (!missaoId) return null;
+      if (missaoIds.length === 0) return [];
       const { data, error } = await supabase
         .from('missoes')
         .select(`
           *,
           inteligencia_cross_rel:inteligencias!missoes_inteligencia_cross_fkey(nome, emoji)
         `)
-        .eq('id', missaoId)
-        .maybeSingle();
+        .in('id', missaoIds);
       if (error) throw error;
       return data;
     },
-    enabled: !!missaoId && isOpen
+    enabled: missaoIds.length > 0 && isOpen
   });
 
   if (!isOpen) return null;
@@ -36,12 +35,14 @@ const MissaoDetalhesModal = ({ isOpen, onClose, missaoId }: MissaoDetalhesModalP
       onClick={onClose}
     >
       <div 
-        className="bg-[#1a1a1a] rounded-xl p-5 max-w-md w-full max-h-[85vh] overflow-auto"
+        className="bg-[#1a1a1a] rounded-xl p-5 max-w-md w-full max-h-[70vh] overflow-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-white font-bold">Detalhes da Missão</h3>
+          <h3 className="text-white font-bold">
+            {missaoIds.length > 1 ? `Missões (${missaoIds.length})` : 'Detalhes da Missão'}
+          </h3>
           <button 
             onClick={onClose} 
             className="text-white/60 hover:text-white p-1 transition-colors"
@@ -59,100 +60,102 @@ const MissaoDetalhesModal = ({ isOpen, onClose, missaoId }: MissaoDetalhesModalP
           </div>
         )}
         
-        {/* Conteúdo */}
-        {!isLoading && missao && (
-          <div className="space-y-4">
-            {/* Badges */}
-            <div className="flex gap-2 flex-wrap">
-              {missao.serie_filtro && (
-                <span className="bg-blue-600/20 text-blue-400 px-2 py-1 rounded text-xs">
-                  {missao.serie_filtro}º ano
-                </span>
-              )}
-              {missao.semana && (
-                <span className="bg-purple-600/20 text-purple-400 px-2 py-1 rounded text-xs">
-                  Semana {missao.semana}
-                </span>
-              )}
-              <span className="bg-white/10 text-white/60 px-2 py-1 rounded text-xs">
-                {missao.pontos_base} pts
-              </span>
-              {missao.tipo_missao && (
-                <span className="bg-emerald-600/20 text-emerald-400 px-2 py-1 rounded text-xs capitalize">
-                  {missao.tipo_missao}
-                </span>
-              )}
-            </div>
-            
-            {/* Título e Descrição */}
-            <div>
-              <h4 className="text-xl text-white font-semibold mb-2">{missao.titulo}</h4>
-              {missao.descricao && (
-                <p className="text-white/70">{missao.descricao}</p>
-              )}
-            </div>
-            
-            {/* Instruções */}
-            {missao.instrucoes && (
-              <div className="pt-2 border-t border-white/10">
-                <p className="text-white/40 text-sm mb-2 font-medium">📋 Instruções:</p>
-                <div className="text-white/70 prose prose-invert prose-sm max-w-none">
-                  <ReactMarkdown>{missao.instrucoes}</ReactMarkdown>
-                </div>
-              </div>
-            )}
-            
-            {/* Dicas */}
-            {missao.dicas && (
-              <div className="pt-2 border-t border-white/10">
-                <p className="text-white/40 text-sm mb-2 font-medium">💡 Dicas:</p>
-                <div className="text-white/70 prose prose-invert prose-sm max-w-none">
-                  <ReactMarkdown>{missao.dicas}</ReactMarkdown>
-                </div>
-              </div>
-            )}
+        {/* Conteúdo - Lista de missões */}
+        {!isLoading && missoes && missoes.length > 0 && (
+          <div className="space-y-5">
+            {missoes.map((missao, index) => (
+              <div key={missao.id}>
+                {/* Separador entre missões */}
+                {index > 0 && <hr className="border-white/10 mb-5" />}
+                
+                <div className="space-y-3">
+                  {/* Badges */}
+                  <div className="flex gap-2 flex-wrap">
+                    {missao.serie_filtro && (
+                      <span className="bg-blue-600/20 text-blue-400 px-2 py-1 rounded text-xs">
+                        {missao.serie_filtro}º ano
+                      </span>
+                    )}
+                    {missao.semana && (
+                      <span className="bg-purple-600/20 text-purple-400 px-2 py-1 rounded text-xs">
+                        Semana {missao.semana}
+                      </span>
+                    )}
+                    <span className="bg-white/10 text-white/60 px-2 py-1 rounded text-xs">
+                      {missao.pontos_base} pts
+                    </span>
+                    {missao.tipo_missao && (
+                      <span className="bg-emerald-600/20 text-emerald-400 px-2 py-1 rounded text-xs capitalize">
+                        {missao.tipo_missao}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* Título e Descrição */}
+                  <div>
+                    <h4 className="text-lg text-white font-semibold mb-1">{missao.titulo}</h4>
+                    {missao.descricao && (
+                      <p className="text-white/70 text-sm">{missao.descricao}</p>
+                    )}
+                  </div>
+                  
+                  {/* Instruções */}
+                  {missao.instrucoes && (
+                    <div className="pt-2 border-t border-white/10">
+                      <p className="text-white/40 text-xs mb-1 font-medium">📋 Instruções:</p>
+                      <div className="text-white/70 prose prose-invert prose-sm max-w-none text-sm">
+                        <ReactMarkdown>{missao.instrucoes}</ReactMarkdown>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Dicas */}
+                  {missao.dicas && (
+                    <div className="pt-2 border-t border-white/10">
+                      <p className="text-white/40 text-xs mb-1 font-medium">💡 Dicas:</p>
+                      <div className="text-white/70 prose prose-invert prose-sm max-w-none text-sm">
+                        <ReactMarkdown>{missao.dicas}</ReactMarkdown>
+                      </div>
+                    </div>
+                  )}
 
-            {/* Reflexão */}
-            {missao.reflexao && (
-              <div className="pt-2 border-t border-white/10">
-                <p className="text-white/40 text-sm mb-2 font-medium">🤔 Reflexão:</p>
-                <div className="text-white/70 prose prose-invert prose-sm max-w-none">
-                  <ReactMarkdown>{missao.reflexao}</ReactMarkdown>
+                  {/* Reflexão */}
+                  {missao.reflexao && (
+                    <div className="pt-2 border-t border-white/10">
+                      <p className="text-white/40 text-xs mb-1 font-medium">🤔 Reflexão:</p>
+                      <div className="text-white/70 prose prose-invert prose-sm max-w-none text-sm">
+                        <ReactMarkdown>{missao.reflexao}</ReactMarkdown>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Requisitos e Prazo */}
+                  <div className="pt-2 border-t border-white/10 flex flex-wrap gap-3 text-xs text-white/50">
+                    <span className={missao.requer_texto ? 'text-green-400' : ''}>
+                      📝 Texto: {missao.requer_texto ? 'Sim' : 'Não'}
+                    </span>
+                    <span className={missao.requer_arquivo ? 'text-green-400' : ''}>
+                      📎 Arquivo: {missao.requer_arquivo ? 'Sim' : 'Não'}
+                    </span>
+                    <span>
+                      ⏰ {new Date(missao.data_prazo).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
                 </div>
               </div>
-            )}
-            
-            {/* Requisitos e Prazo */}
-            <div className="pt-2 border-t border-white/10 space-y-2">
-              <div className="flex items-center gap-2 text-white/50 text-sm">
-                <span>📝 Requer texto:</span>
-                <span className={missao.requer_texto ? 'text-green-400' : 'text-white/30'}>
-                  {missao.requer_texto ? 'Sim' : 'Não'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-white/50 text-sm">
-                <span>📎 Requer arquivo:</span>
-                <span className={missao.requer_arquivo ? 'text-green-400' : 'text-white/30'}>
-                  {missao.requer_arquivo ? 'Sim' : 'Não'}
-                </span>
-              </div>
-              <p className="text-white/40 text-sm">
-                ⏰ Prazo: {new Date(missao.data_prazo).toLocaleDateString('pt-BR', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </p>
-            </div>
+            ))}
           </div>
         )}
 
-        {/* Sem missão */}
-        {!isLoading && !missao && (
+        {/* Sem missões */}
+        {!isLoading && (!missoes || missoes.length === 0) && (
           <div className="text-center py-8">
-            <p className="text-white/40">Missão não encontrada</p>
+            <p className="text-white/40">Nenhuma missão encontrada</p>
           </div>
         )}
       </div>

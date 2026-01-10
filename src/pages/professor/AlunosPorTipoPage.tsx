@@ -57,8 +57,8 @@ const AlunosPorTipoPage = () => {
   // Buscar alunos com status de missão
   const { data: alunosComStatus, isLoading } = useQuery({
     queryKey: ['alunos-status', profile?.institution_id, serie, semana, tipo, casaId, casaMentor?.id],
-    queryFn: async (): Promise<{ alunos: AlunoComStatus[]; missaoId: string | null }> => {
-      if (!profile?.institution_id || !casaMentor?.id) return { alunos: [], missaoId: null };
+    queryFn: async (): Promise<{ alunos: AlunoComStatus[]; missaoIds: string[] }> => {
+      if (!profile?.institution_id || !casaMentor?.id) return { alunos: [], missaoIds: [] };
 
       // 1. Buscar alunos da casa do mentor
       let alunosQuery = supabase
@@ -76,7 +76,7 @@ const AlunosPorTipoPage = () => {
       const { data: alunos, error: alunosError } = await alunosQuery;
       if (alunosError) throw alunosError;
 
-      if (!alunos || alunos.length === 0) return { alunos: [], missaoId: null };
+      if (!alunos || alunos.length === 0) return { alunos: [], missaoIds: [] };
 
       // 2. Buscar missões da semana/tipo
       let missoesQuery = supabase
@@ -97,9 +97,6 @@ const AlunosPorTipoPage = () => {
       if (missoesError) throw missoesError;
 
       const missaoIds = missoes?.map(m => m.id) || [];
-      
-      // Armazenar primeiro ID para o modal
-      const primeiroMissaoId = missoes && missoes.length > 0 ? missoes[0].id : null;
 
       // 3. Buscar entregas dessas missões
       let entregas: { aluno_id: string; missao_id: string; status: string | null; nota: number | null }[] = [];
@@ -153,14 +150,14 @@ const AlunosPorTipoPage = () => {
         return ordem[a.status] - ordem[b.status];
       });
 
-      return { alunos: alunosOrdenados, missaoId: primeiroMissaoId };
+      return { alunos: alunosOrdenados, missaoIds };
     },
     enabled: !!profile?.institution_id && !!casaMentor?.id && !!serie && !!semana
   });
 
-  // Extrair missaoId e alunos
+  // Extrair missaoIds e alunos
   const alunos = alunosComStatus?.alunos ?? [];
-  const missaoId = alunosComStatus?.missaoId ?? null;
+  const missaoIds = alunosComStatus?.missaoIds ?? [];
 
   // Filtrar por turma
   const alunosFiltrados = useMemo(() => {
@@ -228,7 +225,7 @@ const AlunosPorTipoPage = () => {
           {/* Botão Ver Missão */}
           <button
             onClick={() => setShowMissaoModal(true)}
-            disabled={!missaoId}
+            disabled={missaoIds.length === 0}
             className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Eye className="w-4 h-4" />
@@ -369,7 +366,7 @@ const AlunosPorTipoPage = () => {
       <MissaoDetalhesModal
         isOpen={showMissaoModal}
         onClose={() => setShowMissaoModal(false)}
-        missaoId={missaoId}
+        missaoIds={missaoIds}
       />
     </div>
   );
