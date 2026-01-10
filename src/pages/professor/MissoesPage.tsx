@@ -15,8 +15,15 @@ interface AlunoLista {
   id: string;
   nome: string;
   sobrenome: string | null;
+  full_name?: string;
   serie: string | null;
   turma: string | null;
+}
+
+interface EngajamentoData {
+  rapidos: { count: number; percent: number; alunos: AlunoLista[] };
+  noPrazo: { count: number; percent: number; alunos: AlunoLista[] };
+  atrasados: { count: number; percent: number; alunos: AlunoLista[] };
 }
 
 const MissoesPage = () => {
@@ -75,14 +82,15 @@ const MissoesPage = () => {
       
       const missaoIds = missoes?.map(m => m.id) || [];
       
-      // Entregas pendentes de avaliação
+      // Entregas pendentes de avaliação (nota IS NULL e status diferente de 'refazer')
       let entregasPendentes = 0;
       if (missaoIds.length > 0) {
         const { count } = await supabase
           .from('entregas')
           .select('*', { count: 'exact', head: true })
           .in('missao_id', missaoIds)
-          .eq('status', 'pendente');
+          .is('nota', null)
+          .neq('status', 'refazer');
         entregasPendentes = count || 0;
       }
 
@@ -94,23 +102,19 @@ const MissoesPage = () => {
           .from('entregas')
           .select('id, entregue_no_prazo')
           .in('missao_id', missaoIds)
-          .eq('status', 'aprovado');
+          .eq('status', 'aprovada');
         
         totalEntregas = entregasData?.length || 0;
         entregasNoPrazo = entregasData?.filter(e => e.entregue_no_prazo).length || 0;
       }
 
-      // Alunos ativos (última atividade nas últimas 24h)
-      const ontem = new Date();
-      ontem.setDate(ontem.getDate() - 1);
-      
-      const { count: alunosAtivos } = await supabase
+      // TOTAL de alunos da casa (não apenas ativos recentemente)
+      const { count: totalAlunos } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .eq('casa_id', casaMentor!.id)
         .eq('institution_id', profile!.institution_id!)
-        .not('casa_id', 'is', null)
-        .gte('ultima_atividade', ontem.toISOString());
+        .not('casa_id', 'is', null);
 
       // Percentual de entregas no prazo
       const percentualNoPrazo = totalEntregas > 0 
@@ -119,7 +123,7 @@ const MissoesPage = () => {
 
       return {
         entregasPendentes,
-        alunosAtivos: alunosAtivos || 0,
+        totalAlunos: totalAlunos || 0,
         percentualNoPrazo,
         missaoIds
       };
@@ -127,11 +131,11 @@ const MissoesPage = () => {
     enabled: !!casaMentor?.id && !!profile?.institution_id
   });
 
-  // Engajamento dos alunos
-  const { data: engajamento } = useQuery({
+  // Engajamento dos alunos (com dados para os modais)
+  const { data: engajamento } = useQuery<EngajamentoData>({
     queryKey: ['engajamento-alunos', casaMentor?.id, profile?.institution_id],
-    queryFn: async () => {
-      // Buscar IDs das missões da casa
+    queryFn: async (): Promise<EngajamentoData> => {
+      // Buscar missões ativas com datas
       const { data: missoes } = await supabase
         .from('missoes')
         .select('id, data_liberacao, data_prazo')
@@ -140,31 +144,54 @@ const MissoesPage = () => {
         .eq('status', 'liberada');
       
       if (!missoes || missoes.length === 0) {
-        return { rapidos: { count: 0, percent: 0 }, noPrazo: { count: 0, percent: 0 }, atrasados: { count: 0, percent: 0 } };
+        return { 
+          rapidos: { count: 0, percent: 0, alunos: [] }, 
+          noPrazo: { count: 0, percent: 0, alunos: [] }, 
+          atrasados: { count: 0, percent: 0, alunos: [] } 
+        };
       }
 
       const missaoIds = missoes.map(m => m.id);
       const missaoMap = new Map(missoes.map(m => [m.id, m]));
 
-      // Buscar entregas aprovadas
+      // Buscar entregas aprovadas COM dados do aluno
       const { data: entregas } = await supabase
         .from('entregas')
-        .select('id, aluno_id, data_entrega, missao_id, entregue_no_prazo')
+        .select(`
+          id, 
+          aluno_id, 
+          data_entrega, 
+          missao_id, 
+          entregue_no_prazo,
+          aluno:profiles!entregas_aluno_id_fkey(id, nome, sobrenome, full_name, serie, turma)
+        `)
         .in('missao_id', missaoIds)
-        .eq('status', 'aprovado');
+        .eq('status', 'aprovada');
 
       if (!entregas || entregas.length === 0) {
-        return { rapidos: { count: 0, percent: 0 }, noPrazo: { count: 0, percent: 0 }, atrasados: { count: 0, percent: 0 } };
+        return { 
+          rapidos: { count: 0, percent: 0, alunos: [] }, 
+          noPrazo: { count: 0, percent: 0, alunos: [] }, 
+          atrasados: { count: 0, percent: 0, alunos: [] } 
+        };
       }
 
-      // Classificar entregas
-      let rapidosCount = 0;
-      let noPrazoCount = 0;
-      let atrasadosCount = 0;
+      // Classificar entregas e guardar dados dos alunos
+      const rapidosAlunos: AlunoLista[] = [];
+      const noPrazoAlunos: AlunoLista[] = [];
+      const atrasadosAlunos: AlunoLista[] = [];
 
       entregas.forEach(entrega => {
         const missao = missaoMap.get(entrega.missao_id);
-        if (!missao || !entrega.data_entrega) return;
+        if (!missao || !entrega.data_entrega || !entrega.aluno) return;
+
+        const alunoData = entrega.aluno as unknown as AlunoLista;
+
+        // Se entregou fora do prazo
+        if (entrega.entregue_no_prazo === false) {
+          atrasadosAlunos.push(alunoData);
+          return;
+        }
 
         const liberacao = new Date(missao.data_liberacao).getTime();
         const prazo = new Date(missao.data_prazo).getTime();
@@ -172,22 +199,32 @@ const MissoesPage = () => {
         
         const prazoTotal = prazo - liberacao;
         const tempoUsado = entregou - liberacao;
-        const percentualUsado = (tempoUsado / prazoTotal) * 100;
+        const percentualUsado = prazoTotal > 0 ? (tempoUsado / prazoTotal) * 100 : 0;
 
-        if (!entrega.entregue_no_prazo) {
-          atrasadosCount++;
-        } else if (percentualUsado <= 50) {
-          rapidosCount++;
+        if (percentualUsado <= 50) {
+          rapidosAlunos.push(alunoData);
         } else {
-          noPrazoCount++;
+          noPrazoAlunos.push(alunoData);
         }
       });
 
       const total = entregas.length;
       return {
-        rapidos: { count: rapidosCount, percent: total > 0 ? Math.round((rapidosCount / total) * 100) : 0 },
-        noPrazo: { count: noPrazoCount, percent: total > 0 ? Math.round((noPrazoCount / total) * 100) : 0 },
-        atrasados: { count: atrasadosCount, percent: total > 0 ? Math.round((atrasadosCount / total) * 100) : 0 }
+        rapidos: { 
+          count: rapidosAlunos.length, 
+          percent: total > 0 ? Math.round((rapidosAlunos.length / total) * 100) : 0,
+          alunos: rapidosAlunos
+        },
+        noPrazo: { 
+          count: noPrazoAlunos.length, 
+          percent: total > 0 ? Math.round((noPrazoAlunos.length / total) * 100) : 0,
+          alunos: noPrazoAlunos
+        },
+        atrasados: { 
+          count: atrasadosAlunos.length, 
+          percent: total > 0 ? Math.round((atrasadosAlunos.length / total) * 100) : 0,
+          alunos: atrasadosAlunos
+        }
       };
     },
     enabled: !!casaMentor?.id && !!profile?.institution_id
@@ -368,9 +405,9 @@ const MissoesPage = () => {
               onClick={() => navigate('/professor/alunos')}
             >
               <p className="text-2xl font-bold text-white">
-                {estatisticas?.alunosAtivos || 0}
+                {estatisticas?.totalAlunos || 0}
               </p>
-              <p className="text-[10px] text-white/40 font-medium">Alunos<br/>ativos</p>
+              <p className="text-[10px] text-white/40 font-medium">Alunos</p>
             </button>
           </div>
         </div>
@@ -389,7 +426,7 @@ const MissoesPage = () => {
           <div className="grid grid-cols-3 gap-3 text-center">
             <button 
               className="p-3 rounded-lg hover:bg-white/10 transition-colors"
-              onClick={() => engajamento?.rapidos.count && abrirModal('⚡ Alunos Rápidos', [], 'green')}
+              onClick={() => engajamento?.rapidos.count && abrirModal('⚡ Alunos Rápidos (< 50% do prazo)', engajamento.rapidos.alunos, 'green')}
             >
               <p className="text-2xl mb-1">⚡</p>
               <p className="text-xl font-bold text-white">
@@ -402,7 +439,7 @@ const MissoesPage = () => {
             
             <button 
               className="p-3 rounded-lg hover:bg-white/10 transition-colors"
-              onClick={() => engajamento?.noPrazo.count && abrirModal('🚶 Alunos No Prazo', [], 'blue')}
+              onClick={() => engajamento?.noPrazo.count && abrirModal('🚶 Alunos No Prazo (> 50% do prazo)', engajamento.noPrazo.alunos, 'blue')}
             >
               <p className="text-2xl mb-1">🚶</p>
               <p className="text-xl font-bold text-white">
@@ -415,14 +452,14 @@ const MissoesPage = () => {
             
             <button 
               className="p-3 rounded-lg hover:bg-white/10 transition-colors"
-              onClick={() => engajamento?.atrasados.count && abrirModal('🐢 Alunos Atrasados', [], 'yellow')}
+              onClick={() => engajamento?.atrasados.count && abrirModal('🐢 Alunos Atrasados (fora do prazo)', engajamento.atrasados.alunos, 'orange')}
             >
               <p className="text-2xl mb-1">🐢</p>
               <p className="text-xl font-bold text-white">
                 {engajamento?.atrasados.percent || 0}%
               </p>
               <p className="text-[10px] text-white/40 font-medium">
-                {engajamento?.atrasados.count || 0} lentos
+                {engajamento?.atrasados.count || 0} atrasados
               </p>
             </button>
           </div>
