@@ -2,13 +2,22 @@ import { ReactNode } from 'react';
 import { ProfessorProvider, useProfessor } from '@/contexts/ProfessorContext';
 import ProfessorHeader from '@/components/professor/ProfessorHeader';
 import ProfessorBottomNav from '@/components/professor/ProfessorBottomNav';
+import { useAppBadge } from '@/hooks/useAppBadge';
 
 interface ProfessorLayoutProps {
   children: ReactNode;
 }
 
 const ProfessorLayoutContent = ({ children }: ProfessorLayoutProps) => {
-  const { isLoading } = useProfessor();
+  const { profile, casaMentor, isLoading } = useProfessor();
+
+  // Ativar badge no ícone do app
+  useAppBadge({
+    userId: profile?.id,
+    institutionId: profile?.institution_id,
+    role: 'professor',
+    casaMentorId: casaMentor?.id
+  });
 
   if (isLoading) {
     return (

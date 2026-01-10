@@ -23,6 +23,7 @@ import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import FeedbackAprovadoModal from '@/components/aluno/FeedbackAprovadoModal';
 import FeedbackRefazerModal from '@/components/aluno/FeedbackRefazerModal';
+import { clearAppBadge } from '@/hooks/useAppBadge';
 
 interface Missao {
   id: string;
@@ -192,6 +193,8 @@ const MissoesPage = () => {
 
   useEffect(() => {
     fetchMissoes();
+    // Limpar badge do ícone do app ao entrar na página
+    clearAppBadge();
   }, [fetchMissoes]);
 
   const handleRefresh = async () => {

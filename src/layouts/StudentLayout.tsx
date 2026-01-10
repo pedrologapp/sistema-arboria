@@ -3,6 +3,7 @@ import { StudentProvider, useStudent } from '@/contexts/StudentContext';
 import StudentHeader from '@/components/aluno/StudentHeader';
 import BottomNav from '@/components/aluno/BottomNav';
 import { useUpdateActivity } from '@/hooks/useUpdateActivity';
+import { useAppBadge } from '@/hooks/useAppBadge';
 
 interface StudentLayoutProps {
   children: ReactNode;
@@ -10,10 +11,17 @@ interface StudentLayoutProps {
 
 // This component is rendered INSIDE StudentProvider, so it can safely use useStudent
 const StudentLayoutContent = ({ children }: StudentLayoutProps) => {
-  const { isLoading } = useStudent();
+  const { profile, isLoading } = useStudent();
   
   // Atualizar última atividade do usuário
   useUpdateActivity();
+
+  // Ativar badge no ícone do app
+  useAppBadge({
+    userId: profile?.id,
+    institutionId: profile?.institution_id,
+    role: 'user'
+  });
 
   // Show loading while context initializes
   if (isLoading) {
