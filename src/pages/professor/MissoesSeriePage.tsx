@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { CasaBrasao } from '@/components/CasaBrasao';
 
 interface ContagemSemana {
   missoes: number;
@@ -97,8 +98,14 @@ const MissoesSeriePage = () => {
 
       {/* Fase atual */}
       {faseAtual && (
-        <p className="text-white/40 text-sm">
-          {faseAtual.inteligencia?.emoji} FASE {faseAtual.inteligencia?.nome?.toUpperCase()} • Semanas 1-4
+        <p className="text-white/40 text-sm flex items-center gap-1.5">
+          <CasaBrasao 
+            brasaoUrl={faseAtual.inteligencia?.brasao_url}
+            emoji={faseAtual.inteligencia?.emoji}
+            nome={faseAtual.inteligencia?.nome}
+            size="mini"
+          />
+          FASE {faseAtual.inteligencia?.nome?.toUpperCase()} • Semanas 1-4
         </p>
       )}
 

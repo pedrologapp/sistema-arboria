@@ -5,12 +5,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { CasaBrasao } from '@/components/CasaBrasao';
 
 interface Inteligencia {
   id: number;
   nome: string;
   emoji: string;
   cor_hex: string;
+  brasao_url: string | null;
 }
 
 interface Missao {
@@ -31,7 +33,7 @@ const MissoesSemanaPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('inteligencias')
-        .select('id, nome, emoji, cor_hex')
+        .select('id, nome, emoji, cor_hex, brasao_url')
         .order('id');
       if (error) throw error;
       return data as Inteligencia[];
@@ -95,8 +97,14 @@ const MissoesSemanaPage = () => {
 
       {/* Fase atual */}
       {faseAtual && (
-        <p className="text-white/40 text-sm">
-          {faseAtual.inteligencia?.emoji} FASE {faseAtual.inteligencia?.nome?.toUpperCase()}
+        <p className="text-white/40 text-sm flex items-center gap-1.5">
+          <CasaBrasao 
+            brasaoUrl={faseAtual.inteligencia?.brasao_url}
+            emoji={faseAtual.inteligencia?.emoji}
+            nome={faseAtual.inteligencia?.nome}
+            size="mini"
+          />
+          FASE {faseAtual.inteligencia?.nome?.toUpperCase()}
         </p>
       )}
 
@@ -183,7 +191,12 @@ const MissoesSemanaPage = () => {
                     )}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-xl">{inteligencia.emoji}</span>
+                      <CasaBrasao 
+                        brasaoUrl={inteligencia.brasao_url}
+                        emoji={inteligencia.emoji}
+                        nome={inteligencia.nome}
+                        size="medium"
+                      />
                       <div>
                         <p className="text-white font-medium">{inteligencia.nome}</p>
                         <p className="text-white/40 text-xs">

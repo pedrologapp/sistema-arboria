@@ -1,5 +1,6 @@
 import { Users } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
+import { CasaBrasao } from '@/components/CasaBrasao';
 
 const AlunosPage = () => {
   const { casaMentor, casaColor } = useProfessor();
@@ -11,8 +12,14 @@ const AlunosPage = () => {
         <div>
           <h1 className="text-xl font-bold text-white">Alunos da Casa</h1>
           {casaMentor && (
-            <p className="text-sm text-white/50">
-              {casaMentor.emoji} {casaMentor.nome}
+            <p className="text-sm text-white/50 flex items-center gap-1.5">
+              <CasaBrasao 
+                brasaoUrl={casaMentor.brasao_url}
+                emoji={casaMentor.emoji}
+                nome={casaMentor.nome}
+                size="mini"
+              />
+              {casaMentor.nome}
             </p>
           )}
         </div>
