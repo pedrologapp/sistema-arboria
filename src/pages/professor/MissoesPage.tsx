@@ -20,6 +20,8 @@ interface AlunoLista {
   full_name?: string;
   serie: string | null;
   turma: string | null;
+  entregas?: number;      // Qtd de entregas nessa categoria
+  tempoMedio?: number;    // Tempo médio em horas
 }
 
 interface EngajamentoData {
@@ -276,53 +278,86 @@ const MissoesPage = () => {
         };
       }
 
-      // Classificar entregas e guardar dados dos alunos
-      const rapidosAlunos: AlunoLista[] = [];
-      const noPrazoAlunos: AlunoLista[] = [];
-      const atrasadosAlunos: AlunoLista[] = [];
+      // AGRUPAR entregas por aluno usando Maps
+      const rapidosMap = new Map<string, { aluno: AlunoLista; entregas: number; tempoTotal: number }>();
+      const noPrazoMap = new Map<string, { aluno: AlunoLista; entregas: number; tempoTotal: number }>();
+      const atrasadosMap = new Map<string, { aluno: AlunoLista; entregas: number; tempoTotal: number }>();
 
       entregas.forEach(entrega => {
         const missao = missaoMap.get(entrega.missao_id);
         if (!missao || !entrega.data_entrega || !entrega.aluno) return;
 
         const alunoData = entrega.aluno as unknown as AlunoLista;
+        const alunoId = alunoData.id;
 
-        // Se entregou fora do prazo
+        // Calcular tempo de resposta em horas
+        const liberacao = new Date(missao.data_liberacao).getTime();
+        const entregou = new Date(entrega.data_entrega).getTime();
+        const tempoHoras = (entregou - liberacao) / (1000 * 60 * 60);
+
+        // Determinar categoria
+        let targetMap: Map<string, { aluno: AlunoLista; entregas: number; tempoTotal: number }>;
+
         if (entrega.entregue_no_prazo === false) {
-          atrasadosAlunos.push(alunoData);
-          return;
+          targetMap = atrasadosMap;
+        } else {
+          const prazo = new Date(missao.data_prazo).getTime();
+          const prazoTotal = prazo - liberacao;
+          const tempoUsado = entregou - liberacao;
+          const percentualUsado = prazoTotal > 0 ? (tempoUsado / prazoTotal) * 100 : 0;
+          
+          targetMap = percentualUsado <= 50 ? rapidosMap : noPrazoMap;
         }
 
-        const liberacao = new Date(missao.data_liberacao).getTime();
-        const prazo = new Date(missao.data_prazo).getTime();
-        const entregou = new Date(entrega.data_entrega).getTime();
-        
-        const prazoTotal = prazo - liberacao;
-        const tempoUsado = entregou - liberacao;
-        const percentualUsado = prazoTotal > 0 ? (tempoUsado / prazoTotal) * 100 : 0;
-
-        if (percentualUsado <= 50) {
-          rapidosAlunos.push(alunoData);
+        // Agrupar por aluno
+        if (targetMap.has(alunoId)) {
+          const existing = targetMap.get(alunoId)!;
+          existing.entregas++;
+          existing.tempoTotal += tempoHoras;
         } else {
-          noPrazoAlunos.push(alunoData);
+          targetMap.set(alunoId, {
+            aluno: alunoData,
+            entregas: 1,
+            tempoTotal: tempoHoras
+          });
         }
       });
 
+      // Converter Maps para arrays com dados calculados
+      const converterParaLista = (map: Map<string, { aluno: AlunoLista; entregas: number; tempoTotal: number }>): AlunoLista[] => {
+        return Array.from(map.values())
+          .map(item => ({
+            ...item.aluno,
+            entregas: item.entregas,
+            tempoMedio: Math.round(item.tempoTotal / item.entregas)
+          }))
+          .sort((a, b) => (b.entregas || 0) - (a.entregas || 0));
+      };
+
+      const rapidosAlunos = converterParaLista(rapidosMap);
+      const noPrazoAlunos = converterParaLista(noPrazoMap);
+      const atrasadosAlunos = converterParaLista(atrasadosMap);
+
+      // Calcular totais de entregas (não de alunos)
+      const totalEntregasRapidas = Array.from(rapidosMap.values()).reduce((s, i) => s + i.entregas, 0);
+      const totalEntregasNoPrazo = Array.from(noPrazoMap.values()).reduce((s, i) => s + i.entregas, 0);
+      const totalEntregasAtrasadas = Array.from(atrasadosMap.values()).reduce((s, i) => s + i.entregas, 0);
       const total = entregas.length;
+
       return {
         rapidos: { 
           count: rapidosAlunos.length, 
-          percent: total > 0 ? Math.round((rapidosAlunos.length / total) * 100) : 0,
+          percent: total > 0 ? Math.round((totalEntregasRapidas / total) * 100) : 0,
           alunos: rapidosAlunos
         },
         noPrazo: { 
           count: noPrazoAlunos.length, 
-          percent: total > 0 ? Math.round((noPrazoAlunos.length / total) * 100) : 0,
+          percent: total > 0 ? Math.round((totalEntregasNoPrazo / total) * 100) : 0,
           alunos: noPrazoAlunos
         },
         atrasados: { 
           count: atrasadosAlunos.length, 
-          percent: total > 0 ? Math.round((atrasadosAlunos.length / total) * 100) : 0,
+          percent: total > 0 ? Math.round((totalEntregasAtrasadas / total) * 100) : 0,
           alunos: atrasadosAlunos
         }
       };
@@ -648,8 +683,12 @@ const MissoesPage = () => {
           </DialogHeader>
           
           {/* Cabeçalho da lista */}
-          <div className="flex items-center px-4 py-2 border-b border-white/5">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
             <span className="text-white/30 text-xs uppercase">Aluno</span>
+            <div className="flex gap-4">
+              <span className="text-white/30 text-xs uppercase w-8 text-center">Qtd</span>
+              <span className="text-white/30 text-xs uppercase w-10 text-right">Média</span>
+            </div>
           </div>
           
           {/* Lista compacta estilo Discord */}
@@ -682,6 +721,22 @@ const MissoesPage = () => {
                         {aluno.serie}º{aluno.turma}
                       </span>
                     </div>
+                    
+                    {/* Quantidade de entregas */}
+                    <span className={`text-sm font-bold w-8 text-center ${
+                      modalCor === 'green' ? 'text-green-400' : 
+                      modalCor === 'blue' ? 'text-blue-400' : 
+                      modalCor === 'orange' ? 'text-orange-400' : 'text-white'
+                    }`}>
+                      {aluno.entregas || '-'}
+                    </span>
+                    
+                    {/* Tempo médio */}
+                    <span className="text-white/40 text-xs w-10 text-right">
+                      {aluno.tempoMedio !== undefined 
+                        ? (aluno.tempoMedio < 24 ? `${aluno.tempoMedio}h` : `${Math.floor(aluno.tempoMedio / 24)}d`)
+                        : '-'}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -691,7 +746,7 @@ const MissoesPage = () => {
           {/* Footer com contagem */}
           <div className="p-4 border-t border-white/10">
             <p className="text-white/40 text-xs text-center">
-              {modalAlunos.length} {modalAlunos.length === 1 ? 'aluno' : 'alunos'}
+              {modalAlunos.length} {modalAlunos.length === 1 ? 'aluno' : 'alunos'} • {modalAlunos.reduce((s, a) => s + (a.entregas || 0), 0)} entregas
             </p>
           </div>
         </DialogContent>
