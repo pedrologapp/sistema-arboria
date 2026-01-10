@@ -62,12 +62,12 @@ const MissaoDetalhesModal = ({ isOpen, onClose, missaoIds }: MissaoDetalhesModal
         
         {/* Conteúdo - Lista de missões */}
         {!isLoading && missoes && missoes.length > 0 && (
-          <div className="space-y-5">
+          <div className="space-y-4">
             {missoes.map((missao, index) => (
-              <div key={missao.id}>
-                {/* Separador entre missões */}
-                {index > 0 && <hr className="border-white/10 mb-5" />}
-                
+              <div 
+                key={missao.id}
+                className="bg-white/5 border border-white/10 rounded-xl p-4"
+              >
                 <div className="space-y-3">
                   {/* Badges */}
                   <div className="flex gap-2 flex-wrap">
