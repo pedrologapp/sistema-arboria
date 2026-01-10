@@ -1,23 +1,50 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Home, ClipboardList, PenLine, Sparkles, Users } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface NavItemConfig {
   id: string;
   icon: React.ReactNode;
   label: string;
   path: string;
+  badge?: number;
 }
 
 const ProfessorBottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { casaColor } = useProfessor();
+  const { casaColor, profile } = useProfessor();
+
+  // Query: Entregas Pendentes
+  const { data: entregasPendentes = 0 } = useQuery({
+    queryKey: ['entregas-pendentes-count', profile?.institution_id],
+    queryFn: async () => {
+      const { data: missoes } = await supabase
+        .from('missoes')
+        .select('id')
+        .eq('institution_id', profile?.institution_id!);
+
+      if (!missoes || missoes.length === 0) return 0;
+
+      const { count } = await supabase
+        .from('entregas')
+        .select('*', { count: 'exact', head: true })
+        .in('missao_id', missoes.map(m => m.id))
+        .eq('status', 'pendente');
+
+      return count || 0;
+    },
+    enabled: !!profile?.institution_id,
+    staleTime: 30000,
+    refetchInterval: 60000,
+  });
 
   const navItems: NavItemConfig[] = [
     { id: 'home', icon: <Home size={20} />, label: 'Home', path: '/professor' },
     { id: 'missoes', icon: <ClipboardList size={20} />, label: 'Missões', path: '/professor/missoes' },
-    { id: 'avaliar', icon: <PenLine size={20} />, label: 'Avaliar', path: '/professor/entregas' },
+    { id: 'avaliar', icon: <PenLine size={20} />, label: 'Avaliar', path: '/professor/entregas', badge: entregasPendentes > 1 ? entregasPendentes : undefined },
     { id: 'circulo', icon: <Sparkles size={20} />, label: 'Círculo', path: '/professor/circulo' },
     { id: 'alunos', icon: <Users size={20} />, label: 'Alunos', path: '/professor/alunos' },
   ];
@@ -64,11 +91,17 @@ const ProfessorBottomNav = () => {
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item)}
-                className="flex flex-col items-center gap-1 px-3 py-1 transition-all duration-200"
+                className="relative flex flex-col items-center gap-1 px-3 py-1 transition-all duration-200"
                 style={{
                   color: isActive ? casaColor : 'rgba(255, 255, 255, 0.5)'
                 }}
               >
+                {/* Badge de notificação */}
+                {item.badge !== undefined && item.badge > 0 && (
+                  <span className="absolute -top-1 right-0 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1">
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </span>
+                )}
                 <div
                   className="transition-transform duration-200"
                   style={{
