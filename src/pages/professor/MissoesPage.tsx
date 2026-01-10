@@ -36,13 +36,13 @@ const MissoesPage = () => {
   const [modalAlunos, setModalAlunos] = useState<AlunoLista[]>([]);
   const [modalCor, setModalCor] = useState('');
 
-  // Contar missões liberadas por série
-  const { data: contagemPorSerie } = useQuery({
+  // Contar missões liberadas por série (retorna tanto contagem por série quanto total único)
+  const { data: contagemMissoes } = useQuery({
     queryKey: ['contagem-missoes-serie', casaMentor?.id, profile?.institution_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('missoes')
-        .select('serie_filtro')
+        .select('id, serie_filtro')
         .eq('casa_id', casaMentor!.id)
         .eq('institution_id', profile!.institution_id!)
         .eq('status', 'liberada');
@@ -58,15 +58,14 @@ const MissoesPage = () => {
           [6, 7, 8, 9].forEach(s => contagem[s]++);
         }
       });
-      return contagem;
+      
+      return {
+        porSerie: contagem,
+        totalUnico: data?.length || 0  // Total REAL de missões únicas
+      };
     },
     enabled: !!casaMentor?.id && !!profile?.institution_id
   });
-
-  // Total de missões ativas
-  const totalMissoesAtivas = contagemPorSerie 
-    ? Object.values(contagemPorSerie).reduce((a, b) => a + b, 0) / 4 // Divide por 4 pois soma em todas séries
-    : 0;
 
   // Estatísticas gerais
   const { data: estatisticas } = useQuery({
@@ -347,7 +346,7 @@ const MissoesPage = () => {
                 className="text-xs mt-1 font-semibold"
                 style={{ color: casaColor }}
               >
-                {contagemPorSerie?.[serie] || 0} ativas
+                {contagemMissoes?.porSerie[serie] || 0} ativas
               </p>
             </button>
           ))}
@@ -376,7 +375,7 @@ const MissoesPage = () => {
               }}
             >
               <p className="text-2xl font-bold text-white">
-                {Math.round(totalMissoesAtivas)}
+                {contagemMissoes?.totalUnico || 0}
               </p>
               <p className="text-[10px] text-white/40 font-medium">Missões<br/>ativas</p>
             </button>
