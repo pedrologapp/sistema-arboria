@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import MissoesAtivasModal from '@/components/professor/MissoesAtivasModal';
 
 interface AlunoLista {
   id: string;
@@ -28,13 +29,16 @@ interface EngajamentoData {
 
 const MissoesPage = () => {
   const navigate = useNavigate();
-  const { casaMentor, casaColor, profile } = useProfessor();
+  const { casaMentor, casaColor, profile, faseAtual } = useProfessor();
   
   // Modal state
   const [modalAberto, setModalAberto] = useState(false);
   const [modalTitulo, setModalTitulo] = useState('');
   const [modalAlunos, setModalAlunos] = useState<AlunoLista[]>([]);
   const [modalCor, setModalCor] = useState('');
+  
+  // Modal de missões ativas
+  const [showMissoesModal, setShowMissoesModal] = useState(false);
 
   // Contar missões liberadas por série (retorna tanto contagem por série quanto total único)
   const { data: contagemMissoes } = useQuery({
@@ -66,8 +70,15 @@ const MissoesPage = () => {
     },
     enabled: !!casaMentor?.id && !!profile?.institution_id
   });
+  
+  // Preparar dados para o modal de missões ativas
+  const dadosMissoesModal = [6, 7, 8, 9].map(serie => ({
+    serie,
+    semanaAtiva: faseAtual?.semana_atual || 1,
+    missoesAtivas: contagemMissoes?.porSerie?.[serie] || 0
+  }));
 
-  // Estatísticas gerais
+
   const { data: estatisticas } = useQuery({
     queryKey: ['estatisticas-missoes', casaMentor?.id, profile?.institution_id],
     queryFn: async () => {
@@ -369,10 +380,7 @@ const MissoesPage = () => {
           <div className="grid grid-cols-4 gap-2 text-center">
             <button 
               className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-              onClick={() => {
-                const element = document.querySelector('[data-series-section]');
-                element?.scrollIntoView({ behavior: 'smooth' });
-              }}
+              onClick={() => setShowMissoesModal(true)}
             >
               <p className="text-2xl font-bold text-white">
                 {contagemMissoes?.totalUnico || 0}
@@ -577,6 +585,13 @@ const MissoesPage = () => {
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Modal de Missões Ativas por Série */}
+      <MissoesAtivasModal
+        isOpen={showMissoesModal}
+        onClose={() => setShowMissoesModal(false)}
+        dados={dadosMissoesModal}
+      />
     </div>
   );
 };
