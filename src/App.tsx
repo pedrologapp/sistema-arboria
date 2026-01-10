@@ -38,6 +38,7 @@ import ProfessorDashboard from "./pages/professor/ProfessorDashboard";
 import ProfessorMissoesPage from "./pages/professor/MissoesPage";
 import NovaMissaoPage from "./pages/professor/NovaMissaoPage";
 import EditarMissaoPage from "./pages/professor/EditarMissaoPage";
+import MissaoDetalhesPage from "./pages/professor/MissaoDetalhesPage";
 import EntregasPage from "./pages/professor/EntregasPage";
 import AvaliarEntregaPage from "./pages/professor/AvaliarEntregaPage";
 import CirculoPage from "./pages/professor/CirculoPage";
@@ -125,6 +126,13 @@ const App = () => (
               </ProfessorProtectedRoute>
             } />
             <Route path="/professor/missoes/:id" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <MissaoDetalhesPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/missoes/:id/editar" element={
               <ProfessorProtectedRoute>
                 <ProfessorLayout>
                   <EditarMissaoPage />
