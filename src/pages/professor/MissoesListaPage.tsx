@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { CasaBrasao } from '@/components/CasaBrasao';
 
 interface Missao {
   id: string;
@@ -19,6 +20,7 @@ interface Inteligencia {
   nome: string;
   emoji: string;
   cor_hex: string;
+  brasao_url: string | null;
 }
 
 const MissoesListaPage = () => {
@@ -35,7 +37,7 @@ const MissoesListaPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('inteligencias')
-        .select('id, nome, emoji, cor_hex')
+        .select('id, nome, emoji, cor_hex, brasao_url')
         .eq('id', Number(casaId))
         .single();
       if (error) throw error;
@@ -108,9 +110,23 @@ const MissoesListaPage = () => {
     return missao.entregas[0]?.count || 0;
   };
 
+  // Header com brasão
+  const renderHeaderIcon = () => {
+    if (isGeral) return <span className="text-xl mr-1">📋</span>;
+    return (
+      <CasaBrasao 
+        brasaoUrl={casa?.brasao_url}
+        emoji={casa?.emoji}
+        nome={casa?.nome}
+        size="medium"
+        className="mr-2"
+      />
+    );
+  };
+
   const headerTitle = isGeral 
-    ? `📋 Geral • Semana ${semana}` 
-    : `${casa?.emoji || ''} ${casa?.nome || ''} • Semana ${semana}`;
+    ? `Geral • Semana ${semana}` 
+    : `${casa?.nome || ''} • Semana ${semana}`;
 
   return (
     <div className="min-h-screen bg-[#0d0d0d] pb-24">
@@ -122,7 +138,8 @@ const MissoesListaPage = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-lg font-bold text-white flex-1">
+        <h1 className="text-lg font-bold text-white flex-1 flex items-center">
+          {renderHeaderIcon()}
           {headerTitle}
         </h1>
         <button
@@ -154,7 +171,16 @@ const MissoesListaPage = () => {
               className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
               style={{ backgroundColor: `${casaColor}20` }}
             >
-              <span className="text-2xl">{isGeral ? '📋' : casa?.emoji || '📝'}</span>
+              {isGeral ? (
+                <span className="text-2xl">📋</span>
+              ) : (
+                <CasaBrasao 
+                  brasaoUrl={casa?.brasao_url}
+                  emoji={casa?.emoji}
+                  nome={casa?.nome}
+                  size="large"
+                />
+              )}
             </div>
             <p className="text-white/60 mb-4">
               Nenhuma missão {isGeral ? 'geral' : `de ${casa?.nome}`} encontrada

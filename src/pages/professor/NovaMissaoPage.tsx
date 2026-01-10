@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, Eye, X, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
+import { CasaBrasao } from '@/components/CasaBrasao';
 
 interface MissaoForm {
   // Organização
@@ -91,7 +92,7 @@ const NovaMissaoPage = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from('inteligencias')
-        .select('id, nome, emoji, cor_hex')
+        .select('id, nome, emoji, cor_hex, brasao_url')
         .order('id');
       return data || [];
     }
@@ -488,7 +489,12 @@ const NovaMissaoPage = () => {
                       borderColor: form.inteligencia_cross === int.id ? int.cor_hex || undefined : undefined
                     }}
                   >
-                    <span>{int.emoji}</span>
+                    <CasaBrasao 
+                      brasaoUrl={int.brasao_url}
+                      emoji={int.emoji}
+                      nome={int.nome}
+                      size="mini"
+                    />
                     <span className="text-white text-sm truncate">{int.nome}</span>
                   </button>
                 ))}
