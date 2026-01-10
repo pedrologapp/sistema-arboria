@@ -14,7 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        'fantasy': ['Playfair Display', 'Georgia', 'serif'],
+        sans: ['Lexend', 'sans-serif'],
+        fantasy: ['Playfair Display', 'Georgia', 'serif'],
       },
       colors: {
         border: "hsl(var(--border))",
