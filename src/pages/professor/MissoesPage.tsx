@@ -590,7 +590,7 @@ const MissoesPage = () => {
           <div className="grid grid-cols-3 gap-3 text-center">
             <button 
               className="p-3 rounded-lg hover:bg-white/10 transition-colors"
-              onClick={() => engajamento?.rapidos.count && abrirModal('⚡ Alunos Rápidos (< 50% do prazo)', engajamento.rapidos.alunos, 'green')}
+              onClick={() => engajamento?.rapidos.count && abrirModal('Alunos Rápidos', engajamento.rapidos.alunos, 'green')}
             >
               <p className="text-2xl mb-1">⚡</p>
               <p className="text-xl font-bold text-white">
@@ -603,7 +603,7 @@ const MissoesPage = () => {
             
             <button 
               className="p-3 rounded-lg hover:bg-white/10 transition-colors"
-              onClick={() => engajamento?.noPrazo.count && abrirModal('🚶 Alunos No Prazo (> 50% do prazo)', engajamento.noPrazo.alunos, 'blue')}
+              onClick={() => engajamento?.noPrazo.count && abrirModal('No Prazo', engajamento.noPrazo.alunos, 'blue')}
             >
               <p className="text-2xl mb-1">🚶</p>
               <p className="text-xl font-bold text-white">
@@ -616,7 +616,7 @@ const MissoesPage = () => {
             
             <button 
               className="p-3 rounded-lg hover:bg-white/10 transition-colors"
-              onClick={() => engajamento?.atrasados.count && abrirModal('🐢 Alunos Atrasados (fora do prazo)', engajamento.atrasados.alunos, 'orange')}
+              onClick={() => engajamento?.atrasados.count && abrirModal('Atrasados', engajamento.atrasados.alunos, 'orange')}
             >
               <p className="text-2xl mb-1">🐢</p>
               <p className="text-xl font-bold text-white">
@@ -707,32 +707,26 @@ const MissoesPage = () => {
       {/* Modal de Lista de Alunos - Layout Compacto */}
       <Dialog open={modalAberto} onOpenChange={setModalAberto}>
         <DialogContent className="max-w-sm mx-auto bg-[#1a1a1a] border-white/10 p-0 gap-0">
-          <DialogHeader className="p-4 border-b border-white/10">
-            <div className="flex items-center gap-3">
-              {/* Ícone em círculo colorido */}
-              <div className={`w-10 h-10 rounded-full ${categoriasConfig[modalCor]?.corBg || 'bg-white/10'} flex items-center justify-center`}>
-                <span className="text-lg">{modalIcone}</span>
-              </div>
-              
-              {/* Título + Subtítulo */}
-              <div className="flex-1">
-                <DialogTitle className="text-white font-medium text-base">
-                  {modalTitulo}
-                </DialogTitle>
-                <p className="text-white/40 text-xs font-normal">
-                  {modalSubtitulo}
-                </p>
-              </div>
-              
-              {/* Botão fechar */}
-              <button 
-                onClick={() => setModalAberto(false)}
-                className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
+        <DialogHeader className="p-4 border-b border-white/10">
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="text-white font-medium text-base flex items-center gap-2">
+                <span>{modalIcone}</span>
+                <span>{modalTitulo}</span>
+              </DialogTitle>
+              <p className="text-white/40 text-xs mt-0.5">
+                {modalSubtitulo}
+              </p>
             </div>
-          </DialogHeader>
+            
+            <button 
+              onClick={() => setModalAberto(false)}
+              className="text-white/40 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </DialogHeader>
           
           {/* Cabeçalho da lista */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
