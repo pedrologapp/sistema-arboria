@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
@@ -46,15 +46,19 @@ interface MissaoForm {
 
 const NovaMissaoPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { profile, casaMentor, faseAtual } = useProfessor();
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [buscaAluno, setBuscaAluno] = useState('');
 
+  // Verificar se deve iniciar com semana extra
+  const defaultSemana = searchParams.get('semana') === 'extra' ? 'extra' : null;
+
   const [form, setForm] = useState<MissaoForm>({
     // Organização
     serie_filtro: null,
-    semana: null,
+    semana: defaultSemana,
     tipo_missao: 'geral',
     inteligencia_cross: null,
     turmas: ['A', 'B'],
