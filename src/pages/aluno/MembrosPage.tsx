@@ -47,7 +47,7 @@ const MembrosPage = () => {
           full_name,
           avatar_url,
           ultima_atividade,
-          cargos_casa!left(cargo, ativo)
+          cargos_casa!cargos_casa_aluno_id_fkey(cargo, ativo)
         `)
         .eq('casa_id', casa.id)
         .eq('institution_id', profile.institution_id);
