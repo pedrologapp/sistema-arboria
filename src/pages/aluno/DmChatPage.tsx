@@ -106,6 +106,7 @@ const DmChatPage = () => {
       
       // Invalidar query de DMs não lidas para atualizar badges
       queryClient.invalidateQueries({ queryKey: ['dms-nao-lidas'] });
+      queryClient.invalidateQueries({ queryKey: ['count-dms-nao-lidas'] });
     };
     
     marcarComoLido();

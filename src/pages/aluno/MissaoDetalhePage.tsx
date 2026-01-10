@@ -24,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useStudent } from '@/contexts/StudentContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { format, formatDistanceToNow, isPast, differenceInDays, differenceInHours } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -106,6 +107,7 @@ const MissaoDetalhePage = () => {
   const { toast } = useToast();
   const { casaColor, profile } = useStudent();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Estados
@@ -396,7 +398,10 @@ const MissaoDetalhePage = () => {
         if (a.preview) URL.revokeObjectURL(a.preview);
       });
 
-      // 6. Sucesso
+      // 6. Invalidar cache de missões pendentes
+      queryClient.invalidateQueries({ queryKey: ['count-missoes-pendentes'] });
+
+      // 7. Sucesso
       toast({
         title: "🎉 Resposta enviada!",
         description: "Sua entrega foi registrada com sucesso."

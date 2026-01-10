@@ -163,6 +163,7 @@ const CanalChatPage = () => {
       // Invalidar cache para atualizar badge na lista de canais
       queryClient.invalidateQueries({ queryKey: ['mensagens-nao-lidas'] });
       queryClient.invalidateQueries({ queryKey: ['canal-leituras'] });
+      queryClient.invalidateQueries({ queryKey: ['count-canais-nao-lidos'] });
     };
     
     marcarComoLido();
