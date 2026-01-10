@@ -127,9 +127,8 @@ const MissoesSemanaPage = () => {
 
             <button
               onClick={() => {
-                if (totalMissoesGerais > 0) {
-                  navigate(`/professor/missoes/serie/${serie}/semana/${semana}/geral`);
-                }
+                // Navegar para lista de alunos (novo fluxo centrado no aluno)
+                navigate(`/professor/missoes/serie/${serie}/semana/${semana}/geral/alunos`);
               }}
               disabled={totalMissoesGerais === 0}
               className={cn(
@@ -178,9 +177,8 @@ const MissoesSemanaPage = () => {
                   <button
                     key={inteligencia.id}
                     onClick={() => {
-                      if (qtdMissoes > 0) {
-                        navigate(`/professor/missoes/serie/${serie}/semana/${semana}/casa/${inteligencia.id}`);
-                      }
+                      // Navegar para lista de alunos da casa (novo fluxo centrado no aluno)
+                      navigate(`/professor/missoes/serie/${serie}/semana/${semana}/casa/${inteligencia.id}/alunos`);
                     }}
                     disabled={qtdMissoes === 0}
                     className={cn(

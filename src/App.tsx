@@ -49,6 +49,8 @@ import ProfessorConfiguracoesPage from "./pages/professor/ProfessorConfiguracoes
 import MissoesSeriePage from "./pages/professor/MissoesSeriePage";
 import MissoesSemanaPage from "./pages/professor/MissoesSemanaPage";
 import MissoesListaPage from "./pages/professor/MissoesListaPage";
+import AlunosPorTipoPage from "./pages/professor/AlunosPorTipoPage";
+import AlunoMissoesPage from "./pages/professor/AlunoMissoesPage";
 import EntregasSeriePage from "./pages/professor/EntregasSeriePage";
 import EntregasSemanaPage from "./pages/professor/EntregasSemanaPage";
 import EntregasMissaoListaPage from "./pages/professor/EntregasMissaoListaPage";
@@ -151,6 +153,28 @@ const App = () => (
               <ProfessorProtectedRoute>
                 <ProfessorLayout>
                   <MissoesListaPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            {/* Novo fluxo centrado no aluno */}
+            <Route path="/professor/missoes/serie/:serie/semana/:semana/geral/alunos" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <AlunosPorTipoPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/missoes/serie/:serie/semana/:semana/casa/:casaId/alunos" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <AlunosPorTipoPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/missoes/serie/:serie/semana/:semana/aluno/:alunoId" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <AlunoMissoesPage />
                 </ProfessorLayout>
               </ProfessorProtectedRoute>
             } />
