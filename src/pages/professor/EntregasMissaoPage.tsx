@@ -74,7 +74,20 @@ const EntregasMissaoPage = () => {
       {/* Header */}
       <div className="flex items-center gap-3 p-4 border-b border-white/10">
         <button 
-          onClick={() => navigate(-1)} 
+          onClick={() => {
+            if (serieFilter && missao?.semana) {
+              const isGeral = missao.tipo_missao === 'geral' || !missao.tipo_missao;
+              if (isGeral) {
+                navigate(`/professor/entregas/serie/${serieFilter}/semana/${missao.semana}/geral`);
+              } else if (missao.casa_id) {
+                navigate(`/professor/entregas/serie/${serieFilter}/semana/${missao.semana}/casa/${missao.casa_id}`);
+              } else {
+                navigate(-1);
+              }
+            } else {
+              navigate(-1);
+            }
+          }} 
           className="text-white/60 hover:text-white transition-colors"
         >
           <ChevronLeft className="w-6 h-6" />
