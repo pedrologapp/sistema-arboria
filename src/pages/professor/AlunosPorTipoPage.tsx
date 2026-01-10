@@ -35,6 +35,10 @@ const AlunosPorTipoPage = () => {
   const [turmaFiltro, setTurmaFiltro] = useState<string>('todas');
   const [showMissaoModal, setShowMissaoModal] = useState(false);
 
+  // Detectar se é semana extra
+  const isExtra = semana === 'extra';
+  const semanaNumber = isExtra ? 0 : Number(semana);
+
   // Determina se é tipo geral ou individual
   const tipo = casaId ? 'individual' : 'geral';
 
@@ -84,7 +88,7 @@ const AlunosPorTipoPage = () => {
         .select('id')
         .eq('institution_id', profile.institution_id)
         .eq('casa_id', casaMentor.id)
-        .eq('semana', Number(semana))
+        .eq('semana', semanaNumber)
         .or(`serie_filtro.eq.${serie},serie_filtro.is.null`)
         .eq('tipo_missao', tipo);
 
@@ -218,7 +222,7 @@ const AlunosPorTipoPage = () => {
                 {tipo === 'geral' && '📋'}
                 {headerTitle}
               </h1>
-              <p className="text-white/40 text-xs">Semana {semana} • {serie}º Ano</p>
+              <p className="text-white/40 text-xs">{isExtra ? 'Extra' : `Semana ${semana}`} • {serie}º Ano</p>
             </div>
           </div>
 

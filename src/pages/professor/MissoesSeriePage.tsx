@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Lock } from 'lucide-react';
+import { ArrowLeft, Check, Lock, ChevronRight } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useProfessor } from '@/contexts/ProfessorContext';
@@ -75,6 +75,23 @@ const MissoesSeriePage = () => {
     enabled: !!casaMentor?.id && !!profile?.institution_id && !!serie
   });
 
+  // Contar missões extras (semana = 0)
+  const { data: missoesExtras = 0 } = useQuery({
+    queryKey: ['missoes-extras', serie, casaMentor?.id, profile?.institution_id],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('missoes')
+        .select('*', { count: 'exact', head: true })
+        .eq('institution_id', profile!.institution_id!)
+        .eq('casa_id', casaMentor!.id)
+        .eq('semana', 0)
+        .or(`serie_filtro.eq.${serie},serie_filtro.is.null`)
+        .neq('status', 'rascunho');
+      return count || 0;
+    },
+    enabled: !!casaMentor?.id && !!profile?.institution_id && !!serie
+  });
+
   return (
     <div className="p-4 space-y-6">
       {/* Header */}
@@ -117,56 +134,84 @@ const MissoesSeriePage = () => {
 
       {/* Lista de Semanas */}
       {!isLoading && (
-        <div className="space-y-3">
-          {(() => {
-            // Semana atual vem da fase ativa
-            const semanaAtual = faseAtual?.semana_atual || 1;
-            
-            return [1, 2, 3, 4].map((semana) => {
-              const dados = contagemPorSemana?.[semana];
-              const totalEsperado = (dados?.total || 0) * (dados?.missoes || 0);
+        <>
+          <div className="space-y-3">
+            {(() => {
+              // Semana atual vem da fase ativa
+              const semanaAtual = faseAtual?.semana_atual || 1;
               
-              // Estados da semana baseados na semana atual da fase
-              const isAtiva = semana === semanaAtual;
-              const isPassada = semana < semanaAtual;
-              const isFutura = semana > semanaAtual;
+              return [1, 2, 3, 4].map((semana) => {
+                const dados = contagemPorSemana?.[semana];
+                const totalEsperado = (dados?.total || 0) * (dados?.missoes || 0);
+                
+                // Estados da semana baseados na semana atual da fase
+                const isAtiva = semana === semanaAtual;
+                const isPassada = semana < semanaAtual;
+                const isFutura = semana > semanaAtual;
 
-              return (
-                <button
-                  key={semana}
-                  onClick={() => navigate(`/professor/missoes/serie/${serie}/semana/${semana}`)}
-                  className={cn(
-                    "w-full p-4 rounded-xl text-left transition-colors flex items-center justify-between",
-                    isAtiva 
-                      ? "bg-blue-500/10 border border-blue-500/30" 
-                      : "bg-white/5 border border-white/5 hover:bg-white/10"
-                  )}
-                >
-                  <div>
-                    <p className="text-white font-medium flex items-center gap-2">
-                      📅 Semana {semana}
-                      {isAtiva && <span className="text-xs text-blue-400">(atual)</span>}
-                    </p>
-                    <p className="text-white/40 text-sm mt-1">
-                      {dados?.missoes || 0} {(dados?.missoes || 0) === 1 ? 'missão' : 'missões'} • {dados?.entregas || 0}/{totalEsperado} entregaram
-                    </p>
-                  </div>
-                  
-                  {/* Indicadores */}
-                  {isAtiva && (
-                    <div className="w-3 h-3 bg-blue-500 rounded-full" />
-                  )}
-                  {isPassada && (
-                    <Check size={18} className="text-white/30" />
-                  )}
-                  {isFutura && (
-                    <Lock size={18} className="text-white/20" />
-                  )}
-                </button>
-              );
-            });
-          })()}
-        </div>
+                return (
+                  <button
+                    key={semana}
+                    onClick={() => navigate(`/professor/missoes/serie/${serie}/semana/${semana}`)}
+                    className={cn(
+                      "w-full p-4 rounded-xl text-left transition-colors flex items-center justify-between",
+                      isAtiva 
+                        ? "bg-blue-500/10 border border-blue-500/30" 
+                        : "bg-white/5 border border-white/5 hover:bg-white/10"
+                    )}
+                  >
+                    <div>
+                      <p className="text-white font-medium flex items-center gap-2">
+                        📅 Semana {semana}
+                        {isAtiva && <span className="text-xs text-blue-400">(atual)</span>}
+                      </p>
+                      <p className="text-white/40 text-sm mt-1">
+                        {dados?.missoes || 0} {(dados?.missoes || 0) === 1 ? 'missão' : 'missões'} • {dados?.entregas || 0}/{totalEsperado} entregaram
+                      </p>
+                    </div>
+                    
+                    {/* Indicadores */}
+                    {isAtiva && (
+                      <div className="w-3 h-3 bg-blue-500 rounded-full" />
+                    )}
+                    {isPassada && (
+                      <Check size={18} className="text-white/30" />
+                    )}
+                    {isFutura && (
+                      <Lock size={18} className="text-white/20" />
+                    )}
+                  </button>
+                );
+              });
+            })()}
+          </div>
+
+          {/* Separador */}
+          <div className="border-t border-white/10" />
+
+          {/* Card Extra */}
+          <button
+            onClick={() => navigate(`/professor/missoes/serie/${serie}/semana/extra`)}
+            className="w-full p-4 rounded-xl text-left transition-colors bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 hover:from-yellow-500/20 hover:to-orange-500/20"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-white font-medium flex items-center gap-2">
+                  ⭐ Extra
+                </p>
+                <p className="text-white/40 text-sm mt-1">
+                  Missões extras para alunos
+                </p>
+                {missoesExtras > 0 && (
+                  <p className="text-yellow-400 text-sm mt-1">
+                    {missoesExtras} {missoesExtras === 1 ? 'missão ativa' : 'missões ativas'}
+                  </p>
+                )}
+              </div>
+              <ChevronRight size={18} className="text-white/20" />
+            </div>
+          </button>
+        </>
       )}
 
       {/* Dica */}

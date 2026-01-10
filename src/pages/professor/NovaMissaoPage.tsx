@@ -12,7 +12,7 @@ import { CasaBrasao } from '@/components/CasaBrasao';
 interface MissaoForm {
   // Organização
   serie_filtro: number | null;
-  semana: number | null;
+  semana: number | 'extra' | null;
   tipo_missao: 'geral' | 'individual';
   inteligencia_cross: number | null;
   turmas: string[];
@@ -212,7 +212,7 @@ const NovaMissaoPage = () => {
       toast.error('Selecione a série');
       return;
     }
-    if (!form.semana) {
+    if (form.semana === null) {
       toast.error('Selecione a semana');
       return;
     }
@@ -271,6 +271,9 @@ const NovaMissaoPage = () => {
       // turma_filtro: null se todas, ou a turma específica
       const turmaFiltro = form.turmas.length === 2 ? null : (form.turmas[0] || null);
       
+      // Converter 'extra' para 0 ao salvar
+      const semanaValue = form.semana === 'extra' ? 0 : form.semana;
+      
       const { data: missao, error } = await supabase.from('missoes').insert({
         institution_id: profile?.institution_id,
         casa_id: casaMentor?.id,
@@ -279,7 +282,7 @@ const NovaMissaoPage = () => {
         
         // Organização
         serie_filtro: form.serie_filtro,
-        semana: form.semana,
+        semana: semanaValue,
         tipo_missao: form.tipo_missao,
         inteligencia_cross: form.tipo_missao === 'individual' ? form.inteligencia_cross : null,
         turma_filtro: turmaFiltro,
@@ -402,6 +405,21 @@ const NovaMissaoPage = () => {
                 </button>
               ))}
             </div>
+            
+            {/* Botão Extra */}
+            <button
+              type="button"
+              onClick={() => setForm(f => ({ ...f, semana: 'extra' }))}
+              className={cn(
+                "w-full mt-2 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2",
+                form.semana === 'extra'
+                  ? "bg-yellow-600 text-white"
+                  : "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 hover:bg-yellow-500/20"
+              )}
+            >
+              <span>⭐</span>
+              <span>Extra</span>
+            </button>
           </div>
 
           {/* Turmas */}
