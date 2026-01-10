@@ -316,10 +316,12 @@ const MissaoDetalhePage = () => {
   const validar = (): string[] => {
     const erros: string[] = [];
 
-    if (missao?.requer_texto && !textoResposta.trim()) {
+    // Texto é SEMPRE obrigatório
+    if (!textoResposta.trim()) {
       erros.push('O texto da resposta é obrigatório');
     }
 
+    // Arquivo é opcional (só obrigatório se a missão exigir)
     if (missao?.requer_arquivo && arquivos.length === 0) {
       erros.push('É necessário anexar pelo menos um arquivo');
     }
