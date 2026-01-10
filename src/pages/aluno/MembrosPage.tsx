@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Search, Users } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Search, Users, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
 import { MembroCard } from '@/components/chat/MembroCard';
@@ -14,13 +14,30 @@ const CARGO_ORDER = ['lider', 'vice', 'coordenador', 'embaixador'];
 
 const MembrosPage = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { profile, casa, casaColor } = useStudent();
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Debug: Log do contexto
+  console.log('[MembrosPage] Context:', { 
+    casaId: casa?.id, 
+    institutionId: profile?.institution_id 
+  });
+
   // Query: Buscar membros da casa com cargos
-  const { data: membrosCasa = [], isLoading } = useQuery({
+  const { data: membrosCasa = [], isLoading, error } = useQuery({
     queryKey: ['membros-casa-completo', casa?.id, profile?.institution_id],
     queryFn: async () => {
+      console.log('[MembrosPage] Executando query:', { 
+        casaId: casa?.id, 
+        institutionId: profile?.institution_id 
+      });
+      
+      if (!casa?.id || !profile?.institution_id) {
+        console.warn('[MembrosPage] Dados não disponíveis ainda!');
+        return [];
+      }
+      
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -32,13 +49,20 @@ const MembrosPage = () => {
           ultima_atividade,
           cargos_casa!left(cargo, ativo)
         `)
-        .eq('casa_id', casa!.id)
-        .eq('institution_id', profile!.institution_id);
+        .eq('casa_id', casa.id)
+        .eq('institution_id', profile.institution_id);
       
-      if (error) throw error;
+      if (error) {
+        console.error('[MembrosPage] Erro na query:', error);
+        throw error;
+      }
+      
+      console.log('[MembrosPage] Membros encontrados:', data?.length);
       return data || [];
     },
     enabled: !!casa?.id && !!profile?.institution_id,
+    staleTime: 30000,
+    refetchOnMount: 'always',
   });
 
   // Calcular membros online
@@ -210,6 +234,20 @@ const MembrosPage = () => {
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white/50" />
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <p className="text-red-400 mb-2">Erro ao carregar membros</p>
+          <p className="text-white/50 text-sm mb-4">{(error as Error).message}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['membros-casa-completo'] })}
+            className="gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Tentar novamente
+          </Button>
         </div>
       ) : totalFiltrado === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
