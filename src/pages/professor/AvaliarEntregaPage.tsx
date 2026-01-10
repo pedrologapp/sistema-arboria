@@ -224,9 +224,9 @@ const AvaliarEntregaPage = () => {
         <button 
           onClick={() => {
             if (entrega?.missao?.id) {
-              navigate(`/professor/entregas/missao/${entrega.missao.id}`);
+              navigate(`/professor/entregas/missao/${entrega.missao.id}`, { replace: true });
             } else {
-              navigate('/professor/entregas');
+              navigate('/professor/entregas', { replace: true });
             }
           }}
           className="text-white/60 hover:text-white transition-colors"
