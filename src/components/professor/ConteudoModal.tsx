@@ -1,4 +1,4 @@
-import { X, FileText, ExternalLink } from 'lucide-react';
+import { X, FileText, ExternalLink, BookOpen, TreePine, Calendar } from 'lucide-react';
 import AnimatedTextCycle from '@/components/ui/animated-text-cycle';
 
 interface FaseAtual {
@@ -42,8 +42,8 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <div>
-            <h3 className="text-white font-semibold flex items-center gap-2">
-              📚 Conteúdo
+          <h3 className="text-white font-semibold flex items-center gap-2">
+              <BookOpen className="w-4 h-4" /> Conteúdo
             </h3>
             <p className="text-white/40 text-xs mt-0.5">
               Materiais da {faseAtual?.inteligencia?.nome || 'fase atual'}
@@ -63,15 +63,15 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
           {/* Essência do Arboria */}
           <div>
             <p className="text-white/40 text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
-              🌳 Essência do Arboria
+              <TreePine className="w-4 h-4" /> Essência do Arboria
             </p>
             
-            <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-6">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
               <p className="text-white/80 text-sm italic text-center mb-1">
-                "O Projeto Arboria é construído
+                O Projeto Arboria é construído
               </p>
               <p className="text-white/80 text-sm italic text-center mb-6">
-                sobre o pilar da"
+                sobre o pilar da
               </p>
               
               <div className="flex justify-center min-h-[40px] items-center">
@@ -87,7 +87,7 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
           {/* Materiais por Semana */}
           <div>
             <p className="text-white/40 text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
-              📅 Materiais por Semana
+              <Calendar className="w-4 h-4" /> Materiais por Semana
             </p>
             
             <div className="space-y-2">
