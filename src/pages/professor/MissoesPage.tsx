@@ -280,7 +280,7 @@ const MissoesPage = () => {
     <div className="p-4 space-y-6 pb-24">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-foreground">Missões</h1>
+        <h1 className="text-xl font-semibold text-white">Missões</h1>
         <button
           onClick={() => navigate('/professor/missoes/nova')}
           className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all"
@@ -293,7 +293,7 @@ const MissoesPage = () => {
 
       {/* Selecione a Série */}
       <div>
-        <p className="text-muted-foreground text-xs uppercase tracking-widest mb-3 font-medium">
+        <p className="text-white/40 text-xs uppercase tracking-widest mb-3 font-medium">
           Selecione a Série
         </p>
 
@@ -302,10 +302,10 @@ const MissoesPage = () => {
             <button
               key={serie}
               onClick={() => navigate(`/professor/missoes/serie/${serie}`)}
-              className="p-5 bg-card hover:bg-accent/10 rounded-xl text-center transition-colors border border-border"
+              className="p-5 bg-white/5 hover:bg-white/10 rounded-xl text-center transition-colors border border-white/10"
             >
-              <p className="text-3xl font-bold text-foreground">{serie}º</p>
-              <p className="text-muted-foreground text-sm font-medium">ANO</p>
+              <p className="text-3xl font-bold text-white">{serie}º</p>
+              <p className="text-white/60 text-sm font-medium">ANO</p>
               <p 
                 className="text-xs mt-1 font-semibold"
                 style={{ color: casaColor }}
@@ -318,59 +318,59 @@ const MissoesPage = () => {
       </div>
 
       {/* Divider */}
-      <div className="border-t border-border" />
+      <div className="border-t border-white/10" />
 
       {/* 📊 Visão Geral */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <BarChart3 size={16} className="text-muted-foreground" />
-          <p className="text-muted-foreground text-xs uppercase tracking-widest font-medium">
+          <BarChart3 size={16} className="text-white/40" />
+          <p className="text-white/40 text-xs uppercase tracking-widest font-medium">
             Visão Geral
           </p>
         </div>
 
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className="bg-white/5 rounded-xl border border-white/10 p-4">
           <div className="grid grid-cols-4 gap-2 text-center">
             <button 
-              className="p-2 rounded-lg hover:bg-accent/10 transition-colors"
+              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
               onClick={() => {
                 const element = document.querySelector('[data-series-section]');
                 element?.scrollIntoView({ behavior: 'smooth' });
               }}
             >
-              <p className="text-2xl font-bold text-foreground">
+              <p className="text-2xl font-bold text-white">
                 {Math.round(totalMissoesAtivas)}
               </p>
-              <p className="text-[10px] text-muted-foreground font-medium">Missões<br/>ativas</p>
+              <p className="text-[10px] text-white/40 font-medium">Missões<br/>ativas</p>
             </button>
             
             <button 
-              className="p-2 rounded-lg hover:bg-accent/10 transition-colors"
+              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
             >
-              <p className="text-2xl font-bold text-foreground">
+              <p className="text-2xl font-bold text-white">
                 {estatisticas?.percentualNoPrazo || 0}%
               </p>
-              <p className="text-[10px] text-muted-foreground font-medium">Entregas<br/>no prazo</p>
+              <p className="text-[10px] text-white/40 font-medium">Entregas<br/>no prazo</p>
             </button>
             
             <button 
-              className="p-2 rounded-lg hover:bg-accent/10 transition-colors"
+              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
               onClick={() => navigate('/professor/entregas')}
             >
-              <p className={`text-2xl font-bold ${(estatisticas?.entregasPendentes || 0) > 0 ? 'text-yellow-500' : 'text-foreground'}`}>
+              <p className={`text-2xl font-bold ${(estatisticas?.entregasPendentes || 0) > 0 ? 'text-yellow-500' : 'text-white'}`}>
                 {estatisticas?.entregasPendentes || 0}
               </p>
-              <p className="text-[10px] text-muted-foreground font-medium">Pendentes<br/>avaliar</p>
+              <p className="text-[10px] text-white/40 font-medium">Pendentes<br/>avaliar</p>
             </button>
             
             <button 
-              className="p-2 rounded-lg hover:bg-accent/10 transition-colors"
+              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
               onClick={() => navigate('/professor/alunos')}
             >
-              <p className="text-2xl font-bold text-foreground">
+              <p className="text-2xl font-bold text-white">
                 {estatisticas?.alunosAtivos || 0}
               </p>
-              <p className="text-[10px] text-muted-foreground font-medium">Alunos<br/>ativos</p>
+              <p className="text-[10px] text-white/40 font-medium">Alunos<br/>ativos</p>
             </button>
           </div>
         </div>
@@ -379,49 +379,49 @@ const MissoesPage = () => {
       {/* ⚡ Engajamento */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Zap size={16} className="text-muted-foreground" />
-          <p className="text-muted-foreground text-xs uppercase tracking-widest font-medium">
+          <Zap size={16} className="text-white/40" />
+          <p className="text-white/40 text-xs uppercase tracking-widest font-medium">
             Engajamento
           </p>
         </div>
 
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className="bg-white/5 rounded-xl border border-white/10 p-4">
           <div className="grid grid-cols-3 gap-3 text-center">
             <button 
-              className="p-3 rounded-lg hover:bg-accent/10 transition-colors"
+              className="p-3 rounded-lg hover:bg-white/10 transition-colors"
               onClick={() => engajamento?.rapidos.count && abrirModal('⚡ Alunos Rápidos', [], 'green')}
             >
               <p className="text-2xl mb-1">⚡</p>
-              <p className="text-xl font-bold text-foreground">
+              <p className="text-xl font-bold text-white">
                 {engajamento?.rapidos.percent || 0}%
               </p>
-              <p className="text-[10px] text-muted-foreground font-medium">
+              <p className="text-[10px] text-white/40 font-medium">
                 {engajamento?.rapidos.count || 0} rápidos
               </p>
             </button>
             
             <button 
-              className="p-3 rounded-lg hover:bg-accent/10 transition-colors"
+              className="p-3 rounded-lg hover:bg-white/10 transition-colors"
               onClick={() => engajamento?.noPrazo.count && abrirModal('🚶 Alunos No Prazo', [], 'blue')}
             >
               <p className="text-2xl mb-1">🚶</p>
-              <p className="text-xl font-bold text-foreground">
+              <p className="text-xl font-bold text-white">
                 {engajamento?.noPrazo.percent || 0}%
               </p>
-              <p className="text-[10px] text-muted-foreground font-medium">
+              <p className="text-[10px] text-white/40 font-medium">
                 {engajamento?.noPrazo.count || 0} no prazo
               </p>
             </button>
             
             <button 
-              className="p-3 rounded-lg hover:bg-accent/10 transition-colors"
+              className="p-3 rounded-lg hover:bg-white/10 transition-colors"
               onClick={() => engajamento?.atrasados.count && abrirModal('🐢 Alunos Atrasados', [], 'yellow')}
             >
               <p className="text-2xl mb-1">🐢</p>
-              <p className="text-xl font-bold text-foreground">
+              <p className="text-xl font-bold text-white">
                 {engajamento?.atrasados.percent || 0}%
               </p>
-              <p className="text-[10px] text-muted-foreground font-medium">
+              <p className="text-[10px] text-white/40 font-medium">
                 {engajamento?.atrasados.count || 0} lentos
               </p>
             </button>
@@ -432,24 +432,24 @@ const MissoesPage = () => {
       {/* 👥 Status dos Alunos */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Users size={16} className="text-muted-foreground" />
-          <p className="text-muted-foreground text-xs uppercase tracking-widest font-medium">
+          <Users size={16} className="text-white/40" />
+          <p className="text-white/40 text-xs uppercase tracking-widest font-medium">
             Status dos Alunos
           </p>
         </div>
 
-        <div className="bg-card rounded-xl border border-border p-4 space-y-4">
+        <div className="bg-white/5 rounded-xl border border-white/10 p-4 space-y-4">
           {/* Entregaram */}
           <div>
             <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-foreground flex items-center gap-2">
+              <span className="text-sm text-white flex items-center gap-2">
                 <span className="text-green-500">🟢</span> Entregaram
               </span>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-white/60">
                 {statusAlunos?.entregaram.count || 0} ({statusAlunos?.entregaram.percent || 0}%)
               </span>
             </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-green-500 rounded-full transition-all duration-500"
                 style={{ width: `${statusAlunos?.entregaram.percent || 0}%` }}
@@ -460,14 +460,14 @@ const MissoesPage = () => {
           {/* Atrasados */}
           <div>
             <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-foreground flex items-center gap-2">
+              <span className="text-sm text-white flex items-center gap-2">
                 <span className="text-yellow-500">🟡</span> Atrasados
               </span>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-white/60">
                 {statusAlunos?.atrasados.count || 0} ({statusAlunos?.atrasados.percent || 0}%)
               </span>
             </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-yellow-500 rounded-full transition-all duration-500"
                 style={{ width: `${statusAlunos?.atrasados.percent || 0}%` }}
@@ -483,17 +483,17 @@ const MissoesPage = () => {
             }
           >
             <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-foreground flex items-center gap-2">
+              <span className="text-sm text-white flex items-center gap-2">
                 <span className="text-red-500">🔴</span> Não entregaram
               </span>
-              <span className="text-sm text-muted-foreground flex items-center gap-1">
+              <span className="text-sm text-white/60 flex items-center gap-1">
                 {statusAlunos?.naoEntregaram.count || 0} ({statusAlunos?.naoEntregaram.percent || 0}%)
                 {(statusAlunos?.naoEntregaram.count || 0) > 0 && (
-                  <ChevronRight size={14} className="text-muted-foreground" />
+                  <ChevronRight size={14} className="text-white/40" />
                 )}
               </span>
             </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-red-500 rounded-full transition-all duration-500"
                 style={{ width: `${statusAlunos?.naoEntregaram.percent || 0}%` }}
@@ -505,21 +505,21 @@ const MissoesPage = () => {
 
       {/* Modal de Lista de Alunos */}
       <Dialog open={modalAberto} onOpenChange={setModalAberto}>
-        <DialogContent className="max-w-sm mx-auto bg-card border-border">
+        <DialogContent className="max-w-sm mx-auto bg-[#1a1a1a] border-white/10">
           <DialogHeader>
-            <DialogTitle className="text-foreground">{modalTitulo}</DialogTitle>
+            <DialogTitle className="text-white">{modalTitulo}</DialogTitle>
           </DialogHeader>
           
           <div className="max-h-[60vh] overflow-y-auto space-y-2">
             {modalAlunos.length === 0 ? (
-              <p className="text-muted-foreground text-sm text-center py-4">
+              <p className="text-white/60 text-sm text-center py-4">
                 Nenhum aluno encontrado
               </p>
             ) : (
               modalAlunos.map(aluno => (
                 <div 
                   key={aluno.id}
-                  className="flex items-center gap-3 p-3 bg-accent/10 rounded-lg"
+                  className="flex items-center gap-3 p-3 bg-white/5 rounded-lg"
                 >
                   <div 
                     className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm"
@@ -528,10 +528,10 @@ const MissoesPage = () => {
                     {aluno.nome?.charAt(0) || '?'}
                   </div>
                   <div>
-                    <p className="text-foreground font-medium">
+                    <p className="text-white font-medium">
                       {aluno.nome} {aluno.sobrenome}
                     </p>
-                    <p className="text-muted-foreground text-xs">
+                    <p className="text-white/60 text-xs">
                       {aluno.serie}º {aluno.turma}
                     </p>
                   </div>
