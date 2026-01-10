@@ -14,8 +14,10 @@ interface AlunoAvaliacao {
   serie: string | null;
   turma: string | null;
   avatar_url: string | null;
-  status: 'pendente' | 'avaliado' | 'sem_entrega';
+  status: 'completou' | 'parcial' | 'pendente' | 'sem_missao';
   entregasPendentes: number;
+  entregou: number;
+  total: number;
 }
 
 const AlunoLinha = ({ 
@@ -25,73 +27,92 @@ const AlunoLinha = ({
   aluno: AlunoAvaliacao; 
   onClick: () => void;
 }) => {
-  const temPendentes = aluno.entregasPendentes > 0;
+  // Cores baseadas no status
+  const getCor = () => {
+    switch (aluno.status) {
+      case 'completou': return {
+        bolinha: 'bg-green-500',
+        texto: 'text-white',
+        badge: 'bg-green-500/20 text-green-400 border-green-500/30'
+      };
+      case 'parcial': return {
+        bolinha: 'bg-orange-500',
+        texto: 'text-white',
+        badge: 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+      };
+      case 'pendente': return {
+        bolinha: 'bg-red-500',
+        texto: 'text-white',
+        badge: 'bg-red-500/20 text-red-400 border-red-500/30'
+      };
+      default: return {
+        bolinha: 'bg-white/20',
+        texto: 'text-white/40',
+        badge: 'bg-white/10 text-white/40 border-white/10'
+      };
+    }
+  };
+
+  const cor = getCor();
+  const estaAtivo = aluno.status !== 'sem_missao';
 
   return (
     <button
       onClick={onClick}
       className={cn(
         "w-full flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors",
-        temPendentes 
-          ? "hover:bg-white/10" 
-          : "hover:bg-white/5 opacity-50"
+        estaAtivo ? "hover:bg-white/10" : "hover:bg-white/5 opacity-50"
       )}
     >
-      {/* Bolinha de status */}
-      <div className={cn(
-        "w-2.5 h-2.5 rounded-full flex-shrink-0",
-        temPendentes ? "bg-red-500" : 
-        aluno.status === 'avaliado' ? "bg-green-500/50" : "bg-white/20"
-      )} />
+      {/* Bolinha de status com cor dinâmica */}
+      <div className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", cor.bolinha)} />
 
-      {/* Avatar - grayscale quando stand-by */}
+      {/* Avatar */}
       {aluno.avatar_url ? (
         <img
           src={aluno.avatar_url}
           alt={aluno.nome}
           className={cn(
             "w-7 h-7 rounded-full object-cover flex-shrink-0",
-            !temPendentes && "opacity-50 grayscale"
+            !estaAtivo && "opacity-50 grayscale"
           )}
         />
       ) : (
         <div className={cn(
           "w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0",
-          temPendentes 
-            ? "bg-blue-600 text-white" 
-            : "bg-white/10 text-white/40"
+          estaAtivo ? "bg-blue-600 text-white" : "bg-white/10 text-white/40"
         )}>
           {aluno.nome.charAt(0).toUpperCase()}
         </div>
       )}
 
-      {/* Nome + Série/Turma - cores diferentes */}
+      {/* Nome + Série/Turma */}
       <div className="flex-1 flex items-center min-w-0">
-        <span className={cn(
-          "text-sm font-medium truncate",
-          temPendentes ? "text-white" : "text-white/40"
-        )}>
+        <span className={cn("text-sm font-medium truncate", cor.texto)}>
           {aluno.nome} {aluno.sobrenome}
         </span>
         <span className={cn(
           "text-xs ml-2 flex-shrink-0",
-          temPendentes ? "text-white/40" : "text-white/20"
+          estaAtivo ? "text-white/40" : "text-white/20"
         )}>
           {aluno.serie}º{aluno.turma}
         </span>
       </div>
 
-      {/* Badge de pendentes (só se tiver) */}
-      {temPendentes && (
-        <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-          {aluno.entregasPendentes}
+      {/* Badge X/Y - mostrar sempre que tiver missões */}
+      {aluno.total > 0 && (
+        <span className={cn(
+          "text-xs font-semibold px-2 py-0.5 rounded border",
+          cor.badge
+        )}>
+          {aluno.entregou}/{aluno.total}
         </span>
       )}
 
-      {/* Seta - mais visível quando destacado */}
+      {/* Seta */}
       <ChevronRight className={cn(
         "w-4 h-4 flex-shrink-0",
-        temPendentes ? "text-white/30" : "text-white/10"
+        estaAtivo ? "text-white/30" : "text-white/10"
       )} />
     </button>
   );
@@ -108,7 +129,6 @@ const EntregasMissaoListaPage = () => {
   const isGeral = !casaId;
   const isExtra = semana === 'extra';
   const semanaNumber = isExtra ? 0 : Number(semana);
-  const tipoLabel = isGeral ? '📋 Geral' : `${casaMentor?.emoji || '🏠'} Individual`;
 
   // Buscar nome da casa se for individual
   const { data: casa } = useQuery({
@@ -176,9 +196,10 @@ const EntregasMissaoListaPage = () => {
 
       // 2. Buscar missões da semana/tipo
       const missaoIds = missoes?.map(m => m.id) || [];
+      const totalMissoes = missaoIds.length;
 
-      if (missaoIds.length === 0) {
-        // Se não há missões, todos os alunos estão "sem_entrega"
+      if (totalMissoes === 0) {
+        // Se não há missões, todos os alunos estão "sem_missao"
         return alunosData.map(aluno => ({
           id: aluno.id,
           nome: aluno.nome || '',
@@ -186,8 +207,10 @@ const EntregasMissaoListaPage = () => {
           serie: aluno.serie,
           turma: aluno.turma,
           avatar_url: aluno.avatar_url,
-          status: 'sem_entrega' as const,
-          entregasPendentes: 0
+          status: 'sem_missao' as const,
+          entregasPendentes: 0,
+          entregou: 0,
+          total: 0
         }));
       }
 
@@ -200,18 +223,22 @@ const EntregasMissaoListaPage = () => {
       // 4. Calcular status de cada aluno
       return alunosData.map(aluno => {
         const entregasAluno = entregas?.filter(e => e.aluno_id === aluno.id) || [];
+        
+        // Contar entregas (quantas entregou)
+        const quantasEntregou = entregasAluno.length;
+        
+        // Contar pendentes de avaliação (nota IS NULL)
+        const pendentesAvaliacao = entregasAluno.filter(e => e.nota === null).length;
 
-        // Contar pendentes (nota IS NULL)
-        const pendentes = entregasAluno.filter(e => e.nota === null).length;
-
-        let status: 'pendente' | 'avaliado' | 'sem_entrega';
-
-        if (entregasAluno.length === 0) {
-          status = 'sem_entrega';
-        } else if (pendentes > 0) {
-          status = 'pendente';
+        // Determinar status baseado no progresso
+        let status: 'completou' | 'parcial' | 'pendente' | 'sem_missao';
+        
+        if (quantasEntregou === totalMissoes) {
+          status = 'completou';  // 🟢 Verde - entregou todas
+        } else if (quantasEntregou > 0) {
+          status = 'parcial';    // 🟠 Laranja - entregou algumas
         } else {
-          status = 'avaliado';
+          status = 'pendente';   // 🔴 Vermelho - nenhuma entrega
         }
 
         return {
@@ -222,11 +249,13 @@ const EntregasMissaoListaPage = () => {
           turma: aluno.turma,
           avatar_url: aluno.avatar_url,
           status,
-          entregasPendentes: pendentes
+          entregasPendentes: pendentesAvaliacao,
+          entregou: quantasEntregou,
+          total: totalMissoes
         };
       }).sort((a, b) => {
-        // Ordenar: pendentes primeiro, depois avaliados, depois sem entrega
-        const ordem = { pendente: 0, avaliado: 1, sem_entrega: 2 };
+        // Ordenar: pendentes primeiro, depois parcial, depois completou, depois sem_missao
+        const ordem = { pendente: 0, parcial: 1, completou: 2, sem_missao: 3 };
         return ordem[a.status] - ordem[b.status];
       });
     },
@@ -247,8 +276,10 @@ const EntregasMissaoListaPage = () => {
     return alunos.filter(a => a.turma === turmaFiltro);
   }, [alunos, turmaFiltro]);
 
-  // Contadores
-  const pendentes = alunosFiltrados.filter(a => a.status === 'pendente').length;
+  // Contadores - alunos que ainda precisam entregar algo
+  const alunosPendentes = alunosFiltrados.filter(
+    a => a.status === 'pendente' || a.status === 'parcial'
+  ).length;
 
   const handleAlunoClick = (alunoId: string) => {
     const params = new URLSearchParams();
@@ -302,10 +333,10 @@ const EntregasMissaoListaPage = () => {
       </div>
 
       {/* Banner de pendentes */}
-      {pendentes > 0 && (
-        <div className="mx-4 mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
-          <p className="text-red-400 text-sm text-center">
-            🔴 {pendentes} {pendentes === 1 ? 'aluno aguardando' : 'alunos aguardando'} avaliação
+      {alunosPendentes > 0 && (
+        <div className="mx-4 mt-4 p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl">
+          <p className="text-orange-400 text-sm text-center">
+            ⚠️ {alunosPendentes} {alunosPendentes === 1 ? 'aluno ainda não completou' : 'alunos ainda não completaram'} todas as missões
           </p>
         </div>
       )}
@@ -372,13 +403,16 @@ const EntregasMissaoListaPage = () => {
       <div className="p-4 border-t border-white/10">
         <div className="flex flex-wrap gap-4 justify-center text-xs text-white/40">
           <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-green-500" /> Completou
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-orange-500" /> Parcial
+          </span>
+          <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-red-500" /> Pendente
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-green-500" /> Avaliado
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-white/20" /> Sem entrega
+            <span className="w-2 h-2 rounded-full bg-white/20" /> Sem missão
           </span>
         </div>
       </div>
