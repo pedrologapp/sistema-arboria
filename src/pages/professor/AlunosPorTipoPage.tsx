@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
-import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Eye } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { CasaBrasao } from '@/components/CasaBrasao';
+import MissaoDetalhesModal from '@/components/professor/MissaoDetalhesModal';
 
 type StatusAluno = 'completou' | 'aguardando' | 'pendente' | 'sem_missao';
 
@@ -32,6 +33,7 @@ const AlunosPorTipoPage = () => {
   const navigate = useNavigate();
   const { casaMentor, casaColor, profile } = useProfessor();
   const [turmaFiltro, setTurmaFiltro] = useState<string>('todas');
+  const [showMissaoModal, setShowMissaoModal] = useState(false);
 
   // Determina se é tipo geral ou individual
   const tipo = casaId ? 'individual' : 'geral';
@@ -55,8 +57,8 @@ const AlunosPorTipoPage = () => {
   // Buscar alunos com status de missão
   const { data: alunosComStatus, isLoading } = useQuery({
     queryKey: ['alunos-status', profile?.institution_id, serie, semana, tipo, casaId, casaMentor?.id],
-    queryFn: async () => {
-      if (!profile?.institution_id || !casaMentor?.id) return [];
+    queryFn: async (): Promise<{ alunos: AlunoComStatus[]; missaoId: string | null }> => {
+      if (!profile?.institution_id || !casaMentor?.id) return { alunos: [], missaoId: null };
 
       // 1. Buscar alunos da casa do mentor
       let alunosQuery = supabase
@@ -74,7 +76,7 @@ const AlunosPorTipoPage = () => {
       const { data: alunos, error: alunosError } = await alunosQuery;
       if (alunosError) throw alunosError;
 
-      if (!alunos || alunos.length === 0) return [];
+      if (!alunos || alunos.length === 0) return { alunos: [], missaoId: null };
 
       // 2. Buscar missões da semana/tipo
       let missoesQuery = supabase
@@ -95,6 +97,9 @@ const AlunosPorTipoPage = () => {
       if (missoesError) throw missoesError;
 
       const missaoIds = missoes?.map(m => m.id) || [];
+      
+      // Armazenar primeiro ID para o modal
+      const primeiroMissaoId = missoes && missoes.length > 0 ? missoes[0].id : null;
 
       // 3. Buscar entregas dessas missões
       let entregas: { aluno_id: string; missao_id: string; status: string | null; nota: number | null }[] = [];
@@ -143,27 +148,33 @@ const AlunosPorTipoPage = () => {
       });
 
       // Ordenar: pendentes primeiro, depois aguardando, depois completou
-      return resultado.sort((a, b) => {
+      const alunosOrdenados = resultado.sort((a, b) => {
         const ordem: Record<StatusAluno, number> = { pendente: 0, aguardando: 1, completou: 2, sem_missao: 3 };
         return ordem[a.status] - ordem[b.status];
       });
+
+      return { alunos: alunosOrdenados, missaoId: primeiroMissaoId };
     },
     enabled: !!profile?.institution_id && !!casaMentor?.id && !!serie && !!semana
   });
 
+  // Extrair missaoId e alunos
+  const alunos = alunosComStatus?.alunos ?? [];
+  const missaoId = alunosComStatus?.missaoId ?? null;
+
   // Filtrar por turma
   const alunosFiltrados = useMemo(() => {
-    if (!alunosComStatus) return [];
-    if (turmaFiltro === 'todas') return alunosComStatus;
-    return alunosComStatus.filter(a => a.turma === turmaFiltro);
-  }, [alunosComStatus, turmaFiltro]);
+    if (!alunos.length) return [];
+    if (turmaFiltro === 'todas') return alunos;
+    return alunos.filter(a => a.turma === turmaFiltro);
+  }, [alunos, turmaFiltro]);
 
   // Extrair turmas únicas para o filtro
   const turmasUnicas = useMemo(() => {
-    if (!alunosComStatus) return [];
-    const turmas = new Set(alunosComStatus.map(a => a.turma).filter(Boolean));
-    return Array.from(turmas).sort();
-  }, [alunosComStatus]);
+    if (!alunos.length) return [];
+    const turmas = new Set(alunos.map(a => a.turma).filter(Boolean));
+    return Array.from(turmas).sort() as string[];
+  }, [alunos]);
 
   // Título do header
   const headerTitle = tipo === 'geral' 
@@ -188,28 +199,41 @@ const AlunosPorTipoPage = () => {
     <div className="min-h-screen bg-[#0d0d0d]">
       {/* Header */}
       <div className="p-4 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => navigate(`/professor/missoes/serie/${serie}/semana/${semana}`)}
-            className="p-2 -ml-2 text-white/60 hover:text-white transition-colors"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div className="flex-1">
-            <h1 className="text-lg font-bold text-white flex items-center gap-2">
-              {tipo === 'individual' && casaInfo && (
-                <CasaBrasao 
-                  brasaoUrl={casaInfo.brasao_url}
-                  emoji={casaInfo.emoji}
-                  nome={casaInfo.nome}
-                  size="mini"
-                />
-              )}
-              {tipo === 'geral' && '📋'}
-              {headerTitle}
-            </h1>
-            <p className="text-white/40 text-xs">Semana {semana} • {serie}º Ano</p>
+        <div className="flex items-center justify-between">
+          {/* Lado esquerdo */}
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => navigate(`/professor/missoes/serie/${serie}/semana/${semana}`)}
+              className="p-2 -ml-2 text-white/60 hover:text-white transition-colors"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h1 className="text-lg font-bold text-white flex items-center gap-2">
+                {tipo === 'individual' && casaInfo && (
+                  <CasaBrasao 
+                    brasaoUrl={casaInfo.brasao_url}
+                    emoji={casaInfo.emoji}
+                    nome={casaInfo.nome}
+                    size="mini"
+                  />
+                )}
+                {tipo === 'geral' && '📋'}
+                {headerTitle}
+              </h1>
+              <p className="text-white/40 text-xs">Semana {semana} • {serie}º Ano</p>
+            </div>
           </div>
+
+          {/* Botão Ver Missão */}
+          <button
+            onClick={() => setShowMissaoModal(true)}
+            disabled={!missaoId}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Eye className="w-4 h-4" />
+            <span className="text-xs">Ver Missão</span>
+          </button>
         </div>
       </div>
 
@@ -340,6 +364,13 @@ const AlunosPorTipoPage = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Detalhes da Missão */}
+      <MissaoDetalhesModal
+        isOpen={showMissaoModal}
+        onClose={() => setShowMissaoModal(false)}
+        missaoId={missaoId}
+      />
     </div>
   );
 };
