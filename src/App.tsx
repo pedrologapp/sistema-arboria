@@ -43,6 +43,7 @@ import AvaliarEntregaPage from "./pages/professor/AvaliarEntregaPage";
 import CirculoPage from "./pages/professor/CirculoPage";
 import AlunosPage from "./pages/professor/AlunosPage";
 import PerfilAlunoPage from "./pages/professor/PerfilAlunoPage";
+import ProfessorConfiguracoesPage from "./pages/professor/ProfessorConfiguracoesPage";
 
 const queryClient = new QueryClient();
 
@@ -154,6 +155,13 @@ const App = () => (
               <ProfessorProtectedRoute>
                 <ProfessorLayout>
                   <PerfilAlunoPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/configuracoes" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <ProfessorConfiguracoesPage />
                 </ProfessorLayout>
               </ProfessorProtectedRoute>
             } />
