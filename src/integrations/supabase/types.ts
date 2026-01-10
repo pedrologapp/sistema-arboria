@@ -1239,14 +1239,17 @@ export type Database = {
           id: string
           institution_id: string
           instrucoes: string | null
+          inteligencia_cross: number | null
           para_todos_da_casa: boolean | null
           permite_entrega_atrasada: boolean | null
           pontos_base: number
           requer_arquivo: boolean | null
           requer_texto: boolean | null
+          semana: number | null
           serie_filtro: number | null
           status: string | null
           tipo: string
+          tipo_missao: string | null
           titulo: string
           turma_filtro: string | null
           updated_at: string | null
@@ -1262,14 +1265,17 @@ export type Database = {
           id?: string
           institution_id: string
           instrucoes?: string | null
+          inteligencia_cross?: number | null
           para_todos_da_casa?: boolean | null
           permite_entrega_atrasada?: boolean | null
           pontos_base?: number
           requer_arquivo?: boolean | null
           requer_texto?: boolean | null
+          semana?: number | null
           serie_filtro?: number | null
           status?: string | null
           tipo?: string
+          tipo_missao?: string | null
           titulo: string
           turma_filtro?: string | null
           updated_at?: string | null
@@ -1285,14 +1291,17 @@ export type Database = {
           id?: string
           institution_id?: string
           instrucoes?: string | null
+          inteligencia_cross?: number | null
           para_todos_da_casa?: boolean | null
           permite_entrega_atrasada?: boolean | null
           pontos_base?: number
           requer_arquivo?: boolean | null
           requer_texto?: boolean | null
+          semana?: number | null
           serie_filtro?: number | null
           status?: string | null
           tipo?: string
+          tipo_missao?: string | null
           titulo?: string
           turma_filtro?: string | null
           updated_at?: string | null
@@ -1346,6 +1355,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "institutions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missoes_inteligencia_cross_fkey"
+            columns: ["inteligencia_cross"]
+            isOneToOne: false
+            referencedRelation: "inteligencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missoes_inteligencia_cross_fkey"
+            columns: ["inteligencia_cross"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "missoes_inteligencia_cross_fkey"
+            columns: ["inteligencia_cross"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
           },
         ]
       }

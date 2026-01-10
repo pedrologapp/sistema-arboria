@@ -150,7 +150,7 @@ const MissaoDetalhePage = () => {
           requer_texto,
           permite_entrega_atrasada,
           casa_id,
-          inteligencias:casa_id (
+          casa:inteligencias!missoes_casa_id_fkey (
             nome,
             cor_hex,
             emoji
@@ -162,7 +162,7 @@ const MissaoDetalhePage = () => {
       if (missaoError) throw missaoError;
       if (!missaoData) throw new Error('Missão não encontrada');
 
-      const inteligenciaData = missaoData.inteligencias as { nome: string; cor_hex: string; emoji: string } | null;
+      const inteligenciaData = missaoData.casa as { nome: string; cor_hex: string; emoji: string } | null;
 
       setMissao({
         id: missaoData.id,

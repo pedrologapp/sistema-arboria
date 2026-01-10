@@ -1,91 +1,109 @@
-import { ClipboardList, Plus, ChevronRight, Calendar, Award } from 'lucide-react';
+import { Plus, Clock, ChevronRight } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { differenceInDays } from 'date-fns';
 
-interface Missao {
+interface MissaoUrgente {
   id: string;
   titulo: string;
-  descricao: string | null;
-  status: string | null;
-  tipo: string;
-  pontos_base: number;
+  semana: number | null;
+  tipo_missao: string | null;
+  serie_filtro: number | null;
   data_prazo: string;
-  data_criacao: string | null;
+  inteligencia_cross_rel: {
+    nome: string;
+    emoji: string;
+  } | null;
 }
-
-interface MissaoCardProps {
-  missao: Missao;
-  casaColor: string;
-}
-
-const MissaoCard = ({ missao, casaColor }: MissaoCardProps) => {
-  const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
-    liberada: { bg: 'bg-green-500/20', text: 'text-green-400', label: 'Liberada' },
-    rascunho: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'Rascunho' },
-    encerrada: { bg: 'bg-white/10', text: 'text-white/40', label: 'Encerrada' }
-  };
-
-  const status = statusConfig[missao.status || 'rascunho'] || statusConfig.rascunho;
-
-  return (
-    <Link
-      to={`/professor/missoes/${missao.id}`}
-      className="block p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors border border-white/5"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <h3 className="text-white font-medium truncate">{missao.titulo}</h3>
-          {missao.descricao && (
-            <p className="text-white/40 text-sm mt-1 line-clamp-2">
-              {missao.descricao}
-            </p>
-          )}
-        </div>
-        <span className={`px-2 py-1 rounded text-xs font-medium ${status.bg} ${status.text} whitespace-nowrap`}>
-          {status.label}
-        </span>
-      </div>
-      
-      <div className="flex items-center gap-4 mt-3 text-white/40 text-xs">
-        <span className="flex items-center gap-1">
-          <Award size={12} />
-          {missao.pontos_base} pts
-        </span>
-        <span className="capitalize">{missao.tipo}</span>
-        {missao.data_prazo && (
-          <span className="flex items-center gap-1">
-            <Calendar size={12} />
-            {format(new Date(missao.data_prazo), "dd/MM", { locale: ptBR })}
-          </span>
-        )}
-        <ChevronRight size={16} className="ml-auto" />
-      </div>
-    </Link>
-  );
-};
 
 const MissoesPage = () => {
   const navigate = useNavigate();
   const { casaMentor, casaColor, profile } = useProfessor();
 
-  const { data: missoes, isLoading, error } = useQuery({
-    queryKey: ['missoes-professor', casaMentor?.id, profile?.institution_id],
+  // Contar missões liberadas por série
+  const { data: contagemPorSerie } = useQuery({
+    queryKey: ['contagem-missoes-serie', casaMentor?.id, profile?.institution_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('missoes')
-        .select('*')
+        .select('serie_filtro')
         .eq('casa_id', casaMentor!.id)
-        .order('data_criacao', { ascending: false });
+        .eq('institution_id', profile!.institution_id!)
+        .eq('status', 'liberada');
 
       if (error) throw error;
-      return data as Missao[];
+
+      const contagem: Record<number, number> = { 6: 0, 7: 0, 8: 0, 9: 0 };
+      data?.forEach(m => {
+        if (m.serie_filtro) {
+          contagem[m.serie_filtro] = (contagem[m.serie_filtro] || 0) + 1;
+        } else {
+          // Missão para todas as séries
+          [6, 7, 8, 9].forEach(s => contagem[s]++);
+        }
+      });
+      return contagem;
     },
-    enabled: !!casaMentor?.id
+    enabled: !!casaMentor?.id && !!profile?.institution_id
   });
+
+  // Missões urgentes (prazo < 7 dias)
+  const { data: missoesUrgentes } = useQuery({
+    queryKey: ['missoes-urgentes', casaMentor?.id, profile?.institution_id],
+    queryFn: async () => {
+      const hoje = new Date();
+      const em7dias = new Date();
+      em7dias.setDate(hoje.getDate() + 7);
+
+      const { data, error } = await supabase
+        .from('missoes')
+        .select(`
+          id,
+          titulo,
+          semana,
+          tipo_missao,
+          serie_filtro,
+          data_prazo,
+          inteligencia_cross_rel:inteligencias!missoes_inteligencia_cross_fkey(nome, emoji)
+        `)
+        .eq('casa_id', casaMentor!.id)
+        .eq('institution_id', profile!.institution_id!)
+        .eq('status', 'liberada')
+        .gte('data_prazo', hoje.toISOString())
+        .lte('data_prazo', em7dias.toISOString())
+        .order('data_prazo', { ascending: true })
+        .limit(5);
+
+      if (error) throw error;
+      return data as MissaoUrgente[];
+    },
+    enabled: !!casaMentor?.id && !!profile?.institution_id
+  });
+
+  // Calcular dias restantes
+  const getDiasRestantes = (dataPrazo: string) => {
+    return differenceInDays(new Date(dataPrazo), new Date());
+  };
+
+  // Cor e emoji do indicador de urgência
+  const getIndicadorUrgencia = (dias: number) => {
+    if (dias <= 2) return { cor: 'text-red-400', emoji: '🔴' };
+    if (dias <= 5) return { cor: 'text-yellow-400', emoji: '🟡' };
+    return { cor: 'text-green-400', emoji: '🟢' };
+  };
+
+  // Formatar título do card urgente
+  const formatTituloUrgente = (missao: MissaoUrgente) => {
+    let titulo = `Semana ${missao.semana || '?'} - ${
+      missao.tipo_missao === 'individual' ? 'Individual' : 'Geral'
+    }`;
+    if (missao.inteligencia_cross_rel) {
+      titulo += ` ${missao.inteligencia_cross_rel.emoji}`;
+    }
+    return titulo;
+  };
 
   return (
     <div className="p-4 space-y-6">
@@ -95,66 +113,86 @@ const MissoesPage = () => {
         <button
           onClick={() => navigate('/professor/missoes/nova')}
           className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all"
-          style={{
-            backgroundColor: casaColor,
-            color: '#fff'
-          }}
+          style={{ backgroundColor: casaColor, color: '#fff' }}
         >
           <Plus size={18} />
           Nova
         </button>
       </div>
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="space-y-3">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="h-24 bg-white/5 rounded-xl animate-pulse" />
+      {/* Selecione a Série */}
+      <div>
+        <p className="text-white/40 text-sm uppercase tracking-wide mb-3">
+          Selecione a Série
+        </p>
+
+        <div className="grid grid-cols-2 gap-3">
+          {[6, 7, 8, 9].map((serie) => (
+            <button
+              key={serie}
+              onClick={() => navigate(`/professor/missoes/serie/${serie}`)}
+              className="p-4 bg-white/5 hover:bg-white/10 rounded-xl text-center transition-colors border border-white/5"
+            >
+              <p className="text-2xl font-bold text-white">{serie}º</p>
+              <p className="text-white/60 text-sm">ANO</p>
+              <p 
+                className="text-xs mt-1 font-medium"
+                style={{ color: casaColor }}
+              >
+                {contagemPorSerie?.[serie] || 0} ativas
+              </p>
+            </button>
           ))}
         </div>
-      )}
+      </div>
 
-      {/* Error State */}
-      {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
-          Erro ao carregar missões
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!isLoading && !error && missoes?.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div 
-            className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
-            style={{ backgroundColor: `${casaColor}20` }}
-          >
-            <ClipboardList size={40} style={{ color: casaColor }} />
-          </div>
-          <h2 className="text-lg font-semibold text-white mb-2">
-            Nenhuma missão criada
-          </h2>
-          <p className="text-white/50 text-sm mb-6 max-w-xs">
-            Crie sua primeira missão para os alunos da sua casa
+      {/* Prazos se Esgotando */}
+      {missoesUrgentes && missoesUrgentes.length > 0 && (
+        <div>
+          <p className="text-white/40 text-sm uppercase tracking-wide mb-3 flex items-center gap-2">
+            <Clock size={14} />
+            Prazos se Esgotando
           </p>
-          <button
-            onClick={() => navigate('/professor/missoes/nova')}
-            className="px-6 py-3 rounded-lg font-medium transition-all"
-            style={{
-              backgroundColor: casaColor,
-              color: '#fff'
-            }}
-          >
-            Criar Primeira Missão
-          </button>
+
+          <div className="space-y-2">
+            {missoesUrgentes.map((missao) => {
+              const dias = getDiasRestantes(missao.data_prazo);
+              const indicador = getIndicadorUrgencia(dias);
+              
+              return (
+                <Link
+                  key={missao.id}
+                  to={`/professor/missoes/${missao.id}`}
+                  className="flex items-center justify-between p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors border border-white/5"
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <span className="text-lg">{indicador.emoji}</span>
+                    <div className="min-w-0">
+                      <p className="text-white font-medium truncate">
+                        {formatTituloUrgente(missao)}
+                      </p>
+                      <p className="text-white/40 text-sm">
+                        {missao.serie_filtro ? `${missao.serie_filtro}º ano` : 'Todas as séries'} • 
+                        Vence em {dias} dia{dias !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight size={18} className="text-white/30 ml-2 flex-shrink-0" />
+                </Link>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {/* Missions List */}
-      {!isLoading && !error && missoes && missoes.length > 0 && (
-        <div className="space-y-3">
-          {missoes.map((missao) => (
-            <MissaoCard key={missao.id} missao={missao} casaColor={casaColor} />
-          ))}
+      {/* Empty state quando não há missões */}
+      {contagemPorSerie && 
+       Object.values(contagemPorSerie).every(v => v === 0) && 
+       (!missoesUrgentes || missoesUrgentes.length === 0) && (
+        <div className="text-center py-8">
+          <p className="text-white/40 text-sm">
+            Nenhuma missão ativa no momento
+          </p>
         </div>
       )}
     </div>
