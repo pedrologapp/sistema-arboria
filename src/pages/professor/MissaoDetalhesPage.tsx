@@ -142,24 +142,10 @@ const MissaoDetalhesPage = () => {
         return { entregaram: [], naoEntregaram: [], total: 0 };
       }
 
-      // 5. Filtrar apenas alunos (verificar user_roles)
-      const alunoIds = alunos.map(a => a.id);
-      const { data: userRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'user')
-        .in('user_id', alunoIds);
+      // 5. Filtrar apenas alunos (alunos TÊM casa_id, professores/admins não têm)
+      const alunosFiltrados = alunos.filter(a => a.casa_id !== null);
 
-      if (rolesError) {
-        console.error('❌ Erro ao buscar roles:', rolesError);
-      }
-
-      console.log('🎭 User roles encontrados:', userRoles?.length, userRoles);
-
-      const alunoIdsValidos = new Set(userRoles?.map(r => r.user_id) || []);
-      const alunosFiltrados = alunos.filter(a => alunoIdsValidos.has(a.id));
-
-      console.log('✅ Alunos filtrados (com role user):', alunosFiltrados.length);
+      console.log('✅ Alunos filtrados (com casa_id):', alunosFiltrados.length);
 
       // 6. Buscar entregas
       const { data: entregas, error: entregasError } = await supabase
