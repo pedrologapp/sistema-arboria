@@ -21,29 +21,59 @@ const Dashboard = () => {
   const [isCheckingPassword, setIsCheckingPassword] = useState(true);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) return;
+    const checkRoleAndRedirect = async () => {
+      if (!user) {
+        setIsCheckingPassword(false);
+        return;
+      }
 
-      const { data, error } = await supabase
+      // Fetch profile first
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('full_name, nome, sobrenome, institution, must_change_password')
         .eq('id', user.id)
         .maybeSingle();
 
-      if (!error && data) {
-        setProfile(data);
+      if (profileData) {
+        setProfile(profileData);
         
         // Redirect to password change if required
-        if (data.must_change_password) {
-          navigate('/alterar-senha');
+        if (profileData.must_change_password) {
+          navigate('/alterar-senha', { replace: true });
           return;
         }
       }
-      
+
+      // Check professor role
+      const { data: professorRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'professor')
+        .maybeSingle();
+
+      if (professorRole) {
+        navigate('/professor', { replace: true });
+        return;
+      }
+
+      // Check student role
+      const { data: studentRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'user')
+        .maybeSingle();
+
+      if (studentRole) {
+        navigate('/aluno/missoes', { replace: true });
+        return;
+      }
+
       setIsCheckingPassword(false);
     };
 
-    fetchProfile();
+    checkRoleAndRedirect();
   }, [user, navigate]);
 
   const handleSignOut = async () => {
