@@ -2,10 +2,58 @@ import { useProfessor } from '@/contexts/ProfessorContext';
 import { ClipboardList, PenLine, Users, Settings } from 'lucide-react';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 
 const ProfessorDashboard = () => {
   const { profile, casaMentor, casaColor } = useProfessor();
   const navigate = useNavigate();
+
+  // Query: Missões Ativas
+  const { data: missoesAtivas } = useQuery({
+    queryKey: ['missoes-ativas-count', profile?.institution_id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('missoes')
+        .select('*', { count: 'exact', head: true })
+        .eq('institution_id', profile?.institution_id!)
+        .eq('status', 'liberada');
+
+      if (error) {
+        console.error('Erro ao contar missões:', error);
+        return 0;
+      }
+      return count || 0;
+    },
+    enabled: !!profile?.institution_id
+  });
+
+  // Query: Entregas Pendentes
+  const { data: entregasPendentes } = useQuery({
+    queryKey: ['entregas-pendentes-count', profile?.institution_id],
+    queryFn: async () => {
+      const { data: missoes } = await supabase
+        .from('missoes')
+        .select('id')
+        .eq('institution_id', profile?.institution_id!);
+
+      if (!missoes || missoes.length === 0) return 0;
+
+      const { count, error } = await supabase
+        .from('entregas')
+        .select('*', { count: 'exact', head: true })
+        .in('missao_id', missoes.map(m => m.id))
+        .eq('status', 'pendente');
+
+      if (error) {
+        console.error('Erro ao contar entregas:', error);
+        return 0;
+      }
+      return count || 0;
+    },
+    enabled: !!profile?.institution_id
+  });
 
   const quickActions = [
     { 
@@ -121,14 +169,23 @@ const ProfessorDashboard = () => {
         </div>
       </div>
 
-      {/* Placeholder Stats */}
+      {/* Stats */}
       <div className="grid grid-cols-2 gap-3">
         <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
-          <div className="text-2xl font-bold text-white">--</div>
+          <div className="text-2xl font-bold text-white">
+            {missoesAtivas ?? '--'}
+          </div>
           <div className="text-xs text-white/40">Missões Ativas</div>
         </div>
         <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
-          <div className="text-2xl font-bold text-white">--</div>
+          <div className={cn(
+            "text-2xl font-bold",
+            entregasPendentes && entregasPendentes > 0 
+              ? "text-yellow-400" 
+              : "text-white"
+          )}>
+            {entregasPendentes ?? '--'}
+          </div>
           <div className="text-xs text-white/40">Entregas Pendentes</div>
         </div>
       </div>
