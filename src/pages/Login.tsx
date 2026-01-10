@@ -92,14 +92,13 @@ const Login = () => {
         return;
       }
 
-      // Save or remove email based on "remember me"
-      if (lembrarMe) {
-        localStorage.setItem('rememberedEmail', normalizedEmail);
-      } else {
-        localStorage.removeItem('rememberedEmail');
-      }
-
-      toast.success('Login realizado com sucesso!');
+        // Save or remove email based on "remember me"
+        if (lembrarMe) {
+          localStorage.setItem('rememberedEmail', normalizedEmail);
+        } else {
+          localStorage.removeItem('rememberedEmail');
+        }
+        // Toast de sucesso removido - o redirecionamento já indica sucesso
     } catch (error) {
       console.error('Login error:', error);
       toast.error('Erro ao fazer login');
