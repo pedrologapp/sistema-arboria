@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { ArrowLeft, Check, Circle, Plus } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -17,7 +18,6 @@ interface Missao {
   titulo: string;
   tipo_missao: string | null;
   inteligencia_cross: number | null;
-  entregas: { count: number }[];
 }
 
 const MissoesSemanaPage = () => {
@@ -38,19 +38,13 @@ const MissoesSemanaPage = () => {
     }
   });
 
-  // Buscar missões da semana
+  // Buscar missões da semana (sem entregas, apenas contagem)
   const { data: missoes, isLoading: loadingMissoes } = useQuery({
-    queryKey: ['missoes-semana', serie, semana, casaMentor?.id, profile?.institution_id],
+    queryKey: ['missoes-semana-contagem', serie, semana, casaMentor?.id, profile?.institution_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('missoes')
-        .select(`
-          id,
-          titulo,
-          tipo_missao,
-          inteligencia_cross,
-          entregas(count)
-        `)
+        .select('id, titulo, tipo_missao, inteligencia_cross')
         .eq('institution_id', profile!.institution_id!)
         .eq('casa_id', casaMentor!.id)
         .eq('semana', Number(semana))
@@ -62,36 +56,19 @@ const MissoesSemanaPage = () => {
     enabled: !!profile?.institution_id && !!casaMentor?.id && !!serie && !!semana
   });
 
-  // Contar alunos da série na casa do mentor
-  const { data: totalAlunos } = useQuery({
-    queryKey: ['total-alunos-serie-casa', serie, casaMentor?.id, profile?.institution_id],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('institution_id', profile!.institution_id!)
-        .eq('casa_id', casaMentor!.id)
-        .ilike('serie', `%${serie}%`);
+  // Contagem de missões gerais
+  const totalMissoesGerais = missoes?.filter(m => m.tipo_missao === 'geral').length || 0;
 
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !!profile?.institution_id && !!casaMentor?.id && !!serie
-  });
-
-  // Separar missão geral e individuais
-  const missaoGeral = missoes?.find(m => m.tipo_missao === 'geral');
-  const missoesIndividuais = missoes?.filter(m => m.tipo_missao === 'individual') || [];
-
-  // Encontrar missão individual por inteligência
-  const getMissaoIndividual = (inteligenciaId: number) => {
-    return missoesIndividuais.find(m => m.inteligencia_cross === inteligenciaId);
-  };
-
-  const getEntregasCount = (missao: Missao | undefined) => {
-    if (!missao || !missao.entregas || missao.entregas.length === 0) return 0;
-    return missao.entregas[0]?.count || 0;
-  };
+  // Contagem de missões por casa
+  const missoesPorCasa = useMemo(() => {
+    const porCasa: Record<number, number> = {};
+    missoes?.filter(m => m.tipo_missao === 'individual').forEach(m => {
+      if (m.inteligencia_cross) {
+        porCasa[m.inteligencia_cross] = (porCasa[m.inteligencia_cross] || 0) + 1;
+      }
+    });
+    return porCasa;
+  }, [missoes]);
 
   return (
     <div className="p-4 space-y-6">
@@ -141,11 +118,15 @@ const MissoesSemanaPage = () => {
             </p>
 
             <button
-              onClick={() => missaoGeral && navigate(`/professor/missoes/${missaoGeral.id}`)}
-              disabled={!missaoGeral}
+              onClick={() => {
+                if (totalMissoesGerais > 0) {
+                  navigate(`/professor/missoes/serie/${serie}/semana/${semana}/geral`);
+                }
+              }}
+              disabled={totalMissoesGerais === 0}
               className={cn(
                 "w-full p-4 rounded-xl text-left transition-colors",
-                missaoGeral 
+                totalMissoesGerais > 0 
                   ? "bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30" 
                   : "bg-white/5 opacity-60 cursor-not-allowed"
               )}
@@ -156,14 +137,14 @@ const MissoesSemanaPage = () => {
                     📋 GERAL
                   </p>
                   <p className="text-white/40 text-sm mt-1">
-                    {missaoGeral 
-                      ? `Para todos os alunos • ${getEntregasCount(missaoGeral)}/${totalAlunos} entregaram`
+                    {totalMissoesGerais > 0 
+                      ? `${totalMissoesGerais} ${totalMissoesGerais === 1 ? 'missão' : 'missões'}`
                       : 'Nenhuma missão geral nesta semana'
                     }
                   </p>
                 </div>
                 
-                {missaoGeral ? (
+                {totalMissoesGerais > 0 ? (
                   <Check size={18} className="text-green-400" />
                 ) : (
                   <Circle size={18} className="text-white/20" />
@@ -183,16 +164,20 @@ const MissoesSemanaPage = () => {
 
             <div className="space-y-2">
               {inteligencias?.map((inteligencia) => {
-                const missao = getMissaoIndividual(inteligencia.id);
+                const qtdMissoes = missoesPorCasa[inteligencia.id] || 0;
                 
                 return (
                   <button
                     key={inteligencia.id}
-                    onClick={() => missao && navigate(`/professor/missoes/${missao.id}`)}
-                    disabled={!missao}
+                    onClick={() => {
+                      if (qtdMissoes > 0) {
+                        navigate(`/professor/missoes/serie/${serie}/semana/${semana}/casa/${inteligencia.id}`);
+                      }
+                    }}
+                    disabled={qtdMissoes === 0}
                     className={cn(
                       "w-full p-3 rounded-xl text-left transition-colors flex items-center justify-between",
-                      missao 
+                      qtdMissoes > 0 
                         ? "bg-white/5 hover:bg-white/10" 
                         : "bg-white/5 opacity-50 cursor-not-allowed"
                     )}
@@ -202,15 +187,15 @@ const MissoesSemanaPage = () => {
                       <div>
                         <p className="text-white font-medium">{inteligencia.nome}</p>
                         <p className="text-white/40 text-xs">
-                          {missao 
-                            ? `${getEntregasCount(missao)}/${totalAlunos} entregaram`
+                          {qtdMissoes > 0 
+                            ? `${qtdMissoes} ${qtdMissoes === 1 ? 'missão' : 'missões'}`
                             : 'Nenhuma missão'
                           }
                         </p>
                       </div>
                     </div>
                     
-                    {missao ? (
+                    {qtdMissoes > 0 ? (
                       <Check size={16} className="text-green-400" />
                     ) : (
                       <Circle size={16} className="text-white/20" />
