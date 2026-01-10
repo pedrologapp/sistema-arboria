@@ -122,9 +122,14 @@ const AvaliarEntregaPage = () => {
       toast.success(`Entrega aprovada! ${data.pontosCalculados} pontos concedidos.`);
       queryClient.invalidateQueries({ queryKey: ['entregas'] });
       queryClient.invalidateQueries({ queryKey: ['entrega-avaliar'] });
-      setTimeout(() => {
-        navigate('/professor/entregas', { replace: true });
-      }, 100);
+        setTimeout(() => {
+          // Voltar para a lista de entregas da missão
+          if (entrega?.missao?.id) {
+            navigate(`/professor/entregas/missao/${entrega.missao.id}`, { replace: true });
+          } else {
+            navigate('/professor/entregas', { replace: true });
+          }
+        }, 100);
     },
     onError: (error: any) => {
       toast.error(error.message || 'Erro ao aprovar entrega');
@@ -150,9 +155,14 @@ const AvaliarEntregaPage = () => {
       toast.info('Solicitado que o aluno refaça a atividade');
       queryClient.invalidateQueries({ queryKey: ['entregas'] });
       queryClient.invalidateQueries({ queryKey: ['entrega-avaliar'] });
-      setTimeout(() => {
-        navigate('/professor/entregas', { replace: true });
-      }, 100);
+        setTimeout(() => {
+          // Voltar para a lista de entregas da missão
+          if (entrega?.missao?.id) {
+            navigate(`/professor/entregas/missao/${entrega.missao.id}`, { replace: true });
+          } else {
+            navigate('/professor/entregas', { replace: true });
+          }
+        }, 100);
     },
     onError: (error: any) => {
       toast.error(error.message || 'Erro ao solicitar refazer');
@@ -212,7 +222,13 @@ const AvaliarEntregaPage = () => {
       {/* Header */}
       <div className="flex items-center gap-3 p-4 border-b border-white/10">
         <button 
-          onClick={() => navigate('/professor/entregas')} 
+          onClick={() => {
+            if (entrega?.missao?.id) {
+              navigate(`/professor/entregas/missao/${entrega.missao.id}`);
+            } else {
+              navigate('/professor/entregas');
+            }
+          }}
           className="text-white/60 hover:text-white transition-colors"
         >
           <ArrowLeft className="w-6 h-6" />
