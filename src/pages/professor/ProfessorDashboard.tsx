@@ -1,5 +1,6 @@
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { ClipboardList, PenLine, Users, Settings } from 'lucide-react';
+import { CasaBrasao } from '@/components/CasaBrasao';
 import { useNavigate } from 'react-router-dom';
 
 const ProfessorDashboard = () => {
@@ -46,10 +47,16 @@ const ProfessorDashboard = () => {
           Olá, {firstName}! 👋
         </h1>
         {casaMentor && (
-          <p className="text-white/60">
+          <p className="text-white/60 inline-flex items-center justify-center gap-1">
             Mentor da Casa{' '}
-            <span style={{ color: casaColor }}>
-              {casaMentor.emoji} {casaMentor.nome}
+            <span style={{ color: casaColor }} className="inline-flex items-center gap-1">
+              <CasaBrasao 
+                brasaoUrl={casaMentor.brasao_url} 
+                emoji={casaMentor.emoji} 
+                nome={casaMentor.nome}
+                size="mini"
+              />
+              {casaMentor.nome}
             </span>
           </p>
         )}
@@ -64,7 +71,14 @@ const ProfessorDashboard = () => {
             borderColor: `${casaColor}30`
           }}
         >
-          <div className="text-5xl mb-3">{casaMentor.emoji}</div>
+          <div className="flex justify-center mb-3">
+            <CasaBrasao 
+              brasaoUrl={casaMentor.brasao_url} 
+              emoji={casaMentor.emoji} 
+              nome={casaMentor.nome}
+              size="large"
+            />
+          </div>
           <h2 
             className="text-xl font-bold mb-1"
             style={{ color: casaColor }}
