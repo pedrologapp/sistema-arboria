@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
-import { ChevronLeft, Loader2 } from 'lucide-react';
+import { ChevronLeft, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const EntregasSemanaPage = () => {
@@ -23,7 +23,7 @@ const EntregasSemanaPage = () => {
   });
 
   // Contar entregas pendentes por tipo (geral vs individual por casa)
-  const { data: contagem, isLoading } = useQuery({
+  const { data: contagem, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['entregas-por-tipo', serie, semana, profile?.institution_id, casaMentor?.id],
     queryFn: async () => {
       if (!profile?.institution_id) return { gerais: 0, porCasa: {} };
@@ -85,20 +85,32 @@ const EntregasSemanaPage = () => {
 
       return { gerais, porCasa };
     },
-    enabled: !!profile?.institution_id
+    enabled: !!profile?.institution_id,
+    refetchInterval: 60000, // Polling a cada 60 segundos
   });
 
   return (
     <div className="min-h-screen bg-[#0d0d0d] pb-24">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-white/10">
-        <button 
-          onClick={() => navigate(`/professor/entregas/serie/${serie}`)} 
-          className="text-white/60 hover:text-white transition-colors"
+      <div className="flex items-center justify-between p-4 border-b border-white/10">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => navigate(`/professor/entregas/serie/${serie}`)} 
+            className="text-white/60 hover:text-white transition-colors"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <h1 className="text-lg font-bold text-white">Semana {semana} • {serie}º Ano</h1>
+        </div>
+        
+        {/* Botão de refresh */}
+        <button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-50"
         >
-          <ChevronLeft className="w-6 h-6" />
+          <RefreshCw className={cn("w-5 h-5 text-white", isFetching && "animate-spin")} />
         </button>
-        <h1 className="text-lg font-bold text-white">Semana {semana} • {serie}º Ano</h1>
       </div>
 
       {isLoading ? (
