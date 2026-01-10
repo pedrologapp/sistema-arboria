@@ -16,7 +16,7 @@ const EntregasSeriePage = () => {
   const { data: contagemPorSemana, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['entregas-por-semana', serie, profile?.institution_id, casaMentor?.id],
     queryFn: async () => {
-      if (!profile?.institution_id) return { 1: 0, 2: 0, 3: 0, 4: 0 };
+      if (!profile?.institution_id) return { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 };
 
       // Buscar missões que o professor pode avaliar
       let missaoQuery = supabase
@@ -34,7 +34,7 @@ const EntregasSeriePage = () => {
       const missaoIds = missoes?.map(m => m.id) || [];
 
       if (missaoIds.length === 0) {
-        return { 1: 0, 2: 0, 3: 0, 4: 0 };
+        return { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 };
       }
 
       // Buscar entregas pendentes
@@ -54,12 +54,12 @@ const EntregasSeriePage = () => {
         if (m.semana) missaoSemanaMap[m.id] = m.semana;
       });
 
-      // Filtrar por série e contar por semana
-      const contagem: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+      // Filtrar por série e contar por semana (inclui 0 para extras)
+      const contagem: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 };
       entregas?.forEach(e => {
         const alunoSerie = parseInt(e.aluno?.serie?.replace(/\D/g, '') || '0');
         const semana = missaoSemanaMap[e.missao_id];
-        if (alunoSerie === Number(serie) && semana && semana >= 1 && semana <= 4) {
+        if (alunoSerie === Number(serie) && semana !== undefined && semana >= 0 && semana <= 4) {
           contagem[semana]++;
         }
       });
@@ -163,6 +163,38 @@ const EntregasSeriePage = () => {
                 </button>
               );
             })}
+
+            {/* Separador */}
+            <div className="my-4 border-t border-white/10" />
+
+            {/* Card Extra */}
+            {(() => {
+              const pendentes = contagemPorSemana?.[0] || 0;
+              return (
+                <button
+                  onClick={() => navigate(`/professor/entregas/serie/${serie}/semana/extra`)}
+                  className="w-full p-4 rounded-xl text-left transition-colors flex items-center justify-between bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 hover:from-yellow-500/20 hover:to-orange-500/20"
+                >
+                  <div>
+                    <p className="text-yellow-400 font-medium flex items-center gap-2">
+                      ⭐ Extra
+                    </p>
+                    <p className="text-white/40 text-sm">
+                      {pendentes > 0 
+                        ? `${pendentes} entrega${pendentes !== 1 ? 's' : ''} pendente${pendentes !== 1 ? 's' : ''}`
+                        : 'Nenhuma entrega pendente'
+                      }
+                    </p>
+                  </div>
+                  
+                  {pendentes > 0 && (
+                    <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[22px] h-[22px] flex items-center justify-center px-1.5">
+                      {pendentes}
+                    </span>
+                  )}
+                </button>
+              );
+            })()}
           </div>
         )}
       </div>

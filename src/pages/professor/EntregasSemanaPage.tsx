@@ -10,6 +10,9 @@ const EntregasSemanaPage = () => {
   const navigate = useNavigate();
   const { profile, casaMentor } = useProfessor();
 
+  const isExtra = semana === 'extra';
+  const semanaNumber = isExtra ? 0 : Number(semana);
+
   // Buscar inteligências (casas)
   const { data: inteligencias } = useQuery({
     queryKey: ['inteligencias'],
@@ -33,7 +36,7 @@ const EntregasSemanaPage = () => {
         .from('missoes')
         .select('id, tipo_missao, casa_id, semana')
         .eq('institution_id', profile.institution_id)
-        .eq('semana', Number(semana));
+        .eq('semana', semanaNumber);
 
       if (casaMentor?.id) {
         missaoQuery = missaoQuery.or(`tipo_missao.eq.geral,tipo_missao.is.null,casa_id.eq.${casaMentor.id}`);
@@ -100,7 +103,9 @@ const EntregasSemanaPage = () => {
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-lg font-bold text-white">Semana {semana} • {serie}º Ano</h1>
+          <h1 className="text-lg font-bold text-white">
+            {isExtra ? '⭐ Extra' : `Semana ${semana}`} • {serie}º Ano
+          </h1>
         </div>
         
         {/* Botão de refresh */}
@@ -120,7 +125,7 @@ const EntregasSemanaPage = () => {
       ) : (
         <div className="p-4 space-y-4">
           <p className="text-white/40 text-sm uppercase tracking-wide">
-            Entregas da Semana {semana}
+            {isExtra ? 'Entregas Extra' : `Entregas da Semana ${semana}`}
           </p>
 
           {/* GERAL */}
