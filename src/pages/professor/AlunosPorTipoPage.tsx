@@ -18,6 +18,8 @@ interface AlunoComStatus {
   turma: string | null;
   avatar_url: string | null;
   status: StatusAluno;
+  entregou: number;
+  total: number;
 }
 
 interface Inteligencia {
@@ -114,27 +116,23 @@ const AlunosPorTipoPage = () => {
       }
 
       // 4. Calcular status de cada aluno
+      const totalMissoes = missaoIds.length;
+      
       const resultado: AlunoComStatus[] = alunos.map(aluno => {
         const entregasAluno = entregas.filter(e => e.aluno_id === aluno.id);
+        const quantasEntregou = entregasAluno.length;
         
         let status: StatusAluno;
         
-        if (missaoIds.length === 0) {
+        if (totalMissoes === 0) {
           status = 'sem_missao';
+        } else if (quantasEntregou === totalMissoes) {
+          const todasAvaliadas = entregasAluno.every(e => e.nota !== null);
+          status = todasAvaliadas ? 'completou' : 'aguardando';
+        } else if (quantasEntregou > 0) {
+          status = 'aguardando'; // Parcial
         } else {
-          const algumaPendente = missaoIds.some(mid => 
-            !entregasAluno.some(e => e.missao_id === mid)
-          );
-          const todasAvaliadas = entregasAluno.length > 0 && 
-            entregasAluno.every(e => e.nota !== null);
-          
-          if (algumaPendente) {
-            status = 'pendente';
-          } else if (!todasAvaliadas) {
-            status = 'aguardando';
-          } else {
-            status = 'completou';
-          }
+          status = 'pendente'; // Nenhuma entrega
         }
 
         return {
@@ -144,7 +142,9 @@ const AlunosPorTipoPage = () => {
           serie: aluno.serie,
           turma: aluno.turma,
           avatar_url: aluno.avatar_url,
-          status
+          status,
+          entregou: quantasEntregou,
+          total: totalMissoes
         };
       });
 
@@ -333,6 +333,19 @@ const AlunosPorTipoPage = () => {
                     {aluno.serie}º{aluno.turma}
                   </span>
                 </div>
+                
+                {/* Badge X/Y */}
+                {aluno.total > 0 && (
+                  <span className={cn(
+                    "text-xs font-semibold px-2 py-0.5 rounded border",
+                    aluno.status === 'completou' && "bg-green-500/20 text-green-400 border-green-500/30",
+                    aluno.status === 'aguardando' && "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+                    aluno.status === 'pendente' && "bg-red-500/20 text-red-400 border-red-500/30",
+                    aluno.status === 'sem_missao' && "bg-white/10 text-white/40 border-white/10"
+                  )}>
+                    {aluno.entregou}/{aluno.total}
+                  </span>
+                )}
                 
                 {/* Seta */}
                 <ChevronRight className="w-4 h-4 text-white/20 flex-shrink-0" />
