@@ -12,7 +12,7 @@ const EditarMissaoPage = () => {
       {/* Header */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => navigate('/professor/missoes')}
+          onClick={() => navigate(-1)}
           className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
         >
           <ArrowLeft size={20} className="text-white" />
