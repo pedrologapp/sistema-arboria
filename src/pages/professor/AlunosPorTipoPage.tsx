@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ArrowLeft, ChevronRight, Plus } from 'lucide-react';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useProfessor } from '@/contexts/ProfessorContext';
@@ -210,49 +210,40 @@ const AlunosPorTipoPage = () => {
             </h1>
             <p className="text-white/40 text-xs">Semana {semana} • {serie}º Ano</p>
           </div>
-          <button
-            onClick={() => navigate('/professor/missoes/nova')}
-            className="p-2 rounded-lg transition-all"
-            style={{ backgroundColor: casaColor, color: '#fff' }}
-          >
-            <Plus size={18} />
-          </button>
         </div>
       </div>
 
-      {/* Filtro de Turma */}
-      {turmasUnicas.length > 1 && (
-        <div className="p-4 border-b border-white/10">
-          <p className="text-white/40 text-xs uppercase tracking-wide mb-2">Filtrar por Turma</p>
-          <div className="flex gap-2 flex-wrap">
+      {/* Filtro de Turma - sempre visível */}
+      <div className="p-4 border-b border-white/10">
+        <p className="text-white/40 text-xs uppercase tracking-wide mb-2">Turma</p>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => setTurmaFiltro('todas')}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+              turmaFiltro === 'todas' 
+                ? "bg-blue-600 text-white" 
+                : "bg-white/5 text-white/60 hover:bg-white/10"
+            )}
+          >
+            Todas
+          </button>
+          {turmasUnicas.map(turma => (
             <button
-              onClick={() => setTurmaFiltro('todas')}
+              key={turma}
+              onClick={() => setTurmaFiltro(turma || 'todas')}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
-                turmaFiltro === 'todas' 
-                  ? "bg-white/20 text-white" 
+                "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                turmaFiltro === turma 
+                  ? "bg-blue-600 text-white" 
                   : "bg-white/5 text-white/60 hover:bg-white/10"
               )}
             >
-              Todas
+              {turma}
             </button>
-            {turmasUnicas.map(turma => (
-              <button
-                key={turma}
-                onClick={() => setTurmaFiltro(turma || 'todas')}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
-                  turmaFiltro === turma 
-                    ? "bg-white/20 text-white" 
-                    : "bg-white/5 text-white/60 hover:bg-white/10"
-                )}
-              >
-                {turma}
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* Lista de Alunos */}
       <div className="p-2">
