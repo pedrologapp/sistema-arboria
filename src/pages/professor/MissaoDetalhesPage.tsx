@@ -79,43 +79,76 @@ const MissaoDetalhesPage = () => {
 
   // Buscar checklist de alunos
   const { data: checklist, isLoading: loadingChecklist } = useQuery({
-    queryKey: ['checklist-missao', missaoId, missao?.casa_id, missao?.serie_filtro, missao?.turma_filtro],
+    queryKey: ['checklist-missao', missaoId, missao?.casa_id, missao?.serie_filtro, missao?.turma_filtro, missao?.tipo_missao],
     queryFn: async () => {
       if (!missao) return null;
 
-      // 1. Buscar alunos elegíveis (da casa do mentor com role 'user')
+      console.log('🔍 Buscando alunos para missão:', {
+        id: missao.id,
+        tipo_missao: missao.tipo_missao,
+        casa_id: missao.casa_id,
+        serie_filtro: missao.serie_filtro,
+        turma_filtro: missao.turma_filtro,
+        institution_id: missao.institution_id
+      });
+
+      // 1. Buscar alunos da mesma instituição
       let queryAlunos = supabase
         .from('profiles')
-        .select('id, full_name, serie, turma, avatar_url')
-        .eq('casa_id', missao.casa_id!)
+        .select('id, full_name, serie, turma, avatar_url, casa_id')
         .eq('institution_id', missao.institution_id);
 
-      // Filtrar por série se especificado
+      // 2. Filtrar por série se especificado (usando ilike para compatibilidade com formato "6º ano")
       if (missao.serie_filtro) {
-        queryAlunos = queryAlunos.eq('serie', `${missao.serie_filtro}º`);
+        queryAlunos = queryAlunos.ilike('serie', `%${missao.serie_filtro}%`);
       }
 
-      // Filtrar por turma se especificado
+      // 3. Filtrar por turma se especificado
       if (missao.turma_filtro) {
         const turmas = missao.turma_filtro.split(',').map(t => t.trim().toUpperCase());
         queryAlunos = queryAlunos.in('turma', turmas);
       }
 
-      const { data: alunos, error: alunosError } = await queryAlunos;
-      if (alunosError) throw alunosError;
+      // 4. IMPORTANTE: Só filtrar por casa se for missão INDIVIDUAL
+      // Missões GERAIS são para TODOS os alunos da série/turma, independente da casa
+      if (missao.tipo_missao === 'individual' && missao.casa_id) {
+        queryAlunos = queryAlunos.eq('casa_id', missao.casa_id);
+      }
 
-      // Filtrar apenas alunos (verificar user_roles)
-      const alunoIds = alunos?.map(a => a.id) || [];
-      const { data: userRoles } = await supabase
+      const { data: alunos, error: alunosError } = await queryAlunos;
+      
+      console.log('👥 Alunos encontrados (antes de filtrar por role):', alunos?.length, alunos);
+      
+      if (alunosError) {
+        console.error('❌ Erro ao buscar alunos:', alunosError);
+        throw alunosError;
+      }
+
+      if (!alunos || alunos.length === 0) {
+        console.warn('⚠️ Nenhum aluno encontrado com os filtros aplicados');
+        return { entregaram: [], naoEntregaram: [], total: 0 };
+      }
+
+      // 5. Filtrar apenas alunos (verificar user_roles)
+      const alunoIds = alunos.map(a => a.id);
+      const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id')
         .eq('role', 'user')
         .in('user_id', alunoIds);
 
-      const alunoIdsValidos = new Set(userRoles?.map(r => r.user_id) || []);
-      const alunosFiltrados = alunos?.filter(a => alunoIdsValidos.has(a.id)) || [];
+      if (rolesError) {
+        console.error('❌ Erro ao buscar roles:', rolesError);
+      }
 
-      // 2. Buscar entregas
+      console.log('🎭 User roles encontrados:', userRoles?.length, userRoles);
+
+      const alunoIdsValidos = new Set(userRoles?.map(r => r.user_id) || []);
+      const alunosFiltrados = alunos.filter(a => alunoIdsValidos.has(a.id));
+
+      console.log('✅ Alunos filtrados (com role user):', alunosFiltrados.length);
+
+      // 6. Buscar entregas
       const { data: entregas, error: entregasError } = await supabase
         .from('entregas')
         .select('id, aluno_id, status, nota, created_at, data_entrega')
@@ -123,18 +156,19 @@ const MissaoDetalhesPage = () => {
 
       if (entregasError) throw entregasError;
 
-      // 3. Calcular tempo de resposta e combinar
-      const entregasMap = new Map(
-        entregas?.map(e => {
-          const tempoHoras = missao.data_liberacao && e.created_at
-            ? Math.round(
-                (new Date(e.created_at).getTime() - new Date(missao.data_liberacao).getTime()) / 
-                (1000 * 60 * 60)
-              )
-            : null;
-          return [e.aluno_id, { ...e, tempo_resposta_horas: tempoHoras }];
-        }) || []
-      );
+      console.log('📦 Entregas encontradas:', entregas?.length);
+
+      // 7. Calcular tempo de resposta e combinar
+      const entregasMap = new Map<string, Entrega & { tempo_resposta_horas: number | null }>();
+      entregas?.forEach(e => {
+        let tempoHoras: number | null = null;
+        if (missao.data_liberacao && e.created_at) {
+          const liberacao = new Date(missao.data_liberacao).getTime();
+          const entrega = new Date(e.created_at).getTime();
+          tempoHoras = Math.max(0, Math.round((entrega - liberacao) / (1000 * 60 * 60)));
+        }
+        entregasMap.set(e.aluno_id, { ...e, tempo_resposta_horas: tempoHoras });
+      });
 
       const lista: AlunoComEntrega[] = alunosFiltrados.map(aluno => ({
         ...aluno,
@@ -147,6 +181,12 @@ const MissaoDetalhesPage = () => {
         .filter(a => a.entregou)
         .sort((a, b) => (a.tempoResposta || 999) - (b.tempoResposta || 999));
       const naoEntregaram = lista.filter(a => !a.entregou);
+
+      console.log('📊 Resultado final:', {
+        entregaram: entregaram.length,
+        naoEntregaram: naoEntregaram.length,
+        total: lista.length
+      });
 
       return { entregaram, naoEntregaram, total: lista.length };
     },
@@ -199,40 +239,40 @@ const MissaoDetalhesPage = () => {
 
   if (loadingMissao) {
     return (
-      <div className="min-h-screen bg-background p-4 space-y-4">
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-64 w-full" />
+      <div className="pb-24 p-4 space-y-4">
+        <Skeleton className="h-12 w-full bg-white/10" />
+        <Skeleton className="h-32 w-full bg-white/10" />
+        <Skeleton className="h-48 w-full bg-white/10" />
+        <Skeleton className="h-64 w-full bg-white/10" />
       </div>
     );
   }
 
   if (!missao) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Missão não encontrada</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p className="text-white/40">Missão não encontrada</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3">
+      <div className="sticky top-0 z-10 bg-[#0d0d0d]/95 backdrop-blur-sm border-b border-white/10 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate(-1)} className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors">
-              <ArrowLeft size={20} className="text-foreground" />
+            <button onClick={() => navigate(-1)} className="p-2 rounded-lg bg-white/10 hover:bg-white/15 transition-colors">
+              <ArrowLeft size={20} className="text-white" />
             </button>
-            <h1 className="text-lg font-semibold text-foreground truncate max-w-[200px]">
+            <h1 className="text-lg font-semibold text-white truncate max-w-[200px]">
               {getTituloCard()}
             </h1>
           </div>
 
           <Link
             to={`/professor/missoes/${missaoId}/editar`}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 text-white text-sm font-medium hover:bg-white/15 transition-colors"
           >
             <Edit size={16} />
             Editar
@@ -242,15 +282,15 @@ const MissaoDetalhesPage = () => {
 
       <div className="p-4 space-y-4">
         {/* Card com título e descrição */}
-        <div className="bg-card border border-border rounded-xl p-4">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
           <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <BookOpen size={24} className="text-primary" />
+            <div className="p-2 rounded-lg bg-blue-500/20">
+              <BookOpen size={24} className="text-blue-400" />
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-bold text-foreground">{missao.titulo}</h2>
+              <h2 className="text-xl font-bold text-white">{missao.titulo}</h2>
               {missao.descricao && (
-                <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+                <p className="text-white/60 mt-2 text-sm leading-relaxed">
                   {missao.descricao}
                 </p>
               )}
@@ -259,43 +299,43 @@ const MissaoDetalhesPage = () => {
         </div>
 
         {/* Informações */}
-        <div className="bg-card border border-border rounded-xl p-4">
-          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Target size={16} className="text-primary" />
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+            <Target size={16} className="text-blue-400" />
             Informações
           </h3>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="flex flex-col">
-              <span className="text-muted-foreground text-xs">Tipo</span>
-              <span className="text-foreground font-medium capitalize">{missao.tipo || 'Principal'}</span>
+              <span className="text-white/40 text-xs">Tipo</span>
+              <span className="text-white font-medium capitalize">{missao.tipo || 'Principal'}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-muted-foreground text-xs">Pontos</span>
-              <span className="text-foreground font-medium">{missao.pontos_base} pts</span>
+              <span className="text-white/40 text-xs">Pontos</span>
+              <span className="text-white font-medium">{missao.pontos_base} pts</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-muted-foreground text-xs">Série</span>
-              <span className="text-foreground font-medium">
+              <span className="text-white/40 text-xs">Série</span>
+              <span className="text-white font-medium">
                 {missao.serie_filtro ? `${missao.serie_filtro}º ano` : 'Todas'}
               </span>
             </div>
             <div className="flex flex-col">
-              <span className="text-muted-foreground text-xs">Turmas</span>
-              <span className="text-foreground font-medium">{formatTurmas()}</span>
+              <span className="text-white/40 text-xs">Turmas</span>
+              <span className="text-white font-medium">{formatTurmas()}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-muted-foreground text-xs">Prazo</span>
-              <span className="text-foreground font-medium flex items-center gap-1">
+              <span className="text-white/40 text-xs">Prazo</span>
+              <span className="text-white font-medium flex items-center gap-1">
                 <Calendar size={12} />
                 {new Date(missao.data_prazo).toLocaleDateString('pt-BR')}
                 {diasRestantes !== null && diasRestantes > 0 && (
-                  <span className="text-xs text-muted-foreground">({diasRestantes}d)</span>
+                  <span className="text-xs text-white/40">({diasRestantes}d)</span>
                 )}
               </span>
             </div>
             <div className="flex flex-col">
-              <span className="text-muted-foreground text-xs">Criado por</span>
-              <span className="text-foreground font-medium flex items-center gap-1">
+              <span className="text-white/40 text-xs">Criado por</span>
+              <span className="text-white font-medium flex items-center gap-1">
                 <User size={12} />
                 {getCriador()}
               </span>
@@ -305,22 +345,22 @@ const MissaoDetalhesPage = () => {
 
         {/* Instruções */}
         {missao.instrucoes && (
-          <div className="bg-card border border-border rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
               📝 Instruções
             </h3>
-            <div className="prose prose-sm prose-invert max-w-none text-muted-foreground">
+            <div className="prose prose-sm prose-invert max-w-none text-white/60">
               <ReactMarkdown
                 components={{
-                  h1: ({ children }) => <h1 className="text-lg font-bold text-foreground mt-4 mb-2">{children}</h1>,
-                  h2: ({ children }) => <h2 className="text-base font-semibold text-foreground mt-3 mb-2">{children}</h2>,
-                  h3: ({ children }) => <h3 className="text-sm font-semibold text-foreground mt-2 mb-1">{children}</h3>,
-                  p: ({ children }) => <p className="text-muted-foreground mb-2 leading-relaxed">{children}</p>,
+                  h1: ({ children }) => <h1 className="text-lg font-bold text-white mt-4 mb-2">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-base font-semibold text-white mt-3 mb-2">{children}</h2>,
+                  h3: ({ children }) => <h3 className="text-sm font-semibold text-white mt-2 mb-1">{children}</h3>,
+                  p: ({ children }) => <p className="text-white/60 mb-2 leading-relaxed">{children}</p>,
                   ul: ({ children }) => <ul className="list-disc list-inside space-y-1 mb-2">{children}</ul>,
                   ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 mb-2">{children}</ol>,
-                  li: ({ children }) => <li className="text-muted-foreground">{children}</li>,
-                  strong: ({ children }) => <strong className="text-foreground font-semibold">{children}</strong>,
-                  hr: () => <hr className="border-border my-3" />,
+                  li: ({ children }) => <li className="text-white/60">{children}</li>,
+                  strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
+                  hr: () => <hr className="border-white/10 my-3" />,
                 }}
               >
                 {missao.instrucoes}
@@ -331,22 +371,23 @@ const MissaoDetalhesPage = () => {
 
         {/* Progresso */}
         {checklist && (
-          <div className="bg-card border border-border rounded-xl p-4">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                 📊 Progresso
               </h3>
-              <span className="text-sm font-medium text-foreground">
+              <span className="text-sm font-medium text-white">
                 {checklist.entregaram.length}/{checklist.total} ({porcentagem}%)
               </span>
             </div>
-            <div className="h-3 bg-muted rounded-full overflow-hidden">
+            <div className="h-3 bg-white/10 rounded-full overflow-hidden">
               <div
                 className={cn(
                   "h-full rounded-full transition-all duration-500",
                   porcentagem >= 80 ? "bg-green-500" :
                   porcentagem >= 50 ? "bg-yellow-500" :
-                  "bg-red-500"
+                  porcentagem > 0 ? "bg-red-500" :
+                  "bg-white/20"
                 )}
                 style={{ width: `${porcentagem}%` }}
               />
@@ -357,21 +398,21 @@ const MissaoDetalhesPage = () => {
         {/* Checklist de Alunos */}
         {loadingChecklist ? (
           <div className="space-y-3">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full bg-white/10" />
+            <Skeleton className="h-16 w-full bg-white/10" />
+            <Skeleton className="h-16 w-full bg-white/10" />
           </div>
         ) : checklist && (
-          <div className="bg-card border border-border rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-              <Users size={16} className="text-primary" />
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+              <Users size={16} className="text-blue-400" />
               Alunos
             </h3>
 
             {/* Entregaram */}
             {checklist.entregaram.length > 0 && (
               <div className="mb-4">
-                <p className="text-xs font-medium text-green-500 mb-2 flex items-center gap-1">
+                <p className="text-xs font-medium text-green-400 mb-2 flex items-center gap-1">
                   ✅ Entregaram ({checklist.entregaram.length})
                 </p>
                 <div className="space-y-2">
@@ -385,7 +426,7 @@ const MissaoDetalhesPage = () => {
             {/* Não Entregaram */}
             {checklist.naoEntregaram.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-red-500 mb-2 flex items-center gap-1">
+                <p className="text-xs font-medium text-red-400 mb-2 flex items-center gap-1">
                   ❌ Não Entregaram ({checklist.naoEntregaram.length})
                 </p>
                 <div className="space-y-2">
@@ -397,42 +438,47 @@ const MissaoDetalhesPage = () => {
             )}
 
             {checklist.total === 0 && (
-              <p className="text-muted-foreground text-sm text-center py-4">
-                Nenhum aluno elegível encontrado
-              </p>
+              <div className="text-center py-6">
+                <p className="text-white/40 text-sm">
+                  Nenhum aluno encontrado para esta missão.
+                </p>
+                <p className="text-white/30 text-xs mt-1">
+                  Verifique a série e turmas configuradas.
+                </p>
+              </div>
             )}
           </div>
         )}
 
         {/* Métricas de Engajamento */}
         {metricas && checklist && checklist.entregaram.length > 0 && (
-          <div className="bg-card border border-border rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <Clock size={16} className="text-primary" />
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+              <Clock size={16} className="text-blue-400" />
               Métricas de Engajamento
             </h3>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="flex items-center justify-between p-2 bg-green-500/10 rounded-lg">
                 <span className="text-green-400 flex items-center gap-1">⚡ Rápidos (&lt;24h)</span>
-                <span className="text-foreground font-medium">
+                <span className="text-white font-medium">
                   {metricas.rapidos} ({Math.round((metricas.rapidos / checklist.entregaram.length) * 100)}%)
                 </span>
               </div>
               <div className="flex items-center justify-between p-2 bg-yellow-500/10 rounded-lg">
                 <span className="text-yellow-400 flex items-center gap-1">🚶 Médio</span>
-                <span className="text-foreground font-medium">
+                <span className="text-white font-medium">
                   {metricas.medios} ({Math.round((metricas.medios / checklist.entregaram.length) * 100)}%)
                 </span>
               </div>
               <div className="flex items-center justify-between p-2 bg-red-500/10 rounded-lg">
                 <span className="text-red-400 flex items-center gap-1">🐢 Lentos (&gt;72h)</span>
-                <span className="text-foreground font-medium">
+                <span className="text-white font-medium">
                   {metricas.lentos} ({Math.round((metricas.lentos / checklist.entregaram.length) * 100)}%)
                 </span>
               </div>
-              <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
-                <span className="text-muted-foreground">Tempo médio</span>
-                <span className="text-foreground font-medium">{metricas.tempoMedio}h</span>
+              <div className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+                <span className="text-white/60">Tempo médio</span>
+                <span className="text-white font-medium">{metricas.tempoMedio}h</span>
               </div>
             </div>
           </div>
@@ -470,20 +516,20 @@ const AlunoCard = ({ aluno, tipo, diasRestantes }: AlunoCardProps) => {
       className={cn(
         "flex items-center justify-between p-3 rounded-lg border transition-colors",
         tipo === 'entregou' 
-          ? "bg-green-500/5 border-green-500/20 cursor-pointer hover:bg-green-500/10" 
-          : "bg-muted/50 border-border"
+          ? "bg-green-500/10 border-green-500/20 cursor-pointer hover:bg-green-500/15" 
+          : "bg-white/5 border-white/10"
       )}
     >
       <div className="flex items-center gap-3">
         <div className={cn(
           "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold",
-          tipo === 'entregou' ? "bg-green-500/20 text-green-400" : "bg-muted text-muted-foreground"
+          tipo === 'entregou' ? "bg-green-500/20 text-green-400" : "bg-white/10 text-white/40"
         )}>
           {tipo === 'entregou' ? "✓" : "✗"}
         </div>
         <div>
-          <p className="text-sm font-medium text-foreground">{aluno.full_name || 'Sem nome'}</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm font-medium text-white">{aluno.full_name || 'Sem nome'}</p>
+          <p className="text-xs text-white/40">
             {aluno.serie}{aluno.turma}
             {tipo === 'entregou' && aluno.entrega?.created_at && (
               <> • {new Date(aluno.entrega.created_at).toLocaleDateString('pt-BR')}</>
@@ -501,11 +547,11 @@ const AlunoCard = ({ aluno, tipo, diasRestantes }: AlunoCardProps) => {
         {tipo === 'entregou' && (
           <span className="text-xs flex items-center gap-1">
             {aluno.entrega?.nota !== null ? (
-              <span className="text-foreground font-medium">{aluno.entrega.nota}/10</span>
+              <span className="text-white font-medium">{aluno.entrega.nota}/10</span>
             ) : (
               <span className="text-yellow-400">Avaliar</span>
             )}
-            <ChevronRight size={14} className="text-muted-foreground" />
+            <ChevronRight size={14} className="text-white/40" />
           </span>
         )}
       </div>
