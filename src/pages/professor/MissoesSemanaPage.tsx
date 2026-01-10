@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ArrowLeft, Check, Circle } from 'lucide-react';
+import { ArrowLeft, Circle } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useProfessor } from '@/contexts/ProfessorContext';
@@ -60,6 +60,64 @@ const MissoesSemanaPage = () => {
       return data as Missao[];
     },
     enabled: !!profile?.institution_id && !!casaMentor?.id && !!serie && semana !== undefined
+  });
+
+  // Buscar contagem de entregas por tipo
+  const { data: entregasContagem } = useQuery({
+    queryKey: ['entregas-contagem', profile?.institution_id, casaMentor?.id, serie, semanaNumber],
+    queryFn: async () => {
+      if (!profile?.institution_id || !casaMentor?.id) return null;
+
+      // Buscar alunos da casa mentor da série
+      const { data: alunos } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('institution_id', profile.institution_id)
+        .eq('casa_id', casaMentor.id)
+        .ilike('serie', `%${serie}%`)
+        .not('casa_id', 'is', null);
+
+      const totalAlunos = alunos?.length || 0;
+      const alunoIds = alunos?.map(a => a.id) || [];
+
+      const missaoIds = missoes?.map(m => m.id) || [];
+      
+      if (missaoIds.length === 0 || alunoIds.length === 0) {
+        return { geral: { entregaram: 0, total: totalAlunos }, porCasa: {} as Record<number, { entregaram: number; total: number }> };
+      }
+
+      // Buscar entregas
+      const { data: entregas } = await supabase
+        .from('entregas')
+        .select('aluno_id, missao_id')
+        .in('missao_id', missaoIds)
+        .in('aluno_id', alunoIds);
+
+      // Contar alunos que entregaram ao menos 1 missão geral
+      const missoesGerais = missoes?.filter(m => m.tipo_missao === 'geral').map(m => m.id) || [];
+      const entregasGerais = new Set(
+        entregas?.filter(e => missoesGerais.includes(e.missao_id)).map(e => e.aluno_id)
+      );
+
+      // Contar entregas por casa (missões individuais)
+      const porCasa: Record<number, { entregaram: number; total: number }> = {};
+      missoes?.filter(m => m.tipo_missao === 'individual' && m.inteligencia_cross).forEach(m => {
+        const casaId = m.inteligencia_cross!;
+        const entregasCasa = new Set(
+          entregas?.filter(e => e.missao_id === m.id).map(e => e.aluno_id)
+        );
+        porCasa[casaId] = {
+          entregaram: entregasCasa.size,
+          total: totalAlunos
+        };
+      });
+
+      return {
+        geral: { entregaram: entregasGerais.size, total: totalAlunos },
+        porCasa
+      };
+    },
+    enabled: !!profile?.institution_id && !!casaMentor?.id && !!missoes && !!serie
   });
 
   // Contagem de missões gerais
@@ -147,8 +205,21 @@ const MissoesSemanaPage = () => {
                   </p>
                 </div>
                 
-                {totalMissoesGerais > 0 ? (
-                  <Check size={18} className="text-green-400" />
+                {totalMissoesGerais > 0 && entregasContagem?.geral ? (
+                  <span className={cn(
+                    "text-sm font-semibold px-2 py-1 rounded",
+                    entregasContagem.geral.entregaram === entregasContagem.geral.total 
+                      ? "bg-green-500/20 text-green-400"
+                      : entregasContagem.geral.entregaram > 0
+                        ? "bg-yellow-500/20 text-yellow-400"
+                        : "bg-red-500/20 text-red-400"
+                  )}>
+                    {entregasContagem.geral.entregaram}/{entregasContagem.geral.total}
+                  </span>
+                ) : totalMissoesGerais > 0 ? (
+                  <span className="text-sm font-semibold px-2 py-1 rounded bg-white/10 text-white/40">
+                    ...
+                  </span>
                 ) : (
                   <Circle size={18} className="text-white/20" />
                 )}
@@ -202,8 +273,21 @@ const MissoesSemanaPage = () => {
                       </div>
                     </div>
                     
-                    {qtdMissoes > 0 ? (
-                      <Check size={16} className="text-green-400" />
+                    {qtdMissoes > 0 && entregasContagem?.porCasa[inteligencia.id] ? (
+                      <span className={cn(
+                        "text-xs font-semibold px-2 py-0.5 rounded",
+                        entregasContagem.porCasa[inteligencia.id].entregaram === entregasContagem.porCasa[inteligencia.id].total
+                          ? "bg-green-500/20 text-green-400"
+                          : entregasContagem.porCasa[inteligencia.id].entregaram > 0
+                            ? "bg-yellow-500/20 text-yellow-400"
+                            : "bg-red-500/20 text-red-400"
+                      )}>
+                        {entregasContagem.porCasa[inteligencia.id].entregaram}/{entregasContagem.porCasa[inteligencia.id].total}
+                      </span>
+                    ) : qtdMissoes > 0 ? (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-white/10 text-white/40">
+                        ...
+                      </span>
                     ) : (
                       <Circle size={16} className="text-white/20" />
                     )}
