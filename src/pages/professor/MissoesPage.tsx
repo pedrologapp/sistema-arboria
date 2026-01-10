@@ -346,7 +346,7 @@ const MissoesPage = () => {
                 className="text-xs mt-1 font-semibold"
                 style={{ color: casaColor }}
               >
-                {contagemMissoes?.porSerie[serie] || 0} ativas
+                {contagemMissoes?.porSerie?.[serie] || 0} ativas
               </p>
             </button>
           ))}
