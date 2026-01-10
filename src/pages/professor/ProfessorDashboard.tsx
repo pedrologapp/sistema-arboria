@@ -1,5 +1,5 @@
 import { useProfessor } from '@/contexts/ProfessorContext';
-import { Home, ClipboardList, PenLine, Users } from 'lucide-react';
+import { ClipboardList, PenLine, Users, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const ProfessorDashboard = () => {
@@ -32,7 +32,16 @@ const ProfessorDashboard = () => {
   return (
     <div className="space-y-6 pt-4">
       {/* Welcome Section */}
-      <div className="text-center space-y-2">
+      <div className="relative text-center space-y-2">
+        {/* Settings Icon */}
+        <button
+          onClick={() => navigate('/professor/configuracoes')}
+          className="absolute top-0 right-0 p-2 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+          aria-label="Configurações"
+        >
+          <Settings className="w-5 h-5" />
+        </button>
+        
         <h1 className="text-2xl font-bold text-white">
           Olá, {firstName}! 👋
         </h1>
