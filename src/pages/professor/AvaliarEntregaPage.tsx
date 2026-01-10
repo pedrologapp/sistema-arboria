@@ -352,91 +352,116 @@ const AvaliarEntregaPage = () => {
         )}
 
         {/* Seção de Avaliação */}
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-4">
-          <p className="text-xs text-white/40 uppercase tracking-wider">⭐ Avaliação</p>
-          
-          {/* Seletor de Nota */}
-          <div>
-            <p className="text-sm text-white/70 mb-2">Nota (1-10):</p>
-            <div className="grid grid-cols-10 gap-1">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setNota(n)}
-                  className={cn(
-                    "py-3 rounded-lg text-center font-bold transition-colors text-sm",
-                    getNotaColor(n, nota === n)
-                  )}
-                >
-                  {n}
-                </button>
-              ))}
+        {entrega.status === 'aprovada' ? (
+          // Entrega já aprovada - mostrar resumo, NÃO permitir refazer
+          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-2xl">✅</span>
+              <p className="text-green-400 font-semibold">Entrega Aprovada</p>
             </div>
-          </div>
-
-          {/* Pontos calculados */}
-          {nota && (
-            <div 
-              className="p-3 rounded-lg"
-              style={{ backgroundColor: `${casaColor}20` }}
-            >
-              <p className="text-sm text-white/80">
-                💰 Pontos calculados: <strong className="text-white">{calcularPontos(nota)} pts</strong>
-                <span className="text-white/50 ml-1">
-                  (nota {nota}/10 de {entrega.missao?.pontos_base} pts)
-                </span>
+            <div className="space-y-2 text-sm">
+              <p className="text-white/80">
+                <strong>Nota:</strong> {entrega.nota}/10
               </p>
+              <p className="text-white/80">
+                <strong>Pontos concedidos:</strong> {entrega.pontos_concedidos} pts
+              </p>
+              {entrega.feedback_professor && (
+                <div className="mt-3 pt-3 border-t border-white/10">
+                  <p className="text-white/60 text-xs uppercase mb-1">Feedback:</p>
+                  <p className="text-white/80">{entrega.feedback_professor}</p>
+                </div>
+              )}
             </div>
-          )}
-
-          {/* Feedback */}
-          <div>
-            <p className="text-sm text-white/70 mb-2">Feedback para o aluno (opcional):</p>
-            <textarea
-              value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
-              placeholder="Escreva um comentário sobre o trabalho do aluno..."
-              rows={3}
-              className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/30 resize-none focus:outline-none focus:border-white/30"
-            />
           </div>
-
-          {/* Botões de ação */}
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => refazerMutation.mutate()}
-              disabled={refazerMutation.isPending}
-              className="flex-1 py-3 bg-yellow-600/20 border border-yellow-600/50 text-yellow-400 rounded-lg font-medium hover:bg-yellow-600/30 disabled:opacity-50 transition-colors"
-            >
-              {refazerMutation.isPending ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Enviando...
-                </span>
-              ) : (
-                '🔄 Pedir Refazer'
-              )}
-            </button>
+        ) : (
+          // Entrega pendente ou refazer - mostrar formulário completo
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-4">
+            <p className="text-xs text-white/40 uppercase tracking-wider">⭐ Avaliação</p>
             
-            <button
-              type="button"
-              onClick={() => aprovarMutation.mutate()}
-              disabled={!nota || aprovarMutation.isPending}
-              className="flex-1 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
-            >
-              {aprovarMutation.isPending ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Aprovando...
-                </span>
-              ) : (
-                '✅ Aprovar'
-              )}
-            </button>
+            {/* Seletor de Nota */}
+            <div>
+              <p className="text-sm text-white/70 mb-2">Nota (1-10):</p>
+              <div className="grid grid-cols-10 gap-1">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setNota(n)}
+                    className={cn(
+                      "py-3 rounded-lg text-center font-bold transition-colors text-sm",
+                      getNotaColor(n, nota === n)
+                    )}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Pontos calculados */}
+            {nota && (
+              <div 
+                className="p-3 rounded-lg"
+                style={{ backgroundColor: `${casaColor}20` }}
+              >
+                <p className="text-sm text-white/80">
+                  💰 Pontos calculados: <strong className="text-white">{calcularPontos(nota)} pts</strong>
+                  <span className="text-white/50 ml-1">
+                    (nota {nota}/10 de {entrega.missao?.pontos_base} pts)
+                  </span>
+                </p>
+              </div>
+            )}
+
+            {/* Feedback */}
+            <div>
+              <p className="text-sm text-white/70 mb-2">Feedback para o aluno (opcional):</p>
+              <textarea
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="Escreva um comentário sobre o trabalho do aluno..."
+                rows={3}
+                className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/30 resize-none focus:outline-none focus:border-white/30"
+              />
+            </div>
+
+            {/* Botões de ação */}
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => refazerMutation.mutate()}
+                disabled={refazerMutation.isPending}
+                className="flex-1 py-3 bg-yellow-600/20 border border-yellow-600/50 text-yellow-400 rounded-lg font-medium hover:bg-yellow-600/30 disabled:opacity-50 transition-colors"
+              >
+                {refazerMutation.isPending ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Enviando...
+                  </span>
+                ) : (
+                  '🔄 Pedir Refazer'
+                )}
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => aprovarMutation.mutate()}
+                disabled={!nota || aprovarMutation.isPending}
+                className="flex-1 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
+              >
+                {aprovarMutation.isPending ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Aprovando...
+                  </span>
+                ) : (
+                  '✅ Aprovar'
+                )}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
