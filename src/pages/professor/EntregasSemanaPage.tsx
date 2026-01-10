@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
-import { ChevronLeft, Loader2, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CasaBrasao } from '@/components/CasaBrasao';
 
@@ -52,16 +52,17 @@ const EntregasSemanaPage = () => {
         return { gerais: 0, porCasa: {} };
       }
 
-      // Buscar entregas pendentes
+      // Buscar entregas PENDENTES DE AVALIAÇÃO (nota IS NULL)
       const { data: entregas } = await supabase
         .from('entregas')
         .select(`
           id,
           missao_id,
+          nota,
           aluno:profiles!entregas_aluno_id_fkey(serie)
         `)
         .in('missao_id', missaoIds)
-        .eq('status', 'pendente');
+        .is('nota', null);
 
       // Mapear missao_id para tipo e casa
       const missaoMap: Record<string, { tipo: string | null; casaId: number | null }> = {};
@@ -130,26 +131,41 @@ const EntregasSemanaPage = () => {
           </p>
 
           {/* GERAL */}
-          <button
-            onClick={() => navigate(`/professor/entregas/serie/${serie}/semana/${semana}/geral`)}
-            className={cn(
-              "w-full p-4 rounded-xl text-left transition-colors flex items-center justify-between",
-              "bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20"
-            )}
-          >
-            <div>
-              <p className="text-white font-medium text-lg">📋 GERAL</p>
-              <p className="text-white/40 text-sm">
-                {contagem?.gerais || 0} entrega{(contagem?.gerais || 0) !== 1 ? 's' : ''} pendente{(contagem?.gerais || 0) !== 1 ? 's' : ''}
-              </p>
-            </div>
-            
-            {(contagem?.gerais || 0) > 0 && (
-              <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[22px] h-[22px] flex items-center justify-center px-1.5">
-                {contagem?.gerais}
-              </span>
-            )}
-          </button>
+          {(() => {
+            const hasPendentes = (contagem?.gerais || 0) > 0;
+            return (
+              <button
+                onClick={() => navigate(`/professor/entregas/serie/${serie}/semana/${semana}/geral`)}
+                className={cn(
+                  "w-full p-4 rounded-xl text-left transition-colors flex items-center justify-between border",
+                  hasPendentes
+                    ? "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20"
+                    : "bg-white/5 border-white/10 hover:bg-white/10 opacity-60"
+                )}
+              >
+                <div>
+                  <p className={cn("font-medium text-lg", hasPendentes ? "text-white" : "text-white/50")}>
+                    📋 GERAL
+                  </p>
+                  <p className={cn("text-sm", hasPendentes ? "text-yellow-400" : "text-white/30")}>
+                    {hasPendentes
+                      ? `${contagem?.gerais} entrega${(contagem?.gerais || 0) !== 1 ? 's' : ''} pendente${(contagem?.gerais || 0) !== 1 ? 's' : ''}`
+                      : 'Nenhuma pendente'
+                    }
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {hasPendentes && (
+                    <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[22px] h-[22px] flex items-center justify-center px-1.5">
+                      {contagem?.gerais}
+                    </span>
+                  )}
+                  <ChevronRight className={cn("w-5 h-5", hasPendentes ? "text-white/40" : "text-white/20")} />
+                </div>
+              </button>
+            );
+          })()}
 
           {/* INDIVIDUAL (por Casa) */}
           <div className="border-t border-white/10 pt-4">
@@ -165,13 +181,12 @@ const EntregasSemanaPage = () => {
                 return (
                   <button
                     key={int.id}
-                    onClick={() => hasPendentes && navigate(`/professor/entregas/serie/${serie}/semana/${semana}/casa/${int.id}`)}
-                    disabled={!hasPendentes}
+                    onClick={() => navigate(`/professor/entregas/serie/${serie}/semana/${semana}/casa/${int.id}`)}
                     className={cn(
-                      "w-full p-3 rounded-xl text-left flex items-center justify-between border",
+                      "w-full p-3 rounded-xl text-left flex items-center justify-between border transition-colors",
                       hasPendentes 
-                        ? "bg-white/5 border-white/10 hover:bg-white/10 cursor-pointer" 
-                        : "bg-white/[0.02] border-white/5 opacity-40 cursor-not-allowed"
+                        ? "bg-white/10 border-white/20 hover:bg-white/15" 
+                        : "bg-white/5 border-white/5 hover:bg-white/10 opacity-60"
                     )}
                   >
                     <div className="flex items-center gap-3">
@@ -182,21 +197,26 @@ const EntregasSemanaPage = () => {
                         size="medium"
                       />
                       <div>
-                        <p className="text-white font-medium">{int.nome}</p>
-                        <p className="text-white/40 text-xs">
+                        <p className={cn("font-medium", hasPendentes ? "text-white" : "text-white/50")}>
+                          {int.nome}
+                        </p>
+                        <p className={cn("text-xs", hasPendentes ? "text-yellow-400" : "text-white/30")}>
                           {hasPendentes 
                             ? `${pendentes} entrega${pendentes !== 1 ? 's' : ''} pendente${pendentes !== 1 ? 's' : ''}`
-                            : 'Nenhuma entrega'
+                            : 'Nenhuma pendente'
                           }
                         </p>
                       </div>
                     </div>
                     
-                    {hasPendentes && (
-                      <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[22px] h-[22px] flex items-center justify-center px-1.5">
-                        {pendentes}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {hasPendentes && (
+                        <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[22px] h-[22px] flex items-center justify-center px-1.5">
+                          {pendentes}
+                        </span>
+                      )}
+                      <ChevronRight className={cn("w-5 h-5", hasPendentes ? "text-white/40" : "text-white/20")} />
+                    </div>
                   </button>
                 );
               })}
