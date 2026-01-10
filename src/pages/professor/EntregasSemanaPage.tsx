@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { ChevronLeft, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CasaBrasao } from '@/components/CasaBrasao';
 
 const EntregasSemanaPage = () => {
   const { serie, semana } = useParams();
@@ -19,7 +20,7 @@ const EntregasSemanaPage = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from('inteligencias')
-        .select('id, nome, emoji, cor_hex')
+        .select('id, nome, emoji, cor_hex, brasao_url')
         .order('ordem');
       return data;
     }
@@ -174,7 +175,12 @@ const EntregasSemanaPage = () => {
                     )}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-xl">{int.emoji || '🏠'}</span>
+                      <CasaBrasao 
+                        brasaoUrl={int.brasao_url}
+                        emoji={int.emoji}
+                        nome={int.nome}
+                        size="medium"
+                      />
                       <div>
                         <p className="text-white font-medium">{int.nome}</p>
                         <p className="text-white/40 text-xs">
