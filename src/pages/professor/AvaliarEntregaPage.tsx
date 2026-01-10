@@ -122,14 +122,16 @@ const AvaliarEntregaPage = () => {
       toast.success(`Entrega aprovada! ${data.pontosCalculados} pontos concedidos.`);
       queryClient.invalidateQueries({ queryKey: ['entregas'] });
       queryClient.invalidateQueries({ queryKey: ['entrega-avaliar'] });
-        setTimeout(() => {
-          // Voltar para a lista de entregas da missão
-          if (entrega?.missao?.id) {
-            navigate(`/professor/entregas/missao/${entrega.missao.id}`, { replace: true });
-          } else {
-            navigate('/professor/entregas', { replace: true });
-          }
-        }, 100);
+      queryClient.invalidateQueries({ queryKey: ['entregas-pendentes-count'] });
+      queryClient.invalidateQueries({ queryKey: ['app-badge-count'] });
+      setTimeout(() => {
+        // Voltar para a lista de entregas da missão
+        if (entrega?.missao?.id) {
+          navigate(`/professor/entregas/missao/${entrega.missao.id}`, { replace: true });
+        } else {
+          navigate('/professor/entregas', { replace: true });
+        }
+      }, 100);
     },
     onError: (error: any) => {
       toast.error(error.message || 'Erro ao aprovar entrega');
@@ -155,14 +157,16 @@ const AvaliarEntregaPage = () => {
       toast.info('Solicitado que o aluno refaça a atividade');
       queryClient.invalidateQueries({ queryKey: ['entregas'] });
       queryClient.invalidateQueries({ queryKey: ['entrega-avaliar'] });
-        setTimeout(() => {
-          // Voltar para a lista de entregas da missão
-          if (entrega?.missao?.id) {
-            navigate(`/professor/entregas/missao/${entrega.missao.id}`, { replace: true });
-          } else {
-            navigate('/professor/entregas', { replace: true });
-          }
-        }, 100);
+      queryClient.invalidateQueries({ queryKey: ['entregas-pendentes-count'] });
+      queryClient.invalidateQueries({ queryKey: ['app-badge-count'] });
+      setTimeout(() => {
+        // Voltar para a lista de entregas da missão
+        if (entrega?.missao?.id) {
+          navigate(`/professor/entregas/missao/${entrega.missao.id}`, { replace: true });
+        } else {
+          navigate('/professor/entregas', { replace: true });
+        }
+      }, 100);
     },
     onError: (error: any) => {
       toast.error(error.message || 'Erro ao solicitar refazer');

@@ -15,16 +15,24 @@ interface NavItemConfig {
 const ProfessorBottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { casaColor, profile } = useProfessor();
+  const { casaColor, profile, casaMentor } = useProfessor();
 
   // Query: Entregas Pendentes
   const { data: entregasPendentes = 0 } = useQuery({
-    queryKey: ['entregas-pendentes-count', profile?.institution_id],
+    queryKey: ['entregas-pendentes-count', profile?.institution_id, casaMentor?.id],
     queryFn: async () => {
-      const { data: missoes } = await supabase
+      // Buscar missões relevantes para este mentor
+      let missaoQuery = supabase
         .from('missoes')
         .select('id')
         .eq('institution_id', profile?.institution_id!);
+
+      // Filtrar por casa do mentor (missões gerais OU da sua casa)
+      if (casaMentor?.id) {
+        missaoQuery = missaoQuery.or(`tipo_missao.eq.geral,tipo_missao.is.null,casa_id.eq.${casaMentor.id}`);
+      }
+
+      const { data: missoes } = await missaoQuery;
 
       if (!missoes || missoes.length === 0) return 0;
 
@@ -44,7 +52,7 @@ const ProfessorBottomNav = () => {
   const navItems: NavItemConfig[] = [
     { id: 'home', icon: <Home size={20} />, label: 'Home', path: '/professor' },
     { id: 'missoes', icon: <ClipboardList size={20} />, label: 'Missões', path: '/professor/missoes' },
-    { id: 'avaliar', icon: <PenLine size={20} />, label: 'Avaliar', path: '/professor/entregas', badge: entregasPendentes > 1 ? entregasPendentes : undefined },
+    { id: 'avaliar', icon: <PenLine size={20} />, label: 'Avaliar', path: '/professor/entregas', badge: entregasPendentes >= 1 ? entregasPendentes : undefined },
     { id: 'circulo', icon: <Sparkles size={20} />, label: 'Círculo', path: '/professor/circulo' },
     { id: 'alunos', icon: <Users size={20} />, label: 'Alunos', path: '/professor/alunos' },
   ];
