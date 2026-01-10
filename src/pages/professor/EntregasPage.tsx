@@ -6,6 +6,7 @@ import { useProfessor } from '@/contexts/ProfessorContext';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { clearAppBadge } from '@/hooks/useAppBadge';
 
 const EntregasPage = () => {
   const navigate = useNavigate();
@@ -60,6 +61,11 @@ const EntregasPage = () => {
     enabled: !!profile?.institution_id,
     refetchInterval: 60000, // Fallback: atualiza a cada 60 segundos
   });
+
+  // Limpar badge do ícone do app ao entrar na página
+  useEffect(() => {
+    clearAppBadge();
+  }, []);
 
   // Tempo real - escutar novas entregas
   useEffect(() => {
