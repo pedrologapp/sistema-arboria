@@ -119,8 +119,10 @@ const AlunosPorTipoPage = () => {
       const totalMissoes = missaoIds.length;
       
       const resultado: AlunoComStatus[] = alunos.map(aluno => {
-        const entregasAluno = entregas.filter(e => e.aluno_id === aluno.id);
-        const quantasEntregou = entregasAluno.length;
+      const entregasAluno = entregas.filter(e => e.aluno_id === aluno.id);
+      // Contar missões ÚNICAS entregues (ignorar múltiplas entregas da mesma missão)
+      const missoesEntregues = new Set(entregasAluno.map(e => e.missao_id));
+      const quantasEntregou = missoesEntregues.size;
         
         let status: StatusAluno;
         
