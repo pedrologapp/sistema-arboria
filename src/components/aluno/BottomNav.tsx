@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Target, Home, MessageCircle, User } from 'lucide-react';
 import { useStudent } from '@/contexts/StudentContext';
+import { useNotificacoes } from '@/hooks/useNotificacoes';
 import { cn } from '@/lib/utils';
 
 interface NavItemConfig {
@@ -9,17 +10,19 @@ interface NavItemConfig {
   label: string;
   path: string;
   disabled?: boolean;
+  badge?: number;
 }
 
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { casaColor } = useStudent();
+  const { missoesPendentes, mensagensNaoLidas } = useNotificacoes();
 
   const navItems: NavItemConfig[] = [
-    { id: 'missoes', icon: <Target />, label: 'Missões', path: '/aluno/missoes' },
+    { id: 'missoes', icon: <Target />, label: 'Missões', path: '/aluno/missoes', badge: missoesPendentes },
     { id: 'casa', icon: <Home />, label: 'Casa', path: '/aluno/casa' },
-    { id: 'chat', icon: <MessageCircle />, label: 'Chat', path: '/aluno/chat' },
+    { id: 'chat', icon: <MessageCircle />, label: 'Chat', path: '/aluno/chat', badge: mensagensNaoLidas },
     { id: 'perfil', icon: <User />, label: 'Perfil', path: '/aluno/perfil' },
   ];
 
@@ -55,16 +58,25 @@ const BottomNav = () => {
                 )}
                 aria-label={item.label}
               >
-                <div
-                  className={cn(
-                    'w-6 h-6 transition-all duration-200',
-                    isActive ? 'scale-110' : 'scale-100'
+                <div className="relative">
+                  <div
+                    className={cn(
+                      'w-6 h-6 transition-all duration-200',
+                      isActive ? 'scale-110' : 'scale-100'
+                    )}
+                    style={{
+                      color: isActive ? casaColor : 'rgba(255,255,255,0.4)',
+                    }}
+                  >
+                    {item.icon}
+                  </div>
+                  
+                  {/* Badge de notificação */}
+                  {item.badge && item.badge > 0 && (
+                    <div className="absolute -top-1.5 -right-2.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 shadow-lg">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </div>
                   )}
-                  style={{
-                    color: isActive ? casaColor : 'rgba(255,255,255,0.4)',
-                  }}
-                >
-                  {item.icon}
                 </div>
                 <span
                   className={cn(
