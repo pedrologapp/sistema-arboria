@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { toast } from 'sonner';
-import { ArrowLeft, Eye, X } from 'lucide-react';
+import { ArrowLeft, Eye, X, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 
@@ -16,6 +16,19 @@ interface MissaoForm {
   inteligencia_cross: number | null;
   turmas: string[];
   
+  // Destinatários
+  para_todos: boolean;
+  alunos_selecionados: string[];
+  
+  // Liberação
+  liberar_agora: boolean;
+  data_liberacao: string;
+  hora_liberacao: string;
+  
+  // Prazo
+  data_prazo: string;
+  hora_prazo: string;
+  
   // Conteúdo
   titulo: string;
   descricao: string;
@@ -26,8 +39,6 @@ interface MissaoForm {
   // Configurações
   tipo: 'principal' | 'secundaria' | 'bonus';
   pontos_base: number;
-  data_prazo: string;
-  hora_prazo: string;
   requer_texto: boolean;
   requer_arquivo: boolean;
 }
@@ -37,6 +48,7 @@ const NovaMissaoPage = () => {
   const { profile, casaMentor, faseAtual } = useProfessor();
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [buscaAluno, setBuscaAluno] = useState('');
 
   const [form, setForm] = useState<MissaoForm>({
     // Organização
@@ -45,6 +57,19 @@ const NovaMissaoPage = () => {
     tipo_missao: 'geral',
     inteligencia_cross: null,
     turmas: ['A', 'B'],
+    
+    // Destinatários
+    para_todos: true,
+    alunos_selecionados: [],
+    
+    // Liberação
+    liberar_agora: true,
+    data_liberacao: '',
+    hora_liberacao: '08:00',
+    
+    // Prazo
+    data_prazo: '',
+    hora_prazo: '23:59',
     
     // Conteúdo
     titulo: '',
@@ -56,8 +81,6 @@ const NovaMissaoPage = () => {
     // Configurações
     tipo: 'principal',
     pontos_base: 100,
-    data_prazo: '',
-    hora_prazo: '23:59',
     requer_texto: true,
     requer_arquivo: false,
   });
@@ -73,6 +96,94 @@ const NovaMissaoPage = () => {
       return data || [];
     }
   });
+
+  // Buscar alunos disponíveis (filtrados por série, turma, casa)
+  const { data: alunosDisponiveis } = useQuery({
+    queryKey: ['alunos-disponiveis', form.serie_filtro, form.turmas, form.tipo_missao, form.inteligencia_cross, profile?.institution_id],
+    queryFn: async () => {
+      if (!form.serie_filtro || !profile?.institution_id) return [];
+
+      // First get all students with 'user' role
+      const { data: userRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'user');
+
+      if (!userRoles || userRoles.length === 0) return [];
+
+      const userIds = userRoles.map(r => r.user_id);
+
+      let query = supabase
+        .from('profiles')
+        .select('id, full_name, nome, sobrenome, serie, turma, casa_id')
+        .eq('institution_id', profile.institution_id)
+        .in('id', userIds);
+
+      // Filtrar por série (precisa converter para string com º)
+      const serieStr = `${form.serie_filtro}º`;
+      query = query.ilike('serie', `%${form.serie_filtro}%`);
+
+      // Filtrar por turmas selecionadas
+      if (form.turmas.length > 0 && form.turmas.length < 2) {
+        query = query.eq('turma', form.turmas[0]);
+      }
+
+      // Se for INDIVIDUAL, filtrar pela casa/inteligência selecionada
+      if (form.tipo_missao === 'individual' && form.inteligencia_cross) {
+        query = query.eq('casa_id', form.inteligencia_cross);
+      }
+
+      const { data, error } = await query.order('full_name');
+      
+      if (error) {
+        console.error('Erro ao buscar alunos:', error);
+        return [];
+      }
+      
+      return data || [];
+    },
+    enabled: !!form.serie_filtro && !!profile?.institution_id
+  });
+
+  // Filtrar alunos pela busca
+  const alunosFiltrados = alunosDisponiveis?.filter(aluno => {
+    const nome = aluno.full_name || `${aluno.nome || ''} ${aluno.sobrenome || ''}`;
+    return nome.toLowerCase().includes(buscaAluno.toLowerCase());
+  }) || [];
+
+  // Alunos já selecionados
+  const alunosSelecionados = alunosDisponiveis?.filter(aluno =>
+    form.alunos_selecionados.includes(aluno.id)
+  ) || [];
+
+  // Alunos disponíveis (não selecionados)
+  const alunosNaoSelecionados = alunosFiltrados?.filter(aluno =>
+    !form.alunos_selecionados.includes(aluno.id)
+  ) || [];
+
+  // Adicionar aluno
+  const adicionarAluno = (alunoId: string) => {
+    setForm(f => ({
+      ...f,
+      alunos_selecionados: [...f.alunos_selecionados, alunoId]
+    }));
+  };
+
+  // Remover aluno
+  const removerAluno = (alunoId: string) => {
+    setForm(f => ({
+      ...f,
+      alunos_selecionados: f.alunos_selecionados.filter(id => id !== alunoId)
+    }));
+  };
+
+  // Selecionar todos os alunos
+  const selecionarTodos = () => {
+    setForm(f => ({
+      ...f,
+      alunos_selecionados: alunosDisponiveis?.map(a => a.id) || []
+    }));
+  };
 
   // Atualizar pontos baseado no tipo
   const handleTipoChange = (tipo: 'principal' | 'secundaria' | 'bonus') => {
@@ -90,8 +201,15 @@ const NovaMissaoPage = () => {
       ...f,
       turmas: f.turmas.includes(turma)
         ? f.turmas.filter(t => t !== turma)
-        : [...f.turmas, turma]
+        : [...f.turmas, turma],
+      // Reset alunos selecionados when turma changes
+      alunos_selecionados: []
     }));
+  };
+
+  // Helper para obter nome do aluno
+  const getNomeAluno = (aluno: { full_name: string | null; nome: string | null; sobrenome: string | null }) => {
+    return aluno.full_name || `${aluno.nome || ''} ${aluno.sobrenome || ''}`.trim() || 'Sem nome';
   };
 
   // Salvar missão
@@ -107,6 +225,14 @@ const NovaMissaoPage = () => {
     }
     if (form.tipo_missao === 'individual' && !form.inteligencia_cross) {
       toast.error('Selecione a casa/inteligência');
+      return;
+    }
+    if (!form.para_todos && form.alunos_selecionados.length === 0) {
+      toast.error('Selecione pelo menos um aluno');
+      return;
+    }
+    if (!form.liberar_agora && !form.data_liberacao) {
+      toast.error('Selecione a data de liberação');
       return;
     }
     if (!form.titulo.trim()) {
@@ -126,15 +252,33 @@ const NovaMissaoPage = () => {
       return;
     }
 
+    // Calcular data de liberação
+    let dataLiberacao: Date;
+    let status: string;
+
+    if (form.liberar_agora) {
+      dataLiberacao = new Date();
+      status = 'liberada';
+    } else {
+      dataLiberacao = new Date(`${form.data_liberacao}T${form.hora_liberacao}`);
+      status = dataLiberacao > new Date() ? 'agendada' : 'liberada';
+    }
+
+    const prazo = new Date(`${form.data_prazo}T${form.hora_prazo}`);
+
+    // Validar que prazo é depois da liberação
+    if (prazo <= dataLiberacao) {
+      toast.error('O prazo deve ser depois da data de liberação');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const prazo = new Date(`${form.data_prazo}T${form.hora_prazo}`);
-      
       // turma_filtro: null se todas, ou a turma específica
       const turmaFiltro = form.turmas.length === 2 ? null : (form.turmas[0] || null);
       
-      const { error } = await supabase.from('missoes').insert({
+      const { data: missao, error } = await supabase.from('missoes').insert({
         institution_id: profile?.institution_id,
         casa_id: casaMentor?.id,
         fase_id: faseAtual?.id,
@@ -147,6 +291,14 @@ const NovaMissaoPage = () => {
         inteligencia_cross: form.tipo_missao === 'individual' ? form.inteligencia_cross : null,
         turma_filtro: turmaFiltro,
         
+        // Destinatários
+        para_todos_da_casa: form.para_todos,
+        
+        // Datas
+        data_liberacao: dataLiberacao.toISOString(),
+        data_prazo: prazo.toISOString(),
+        status: status,
+        
         // Conteúdo
         titulo: form.titulo.trim(),
         descricao: form.descricao.trim(),
@@ -157,16 +309,32 @@ const NovaMissaoPage = () => {
         // Configurações
         tipo: form.tipo,
         pontos_base: form.pontos_base,
-        data_prazo: prazo.toISOString(),
-        data_liberacao: new Date().toISOString(),
         requer_texto: form.requer_texto,
         requer_arquivo: form.requer_arquivo,
-        status: 'liberada'
-      });
+      }).select().single();
 
       if (error) throw error;
 
-      toast.success('Missão criada com sucesso!');
+      // Se alunos específicos, inserir destinatários
+      if (!form.para_todos && form.alunos_selecionados.length > 0 && missao) {
+        const { error: destError } = await supabase.from('missao_destinatarios').insert(
+          form.alunos_selecionados.map(alunoId => ({
+            missao_id: missao.id,
+            aluno_id: alunoId
+          }))
+        );
+
+        if (destError) {
+          console.error('Erro ao inserir destinatários:', destError);
+          // Não falhar a operação, missão já foi criada
+        }
+      }
+
+      toast.success(
+        form.liberar_agora 
+          ? 'Missão criada e liberada!' 
+          : 'Missão agendada com sucesso!'
+      );
       navigate('/professor/missoes');
       
     } catch (error: any) {
@@ -207,7 +375,7 @@ const NovaMissaoPage = () => {
                 <button
                   key={serie}
                   type="button"
-                  onClick={() => setForm(f => ({ ...f, serie_filtro: serie }))}
+                  onClick={() => setForm(f => ({ ...f, serie_filtro: serie, alunos_selecionados: [] }))}
                   className={cn(
                     "py-3 rounded-lg text-center font-medium transition-colors",
                     form.serie_filtro === serie
@@ -243,13 +411,38 @@ const NovaMissaoPage = () => {
             </div>
           </div>
 
+          {/* Turmas */}
+          <div className="mb-4">
+            <label className="text-white/60 text-sm block mb-2">Turmas</label>
+            <div className="flex gap-2">
+              {['A', 'B'].map((turma) => (
+                <button
+                  key={turma}
+                  type="button"
+                  onClick={() => toggleTurma(turma)}
+                  className={cn(
+                    "flex-1 py-3 rounded-lg font-medium transition-colors",
+                    form.turmas.includes(turma)
+                      ? "bg-green-600/20 border border-green-500/50 text-green-400"
+                      : "bg-white/5 border border-transparent text-white/40"
+                  )}
+                >
+                  {form.turmas.includes(turma) ? '✓' : ''} Turma {turma}
+                </button>
+              ))}
+            </div>
+            <p className="text-white/30 text-xs mt-2">
+              Deixe ambas selecionadas para enviar a todas as turmas
+            </p>
+          </div>
+
           {/* Tipo de Missão */}
           <div className="mb-4">
             <label className="text-white/60 text-sm block mb-2">Tipo de Missão *</label>
             <div className="space-y-2">
               <button
                 type="button"
-                onClick={() => setForm(f => ({ ...f, tipo_missao: 'geral', inteligencia_cross: null }))}
+                onClick={() => setForm(f => ({ ...f, tipo_missao: 'geral', inteligencia_cross: null, alunos_selecionados: [] }))}
                 className={cn(
                   "w-full p-4 rounded-lg text-left transition-colors flex items-center gap-3",
                   form.tipo_missao === 'geral'
@@ -265,7 +458,7 @@ const NovaMissaoPage = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setForm(f => ({ ...f, tipo_missao: 'individual' }))}
+                onClick={() => setForm(f => ({ ...f, tipo_missao: 'individual', alunos_selecionados: [] }))}
                 className={cn(
                   "w-full p-4 rounded-lg text-left transition-colors flex items-center gap-3",
                   form.tipo_missao === 'individual'
@@ -291,7 +484,7 @@ const NovaMissaoPage = () => {
                   <button
                     key={int.id}
                     type="button"
-                    onClick={() => setForm(f => ({ ...f, inteligencia_cross: int.id }))}
+                    onClick={() => setForm(f => ({ ...f, inteligencia_cross: int.id, alunos_selecionados: [] }))}
                     className={cn(
                       "p-3 rounded-lg text-left transition-colors flex items-center gap-2",
                       form.inteligencia_cross === int.id
@@ -310,30 +503,259 @@ const NovaMissaoPage = () => {
               </div>
             </div>
           )}
+        </div>
 
-          {/* Turmas */}
+        {/* ══════════════════════════════════════ */}
+        {/* SEÇÃO: DESTINATÁRIOS */}
+        {/* ══════════════════════════════════════ */}
+        <div>
+          <h2 className="text-white/40 text-sm uppercase tracking-wide mb-4 flex items-center gap-2">
+            👥 Destinatários
+          </h2>
+
+          {/* Para quem? */}
           <div className="mb-4">
-            <label className="text-white/60 text-sm block mb-2">Turmas</label>
-            <div className="flex gap-2">
-              {['A', 'B'].map((turma) => (
-                <button
-                  key={turma}
-                  type="button"
-                  onClick={() => toggleTurma(turma)}
-                  className={cn(
-                    "flex-1 py-3 rounded-lg font-medium transition-colors",
-                    form.turmas.includes(turma)
-                      ? "bg-green-600/20 border border-green-500/50 text-green-400"
-                      : "bg-white/5 border border-transparent text-white/40"
-                  )}
-                >
-                  {form.turmas.includes(turma) ? '✓' : ''} Turma {turma}
-                </button>
-              ))}
+            <label className="text-white/60 text-sm block mb-2">Para quem? *</label>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setForm(f => ({ ...f, para_todos: true, alunos_selecionados: [] }))}
+                className={cn(
+                  "w-full p-3 rounded-lg text-left flex items-center gap-3 transition-colors",
+                  form.para_todos
+                    ? "bg-blue-600/20 border border-blue-500/50"
+                    : "bg-white/5 border border-transparent hover:bg-white/10"
+                )}
+              >
+                <span className={form.para_todos ? "text-blue-400" : "text-white/30"}>
+                  {form.para_todos ? '●' : '○'}
+                </span>
+                <div>
+                  <p className="text-white">Todos os alunos</p>
+                  <p className="text-white/40 text-xs">
+                    {form.tipo_missao === 'geral' 
+                      ? `Todos do ${form.serie_filtro || '?'}º ano`
+                      : `Todos da casa ${inteligencias?.find(i => i.id === form.inteligencia_cross)?.nome || '(selecione)'}`
+                    }
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setForm(f => ({ ...f, para_todos: false }))}
+                className={cn(
+                  "w-full p-3 rounded-lg text-left flex items-center gap-3 transition-colors",
+                  !form.para_todos
+                    ? "bg-purple-600/20 border border-purple-500/50"
+                    : "bg-white/5 border border-transparent hover:bg-white/10"
+                )}
+              >
+                <span className={!form.para_todos ? "text-purple-400" : "text-white/30"}>
+                  {!form.para_todos ? '●' : '○'}
+                </span>
+                <div>
+                  <p className="text-white">Alunos específicos</p>
+                  <p className="text-white/40 text-xs">Selecione quais alunos receberão</p>
+                </div>
+              </button>
             </div>
-            <p className="text-white/30 text-xs mt-2">
-              Deixe ambas selecionadas para enviar a todas as turmas
-            </p>
+          </div>
+
+          {/* Seleção de Alunos (se não for para todos) */}
+          {!form.para_todos && (
+            <div className="space-y-4">
+              {/* Mensagem se série não selecionada */}
+              {!form.serie_filtro && (
+                <p className="text-amber-400/80 text-sm text-center py-4 bg-amber-500/10 rounded-lg">
+                  ⚠️ Selecione a série primeiro para ver os alunos disponíveis
+                </p>
+              )}
+
+              {form.serie_filtro && (
+                <>
+                  {/* Campo de busca */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                    <input
+                      type="text"
+                      value={buscaAluno}
+                      onChange={(e) => setBuscaAluno(e.target.value)}
+                      placeholder="Buscar aluno por nome..."
+                      className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/50"
+                    />
+                  </div>
+
+                  {/* Alunos selecionados */}
+                  {alunosSelecionados.length > 0 && (
+                    <div>
+                      <p className="text-green-400 text-sm mb-2">
+                        ✓ Selecionados ({alunosSelecionados.length})
+                      </p>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {alunosSelecionados.map(aluno => (
+                          <div 
+                            key={aluno.id}
+                            className="flex items-center justify-between p-2 bg-green-500/10 rounded-lg"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-green-400">✓</span>
+                              <span className="text-white text-sm">{getNomeAluno(aluno)}</span>
+                              <span className="text-white/40 text-xs">({aluno.serie} {aluno.turma})</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removerAluno(aluno.id)}
+                              className="text-red-400/60 hover:text-red-400 px-2"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Alunos disponíveis */}
+                  {alunosNaoSelecionados.length > 0 && (
+                    <div>
+                      <p className="text-white/40 text-sm mb-2">
+                        Disponíveis ({alunosNaoSelecionados.length})
+                        {form.tipo_missao === 'individual' && form.inteligencia_cross && (
+                          <span className="ml-1">
+                            — {inteligencias?.find(i => i.id === form.inteligencia_cross)?.emoji}
+                          </span>
+                        )}
+                      </p>
+                      <div className="space-y-1 max-h-48 overflow-y-auto">
+                        {alunosNaoSelecionados.map(aluno => (
+                          <div 
+                            key={aluno.id}
+                            className="flex items-center justify-between p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-white/30">○</span>
+                              <span className="text-white text-sm">{getNomeAluno(aluno)}</span>
+                              <span className="text-white/40 text-xs">({aluno.serie} {aluno.turma})</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => adicionarAluno(aluno.id)}
+                              className="text-blue-400 px-2 text-sm hover:text-blue-300"
+                            >
+                              + Adicionar
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mensagem se não houver alunos */}
+                  {alunosDisponiveis?.length === 0 && (
+                    <p className="text-white/40 text-sm text-center py-4">
+                      Nenhum aluno encontrado para os filtros selecionados.
+                      <br />
+                      <span className="text-xs">Verifique série, turma e casa.</span>
+                    </p>
+                  )}
+
+                  {/* Selecionar todos */}
+                  {alunosNaoSelecionados.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={selecionarTodos}
+                      className="text-blue-400 text-sm hover:text-blue-300"
+                    >
+                      Selecionar todos ({alunosDisponiveis?.length})
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ══════════════════════════════════════ */}
+        {/* SEÇÃO: LIBERAÇÃO */}
+        {/* ══════════════════════════════════════ */}
+        <div>
+          <h2 className="text-white/40 text-sm uppercase tracking-wide mb-4 flex items-center gap-2">
+            📅 Liberação
+          </h2>
+
+          {/* Quando liberar? */}
+          <div className="mb-4">
+            <label className="text-white/60 text-sm block mb-2">Quando liberar? *</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setForm(f => ({ ...f, liberar_agora: true }))}
+                className={cn(
+                  "p-3 rounded-lg text-center transition-colors",
+                  form.liberar_agora
+                    ? "bg-green-600/20 border border-green-500/50"
+                    : "bg-white/5 border border-transparent hover:bg-white/10"
+                )}
+              >
+                <p className="text-white font-medium">🚀 Agora</p>
+                <p className="text-white/40 text-xs">Liberar imediatamente</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setForm(f => ({ ...f, liberar_agora: false }))}
+                className={cn(
+                  "p-3 rounded-lg text-center transition-colors",
+                  !form.liberar_agora
+                    ? "bg-blue-600/20 border border-blue-500/50"
+                    : "bg-white/5 border border-transparent hover:bg-white/10"
+                )}
+              >
+                <p className="text-white font-medium">📅 Agendar</p>
+                <p className="text-white/40 text-xs">Definir data/hora</p>
+              </button>
+            </div>
+          </div>
+
+          {/* Data/Hora de Liberação (se agendar) */}
+          {!form.liberar_agora && (
+            <div className="mb-4">
+              <label className="text-white/60 text-sm block mb-2">Data e Hora de Liberação *</label>
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="date"
+                  value={form.data_liberacao}
+                  onChange={(e) => setForm(f => ({ ...f, data_liberacao: e.target.value }))}
+                  className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500/50"
+                />
+                <input
+                  type="time"
+                  value={form.hora_liberacao}
+                  onChange={(e) => setForm(f => ({ ...f, hora_liberacao: e.target.value }))}
+                  className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500/50"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Prazo de Entrega */}
+          <div className="mb-4">
+            <label className="text-white/60 text-sm block mb-2">Prazo de Entrega *</label>
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="date"
+                value={form.data_prazo}
+                onChange={(e) => setForm(f => ({ ...f, data_prazo: e.target.value }))}
+                className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500/50"
+              />
+              <input
+                type="time"
+                value={form.hora_prazo}
+                onChange={(e) => setForm(f => ({ ...f, hora_prazo: e.target.value }))}
+                className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500/50"
+              />
+            </div>
           </div>
         </div>
 
@@ -447,25 +869,6 @@ const NovaMissaoPage = () => {
             </div>
           </div>
 
-          {/* Prazo */}
-          <div className="mb-4">
-            <label className="text-white/60 text-sm block mb-2">Prazo *</label>
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                type="date"
-                value={form.data_prazo}
-                onChange={(e) => setForm(f => ({ ...f, data_prazo: e.target.value }))}
-                className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500/50"
-              />
-              <input
-                type="time"
-                value={form.hora_prazo}
-                onChange={(e) => setForm(f => ({ ...f, hora_prazo: e.target.value }))}
-                className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500/50"
-              />
-            </div>
-          </div>
-
           {/* Tipo de Entrega */}
           <div className="mb-4">
             <label className="text-white/60 text-sm block mb-2">Tipo de Entrega *</label>
@@ -522,7 +925,7 @@ const NovaMissaoPage = () => {
             disabled={loading}
             className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium disabled:opacity-50 hover:bg-blue-700 transition-colors"
           >
-            {loading ? 'Criando...' : '💾 Criar Missão'}
+            {loading ? 'Criando...' : (form.liberar_agora ? '💾 Criar Missão' : '📅 Agendar Missão')}
           </button>
         </div>
       </div>
@@ -556,6 +959,24 @@ const NovaMissaoPage = () => {
               <span className="bg-white/10 text-white/60 px-2 py-1 rounded text-xs">
                 {form.pontos_base} pts
               </span>
+              {form.para_todos ? (
+                <span className="bg-green-600/20 text-green-400 px-2 py-1 rounded text-xs">
+                  Todos os alunos
+                </span>
+              ) : (
+                <span className="bg-purple-600/20 text-purple-400 px-2 py-1 rounded text-xs">
+                  {form.alunos_selecionados.length} aluno(s) específico(s)
+                </span>
+              )}
+              {form.liberar_agora ? (
+                <span className="bg-green-600/20 text-green-400 px-2 py-1 rounded text-xs">
+                  🚀 Liberar agora
+                </span>
+              ) : (
+                <span className="bg-amber-600/20 text-amber-400 px-2 py-1 rounded text-xs">
+                  📅 Agendada
+                </span>
+              )}
             </div>
             
             {/* Conteúdo do preview */}
@@ -593,14 +1014,19 @@ const NovaMissaoPage = () => {
                 </div>
               )}
               
-              {/* Info de prazo */}
-              {form.data_prazo && (
-                <div className="pt-2 border-t border-white/10">
+              {/* Info de datas */}
+              <div className="pt-2 border-t border-white/10 space-y-1">
+                {!form.liberar_agora && form.data_liberacao && (
+                  <p className="text-white/40 text-sm">
+                    📅 Liberação: {new Date(`${form.data_liberacao}T${form.hora_liberacao}`).toLocaleString('pt-BR')}
+                  </p>
+                )}
+                {form.data_prazo && (
                   <p className="text-white/40 text-sm">
                     ⏰ Prazo: {new Date(`${form.data_prazo}T${form.hora_prazo}`).toLocaleString('pt-BR')}
                   </p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
