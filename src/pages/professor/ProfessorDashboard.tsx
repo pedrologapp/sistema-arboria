@@ -31,9 +31,9 @@ const ProfessorDashboard = () => {
   const firstName = profile?.nome || profile?.full_name?.split(' ')[0] || 'Professor';
 
   return (
-    <div className="space-y-6 pt-4">
+    <div className="p-4 space-y-6">
       {/* Welcome Section */}
-      <div className="relative text-center space-y-2">
+      <div className="relative text-center pt-2">
         {/* Settings Icon */}
         <button
           onClick={() => navigate('/professor/configuracoes')}
@@ -47,7 +47,7 @@ const ProfessorDashboard = () => {
           Olá, {firstName}! 👋
         </h1>
         {casaMentor && (
-          <p className="text-white/60 inline-flex items-center justify-center gap-1">
+          <p className="text-white/60 inline-flex items-center justify-center gap-1 mt-1">
             Mentor da Casa{' '}
             <span style={{ color: casaColor }} className="inline-flex items-center gap-1">
               <CasaBrasao 
