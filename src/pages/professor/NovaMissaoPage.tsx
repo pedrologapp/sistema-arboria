@@ -98,29 +98,21 @@ const NovaMissaoPage = () => {
   });
 
   // Buscar alunos disponíveis (filtrados por série, turma, casa)
+  // NOTA: Usamos casa_id IS NOT NULL para identificar alunos (professores/admins não têm casa)
+  // Isso evita depender da tabela user_roles que tem RLS restritiva para professores
   const { data: alunosDisponiveis } = useQuery({
     queryKey: ['alunos-disponiveis', form.serie_filtro, form.turmas, form.tipo_missao, form.inteligencia_cross, profile?.institution_id],
     queryFn: async () => {
       if (!form.serie_filtro || !profile?.institution_id) return [];
 
-      // First get all students with 'user' role
-      const { data: userRoles } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'user');
-
-      if (!userRoles || userRoles.length === 0) return [];
-
-      const userIds = userRoles.map(r => r.user_id);
-
       let query = supabase
         .from('profiles')
         .select('id, full_name, nome, sobrenome, serie, turma, casa_id')
         .eq('institution_id', profile.institution_id)
-        .in('id', userIds);
+        // Alunos sempre têm casa_id, professores/admins não têm
+        .not('casa_id', 'is', null);
 
-      // Filtrar por série (precisa converter para string com º)
-      const serieStr = `${form.serie_filtro}º`;
+      // Filtrar por série
       query = query.ilike('serie', `%${form.serie_filtro}%`);
 
       // Filtrar por turmas selecionadas
