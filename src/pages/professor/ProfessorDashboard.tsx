@@ -1,14 +1,39 @@
+import { useState } from 'react';
 import { useProfessor } from '@/contexts/ProfessorContext';
-import { ClipboardList, PenLine, Users, Settings } from 'lucide-react';
+import { ClipboardList, PenLine, Users, Settings, BookOpen } from 'lucide-react';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import ConteudoModal from '@/components/professor/ConteudoModal';
+
+// Detectar gênero pelo primeiro nome (heurística simples)
+const getGenero = (nome: string): 'masculino' | 'feminino' => {
+  const primeiroNome = (nome?.toLowerCase() || '').split(' ')[0];
+  const nomesFemininos = ['julianeide', 'maria', 'ana', 'paula', 'carla', 'fernanda', 'julia', 'beatriz', 'leticia', 'amanda', 'camila', 'larissa', 'bruna', 'gabriela', 'isabela', 'mariana', 'patricia', 'renata', 'vanessa', 'cristina', 'luciana', 'adriana', 'sandra', 'monica', 'tatiana', 'priscila', 'daniela', 'fabiana', 'juliana', 'rafaela', 'simone', 'viviane', 'alessandra', 'carolina', 'debora', 'elaine', 'flavia', 'gisele', 'helena', 'ines', 'jessica', 'katia', 'lidia', 'miriam', 'natalia', 'olivia', 'paloma', 'raquel', 'sabrina', 'thais', 'ursula', 'vera', 'wagner', 'ximena', 'yara', 'zelia'];
+  const nomesExcecao = ['luca', 'josue', 'jonas', 'elias', 'matias', 'tobias', 'isaias', 'jeremias', 'esdras', 'barnaba'];
+  
+  if (nomesFemininos.includes(primeiroNome)) {
+    return 'feminino';
+  }
+  
+  if (nomesExcecao.includes(primeiroNome)) {
+    return 'masculino';
+  }
+  
+  // Heurística: nomes terminados em 'a' geralmente são femininos
+  if (primeiroNome.endsWith('a')) {
+    return 'feminino';
+  }
+  
+  return 'masculino';
+};
 
 const ProfessorDashboard = () => {
-  const { profile, casaMentor, casaColor } = useProfessor();
+  const { profile, casaMentor, casaColor, faseAtual } = useProfessor();
   const navigate = useNavigate();
+  const [showConteudoModal, setShowConteudoModal] = useState(false);
 
   // Query: Missões Ativas
   const { data: missoesAtivas } = useQuery({
@@ -55,28 +80,49 @@ const ProfessorDashboard = () => {
     enabled: !!profile?.institution_id
   });
 
+  const genero = getGenero(profile?.full_name || profile?.nome || '');
+  const tituloMentor = genero === 'feminino' ? 'Mentora' : 'Mentor';
+
   const quickActions = [
     { 
       icon: <ClipboardList size={24} />, 
-      label: 'Criar Missão', 
+      label: 'Fazer Observação', 
       path: '/professor/missoes/nova',
-      description: 'Nova tarefa para os alunos'
+      description: 'Nova observação para alunos',
+      isModal: false
     },
     { 
       icon: <PenLine size={24} />, 
       label: 'Avaliar Entregas', 
       path: '/professor/entregas',
-      description: 'Pendentes de avaliação'
+      description: 'Pendentes de avaliação',
+      isModal: false
     },
     { 
       icon: <Users size={24} />, 
       label: 'Meus Alunos', 
       path: '/professor/alunos',
-      description: 'Ver alunos da casa'
+      description: 'Ver alunos da casa',
+      isModal: false
+    },
+    { 
+      icon: <BookOpen size={24} />, 
+      label: 'Conteúdo', 
+      path: null,
+      description: 'Materiais e essência Arboria',
+      isModal: true
     },
   ];
 
   const firstName = profile?.nome || profile?.full_name?.split(' ')[0] || 'Professor';
+
+  const handleActionClick = (action: typeof quickActions[0]) => {
+    if (action.isModal) {
+      setShowConteudoModal(true);
+    } else if (action.path) {
+      navigate(action.path);
+    }
+  };
 
   return (
     <div className="p-4 space-y-6">
@@ -91,51 +137,37 @@ const ProfessorDashboard = () => {
           <Settings className="w-5 h-5" />
         </button>
         
-        <h1 className="text-2xl font-bold text-white">
+        <h1 className="text-2xl font-bold text-white mb-6">
           Olá, {firstName}! 👋
         </h1>
+
+        {/* Casa Card - Novo Layout */}
         {casaMentor && (
-          <p className="text-white/60 inline-flex items-center justify-center gap-1 mt-1">
-            Mentor da Casa{' '}
-            <span style={{ color: casaColor }} className="inline-flex items-center gap-1">
+          <div 
+            className="p-6 rounded-2xl border text-center"
+            style={{
+              backgroundColor: `${casaColor}10`,
+              borderColor: `${casaColor}30`
+            }}
+          >
+            <div className="flex justify-center mb-3">
               <CasaBrasao 
                 brasaoUrl={casaMentor.brasao_url} 
                 emoji={casaMentor.emoji} 
                 nome={casaMentor.nome}
-                size="mini"
+                size="large"
               />
-              {casaMentor.nome}
-            </span>
-          </p>
+            </div>
+            <h2 
+              className="text-xl font-bold mb-1"
+              style={{ color: casaColor }}
+            >
+              Casa {casaMentor.nome}
+            </h2>
+            <p className="text-white/50 text-sm">{tituloMentor}</p>
+          </div>
         )}
       </div>
-
-      {/* Casa Card */}
-      {casaMentor && (
-        <div 
-          className="p-6 rounded-2xl border text-center"
-          style={{
-            backgroundColor: `${casaColor}10`,
-            borderColor: `${casaColor}30`
-          }}
-        >
-          <div className="flex justify-center mb-3">
-            <CasaBrasao 
-              brasaoUrl={casaMentor.brasao_url} 
-              emoji={casaMentor.emoji} 
-              nome={casaMentor.nome}
-              size="large"
-            />
-          </div>
-          <h2 
-            className="text-xl font-bold mb-1"
-            style={{ color: casaColor }}
-          >
-            Casa {casaMentor.nome}
-          </h2>
-          <p className="text-white/50 text-sm">{casaMentor.descricao}</p>
-        </div>
-      )}
 
       {/* Quick Actions */}
       <div className="space-y-3">
@@ -146,8 +178,8 @@ const ProfessorDashboard = () => {
         <div className="grid gap-3">
           {quickActions.map((action) => (
             <button
-              key={action.path}
-              onClick={() => navigate(action.path)}
+              key={action.label}
+              onClick={() => handleActionClick(action)}
               className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-left group"
             >
               <div 
@@ -189,6 +221,13 @@ const ProfessorDashboard = () => {
           <div className="text-xs text-white/40">Entregas Pendentes</div>
         </div>
       </div>
+
+      {/* Modal de Conteúdo */}
+      <ConteudoModal
+        isOpen={showConteudoModal}
+        onClose={() => setShowConteudoModal(false)}
+        faseAtual={faseAtual}
+      />
     </div>
   );
 };
