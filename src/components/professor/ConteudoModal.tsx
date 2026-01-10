@@ -1,4 +1,5 @@
 import { X, FileText, ExternalLink } from 'lucide-react';
+import AnimatedTextCycle from '@/components/ui/animated-text-cycle';
 
 interface FaseAtual {
   inteligencia?: {
@@ -12,6 +13,8 @@ interface ConteudoModalProps {
   faseAtual: FaseAtual | null;
 }
 
+const pilares = ['Consciência', 'Integralidade', 'Necessidade', 'Acreditar'];
+
 const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
   if (!isOpen) return null;
 
@@ -21,13 +24,6 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
     { semana: 2, titulo: 'Material da segunda semana', url: '/pdfs/semana-2.pdf' },
     { semana: 3, titulo: 'Material da terceira semana', url: '/pdfs/semana-3.pdf' },
     { semana: 4, titulo: 'Material da quarta semana', url: '/pdfs/semana-4.pdf' },
-  ];
-
-  const pilares = [
-    { icone: '🧠', nome: 'Consciência' },
-    { icone: '🔄', nome: 'Integralidade' },
-    { icone: '💡', nome: 'Necessidade' },
-    { icone: '✨', nome: 'Acreditar' },
   ];
 
   const handleOpenPdf = (url: string) => {
@@ -70,23 +66,20 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
               🌳 Essência do Arboria
             </p>
             
-            <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-4">
-              <p className="text-white/80 text-sm italic mb-4 text-center">
-                "O Projeto Arboria é construído sobre 4 pilares fundamentais"
+            <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-6">
+              <p className="text-white/80 text-sm italic text-center mb-1">
+                "O Projeto Arboria é construído
+              </p>
+              <p className="text-white/80 text-sm italic text-center mb-6">
+                sobre o pilar da"
               </p>
               
-              <div className="grid grid-cols-2 gap-3">
-                {pilares.map((pilar, index) => (
-                  <div 
-                    key={index}
-                    className="bg-white/5 rounded-lg p-3 text-center"
-                  >
-                    <span className="text-2xl">{pilar.icone}</span>
-                    <p className="text-white font-medium text-sm mt-1">
-                      {pilar.nome}
-                    </p>
-                  </div>
-                ))}
+              <div className="flex justify-center min-h-[40px] items-center">
+                <AnimatedTextCycle
+                  words={pilares}
+                  interval={3000}
+                  className="text-2xl font-bold text-emerald-400"
+                />
               </div>
             </div>
           </div>
