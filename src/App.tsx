@@ -48,6 +48,10 @@ import ProfessorConfiguracoesPage from "./pages/professor/ProfessorConfiguracoes
 import MissoesSeriePage from "./pages/professor/MissoesSeriePage";
 import MissoesSemanaPage from "./pages/professor/MissoesSemanaPage";
 import MissoesListaPage from "./pages/professor/MissoesListaPage";
+import EntregasSeriePage from "./pages/professor/EntregasSeriePage";
+import EntregasSemanaPage from "./pages/professor/EntregasSemanaPage";
+import EntregasMissaoListaPage from "./pages/professor/EntregasMissaoListaPage";
+import EntregasMissaoPage from "./pages/professor/EntregasMissaoPage";
 
 const queryClient = new QueryClient();
 
@@ -166,6 +170,41 @@ const App = () => (
               <ProfessorProtectedRoute>
                 <ProfessorLayout>
                   <EntregasPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/entregas/serie/:serie" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <EntregasSeriePage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/entregas/serie/:serie/semana/:semana" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <EntregasSemanaPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/entregas/serie/:serie/semana/:semana/geral" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <EntregasMissaoListaPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/entregas/serie/:serie/semana/:semana/casa/:casaId" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <EntregasMissaoListaPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/entregas/missao/:missaoId" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <EntregasMissaoPage />
                 </ProfessorLayout>
               </ProfessorProtectedRoute>
             } />
