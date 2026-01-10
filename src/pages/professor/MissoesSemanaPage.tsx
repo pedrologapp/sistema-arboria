@@ -27,6 +27,10 @@ const MissoesSemanaPage = () => {
   const navigate = useNavigate();
   const { casaMentor, casaColor, profile, faseAtual } = useProfessor();
 
+  // Detectar se é semana extra
+  const isExtra = semana === 'extra';
+  const semanaNumber = isExtra ? 0 : Number(semana);
+
   // Buscar inteligências (casas)
   const { data: inteligencias } = useQuery({
     queryKey: ['inteligencias'],
@@ -42,20 +46,20 @@ const MissoesSemanaPage = () => {
 
   // Buscar missões da semana (sem entregas, apenas contagem)
   const { data: missoes, isLoading: loadingMissoes } = useQuery({
-    queryKey: ['missoes-semana-contagem', serie, semana, casaMentor?.id, profile?.institution_id],
+    queryKey: ['missoes-semana-contagem', serie, semanaNumber, casaMentor?.id, profile?.institution_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('missoes')
         .select('id, titulo, tipo_missao, inteligencia_cross')
         .eq('institution_id', profile!.institution_id!)
         .eq('casa_id', casaMentor!.id)
-        .eq('semana', Number(semana))
+        .eq('semana', semanaNumber)
         .or(`serie_filtro.eq.${serie},serie_filtro.is.null`);
 
       if (error) throw error;
       return data as Missao[];
     },
-    enabled: !!profile?.institution_id && !!casaMentor?.id && !!serie && !!semana
+    enabled: !!profile?.institution_id && !!casaMentor?.id && !!serie && semana !== undefined
   });
 
   // Contagem de missões gerais
@@ -83,12 +87,12 @@ const MissoesSemanaPage = () => {
           <ArrowLeft size={20} />
         </button>
         <h1 className="text-xl font-bold text-white flex-1">
-          Semana {semana} • {serie}º Ano
+          {isExtra ? '⭐ Extra' : `Semana ${semana}`} • {serie}º Ano
         </h1>
       </div>
 
-      {/* Fase atual */}
-      {faseAtual && (
+      {/* Fase atual - esconder quando for extra */}
+      {!isExtra && faseAtual && (
         <p className="text-white/40 text-sm flex items-center gap-1.5">
           <CasaBrasao 
             brasaoUrl={faseAtual.inteligencia?.brasao_url}
@@ -114,7 +118,7 @@ const MissoesSemanaPage = () => {
           {/* Missão Geral */}
           <div>
             <p className="text-white/60 text-sm uppercase tracking-wide mb-3">
-              Missões da Semana {semana}
+              {isExtra ? 'Missões Extra' : `Missões da Semana ${semana}`}
             </p>
 
             <button
@@ -214,17 +218,17 @@ const MissoesSemanaPage = () => {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div 
                 className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-                style={{ backgroundColor: `${casaColor}20` }}
+                style={{ backgroundColor: isExtra ? '#facc1520' : `${casaColor}20` }}
               >
-                <span className="text-2xl">📋</span>
+                <span className="text-2xl">{isExtra ? '⭐' : '📋'}</span>
               </div>
               <p className="text-white/60 mb-4">
-                Nenhuma missão na Semana {semana}
+                {isExtra ? 'Nenhuma missão extra' : `Nenhuma missão na Semana ${semana}`}
               </p>
               <button
                 onClick={() => navigate('/professor/missoes/nova')}
                 className="px-4 py-2 rounded-lg font-medium text-sm"
-                style={{ backgroundColor: casaColor, color: '#fff' }}
+                style={{ backgroundColor: isExtra ? '#facc15' : casaColor, color: isExtra ? '#000' : '#fff' }}
               >
                 Criar primeira missão
               </button>
