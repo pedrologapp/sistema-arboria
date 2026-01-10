@@ -25,52 +25,74 @@ const AlunoLinha = ({
   aluno: AlunoAvaliacao; 
   onClick: () => void;
 }) => {
-  const cores = {
-    pendente: 'bg-red-500',
-    avaliado: 'bg-green-500',
-    sem_entrega: 'bg-white/20'
-  };
+  const temPendentes = aluno.entregasPendentes > 0;
 
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 py-2.5 px-3 hover:bg-white/5 rounded-lg transition-colors"
+      className={cn(
+        "w-full flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors",
+        temPendentes 
+          ? "hover:bg-white/10" 
+          : "hover:bg-white/5 opacity-50"
+      )}
     >
       {/* Bolinha de status */}
-      <div className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", cores[aluno.status])} />
+      <div className={cn(
+        "w-2.5 h-2.5 rounded-full flex-shrink-0",
+        temPendentes ? "bg-red-500" : 
+        aluno.status === 'avaliado' ? "bg-green-500/50" : "bg-white/20"
+      )} />
 
-      {/* Avatar */}
+      {/* Avatar - grayscale quando stand-by */}
       {aluno.avatar_url ? (
         <img
           src={aluno.avatar_url}
           alt={aluno.nome}
-          className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+          className={cn(
+            "w-7 h-7 rounded-full object-cover flex-shrink-0",
+            !temPendentes && "opacity-50 grayscale"
+          )}
         />
       ) : (
-        <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+        <div className={cn(
+          "w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0",
+          temPendentes 
+            ? "bg-blue-600 text-white" 
+            : "bg-white/10 text-white/40"
+        )}>
           {aluno.nome.charAt(0).toUpperCase()}
         </div>
       )}
 
-      {/* Nome + Série/Turma */}
+      {/* Nome + Série/Turma - cores diferentes */}
       <div className="flex-1 flex items-center min-w-0">
-        <span className="text-white text-sm font-medium truncate">
+        <span className={cn(
+          "text-sm font-medium truncate",
+          temPendentes ? "text-white" : "text-white/40"
+        )}>
           {aluno.nome} {aluno.sobrenome}
         </span>
-        <span className="text-white/40 text-xs ml-2 flex-shrink-0">
+        <span className={cn(
+          "text-xs ml-2 flex-shrink-0",
+          temPendentes ? "text-white/40" : "text-white/20"
+        )}>
           {aluno.serie}º{aluno.turma}
         </span>
       </div>
 
-      {/* Badge de pendentes */}
-      {aluno.entregasPendentes > 0 && (
+      {/* Badge de pendentes (só se tiver) */}
+      {temPendentes && (
         <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
           {aluno.entregasPendentes}
         </span>
       )}
 
-      {/* Seta */}
-      <ChevronRight className="w-4 h-4 text-white/20 flex-shrink-0" />
+      {/* Seta - mais visível quando destacado */}
+      <ChevronRight className={cn(
+        "w-4 h-4 flex-shrink-0",
+        temPendentes ? "text-white/30" : "text-white/10"
+      )} />
     </button>
   );
 };
