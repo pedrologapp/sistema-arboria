@@ -24,11 +24,11 @@ interface Arquetipo {
 }
 
 interface AlertaAtivo {
-  tipo: 'precisa_atencao' | 'celebrar';
+  tipo: 'precisa_atencao' | 'celebrar' | 'brilhando' | 'melhorando' | 'atencao_recente' | 'bom_comeco' | 'fique_de_olho';
   subtipo?: 'descoberta' | 'confirmacao';
   motivo: string;
   contexto: string[];
-  hipoteses: { titulo: string; descricao: string }[];
+  hipoteses: { titulo: string; descricao: string; perguntas?: string[] }[];
   sugestoes: string[];
   acoesSugeridas: AcaoSugerida[];
   arquetipo?: Arquetipo;
@@ -37,7 +37,14 @@ interface AlertaAtivo {
   sinalCodigo?: string;
   padraoCodigo?: string;
   sinalPredominante?: string;
+  sinalSecundario?: string;
   quantidadeSinal?: number;
+  textoAcontecendo?: string;
+  padrao?: {
+    nome: string;
+    significado: string;
+    acao_recomendada?: string;
+  };
 }
 
 export interface PerfilAlunoData {

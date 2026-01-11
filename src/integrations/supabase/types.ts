@@ -2557,6 +2557,11 @@ export type Database = {
         | "celebrar"
         | "nao_esquecer"
         | "fase_anterior"
+        | "brilhando"
+        | "melhorando"
+        | "atencao_recente"
+        | "bom_comeco"
+        | "fique_de_olho"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2703,6 +2708,11 @@ export const Constants = {
         "celebrar",
         "nao_esquecer",
         "fase_anterior",
+        "brilhando",
+        "melhorando",
+        "atencao_recente",
+        "bom_comeco",
+        "fique_de_olho",
       ],
     },
   },
