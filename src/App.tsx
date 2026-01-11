@@ -60,6 +60,9 @@ import EntregasSemanaPage from "./pages/professor/EntregasSemanaPage";
 import EntregasMissaoListaPage from "./pages/professor/EntregasMissaoListaPage";
 import EntregasMissaoPage from "./pages/professor/EntregasMissaoPage";
 import EntregasAlunoPage from "./pages/professor/EntregasAlunoPage";
+import ProfessorChatPage from "./pages/professor/ProfessorChatPage";
+import ProfessorCanalViewPage from "./pages/professor/ProfessorCanalViewPage";
+import ProfessorDmPage from "./pages/professor/ProfessorDmPage";
 
 const queryClient = new QueryClient();
 
@@ -306,6 +309,27 @@ const App = () => (
               <ProfessorProtectedRoute>
                 <ProfessorLayout>
                   <ProfessorConfiguracoesPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/chat" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <ProfessorChatPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/chat/canal/:canalId" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <ProfessorCanalViewPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/chat/dm/:conversaId" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <ProfessorDmPage />
                 </ProfessorLayout>
               </ProfessorProtectedRoute>
             } />
