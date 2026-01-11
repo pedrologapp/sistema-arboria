@@ -53,6 +53,7 @@ interface FeedbackEstadoCardProps {
   casaColor?: string;
   casaNome?: string;
   faseNome?: string;
+  celebracaoSubtipo?: 'descoberta' | 'confirmacao';
 }
 
 const estadoConfig = {
@@ -163,11 +164,27 @@ export function FeedbackEstadoCard({
   onRegistrarObservacao,
   casaColor,
   casaNome,
-  faseNome
+  faseNome,
+  celebracaoSubtipo
 }: FeedbackEstadoCardProps) {
   const [expandido, setExpandido] = useState(false);
   
-  const config = estadoConfig[estado] || estadoConfig.aguardando;
+  // Estados de celebração
+  const estadosCelebracao = ['celebrar', 'celebrar_descoberta', 'celebrar_confirmacao', 'brilhando'];
+  const ehCelebracao = estadosCelebracao.includes(estado);
+  
+  // Determinar subtipo: prop explícita > inferido do estado > inferido do arquétipo
+  const subtipoFinal: 'descoberta' | 'confirmacao' | null = 
+    celebracaoSubtipo || 
+    (estado === 'celebrar_descoberta' ? 'descoberta' : null) ||
+    (estado === 'celebrar_confirmacao' ? 'confirmacao' : null) ||
+    (arquetipo?.tipo?.toLowerCase().includes('descoberta') ? 'descoberta' : null) ||
+    (arquetipo?.tipo?.toLowerCase().includes('confirm') ? 'confirmacao' : null) ||
+    (ehCelebracao ? 'confirmacao' : null); // Fallback para confirmação se for celebração sem subtipo
+  
+  // Para celebrações, sempre usar config de 'celebrar' (CELEBRE! no topo)
+  const estadoConfig_key = ehCelebracao ? 'celebrar' : estado;
+  const config = estadoConfig[estadoConfig_key] || estadoConfig.aguardando;
   const Icon = config.icon;
   
   const temDetalhes = (hipoteses && hipoteses.length > 0) || 
@@ -179,12 +196,9 @@ export function FeedbackEstadoCard({
   // Estados que mostram botão de ação
   const estadosComAcao = ['precisa_atencao', 'fique_de_olho', 'atencao_recente'];
   
-  // Estados de celebração
-  const estadosCelebracao = ['celebrar', 'celebrar_descoberta', 'celebrar_confirmacao', 'brilhando'];
-  const ehCelebracao = estadosCelebracao.includes(estado);
   // Descoberta: só mostra arquétipo se tiver nome_arquetipo preenchido
-  const ehDescoberta = estado === 'celebrar_descoberta' && arquetipo?.nome_arquetipo;
-  const ehConfirmacao = estado === 'celebrar_confirmacao';
+  const ehDescoberta = subtipoFinal === 'descoberta' && arquetipo?.nome_arquetipo;
+  const ehConfirmacao = subtipoFinal === 'confirmacao';
 
   return (
     <div className={cn(
@@ -300,8 +314,8 @@ export function FeedbackEstadoCard({
           </div>
         )}
         
-        {/* Arquétipo simples (para celebrar genérico) */}
-        {!ehDescoberta && !ehConfirmacao && arquetipo && (
+        {/* Arquétipo simples (para estados NÃO celebração que têm arquétipo) */}
+        {!ehCelebracao && arquetipo && (
           <div className="mt-3 p-2 bg-black/20 rounded-lg">
             <p className={cn('text-sm font-medium', config.textColor)}>
               🏆 {arquetipo.tipo}: {arquetipo.nome_arquetipo}
@@ -309,6 +323,32 @@ export function FeedbackEstadoCard({
             <p className={cn('text-xs opacity-80', config.textColor)}>
               {arquetipo.significado}
             </p>
+          </div>
+        )}
+        
+        {/* Fallback para celebração genérica sem arquetipo (sempre mostrar potencializar) */}
+        {ehCelebracao && !ehDescoberta && !ehConfirmacao && (
+          <div className="mt-4 p-3 bg-black/20 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="w-4 h-4 text-yellow-300" />
+              <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wide">
+                Como Potencializar
+              </span>
+            </div>
+            <ul className="space-y-1.5">
+              <li className="text-white/90 text-sm flex items-start gap-2">
+                <span className="text-yellow-300">✨</span>
+                Desafios de nível avançado
+              </li>
+              <li className="text-white/90 text-sm flex items-start gap-2">
+                <span className="text-yellow-300">✨</span>
+                Papel de mentor para colegas
+              </li>
+              <li className="text-white/90 text-sm flex items-start gap-2">
+                <span className="text-yellow-300">✨</span>
+                Projetos de protagonismo{casaNome ? ` em ${casaNome}` : ''}
+              </li>
+            </ul>
           </div>
         )}
         
