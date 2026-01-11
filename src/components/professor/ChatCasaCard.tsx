@@ -1,3 +1,4 @@
+import React from 'react';
 import { MessageCircle, Eye, ChevronRight } from 'lucide-react';
 
 interface ChatCasaCardProps {
@@ -7,9 +8,11 @@ interface ChatCasaCardProps {
   onClick: () => void;
 }
 
-export const ChatCasaCard = ({ casaNome, casaColor, novasMensagens = 0, onClick }: ChatCasaCardProps) => {
-  return (
-    <button
+export const ChatCasaCard = React.forwardRef<HTMLButtonElement, ChatCasaCardProps>(
+  ({ casaNome, casaColor, novasMensagens = 0, onClick }, ref) => {
+    return (
+      <button
+        ref={ref}
       onClick={onClick}
       className="w-full p-4 rounded-xl text-left group
         bg-gradient-to-r from-white/[0.06] to-white/[0.02]
@@ -77,7 +80,10 @@ export const ChatCasaCard = ({ casaNome, casaColor, novasMensagens = 0, onClick 
           className="w-5 h-5 text-white/30 flex-shrink-0 group-hover:text-white/50 transition-colors" 
           strokeWidth={1.5}
         />
-      </div>
-    </button>
-  );
-};
+        </div>
+      </button>
+    );
+  }
+);
+
+ChatCasaCard.displayName = 'ChatCasaCard';
