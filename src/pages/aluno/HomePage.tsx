@@ -5,7 +5,6 @@ import { useStudent } from '@/contexts/StudentContext';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { supabase } from '@/integrations/supabase/client';
-import { cn } from '@/lib/utils';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -82,22 +81,29 @@ const HomePage = () => {
         Olá, {firstName}!
       </h1>
 
-      {/* Main Card - House Info */}
+      {/* Main Card - House Info - Premium Glassmorphism */}
       <div 
-        className="relative overflow-hidden rounded-2xl p-6"
+        className="relative overflow-hidden p-6 rounded-2xl text-center
+          bg-[rgba(26,26,30,0.85)] backdrop-blur-xl
+          border border-white/10
+          shadow-xl transition-all duration-300"
         style={{
-          background: `linear-gradient(135deg, ${casaColor}15 0%, ${casaColor}05 100%)`,
-          boxShadow: `0 0 40px ${casaColor}20`,
+          boxShadow: `0 20px 40px -12px ${casaColor}30`
         }}
       >
-        {/* Background glow */}
+        {/* Decorative glow - top right */}
         <div 
-          className="absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl opacity-20"
+          className="absolute -top-12 -right-12 w-40 h-40 rounded-full blur-3xl opacity-20 pointer-events-none"
+          style={{ backgroundColor: casaColor }}
+        />
+        {/* Decorative glow - bottom left */}
+        <div 
+          className="absolute -bottom-12 -left-12 w-32 h-32 rounded-full blur-2xl opacity-15 pointer-events-none"
           style={{ backgroundColor: casaColor }}
         />
 
         {/* Content */}
-        <div className="relative z-10 flex flex-col items-center text-center">
+        <div className="relative z-10 flex flex-col items-center">
           {/* House Emblem */}
           <div className="mb-4">
             <CasaBrasao
@@ -108,20 +114,26 @@ const HomePage = () => {
             />
           </div>
 
-          {/* House Name */}
-          <h2 className="text-xl font-semibold text-white mb-1">
+          {/* House Name - Dynamic Color */}
+          <h2 
+            className="text-xl font-bold mb-1"
+            style={{ color: casaColor }}
+          >
             Casa {casa?.nome || 'Desconhecida'}
           </h2>
 
           {/* Cargo */}
-          <p className="text-white/60 text-sm mb-3">
+          <p className="text-white/50 text-sm font-light mb-4">
             {cargo || 'Membro'}
           </p>
 
-          {/* Points */}
+          {/* Points - Premium Badge */}
           <div 
-            className="flex items-center gap-2 px-4 py-2 rounded-full mb-4"
-            style={{ backgroundColor: `${casaColor}20` }}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full mb-5 shadow-lg transition-all duration-300"
+            style={{ 
+              backgroundColor: `${casaColor}25`,
+              boxShadow: `0 4px 15px -3px ${casaColor}40`
+            }}
           >
             <Star className="w-5 h-5" style={{ color: casaColor }} fill={casaColor} />
             <span className="text-white font-semibold">
@@ -129,19 +141,20 @@ const HomePage = () => {
             </span>
           </div>
 
-          {/* Current Phase Card */}
+          {/* Current Phase Card - Enhanced */}
           {faseAtual && (
             <div 
-              className="w-full rounded-xl p-4 border"
+              className="w-full rounded-xl p-4 border backdrop-blur-sm"
               style={{
-                backgroundColor: `${faseAtual.inteligencia?.cor_hex || casaColor}15`,
-                borderColor: `${faseAtual.inteligencia?.cor_hex || casaColor}30`,
+                backgroundColor: `${faseAtual.inteligencia?.cor_hex || casaColor}12`,
+                borderColor: `${faseAtual.inteligencia?.cor_hex || casaColor}25`,
+                boxShadow: `inset 0 1px 0 0 rgba(255,255,255,0.05)`
               }}
             >
-              <p className="text-white font-medium">
-                Fase atual: {faseAtual.inteligencia?.nome?.toUpperCase() || 'Carregando...'}
+              <p className="text-white font-semibold">
+                Fase atual: <span style={{ color: faseAtual.inteligencia?.cor_hex || casaColor }}>{faseAtual.inteligencia?.nome?.toUpperCase() || 'Carregando...'}</span>
               </p>
-              <p className="text-white/60 text-sm mt-1">
+              <p className="text-white/50 text-sm font-light mt-1">
                 Semana {faseAtual.semana_atual || 1} de 4
               </p>
             </div>
@@ -161,20 +174,33 @@ const HomePage = () => {
             <button
               key={action.id}
               onClick={() => navigate(action.path)}
-              className={cn(
-                "w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-200",
-                "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20",
-                "active:scale-[0.98]"
-              )}
+              className="relative w-full flex items-center gap-4 p-4 rounded-xl text-left group
+                bg-gradient-to-r from-white/[0.06] to-white/[0.02]
+                backdrop-blur-sm border border-white/10
+                hover:scale-[1.02] hover:border-white/20
+                transition-all duration-300 ease-out
+                active:scale-[0.98]"
+              style={{
+                boxShadow: `0 4px 20px -4px ${casaColor}15`
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = `0 8px 30px -4px ${casaColor}30`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = `0 4px 20px -4px ${casaColor}15`;
+              }}
             >
               <div 
-                className="w-12 h-12 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: `${casaColor}20` }}
+                className="p-3 rounded-lg shadow-lg transition-all duration-300 group-hover:scale-110"
+                style={{ 
+                  backgroundColor: `${casaColor}20`,
+                  boxShadow: `0 4px 12px -2px ${casaColor}30`
+                }}
               >
                 <Icon className="w-6 h-6" style={{ color: casaColor }} />
               </div>
               
-              <div className="flex-1 text-left">
+              <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-white font-medium">{action.label}</span>
                   {action.badge && (
@@ -183,10 +209,10 @@ const HomePage = () => {
                     </span>
                   )}
                 </div>
-                <p className="text-white/50 text-sm">{action.description}</p>
+                <p className="text-white/50 text-sm font-light">{action.description}</p>
               </div>
 
-              <ChevronRight className="w-5 h-5 text-white/30" />
+              <ChevronRight className="w-5 h-5 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all duration-300" />
             </button>
           );
         })}
