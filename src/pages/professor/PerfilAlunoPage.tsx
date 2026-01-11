@@ -15,8 +15,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { usePerfilAluno, type PerfilAlunoData } from '@/hooks/usePerfilAluno';
-import AlertaAtivoCard from '@/components/professor/AlertaAtivoCard';
-import EstadoVazioObservacao from '@/components/professor/EstadoVazioObservacao';
+import { FeedbackEstadoCard } from '@/components/professor/FeedbackEstadoCard';
 import HistoricoObservacoes from '@/components/professor/HistoricoObservacoes';
 import RegistrarAcaoModal from '@/components/professor/RegistrarAcaoModal';
 
@@ -307,32 +306,41 @@ const PerfilAlunoPage = () => {
           Observações do Professor
         </p>
         
-        {/* Card de Alerta ou Estado Vazio */}
-        {aluno.alertaAtivo ? (
-          <AlertaAtivoCard
-            tipo={aluno.alertaAtivo.tipo}
-            subtipo={aluno.alertaAtivo.subtipo}
-            nomeAluno={primeiroNome}
-            motivo={aluno.alertaAtivo.motivo}
-            contexto={aluno.alertaAtivo.contexto}
-            hipoteses={aluno.alertaAtivo.hipoteses}
-            sugestoes={aluno.alertaAtivo.sugestoes}
-            acoesSugeridas={aluno.alertaAtivo.acoesSugeridas}
-            arquetipo={aluno.alertaAtivo.arquetipo}
-            onRegistrarAcaoClick={handleRegistrarAcao}
-            casaColor={aluno.casaCor}
-            sinalPredominante={aluno.alertaAtivo.sinalPredominante}
-            quantidadeSinal={aluno.alertaAtivo.quantidadeSinal}
-          />
-        ) : (
-          <EstadoVazioObservacao
-            tipo={aluno.temObsFaseAtual ? 'tudo_bem' : 'aguardando'}
-            nomeAluno={primeiroNome}
-            ultimaObservacao={aluno.ultimaObservacao}
-            onRegistrarClick={handleRegistrarObservacao}
-            casaColor={aluno.casaCor}
-          />
-        )}
+        {/* Card de Feedback de Estado */}
+        <FeedbackEstadoCard
+          estado={
+            aluno.alertaAtivo 
+              ? aluno.alertaAtivo.tipo
+              : aluno.temObsFaseAtual 
+                ? 'aguardando' 
+                : 'aguardando'
+          }
+          nomeAluno={primeiroNome}
+          textoAcontecendo={
+            aluno.alertaAtivo?.textoAcontecendo || 
+            (aluno.temObsFaseAtual 
+              ? `Continue observando ${primeiroNome}.`
+              : `${primeiroNome} ainda não foi observado nesta fase.`)
+          }
+          sinalPrincipal={aluno.alertaAtivo?.sinalPredominante}
+          sinalSecundario={aluno.alertaAtivo?.sinalSecundario}
+          contexto={aluno.alertaAtivo?.contexto}
+          hipoteses={aluno.alertaAtivo?.hipoteses}
+          acoesSugeridas={aluno.alertaAtivo?.acoesSugeridas?.map(a => ({
+            acao: a.titulo,
+            prioridade: 'media' as const
+          }))}
+          padrao={aluno.alertaAtivo?.padrao}
+          arquetipo={aluno.alertaAtivo?.arquetipo ? {
+            nome_arquetipo: aluno.alertaAtivo.arquetipo.nome,
+            tipo: 'Celebração',
+            significado: aluno.alertaAtivo.arquetipo.significado,
+            potencializar: aluno.alertaAtivo.arquetipo.potencializar
+          } : undefined}
+          onRegistrarAcao={handleRegistrarAcao}
+          onRegistrarObservacao={handleRegistrarObservacao}
+          casaColor={aluno.casaCor}
+        />
         
         {/* Histórico de Observações */}
         {observacoesHistorico.length > 0 && (
