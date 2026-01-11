@@ -24,6 +24,38 @@ const MembrosPage = () => {
     institutionId: profile?.institution_id 
   });
 
+  // Query: Buscar mentor da casa (professor)
+  const { data: mentorCasa } = useQuery({
+    queryKey: ['mentor-casa-membros', casa?.id, profile?.institution_id],
+    queryFn: async () => {
+      if (!casa?.id || !profile?.institution_id) return null;
+      
+      const { data, error } = await supabase
+        .from('professor_casa')
+        .select(`
+          professor_id,
+          profiles!professor_casa_professor_id_fkey(
+            id, full_name, nome, sobrenome, avatar_url
+          )
+        `)
+        .eq('casa_id', casa.id)
+        .eq('institution_id', profile.institution_id)
+        .eq('ativo', true)
+        .eq('eh_mentor_principal', true)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Erro ao buscar mentor:', error);
+        return null;
+      }
+      
+      const profileData = data?.profiles as { id: string; full_name: string | null; nome: string | null; sobrenome: string | null; avatar_url: string | null } | null;
+      return profileData || null;
+    },
+    staleTime: 60000,
+    enabled: !!casa?.id && !!profile?.institution_id,
+  });
+
   // Query: Buscar membros da casa com cargos
   const { data: membrosCasa = [], isLoading, error } = useQuery({
     queryKey: ['membros-casa-completo', casa?.id, profile?.institution_id],
@@ -90,6 +122,15 @@ const MembrosPage = () => {
 
     return { lideranca, membrosComuns };
   }, [membrosCasa]);
+
+  // Filtrar mentor por busca
+  const mentorFiltrado = useMemo(() => {
+    if (!mentorCasa) return null;
+    if (!searchTerm) return mentorCasa;
+    const termo = searchTerm.toLowerCase();
+    const nome = (mentorCasa.nome || mentorCasa.full_name || '').toLowerCase();
+    return nome.includes(termo) ? mentorCasa : null;
+  }, [mentorCasa, searchTerm]);
 
   // Filtrar por busca (nome e cargo)
   const liderancaFiltrada = useMemo(() => {
@@ -258,6 +299,32 @@ const MembrosPage = () => {
         </div>
       ) : (
         <div className="space-y-6">
+          {/* Seção: Mentor da Casa */}
+          {mentorFiltrado && (
+            <div className="space-y-1">
+              <h3 className="text-xs font-medium text-white/50 uppercase tracking-wider px-1 flex items-center gap-1.5 mb-2">
+                <span>🎓</span> Mentor da Casa
+              </h3>
+              <div className="space-y-1 bg-white/5 rounded-lg overflow-hidden">
+                <MembroCard
+                  membro={{
+                    id: mentorFiltrado.id,
+                    nome: mentorFiltrado.nome,
+                    sobrenome: mentorFiltrado.sobrenome,
+                    full_name: mentorFiltrado.full_name,
+                    avatar_url: mentorFiltrado.avatar_url,
+                    ultima_atividade: null,
+                    cargos_casa: []
+                  }}
+                  isMe={false}
+                  hideStatus={true}
+                  onIniciarConversa={iniciarConversa}
+                  casaColor={casaColor}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Seção: Liderança */}
           {liderancaFiltrada.length > 0 && (
             <div className="space-y-1">
