@@ -182,7 +182,8 @@ export function FeedbackEstadoCard({
   // Estados de celebração
   const estadosCelebracao = ['celebrar', 'celebrar_descoberta', 'celebrar_confirmacao', 'brilhando'];
   const ehCelebracao = estadosCelebracao.includes(estado);
-  const ehDescoberta = estado === 'celebrar_descoberta' || (estado === 'celebrar' && arquetipo);
+  // Descoberta: só mostra arquétipo se tiver nome_arquetipo preenchido
+  const ehDescoberta = estado === 'celebrar_descoberta' && arquetipo?.nome_arquetipo;
   const ehConfirmacao = estado === 'celebrar_confirmacao';
 
   return (
@@ -262,8 +263,8 @@ export function FeedbackEstadoCard({
           </div>
         )}
         
-        {/* Para Confirmação - Sugestões de potencialização padrão */}
-        {ehConfirmacao && !arquetipo && (
+        {/* Para Confirmação - Sugestões de potencialização (sempre mostra, mesmo se arquetipo vier sem nome) */}
+        {ehConfirmacao && (
           <div className="mt-4 p-3 bg-black/20 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <Target className="w-4 h-4 text-yellow-300" />
@@ -272,18 +273,29 @@ export function FeedbackEstadoCard({
               </span>
             </div>
             <ul className="space-y-1.5">
-              <li className="text-white/90 text-sm flex items-start gap-2">
-                <span className="text-yellow-300">✨</span>
-                Desafios de nível avançado
-              </li>
-              <li className="text-white/90 text-sm flex items-start gap-2">
-                <span className="text-yellow-300">✨</span>
-                Papel de mentor para colegas
-              </li>
-              <li className="text-white/90 text-sm flex items-start gap-2">
-                <span className="text-yellow-300">✨</span>
-                Projetos de protagonismo{casaNome ? ` em ${casaNome}` : ''}
-              </li>
+              {arquetipo?.potencializar && arquetipo.potencializar.length > 0 ? (
+                arquetipo.potencializar.map((item, i) => (
+                  <li key={i} className="text-white/90 text-sm flex items-start gap-2">
+                    <span className="text-yellow-300">✨</span>
+                    {item}
+                  </li>
+                ))
+              ) : (
+                <>
+                  <li className="text-white/90 text-sm flex items-start gap-2">
+                    <span className="text-yellow-300">✨</span>
+                    Desafios de nível avançado
+                  </li>
+                  <li className="text-white/90 text-sm flex items-start gap-2">
+                    <span className="text-yellow-300">✨</span>
+                    Papel de mentor para colegas
+                  </li>
+                  <li className="text-white/90 text-sm flex items-start gap-2">
+                    <span className="text-yellow-300">✨</span>
+                    Projetos de protagonismo{casaNome ? ` em ${casaNome}` : ''}
+                  </li>
+                </>
+              )}
             </ul>
           </div>
         )}
