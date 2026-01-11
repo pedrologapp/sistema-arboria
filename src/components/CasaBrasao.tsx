@@ -5,7 +5,7 @@ interface CasaBrasaoProps {
   brasaoUrl?: string | null;
   emoji?: string | null;
   nome?: string;
-  size: 'mini' | 'medium' | 'large' | 'xl';
+  size: 'mini' | 'medium' | 'large';
   className?: string;
 }
 
@@ -13,14 +13,12 @@ const sizeMap = {
   mini: 'w-5 h-5',       // 20px - barras de inteligência
   medium: 'w-8 h-8',     // 32px - cards e seções
   large: 'w-24 h-24',    // 96px - header da casa
-  xl: 'w-32 h-32',       // 128px - HomePage
 };
 
 const emojiSizeMap = {
   mini: 'text-base',
   medium: 'text-2xl',
   large: 'text-5xl',
-  xl: 'text-6xl',
 };
 
 export const CasaBrasao = ({ brasaoUrl, emoji, nome, size, className }: CasaBrasaoProps) => {

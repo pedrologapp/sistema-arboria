@@ -53,8 +53,8 @@ const Login = () => {
           return;
         }
         
-        // Default: aluno goes to /aluno/home
-        navigate('/aluno/home');
+        // Default: aluno goes to /aluno/missoes
+        navigate('/aluno/missoes');
       }
     };
     

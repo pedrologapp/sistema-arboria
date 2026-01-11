@@ -24,7 +24,6 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 // Aluno pages
-import HomePage from "./pages/aluno/HomePage";
 import MissoesPage from "./pages/aluno/MissoesPage";
 import MissaoDetalhePage from "./pages/aluno/MissaoDetalhePage";
 import CasaPage from "./pages/aluno/CasaPage";
@@ -336,14 +335,7 @@ const App = () => (
             } />
 
             {/* Aluno Routes */}
-            <Route path="/aluno" element={<Navigate to="/aluno/home" replace />} />
-            <Route path="/aluno/home" element={
-              <StudentProtectedRoute>
-                <StudentLayout>
-                  <HomePage />
-                </StudentLayout>
-              </StudentProtectedRoute>
-            } />
+            <Route path="/aluno" element={<Navigate to="/aluno/missoes" replace />} />
             <Route path="/aluno/missoes" element={
               <StudentProtectedRoute>
                 <StudentLayout>
