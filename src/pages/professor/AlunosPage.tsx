@@ -30,7 +30,7 @@ const AlunosPage = () => {
     if (!alunos) return [];
 
     return alunos.filter(aluno => {
-      if (serieFiltro && aluno.serie !== serieFiltro) return false;
+      if (serieFiltro && !aluno.serie.startsWith(serieFiltro)) return false;
       if (turmaFiltro && aluno.turma !== turmaFiltro) return false;
       if (statusFiltro && aluno.status !== statusFiltro) return false;
       if (busca && !aluno.nome.toLowerCase().includes(busca.toLowerCase())) return false;
