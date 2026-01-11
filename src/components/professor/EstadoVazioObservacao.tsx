@@ -23,7 +23,7 @@ const EstadoVazioObservacao = ({
       : null;
 
     return (
-      <div className="rounded-xl bg-green-500/10 border border-green-500/20 p-4">
+      <div className="rounded-xl bg-[#14532D] border border-green-500/30 p-4">
         <div className="flex items-center gap-2 text-green-400 font-semibold mb-2">
           <CheckCircle className="w-4 h-4" strokeWidth={2} />
           <span className="text-sm">Tudo bem com {nomeAluno}</span>
@@ -43,8 +43,8 @@ const EstadoVazioObservacao = ({
   }
 
   return (
-    <div className="rounded-xl bg-blue-500/10 border border-blue-500/20 p-4">
-      <div className="flex items-center gap-2 text-blue-400 font-semibold mb-2">
+    <div className="rounded-xl bg-[#374151] border border-gray-500/30 p-4">
+      <div className="flex items-center gap-2 text-gray-300 font-semibold mb-2">
         <Eye className="w-4 h-4" strokeWidth={2} />
         <span className="text-sm">Aguardando seu olhar</span>
       </div>

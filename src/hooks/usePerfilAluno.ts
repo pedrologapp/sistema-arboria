@@ -11,14 +11,31 @@ interface Observacao {
   valencia: string;
 }
 
+interface AcaoSugerida {
+  titulo: string;
+  icone: string;
+  codigo: string;
+}
+
+interface Arquetipo {
+  nome: string;
+  significado: string;
+  potencializar: string[];
+}
+
 interface AlertaAtivo {
   tipo: 'precisa_atencao' | 'celebrar';
+  subtipo?: 'descoberta' | 'confirmacao';
   motivo: string;
   contexto: string[];
   hipoteses: { titulo: string; descricao: string }[];
   sugestoes: string[];
+  acoesSugeridas: AcaoSugerida[];
+  arquetipo?: Arquetipo;
   created_at: string;
   alertaId: string;
+  sinalCodigo?: string;
+  padraoCodigo?: string;
 }
 
 export interface PerfilAlunoData {
@@ -31,6 +48,7 @@ export interface PerfilAlunoData {
   casaNome: string;
   casaCor: string;
   casaEmoji: string;
+  casaCodigo: string;
   pontosTotais: number;
   ranking: number;
   totalAlunosCasa: number;
@@ -56,7 +74,17 @@ export interface PerfilAlunoData {
   alertaAtivo: AlertaAtivo | null;
   ultimaObservacao: { sinal: string; dataHora: string } | null;
   temObsFaseAtual: boolean;
+  faseAtualCodigo?: string;
 }
+
+// Função para substituir variáveis nos templates
+const substituirTemplate = (template: string, dados: Record<string, string | number>): string => {
+  let resultado = template;
+  for (const [chave, valor] of Object.entries(dados)) {
+    resultado = resultado.replace(new RegExp(`\\{${chave}\\}`, 'g'), String(valor));
+  }
+  return resultado;
+};
 
 export const usePerfilAluno = (alunoId: string | undefined) => {
   const { profile, faseAtual } = useProfessor();
@@ -90,11 +118,12 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
       let casaNome = 'Sem casa';
       let casaCor = '#6366f1';
       let casaEmoji = '🏠';
+      let casaCodigo = '';
 
       if (aluno.casa_id) {
         const { data: casa } = await supabase
           .from('inteligencias')
-          .select('id, nome, cor_hex, emoji')
+          .select('id, nome, cor_hex, emoji, codigo')
           .eq('id', aluno.casa_id)
           .single();
 
@@ -102,6 +131,21 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           casaNome = casa.nome;
           casaCor = casa.cor_hex || '#6366f1';
           casaEmoji = casa.emoji || '🏠';
+          casaCodigo = casa.codigo;
+        }
+      }
+
+      // Buscar código da fase atual
+      let faseAtualCodigo = '';
+      if (faseAtual?.inteligencia?.id) {
+        const { data: faseInteligencia } = await supabase
+          .from('inteligencias')
+          .select('codigo')
+          .eq('id', faseAtual.inteligencia.id)
+          .single();
+        
+        if (faseInteligencia) {
+          faseAtualCodigo = faseInteligencia.codigo;
         }
       }
 
@@ -227,7 +271,7 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
       const sinaisIds = [...new Set(observacoesData?.map(o => o.sinal_id) || [])];
       const { data: sinaisData } = await supabase
         .from('sinais')
-        .select('id, emoji, label_pt, valencia')
+        .select('id, emoji, label_pt, valencia, codigo')
         .in('id', sinaisIds.length > 0 ? sinaisIds : [0]);
 
       const sinaisMap = new Map(sinaisData?.map(s => [s.id, s]) || []);
@@ -279,15 +323,145 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
         if (alertaData) {
           // Parse dados_contexto do alerta
           const dadosContexto = alertaData.dados_contexto as Record<string, unknown> | null;
+          const sinalCodigo = (dadosContexto?.sinal_codigo as string) || '';
+          const padraoCodigo = (dadosContexto?.padrao_codigo as string) || '';
           
+          // Formatar nome do aluno
+          const nomeCompleto = aluno.full_name || 
+            `${aluno.nome || ''} ${aluno.sobrenome || ''}`.trim() || 
+            'Aluno';
+          const primeiroNome = nomeCompleto.split(' ')[0];
+          
+          // Determinar subtipo para celebrar
+          let subtipo: 'descoberta' | 'confirmacao' | undefined;
+          if (alertaData.tipo_alerta === 'celebrar') {
+            // É descoberta se a fase atual for diferente da casa do aluno
+            subtipo = faseAtualCodigo !== casaCodigo ? 'descoberta' : 'confirmacao';
+          }
+          
+          // Buscar hipóteses dinâmicas
+          let hipoteses: { titulo: string; descricao: string }[] = [];
+          
+          if (alertaData.tipo_alerta === 'precisa_atencao') {
+            // Primeiro tentar buscar por sinal
+            if (sinalCodigo) {
+              const { data: hipotesesSinal } = await supabase
+                .from('hipoteses_por_sinal')
+                .select('titulo, descricao')
+                .eq('sinal_codigo', sinalCodigo)
+                .order('ordem');
+              
+              if (hipotesesSinal && hipotesesSinal.length > 0) {
+                hipoteses = hipotesesSinal;
+              }
+            }
+            
+            // Se não encontrou por sinal, buscar por padrão
+            if (hipoteses.length === 0 && padraoCodigo) {
+              const { data: hipotesesPadrao } = await supabase
+                .from('hipoteses_por_padrao')
+                .select('titulo, descricao')
+                .eq('padrao_codigo', padraoCodigo)
+                .order('ordem');
+              
+              if (hipotesesPadrao && hipotesesPadrao.length > 0) {
+                hipoteses = hipotesesPadrao;
+              }
+            }
+            
+            // Fallback para dados do contexto se não encontrou no banco
+            if (hipoteses.length === 0) {
+              hipoteses = (dadosContexto?.hipoteses as { titulo: string; descricao: string }[]) || [];
+            }
+          }
+          
+          // Buscar ações sugeridas
+          let acoesSugeridas: AcaoSugerida[] = [];
+          if (alertaData.tipo_alerta === 'precisa_atencao') {
+            const { data: acoesData } = await supabase
+              .from('acoes_sugeridas')
+              .select('titulo, icone')
+              .eq('tipo_alerta', 'atencao_geral')
+              .order('ordem');
+            
+            if (acoesData && acoesData.length > 0) {
+              acoesSugeridas = acoesData.map(a => ({
+                titulo: substituirTemplate(a.titulo, { nome: primeiroNome }),
+                icone: a.icone,
+                codigo: a.icone // Usar icone como código da ação
+              }));
+            }
+          }
+          
+          // Buscar arquétipo para celebração
+          let arquetipo: Arquetipo | undefined;
+          if (alertaData.tipo_alerta === 'celebrar' && subtipo === 'descoberta' && casaCodigo && faseAtualCodigo) {
+            const { data: arquetipoData } = await supabase
+              .from('arquetipos')
+              .select('nome_arquetipo, significado, potencializar')
+              .eq('casa_codigo', casaCodigo)
+              .eq('fase_codigo', faseAtualCodigo)
+              .eq('tipo', 'descoberta')
+              .maybeSingle();
+            
+            if (arquetipoData) {
+              arquetipo = {
+                nome: arquetipoData.nome_arquetipo || '',
+                significado: substituirTemplate(arquetipoData.significado, { nome: primeiroNome }),
+                potencializar: arquetipoData.potencializar || []
+              };
+            }
+          } else if (alertaData.tipo_alerta === 'celebrar' && subtipo === 'confirmacao' && casaCodigo) {
+            const { data: arquetipoData } = await supabase
+              .from('arquetipos')
+              .select('nome_arquetipo, significado, potencializar')
+              .eq('casa_codigo', casaCodigo)
+              .eq('tipo', 'confirmacao')
+              .maybeSingle();
+            
+            if (arquetipoData) {
+              arquetipo = {
+                nome: arquetipoData.nome_arquetipo || '',
+                significado: substituirTemplate(arquetipoData.significado, { nome: primeiroNome }),
+                potencializar: arquetipoData.potencializar || []
+              };
+            }
+          }
+          
+          // Buscar template de texto
+          let motivo = alertaData.motivo;
+          if (alertaData.tipo_alerta === 'celebrar') {
+            const templateCodigo = subtipo === 'descoberta' ? 'celebrar_descoberta' : 'celebrar_confirmacao';
+            const { data: templateData } = await supabase
+              .from('templates_texto')
+              .select('template')
+              .eq('codigo', templateCodigo)
+              .maybeSingle();
+            
+            if (templateData?.template) {
+              const contagem = (dadosContexto?.contagem as number) || 3;
+              motivo = substituirTemplate(templateData.template, {
+                nome: primeiroNome,
+                contagem: contagem,
+                fase: faseAtualCodigo,
+                casa: casaNome
+              });
+            }
+          }
+
           alertaAtivo = {
             tipo: alertaData.tipo_alerta as 'precisa_atencao' | 'celebrar',
-            motivo: alertaData.motivo,
+            subtipo,
+            motivo,
             contexto: (dadosContexto?.contexto as string[]) || [],
-            hipoteses: (dadosContexto?.hipoteses as { titulo: string; descricao: string }[]) || [],
+            hipoteses,
             sugestoes: (dadosContexto?.sugestoes as string[]) || [],
+            acoesSugeridas,
+            arquetipo,
             created_at: alertaData.created_at || '',
-            alertaId: alertaData.id
+            alertaId: alertaData.id,
+            sinalCodigo,
+            padraoCodigo
           };
         }
       }
@@ -344,6 +518,7 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
         casaNome,
         casaCor,
         casaEmoji,
+        casaCodigo,
         pontosTotais,
         ranking,
         totalAlunosCasa,
@@ -355,7 +530,8 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
         observacoes,
         alertaAtivo,
         ultimaObservacao,
-        temObsFaseAtual
+        temObsFaseAtual,
+        faseAtualCodigo
       };
     },
     enabled: !!alunoId && !!profile?.institution_id
