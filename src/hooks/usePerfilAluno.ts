@@ -320,7 +320,7 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           .eq('aluno_id', alunoId)
           .eq('institution_id', aluno.institution_id)
           .in('tipo_alerta', ['precisa_atencao', 'celebrar'])
-          .in('status', ['ativo', 'visualizado'])
+          .in('status', ['ativo', 'visualizado', 'em_acompanhamento'])
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();

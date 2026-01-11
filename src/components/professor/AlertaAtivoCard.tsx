@@ -33,7 +33,7 @@ interface AlertaAtivoCardProps {
   sugestoes?: string[];
   acoesSugeridas?: AcaoSugerida[];
   arquetipo?: Arquetipo;
-  onAcaoClick: (tipoAcao: string) => void;
+  onRegistrarAcaoClick: () => void;
   casaColor: string;
   sinalPredominante?: string;
   quantidadeSinal?: number;
@@ -68,7 +68,7 @@ const AlertaAtivoCard = ({
   sugestoes,
   acoesSugeridas,
   arquetipo,
-  onAcaoClick,
+  onRegistrarAcaoClick,
   casaColor,
   sinalPredominante,
   quantidadeSinal
@@ -215,36 +215,43 @@ const AlertaAtivoCard = ({
       
       {/* Ações (apenas para precisa_atencao) */}
       {isPrecisaAtencao && acoesParaRenderizar.length > 0 && (
-        <>
-          <div className="flex items-center gap-2 text-white/40 text-xs">
+        <div className="mt-4">
+          <div className="flex items-center gap-2 text-white/40 text-xs mb-3">
             <Target className="w-3.5 h-3.5" strokeWidth={1.5} />
             <span className="uppercase tracking-wide">O que fazer</span>
           </div>
           
-          <div className="space-y-2">
-            {acoesParaRenderizar.map((acao, index) => {
-              const IconComponent = iconeMap[acao.icone] || MessageCircle;
-              
-              // Cores específicas para cada ícone (normalizado para lowercase)
-              const iconeNormalizado = acao.icone.toLowerCase();
-              let iconColor = 'text-blue-400';
-              if (iconeNormalizado === 'eye' || iconeNormalizado === 'observar') iconColor = 'text-purple-400';
-              if (iconeNormalizado === 'users' || iconeNormalizado === 'falar_colegas') iconColor = 'text-green-400';
-              if (iconeNormalizado === 'home' || iconeNormalizado === 'verificar_familia') iconColor = 'text-orange-400';
-              
-              return (
-                <button
-                  key={index}
-                  onClick={() => onAcaoClick(acao.codigo)}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-left"
-                >
-                  <IconComponent className={`w-4 h-4 ${iconColor}`} strokeWidth={1.5} />
-                  <span className="text-white text-sm">{acao.titulo}</span>
-                </button>
-              );
-            })}
+          {/* Sugestões como texto (não clicáveis) */}
+          <div className="text-white/60 text-sm mb-4">
+            <p className="text-white/40 text-xs mb-2">Sugestões:</p>
+            <ul className="space-y-1.5">
+              {acoesParaRenderizar.map((acao, index) => {
+                const IconComponent = iconeMap[acao.icone] || MessageCircle;
+                const iconeNormalizado = acao.icone.toLowerCase();
+                let iconColor = 'text-blue-400/60';
+                if (iconeNormalizado === 'eye' || iconeNormalizado === 'observar') iconColor = 'text-purple-400/60';
+                if (iconeNormalizado === 'users' || iconeNormalizado === 'falar_colegas') iconColor = 'text-green-400/60';
+                if (iconeNormalizado === 'home' || iconeNormalizado === 'verificar_familia') iconColor = 'text-orange-400/60';
+                
+                return (
+                  <li key={index} className="flex items-center gap-2">
+                    <IconComponent className={`w-3.5 h-3.5 ${iconColor}`} strokeWidth={1.5} />
+                    <span>{acao.titulo}</span>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
-        </>
+          
+          {/* Botão único para registrar ação */}
+          <button
+            onClick={onRegistrarAcaoClick}
+            className="w-full py-3 rounded-xl bg-blue-600 text-white flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors font-medium text-sm"
+          >
+            <Target className="w-4 h-4" strokeWidth={2} />
+            <span>Registrar minha ação</span>
+          </button>
+        </div>
       )}
     </div>
   );
