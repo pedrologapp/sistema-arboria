@@ -43,6 +43,9 @@ import MissaoDetalhesPage from "./pages/professor/MissaoDetalhesPage";
 import EntregasPage from "./pages/professor/EntregasPage";
 import AvaliarEntregaPage from "./pages/professor/AvaliarEntregaPage";
 import CirculoPage from "./pages/professor/CirculoPage";
+import CirculoTurmaPage from "./pages/professor/circulo/CirculoTurmaPage";
+import CirculoAlunosPage from "./pages/professor/circulo/CirculoAlunosPage";
+import CirculoRegistrarPage from "./pages/professor/circulo/CirculoRegistrarPage";
 import AlunosPage from "./pages/professor/AlunosPage";
 import PerfilAlunoPage from "./pages/professor/PerfilAlunoPage";
 import ProfessorConfiguracoesPage from "./pages/professor/ProfessorConfiguracoesPage";
@@ -253,6 +256,27 @@ const App = () => (
               <ProfessorProtectedRoute>
                 <ProfessorLayout>
                   <CirculoPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/circulo/serie/:serie" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <CirculoTurmaPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/circulo/serie/:serie/turma/:turma" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <CirculoAlunosPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/circulo/aluno/:alunoId" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <CirculoRegistrarPage />
                 </ProfessorLayout>
               </ProfessorProtectedRoute>
             } />

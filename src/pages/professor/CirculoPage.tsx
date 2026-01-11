@@ -1,8 +1,20 @@
-import { Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useProfessor } from '@/contexts/ProfessorContext';
+
+const SERIES = [
+  { numero: 6, label: '6º ANO' },
+  { numero: 7, label: '7º ANO' },
+  { numero: 8, label: '8º ANO' },
+  { numero: 9, label: '9º ANO' },
+];
 
 const CirculoPage = () => {
   const { casaColor } = useProfessor();
+  const navigate = useNavigate();
+
+  const handleSerieClick = (serie: number) => {
+    navigate(`/professor/circulo/serie/${serie}`);
+  };
 
   return (
     <div className="space-y-6 pt-4">
@@ -11,32 +23,30 @@ const CirculoPage = () => {
         <h1 className="text-xl font-bold text-white">Círculo das Inteligências</h1>
       </div>
 
-      {/* Placeholder */}
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div 
-          className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
-          style={{ backgroundColor: `${casaColor}20` }}
-        >
-          <Sparkles size={40} style={{ color: casaColor }} />
-        </div>
-        <h2 className="text-lg font-semibold text-white mb-2">
-          Em Construção
-        </h2>
-        <p className="text-white/50 text-sm max-w-xs">
-          O Círculo das Inteligências com os 15 sinais será implementado no Prompt 5.5
-        </p>
-        
-        {/* Preview dos 15 sinais */}
-        <div className="mt-8 grid grid-cols-5 gap-2">
-          {['🌟', '💡', '🎯', '🔥', '⭐', '🌈', '💎', '🚀', '🎨', '🎵', '📚', '🔬', '🌿', '🤝', '🧘'].map((emoji, i) => (
-            <div 
-              key={i}
-              className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-lg"
+      {/* Subtitle */}
+      <p className="text-white/60 text-sm">SELECIONE A SÉRIE</p>
+
+      {/* Grid 2x2 */}
+      <div className="grid grid-cols-2 gap-4">
+        {SERIES.map((serie) => (
+          <button
+            key={serie.numero}
+            onClick={() => handleSerieClick(serie.numero)}
+            className="aspect-square rounded-2xl flex flex-col items-center justify-center gap-2 transition-all active:scale-95"
+            style={{ 
+              backgroundColor: `${casaColor}15`,
+              border: `1px solid ${casaColor}30`
+            }}
+          >
+            <span 
+              className="text-4xl font-bold"
+              style={{ color: casaColor }}
             >
-              {emoji}
-            </div>
-          ))}
-        </div>
+              {serie.numero}º
+            </span>
+            <span className="text-white/70 text-sm font-medium">ANO</span>
+          </button>
+        ))}
       </div>
     </div>
   );
