@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, MessageCircle, Loader2, Smile, Meh, ThumbsDown, Sparkles, Edit3 } from 'lucide-react';
+import { X, MessageCircle, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useQueryClient } from '@tanstack/react-query';
@@ -16,11 +16,9 @@ interface RegistrarConversaModalProps {
 }
 
 const tiposAcao = [
-  { value: 'conversei_descoberta', label: 'Conversei com o aluno sobre a descoberta' },
-  { value: 'propus_desafio', label: 'Propus um desafio/próximo passo' },
-  { value: 'papel_mentor', label: 'Dei papel de mentor para ajudar colega' },
-  { value: 'outro', label: 'Outro (descreva abaixo)' },
-  { value: 'ainda_nao_conversei', label: 'Ainda não conversei' }
+  { value: 'conversei', label: 'Conversei', emoji: '💬' },
+  { value: 'desafio', label: 'Desafio', emoji: '🎯' },
+  { value: 'mentor', label: 'Mentor', emoji: '🤝' }
 ];
 
 const reacoesAluno = [
@@ -47,17 +45,12 @@ const RegistrarConversaModal = ({
   const [observacoes, setObservacoes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Validação: tipo de ação obrigatório, reação opcional se "ainda não conversei"
-  const ehAindaNaoConversei = tipoAcao === 'ainda_nao_conversei';
-  const ehOutro = tipoAcao === 'outro';
-  // Para "outro", observações são obrigatórias
-  const podeSubmeter = tipoAcao !== '' && 
-    (ehAindaNaoConversei || reacaoAluno !== '') &&
-    (!ehOutro || observacoes.trim() !== '');
+  // Validação: apenas tipo de ação é obrigatório
+  const podeSubmeter = tipoAcao !== '';
 
   const handleSalvar = async () => {
     if (!profile?.institution_id || !podeSubmeter) {
-      toast.error('Preencha os campos obrigatórios');
+      toast.error('Selecione o que você fez');
       return;
     }
 
@@ -72,7 +65,7 @@ const RegistrarConversaModal = ({
           institution_id: profile.institution_id,
           alerta_id: alertaId || null,
           tipo_acao: tipoAcao,
-          reacao_aluno: ehAindaNaoConversei ? null : reacaoAluno,
+          reacao_aluno: reacaoAluno || null,
           observacoes: observacoes.trim() || null
         });
 
@@ -95,11 +88,7 @@ const RegistrarConversaModal = ({
       queryClient.invalidateQueries({ queryKey: ['alertas-alunos'] });
       queryClient.invalidateQueries({ queryKey: ['perfil-aluno'] });
 
-      toast.success(
-        ehAindaNaoConversei 
-          ? 'Lembrete registrado. Não esqueça de conversar!' 
-          : 'Conversa registrada com sucesso!'
-      );
+      toast.success('Conversa registrada com sucesso!');
 
       // 4. Limpar estado e fechar
       setTipoAcao('');
@@ -124,18 +113,16 @@ const RegistrarConversaModal = ({
 
   if (!isOpen) return null;
 
-  const titulo = subtipo === 'descoberta' 
-    ? `Conversa sobre Descoberta` 
-    : `Conversa sobre Confirmação`;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
       <div className="w-full max-w-md bg-[#1a1a1a] rounded-2xl border border-white/10 overflow-hidden max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/10 bg-amber-900/20">
           <div className="flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-amber-400" strokeWidth={1.5} />
-            <span className="text-white font-medium">{titulo}</span>
+            <div className="flex items-center justify-center w-6 h-6">
+              <MessageCircle className="w-5 h-5 text-amber-400" strokeWidth={1.5} />
+            </div>
+            <span className="text-white font-medium">Registrar conversa com {nomeAluno}</span>
           </div>
           <button
             onClick={handleClose}
@@ -147,83 +134,66 @@ const RegistrarConversaModal = ({
 
         {/* Body */}
         <div className="p-4 space-y-5">
-          {/* Campo: O que você fez? */}
+          {/* Campo: O que você fez? - Chips horizontais */}
           <div>
             <label className="block text-white/80 text-sm mb-3">
               O que você fez? <span className="text-red-400">*</span>
             </label>
-            <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
               {tiposAcao.map((tipo) => (
-                <label
+                <button
                   key={tipo.value}
-                  className="flex items-start gap-3 cursor-pointer group"
                   onClick={() => setTipoAcao(tipo.value)}
+                  className={`px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                    tipoAcao === tipo.value
+                      ? 'bg-amber-500/20 border-amber-500/60 text-amber-300'
+                      : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:border-white/20'
+                  }`}
                 >
-                  <div
-                    className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
-                      tipoAcao === tipo.value
-                        ? 'border-amber-500 bg-amber-500'
-                        : 'border-white/30 group-hover:border-white/50'
-                    }`}
-                  >
-                    {tipoAcao === tipo.value && (
-                      <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                    )}
-                  </div>
-                  <span className="text-white/80 text-sm">{tipo.label}</span>
-                </label>
+                  <span className="text-lg">{tipo.emoji}</span>
+                  <span>{tipo.label}</span>
+                </button>
               ))}
             </div>
           </div>
 
-          {/* Campo: Como foi? (Observações) - MOVIDO PARA ANTES DA REAÇÃO */}
-          {tipoAcao && !ehAindaNaoConversei && (
-            <>
-              <div className="border-t border-white/10" />
-              <div>
-                <label className="block text-white text-sm font-medium mb-2 flex items-center gap-2">
-                  <Edit3 className="w-4 h-4 text-amber-400" />
-                  Como foi? {ehOutro && <span className="text-red-400">*</span>}
-                </label>
-                <textarea
-                  value={observacoes}
-                  onChange={(e) => setObservacoes(e.target.value)}
-                  placeholder={`Conte brevemente como foi a conversa com ${nomeAluno}. O que ele disse? Topou o desafio? Algo marcante que você percebeu?`}
-                  className="w-full h-28 px-4 py-3 rounded-xl bg-white/5 border-2 border-dashed border-amber-500/30 text-white placeholder-white/40 text-sm resize-none focus:outline-none focus:border-amber-500/60 transition-colors"
-                />
-              </div>
-            </>
-          )}
+          {/* Campo: Como foi? (sempre visível, opcional) */}
+          <div className="border-t border-white/10 pt-4">
+            <label className="block text-white/80 text-sm mb-2">
+              Como foi? <span className="text-white/40 text-xs">(opcional)</span>
+            </label>
+            <textarea
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              placeholder="Conte brevemente como foi..."
+              className="w-full h-24 px-4 py-3 rounded-xl bg-white/5 border-2 border-dashed border-amber-500/30 text-white placeholder-white/40 text-sm resize-none focus:outline-none focus:border-amber-500/60 transition-colors"
+            />
+          </div>
 
-          {/* Campo: Como foi a reação? (se não for "ainda não conversei") */}
-          {tipoAcao && !ehAindaNaoConversei && (
-            <>
-              <div className="border-t border-white/10" />
-              <div>
-                <label className="block text-white/80 text-sm mb-3">
-                  Qual foi a reação de {nomeAluno}? <span className="text-red-400">*</span>
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {reacoesAluno.map((reacao) => (
-                    <button
-                      key={reacao.value}
-                      onClick={() => setReacaoAluno(reacao.value)}
-                      className={`p-3 rounded-xl border-2 text-center transition-all duration-200 flex flex-col items-center gap-1.5 ${
-                        reacaoAluno === reacao.value
-                          ? `${reacao.bgColor} ${reacao.borderColor} scale-105`
-                          : 'bg-white/5 border-white/10 hover:bg-white/10 hover:scale-102'
-                      }`}
-                    >
-                      <span className="text-2xl">{reacao.emoji}</span>
-                      <span className={`text-xs ${reacaoAluno === reacao.value ? 'text-white font-medium' : 'text-white/60'}`}>
-                        {reacao.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
+          {/* Campo: Reação do aluno (sempre visível, opcional) */}
+          <div className="border-t border-white/10 pt-4">
+            <label className="block text-white/80 text-sm mb-3">
+              Reação do aluno? <span className="text-white/40 text-xs">(opcional)</span>
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              {reacoesAluno.map((reacao) => (
+                <button
+                  key={reacao.value}
+                  onClick={() => setReacaoAluno(reacaoAluno === reacao.value ? '' : reacao.value)}
+                  className={`p-3 rounded-xl border-2 text-center transition-all duration-200 flex flex-col items-center gap-1.5 ${
+                    reacaoAluno === reacao.value
+                      ? `${reacao.bgColor} ${reacao.borderColor} scale-105`
+                      : 'bg-white/5 border-white/10 hover:bg-white/10'
+                  }`}
+                >
+                  <span className="text-2xl">{reacao.emoji}</span>
+                  <span className={`text-xs ${reacaoAluno === reacao.value ? 'text-white font-medium' : 'text-white/60'}`}>
+                    {reacao.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
@@ -250,7 +220,7 @@ const RegistrarConversaModal = ({
                 <span>Salvando...</span>
               </>
             ) : (
-              <span>Salvar</span>
+              <span>Salvar registro</span>
             )}
           </button>
         </div>
