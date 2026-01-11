@@ -310,11 +310,14 @@ const PerfilAlunoPage = () => {
         {aluno.alertaAtivo ? (
           <AlertaAtivoCard
             tipo={aluno.alertaAtivo.tipo}
+            subtipo={aluno.alertaAtivo.subtipo}
             nomeAluno={primeiroNome}
             motivo={aluno.alertaAtivo.motivo}
             contexto={aluno.alertaAtivo.contexto}
             hipoteses={aluno.alertaAtivo.hipoteses}
             sugestoes={aluno.alertaAtivo.sugestoes}
+            acoesSugeridas={aluno.alertaAtivo.acoesSugeridas}
+            arquetipo={aluno.alertaAtivo.arquetipo}
             onAcaoClick={handleAcaoClick}
             casaColor={aluno.casaCor}
           />

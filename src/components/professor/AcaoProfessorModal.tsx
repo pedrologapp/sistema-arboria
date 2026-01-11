@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, MessageCircle, Eye, Users, Loader2 } from 'lucide-react';
+import { X, MessageCircle, Eye, Users, Home, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useQueryClient } from '@tanstack/react-query';
@@ -16,8 +16,13 @@ interface AcaoProfessorModalProps {
 
 const tipoAcaoConfig: Record<string, { icon: typeof MessageCircle; label: string; color: string }> = {
   conversar: { icon: MessageCircle, label: 'Conversar com', color: 'text-blue-400' },
+  'message-circle': { icon: MessageCircle, label: 'Conversar com', color: 'text-blue-400' },
   observar: { icon: Eye, label: 'Observar mais', color: 'text-purple-400' },
-  falar_colegas: { icon: Users, label: 'Falar com outros profs sobre', color: 'text-green-400' }
+  eye: { icon: Eye, label: 'Observar mais', color: 'text-purple-400' },
+  falar_colegas: { icon: Users, label: 'Falar com outros profs sobre', color: 'text-green-400' },
+  users: { icon: Users, label: 'Falar com outros profs sobre', color: 'text-green-400' },
+  verificar_familia: { icon: Home, label: 'Verificar com a família de', color: 'text-orange-400' },
+  home: { icon: Home, label: 'Verificar com a família de', color: 'text-orange-400' }
 };
 
 const categorias = [
