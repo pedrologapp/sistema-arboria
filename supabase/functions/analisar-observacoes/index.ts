@@ -32,11 +32,14 @@ interface PadraoIdentificado {
 }
 
 interface AlertaGerado {
-  estado: "precisa_atencao" | "celebrar" | "nao_esquecer" | "neutro";
+  estado: "precisa_atencao" | "celebrar" | "brilhando" | "melhorando" | 
+          "atencao_recente" | "bom_comeco" | "fique_de_olho" | "nao_esquecer" | "neutro";
   deve_gerar_alerta: boolean;
   alerta?: {
     sinal_principal: string;
     sinal_codigo: string;
+    sinal_secundario?: string;
+    sinal_secundario_codigo?: string;
     quantidade: number;
     texto_acontecendo: string;
     padrao_identificado?: PadraoIdentificado;
@@ -433,23 +436,82 @@ ${DICIONARIO_CELEBRACOES}
 Retorne APENAS o JSON válido, sem explicações adicionais.`;
 }
 
+// Determine state based on last observations
+function determinarEstado(observacoes: Observacao[]): string {
+  if (observacoes.length === 0) return 'aguardando';
+  
+  if (observacoes.length === 1) {
+    return observacoes[0].valencia === 'positivo' ? 'bom_comeco' : 'fique_de_olho';
+  }
+  
+  const ultima = observacoes[0];
+  const penultima = observacoes[1];
+  
+  if (ultima.valencia === 'atencao' && penultima.valencia === 'atencao') {
+    return 'precisa_atencao';
+  }
+  if (ultima.valencia === 'positivo' && penultima.valencia === 'positivo') {
+    return 'brilhando';
+  }
+  if (ultima.valencia === 'atencao' && penultima.valencia === 'positivo') {
+    return 'atencao_recente';
+  }
+  if (ultima.valencia === 'positivo' && penultima.valencia === 'atencao') {
+    return 'melhorando';
+  }
+  
+  return 'neutro';
+}
+
 // Fallback analysis when AI fails
 function analiseFallback(observacoes: Observacao[], nomeAluno: string): AlertaGerado {
-  if (observacoes.length < 2) {
-    return { estado: "neutro", deve_gerar_alerta: false };
+  const estado = determinarEstado(observacoes);
+  
+  // Handle case with 0 observations
+  if (observacoes.length === 0) {
+    return { 
+      estado: "neutro", 
+      deve_gerar_alerta: false 
+    };
+  }
+  
+  // Handle case with 1 observation
+  if (observacoes.length === 1) {
+    const obs = observacoes[0];
+    const isPositivo = obs.valencia === 'positivo';
+    
+    return {
+      estado: isPositivo ? "bom_comeco" : "fique_de_olho",
+      deve_gerar_alerta: true,
+      alerta: {
+        sinal_principal: obs.sinal,
+        sinal_codigo: obs.sinal_codigo,
+        quantidade: 1,
+        texto_acontecendo: isPositivo
+          ? `${nomeAluno} teve sua primeira observação: "${obs.sinal}".`
+          : `A primeira observação de ${nomeAluno} foi "${obs.sinal}".`,
+        contexto: isPositivo
+          ? ["Bom começo para o acompanhamento", "Continue observando para confirmar padrão"]
+          : ["Primeira observação requer atenção", "Observe mais para entender o padrão"],
+        hipoteses: [],
+        acoes_sugeridas: isPositivo
+          ? [{ acao: "Continue observando e celebrando", prioridade: "media" as const }]
+          : [{ acao: "Acompanhe de perto nas próximas atividades", prioridade: "media" as const }],
+      },
+    };
   }
 
   const ultimas2 = observacoes.slice(0, 2);
-  const ambas_atencao = ultimas2.every((o) => o.valencia === "atencao");
-  const ambas_positivas = ultimas2.every((o) => o.valencia === "positivo");
+  const ultima = ultimas2[0];
+  const penultima = ultimas2[1];
 
-  if (ambas_atencao) {
-    const sinalPrincipal = ultimas2[0].sinal;
-    const sinalCodigo = ultimas2[0].sinal_codigo;
-    const sinal2Codigo = ultimas2[1].sinal_codigo;
+  // 2 atenções consecutivas
+  if (estado === "precisa_atencao") {
+    const sinalPrincipal = ultima.sinal;
+    const sinalCodigo = ultima.sinal_codigo;
+    const sinal2Codigo = penultima.sinal_codigo;
     const quantidade = observacoes.filter((o) => o.sinal === sinalPrincipal).length;
 
-    // Detect high concern patterns
     const padroesAltaPreocupacao: Record<string, PadraoIdentificado> = {
       "triste+isolou": { nome: "Retraimento emocional", significado: "Pode estar em sofrimento psíquico", acao_recomendada: "Conversa urgente" },
       "triste+triste": { nome: "Tristeza persistente", significado: "Possível quadro depressivo", acao_recomendada: "Encaminhar psicólogo" },
@@ -469,10 +531,12 @@ function analiseFallback(observacoes: Observacao[], nomeAluno: string): AlertaGe
       alerta: {
         sinal_principal: sinalPrincipal,
         sinal_codigo: sinalCodigo,
+        sinal_secundario: penultima.sinal,
+        sinal_secundario_codigo: sinal2Codigo,
         quantidade: Math.min(quantidade, 3),
         texto_acontecendo: sinalCodigo === sinal2Codigo
           ? `${nomeAluno} registrou '${sinalPrincipal}' nas últimas 2 observações consecutivas.`
-          : `${nomeAluno} apresentou sinais de atenção: '${ultimas2[0].sinal}' e '${ultimas2[1].sinal}'.`,
+          : `${nomeAluno} apresentou sinais de atenção: '${ultima.sinal}' e '${penultima.sinal}'.`,
         padrao_identificado: padraoEncontrado,
         contexto: [
           "Padrão de atenção identificado nas observações recentes",
@@ -487,10 +551,79 @@ function analiseFallback(observacoes: Observacao[], nomeAluno: string): AlertaGe
     };
   }
 
-  if (ambas_positivas) {
+  // 2 positivos consecutivos
+  if (estado === "brilhando") {
+    const sinaisIguais = ultima.sinal_codigo === penultima.sinal_codigo;
+    
     return {
-      estado: "celebrar",
-      deve_gerar_alerta: false,
+      estado: "brilhando",
+      deve_gerar_alerta: true,
+      alerta: {
+        sinal_principal: ultima.sinal,
+        sinal_codigo: ultima.sinal_codigo,
+        sinal_secundario: penultima.sinal,
+        sinal_secundario_codigo: penultima.sinal_codigo,
+        quantidade: 2,
+        texto_acontecendo: sinaisIguais
+          ? `${nomeAluno} está brilhando! Registrou '${ultima.sinal}' nas últimas 2 observações.`
+          : `${nomeAluno} está indo muito bem! Últimas observações: '${ultima.sinal}' e '${penultima.sinal}'.`,
+        contexto: [
+          "Padrão positivo identificado nas observações recentes",
+          "Continue celebrando e reforçando o comportamento"
+        ],
+        hipoteses: [],
+        acoes_sugeridas: [
+          { acao: "Continue observando e celebrando", prioridade: "media" as const }
+        ],
+      },
+    };
+  }
+
+  // Positivo após atenção = Melhorando
+  if (estado === "melhorando") {
+    return {
+      estado: "melhorando",
+      deve_gerar_alerta: true,
+      alerta: {
+        sinal_principal: ultima.sinal,
+        sinal_codigo: ultima.sinal_codigo,
+        sinal_secundario: penultima.sinal,
+        sinal_secundario_codigo: penultima.sinal_codigo,
+        quantidade: 1,
+        texto_acontecendo: `${nomeAluno} mostrou melhora! Após "${penultima.sinal}", registrou "${ultima.sinal}".`,
+        contexto: [
+          "Aluno demonstrou recuperação",
+          "Continue acompanhando de perto"
+        ],
+        hipoteses: [],
+        acoes_sugeridas: [
+          { acao: "Continue acompanhando de perto", prioridade: "media" as const }
+        ],
+      },
+    };
+  }
+
+  // Atenção após positivo = Atenção Recente
+  if (estado === "atencao_recente") {
+    return {
+      estado: "atencao_recente",
+      deve_gerar_alerta: true,
+      alerta: {
+        sinal_principal: ultima.sinal,
+        sinal_codigo: ultima.sinal_codigo,
+        sinal_secundario: penultima.sinal,
+        sinal_secundario_codigo: penultima.sinal_codigo,
+        quantidade: 1,
+        texto_acontecendo: `${nomeAluno} estava bem, mas a última observação foi "${ultima.sinal}".`,
+        contexto: [
+          "Mudança recente no comportamento",
+          "Fique atento nas próximas observações"
+        ],
+        hipoteses: [],
+        acoes_sugeridas: [
+          { acao: "Fique atento nas próximas observações", prioridade: "media" as const }
+        ],
+      },
     };
   }
 

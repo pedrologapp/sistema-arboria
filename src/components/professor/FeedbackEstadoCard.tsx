@@ -45,6 +45,9 @@ interface FeedbackEstadoCardProps {
     significado: string;
     potencializar: string[];
   };
+  onRegistrarAcao?: () => void;
+  onRegistrarObservacao?: () => void;
+  casaColor?: string;
 }
 
 const estadoConfig = {
@@ -132,7 +135,10 @@ export function FeedbackEstadoCard({
   hipoteses,
   acoesSugeridas,
   padrao,
-  arquetipo
+  arquetipo,
+  onRegistrarAcao,
+  onRegistrarObservacao,
+  casaColor
 }: FeedbackEstadoCardProps) {
   const [expandido, setExpandido] = useState(false);
   
@@ -144,6 +150,9 @@ export function FeedbackEstadoCard({
                       (contexto && contexto.length > 0) ||
                       padrao ||
                       arquetipo;
+  
+  // Estados que mostram botão de ação
+  const estadosComAcao = ['precisa_atencao', 'fique_de_olho', 'atencao_recente'];
 
   return (
     <div className={cn(
@@ -190,6 +199,28 @@ export function FeedbackEstadoCard({
             <p className={cn('text-xs opacity-80', config.textColor)}>
               {arquetipo.significado}
             </p>
+          </div>
+        )}
+        
+        {/* Botões de ação */}
+        {(onRegistrarAcao || onRegistrarObservacao) && (
+          <div className="mt-4 flex gap-2">
+            {estadosComAcao.includes(estado) && onRegistrarAcao && (
+              <button
+                onClick={onRegistrarAcao}
+                className="flex-1 py-2 px-3 rounded-lg bg-white/20 hover:bg-white/30 transition-colors text-white text-sm font-medium"
+              >
+                Registrar ação
+              </button>
+            )}
+            {estado === 'aguardando' && onRegistrarObservacao && (
+              <button
+                onClick={onRegistrarObservacao}
+                className="flex-1 py-2 px-3 rounded-lg bg-white/20 hover:bg-white/30 transition-colors text-white text-sm font-medium"
+              >
+                Registrar observação
+              </button>
+            )}
           </div>
         )}
       </div>
