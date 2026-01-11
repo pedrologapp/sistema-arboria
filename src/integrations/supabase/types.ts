@@ -93,6 +93,7 @@ export type Database = {
           id: string
           institution_id: string
           motivo: string
+          notificacao_ativa: boolean | null
           resolved_at: string | null
           resolved_by: string | null
           status: Database["public"]["Enums"]["status_alerta"] | null
@@ -109,6 +110,7 @@ export type Database = {
           id?: string
           institution_id: string
           motivo: string
+          notificacao_ativa?: boolean | null
           resolved_at?: string | null
           resolved_by?: string | null
           status?: Database["public"]["Enums"]["status_alerta"] | null
@@ -125,6 +127,7 @@ export type Database = {
           id?: string
           institution_id?: string
           motivo?: string
+          notificacao_ativa?: boolean | null
           resolved_at?: string | null
           resolved_by?: string | null
           status?: Database["public"]["Enums"]["status_alerta"] | null

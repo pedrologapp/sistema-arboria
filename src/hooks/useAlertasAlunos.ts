@@ -48,6 +48,13 @@ export interface BannerComeceAqui {
   alunos: AlunoSimples[];
 }
 
+export interface BadgesAtivos {
+  precisaAtencao: number;
+  celebrar: number;
+  naoEsquecer: number;
+  atencaoFaseAnterior: number;
+}
+
 export interface AlertasAgrupados {
   bannerComeceAqui: BannerComeceAqui | null;
   precisaAtencao: AlertaAluno[];
@@ -60,6 +67,7 @@ export interface AlertasAgrupados {
     naoEsquecer: number;
     atencaoFaseAnterior: number;
   };
+  badgesAtivos: BadgesAtivos;
   isLoading: boolean;
 }
 
@@ -77,6 +85,7 @@ export const useAlertasAlunos = () => {
           naoEsquecer: [],
           atencaoFaseAnterior: [],
           totais: { precisaAtencao: 0, celebrar: 0, naoEsquecer: 0, atencaoFaseAnterior: 0 },
+          badgesAtivos: { precisaAtencao: 0, celebrar: 0, naoEsquecer: 0, atencaoFaseAnterior: 0 },
           isLoading: false
         };
       }
@@ -106,6 +115,7 @@ export const useAlertasAlunos = () => {
           created_at,
           fase_id,
           fase_origem_id,
+          notificacao_ativa,
           aluno:profiles!alertas_alunos_aluno_id_fkey (
             id,
             nome,
@@ -283,6 +293,24 @@ export const useAlertasAlunos = () => {
       // Combinar nao_esquecer do banco + calculados dinamicamente
       const naoEsquecer = [...naoEsquecerDb, ...alunosNaoEsquecer];
 
+      // 11. Calcular badges ativos (contagem de alertas com notificacao_ativa = true)
+      const alertasComBadge = (alertasDb || []).filter(a => a.notificacao_ativa === true);
+      const badgesPrecisa = alertasComBadge.filter(a => 
+        a.tipo_alerta === 'precisa_atencao' && 
+        (!a.fase_origem_id || a.fase_origem_id === faseAtual?.id)
+      ).length;
+      const badgesCelebrar = alertasComBadge.filter(a => 
+        a.tipo_alerta === 'celebrar' && 
+        (!a.fase_origem_id || a.fase_origem_id === faseAtual?.id)
+      ).length;
+      const badgesNaoEsquecer = alertasComBadge.filter(a => 
+        a.tipo_alerta === 'nao_esquecer' && 
+        (!a.fase_origem_id || a.fase_origem_id === faseAtual?.id)
+      ).length;
+      const badgesFaseAnterior = alertasComBadge.filter(a => 
+        a.fase_origem_id && a.fase_origem_id !== faseAtual?.id
+      ).length;
+
       return {
         bannerComeceAqui,
         precisaAtencao,
@@ -294,6 +322,12 @@ export const useAlertasAlunos = () => {
           celebrar: celebrar.length,
           naoEsquecer: naoEsquecer.length,
           atencaoFaseAnterior: atencaoFaseAnterior.length
+        },
+        badgesAtivos: {
+          precisaAtencao: badgesPrecisa,
+          celebrar: badgesCelebrar,
+          naoEsquecer: badgesNaoEsquecer + alunosNaoEsquecer.length, // Incluir calculados
+          atencaoFaseAnterior: badgesFaseAnterior
         },
         isLoading: false
       };
@@ -311,6 +345,7 @@ export const useAlertasAlunos = () => {
     celebrar: query.data?.celebrar || [],
     naoEsquecer: query.data?.naoEsquecer || [],
     atencaoFaseAnterior: query.data?.atencaoFaseAnterior || [],
-    totais: query.data?.totais || { precisaAtencao: 0, celebrar: 0, naoEsquecer: 0, atencaoFaseAnterior: 0 }
+    totais: query.data?.totais || { precisaAtencao: 0, celebrar: 0, naoEsquecer: 0, atencaoFaseAnterior: 0 },
+    badgesAtivos: query.data?.badgesAtivos || { precisaAtencao: 0, celebrar: 0, naoEsquecer: 0, atencaoFaseAnterior: 0 }
   };
 };
