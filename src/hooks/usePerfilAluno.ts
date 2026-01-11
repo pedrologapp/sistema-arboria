@@ -161,11 +161,12 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           .order('semana')
           .order('tipo_missao');
 
-        // Buscar entregas do aluno
+        // Buscar entregas do aluno - ordenar por data ASC para que o Map sobrescreva com a mais recente
         const { data: entregasData } = await supabase
           .from('entregas')
           .select('missao_id, status, nota')
-          .eq('aluno_id', alunoId);
+          .eq('aluno_id', alunoId)
+          .order('created_at', { ascending: true });
 
         const entregasMap = new Map(
           entregasData?.map(e => [e.missao_id, { status: e.status, nota: e.nota }]) || []
@@ -177,8 +178,9 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           
           if (entrega) {
             if (entrega.status === 'aprovada') status = 'aprovada';
+            else if (entrega.status === 'refazer') status = 'aguardando'; // Refazer = precisa reenviar
             else if (entrega.status === 'aguardando') status = 'aguardando';
-            else if (entrega.status === 'pendente') status = 'pendente';
+            else status = 'pendente';
           }
 
           return {
