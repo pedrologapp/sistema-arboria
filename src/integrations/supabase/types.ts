@@ -14,6 +14,155 @@ export type Database = {
   }
   public: {
     Tables: {
+      acoes_professor: {
+        Row: {
+          alerta_id: string
+          categoria_descoberta:
+            | Database["public"]["Enums"]["categoria_descoberta"]
+            | null
+          created_at: string | null
+          descoberta: string | null
+          id: string
+          institution_id: string
+          professor_id: string
+          tipo_acao: string
+        }
+        Insert: {
+          alerta_id: string
+          categoria_descoberta?:
+            | Database["public"]["Enums"]["categoria_descoberta"]
+            | null
+          created_at?: string | null
+          descoberta?: string | null
+          id?: string
+          institution_id: string
+          professor_id: string
+          tipo_acao: string
+        }
+        Update: {
+          alerta_id?: string
+          categoria_descoberta?:
+            | Database["public"]["Enums"]["categoria_descoberta"]
+            | null
+          created_at?: string | null
+          descoberta?: string | null
+          id?: string
+          institution_id?: string
+          professor_id?: string
+          tipo_acao?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acoes_professor_alerta_id_fkey"
+            columns: ["alerta_id"]
+            isOneToOne: false
+            referencedRelation: "alertas_alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acoes_professor_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acoes_professor_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acoes_professor_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+        ]
+      }
+      alertas_alunos: {
+        Row: {
+          acao_tomada: string | null
+          aluno_id: string
+          created_at: string | null
+          dados_contexto: Json | null
+          id: string
+          institution_id: string
+          motivo: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["status_alerta"] | null
+          tipo_alerta: Database["public"]["Enums"]["tipo_alerta"]
+          updated_at: string | null
+        }
+        Insert: {
+          acao_tomada?: string | null
+          aluno_id: string
+          created_at?: string | null
+          dados_contexto?: Json | null
+          id?: string
+          institution_id: string
+          motivo: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["status_alerta"] | null
+          tipo_alerta: Database["public"]["Enums"]["tipo_alerta"]
+          updated_at?: string | null
+        }
+        Update: {
+          acao_tomada?: string | null
+          aluno_id?: string
+          created_at?: string | null
+          dados_contexto?: Json | null
+          id?: string
+          institution_id?: string
+          motivo?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["status_alerta"] | null
+          tipo_alerta?: Database["public"]["Enums"]["tipo_alerta"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alertas_alunos_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alertas_alunos_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
+            foreignKeyName: "alertas_alunos_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alertas_alunos_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alertas_alunos_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+        ]
+      }
       aluno_turma: {
         Row: {
           aluno_id: string
@@ -2186,6 +2335,13 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user" | "professor"
+      categoria_descoberta:
+        | "fator_escolar"
+        | "fator_externo"
+        | "fator_social"
+        | "indefinido"
+      status_alerta: "ativo" | "visualizado" | "resolvido" | "arquivado"
+      tipo_alerta: "precisa_atencao" | "celebrar" | "nao_esquecer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2314,6 +2470,14 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user", "professor"],
+      categoria_descoberta: [
+        "fator_escolar",
+        "fator_externo",
+        "fator_social",
+        "indefinido",
+      ],
+      status_alerta: ["ativo", "visualizado", "resolvido", "arquivado"],
+      tipo_alerta: ["precisa_atencao", "celebrar", "nao_esquecer"],
     },
   },
 } as const
