@@ -29,7 +29,7 @@ const StudentHeader = ({ notificationCount = 0 }: StudentHeaderProps) => {
                 className="text-sm font-medium"
                 style={{ color: faseAtual.inteligencia.cor_hex || '#fff' }}
               >
-                Fase {faseAtual.inteligencia.nome}
+                Semana {faseAtual.semana_atual || 1}
               </span>
             ) : null}
             

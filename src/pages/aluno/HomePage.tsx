@@ -77,15 +77,15 @@ const HomePage = () => {
   return (
     <div className="space-y-6">
       {/* Greeting */}
-      <h1 className="text-2xl font-bold text-white">
+      <h1 className="text-2xl font-bold text-white mt-2">
         Olá, {firstName}!
       </h1>
 
       {/* Main Card - House Info - Premium Glassmorphism */}
       <div 
         className="relative overflow-hidden p-6 rounded-2xl text-center
-          bg-[rgba(26,26,30,0.85)] backdrop-blur-xl
-          border border-white/10
+          bg-gradient-to-r from-white/[0.06] to-white/[0.02]
+          backdrop-blur-sm border border-white/10
           shadow-xl transition-all duration-300"
         style={{
           boxShadow: `0 20px 40px -12px ${casaColor}30`
