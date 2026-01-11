@@ -46,6 +46,7 @@ import CirculoPage from "./pages/professor/CirculoPage";
 import CirculoTurmaPage from "./pages/professor/circulo/CirculoTurmaPage";
 import CirculoAlunosPage from "./pages/professor/circulo/CirculoAlunosPage";
 import CirculoRegistrarPage from "./pages/professor/circulo/CirculoRegistrarPage";
+import CirculoRegistrarMultiplosPage from "./pages/professor/circulo/CirculoRegistrarMultiplosPage";
 import AlunosPage from "./pages/professor/AlunosPage";
 import PerfilAlunoPage from "./pages/professor/PerfilAlunoPage";
 import ProfessorConfiguracoesPage from "./pages/professor/ProfessorConfiguracoesPage";
@@ -277,6 +278,13 @@ const App = () => (
               <ProfessorProtectedRoute>
                 <ProfessorLayout>
                   <CirculoRegistrarPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/circulo/multiplos" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <CirculoRegistrarMultiplosPage />
                 </ProfessorLayout>
               </ProfessorProtectedRoute>
             } />
