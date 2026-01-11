@@ -16,6 +16,7 @@ interface MembroCardProps {
   onIniciarConversa: (usuarioId: string) => void;
   casaColor?: string;
   temDmNaoLida?: boolean;
+  hideStatus?: boolean;
 }
 
 const CARGO_EMOJI: Record<string, string> = {
@@ -25,7 +26,7 @@ const CARGO_EMOJI: Record<string, string> = {
   embaixador: '🌍 Embaixador',
 };
 
-export const MembroCard = ({ membro, isMe, onIniciarConversa, temDmNaoLida = false }: MembroCardProps) => {
+export const MembroCard = ({ membro, isMe, onIniciarConversa, temDmNaoLida = false, hideStatus = false }: MembroCardProps) => {
   const status = getStatusOnline(membro.ultima_atividade);
   const nomeExibido = membro.nome || membro.full_name || 'Usuário';
   const cargoAtivo = membro.cargos_casa?.find(c => c.ativo);
@@ -34,11 +35,13 @@ export const MembroCard = ({ membro, isMe, onIniciarConversa, temDmNaoLida = fal
   return (
     <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/5 transition-colors">
       <div className="flex items-center gap-2 flex-1 min-w-0">
-        {/* Status indicator */}
-        <div 
-          className="w-2 h-2 rounded-full flex-shrink-0"
-          style={{ backgroundColor: status.cor }}
-        />
+        {/* Status indicator - hidden for mentors/professors */}
+        {!hideStatus && (
+          <div 
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ backgroundColor: status.cor }}
+          />
+        )}
         
         {/* Avatar pequeno */}
         {membro.avatar_url ? (
