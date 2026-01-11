@@ -1,8 +1,9 @@
-import { ChevronDown, Check } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
-import { useAlertasAlunos, AlertaAluno } from '@/hooks/useAlertasAlunos';
+import { useAlertasAlunos, AlertaAluno, AlertaFaseAnterior } from '@/hooks/useAlertasAlunos';
 import { AlertaAlunoCard } from './AlertaAlunoCard';
+import { AlertaFaseAnteriorCard } from './AlertaFaseAnteriorCard';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface AlertBoxesProps {
@@ -10,7 +11,7 @@ interface AlertBoxesProps {
 }
 
 interface AlertBoxConfig {
-  id: 'precisa_atencao' | 'celebrar' | 'nao_esquecer';
+  id: 'precisa_atencao' | 'celebrar' | 'nao_esquecer' | 'atencao_fase_anterior';
   icon: string;
   iconEmpty: string;
   label: string;
@@ -46,11 +47,20 @@ const alertConfigs: AlertBoxConfig[] = [
     emptyMessage: 'Todos os alunos foram observados recentemente',
     colorActive: '#CC7000',
     colorHover: '#E08000'
+  },
+  {
+    id: 'atencao_fase_anterior',
+    icon: '⚠️',
+    iconEmpty: '✓',
+    label: 'Atenção da fase anterior',
+    emptyMessage: 'Nenhum alerta pendente de fases anteriores',
+    colorActive: '#8B4000',
+    colorHover: '#A04800'
   }
 ];
 
 export const AlertBoxes = ({ onAlunoClick }: AlertBoxesProps) => {
-  const { precisaAtencao, celebrar, naoEsquecer, totais, isLoading } = useAlertasAlunos();
+  const { precisaAtencao, celebrar, naoEsquecer, atencaoFaseAnterior, totais, isLoading } = useAlertasAlunos();
   const [openBox, setOpenBox] = useState<string | null>(null);
 
   const getAlertasByType = (type: string): AlertaAluno[] => {
@@ -67,19 +77,20 @@ export const AlertBoxes = ({ onAlunoClick }: AlertBoxesProps) => {
       case 'precisa_atencao': return totais.precisaAtencao;
       case 'celebrar': return totais.celebrar;
       case 'nao_esquecer': return totais.naoEsquecer;
+      case 'atencao_fase_anterior': return totais.atencaoFaseAnterior;
       default: return 0;
     }
   };
 
   const handleToggle = (boxId: string, count: number) => {
-    if (count === 0) return; // Não expande se vazio
+    if (count === 0) return;
     setOpenBox(prev => prev === boxId ? null : boxId);
   };
 
   if (isLoading) {
     return (
       <div className="space-y-2">
-        {[1, 2, 3].map(i => (
+        {[1, 2, 3, 4].map(i => (
           <Skeleton key={i} className="h-12 w-full rounded-xl" />
         ))}
       </div>
@@ -90,9 +101,9 @@ export const AlertBoxes = ({ onAlunoClick }: AlertBoxesProps) => {
     <div className="space-y-2">
       {alertConfigs.map(config => {
         const count = getCountByType(config.id);
-        const alertas = getAlertasByType(config.id);
         const isEmpty = count === 0;
         const isOpen = openBox === config.id;
+        const isFaseAnterior = config.id === 'atencao_fase_anterior';
         
         return (
           <div key={config.id} className="overflow-hidden rounded-xl">
@@ -150,21 +161,37 @@ export const AlertBoxes = ({ onAlunoClick }: AlertBoxesProps) => {
                   style={{ backgroundColor: `${config.colorActive}40` }}
                 >
                   <div className="p-3 space-y-2">
-                    {alertas.map(alerta => (
-                      <AlertaAlunoCard
-                        key={alerta.id}
-                        aluno={alerta.aluno}
-                        motivo={alerta.motivo}
-                        tipoAlerta={config.id}
-                        onClick={() => onAlunoClick(alerta.aluno.id)}
-                      />
-                    ))}
+                    {isFaseAnterior ? (
+                      // Render AlertaFaseAnteriorCard for phase anterior alerts
+                      atencaoFaseAnterior.map(alerta => (
+                        <AlertaFaseAnteriorCard
+                          key={alerta.id}
+                          aluno={alerta.aluno}
+                          faseAnteriorNome={alerta.faseAnteriorNome}
+                          faseAnteriorEmoji={alerta.faseAnteriorEmoji}
+                          motivo={alerta.motivo}
+                          observadoFaseAtual={alerta.observadoFaseAtual}
+                          onClick={() => onAlunoClick(alerta.aluno.id)}
+                        />
+                      ))
+                    ) : (
+                      // Render AlertaAlunoCard for other alert types
+                      getAlertasByType(config.id).map(alerta => (
+                        <AlertaAlunoCard
+                          key={alerta.id}
+                          aluno={alerta.aluno}
+                          motivo={alerta.motivo}
+                          tipoAlerta={config.id as 'precisa_atencao' | 'celebrar' | 'nao_esquecer'}
+                          onClick={() => onAlunoClick(alerta.aluno.id)}
+                        />
+                      ))
+                    )}
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Empty state message (shown below when empty) */}
+            {/* Empty state message */}
             {isEmpty && (
               <div 
                 className="px-4 py-2 text-xs text-white/40"

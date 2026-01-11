@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Users, Search } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useAlunosCasa } from '@/hooks/useAlunosCasa';
+import { useAlertasAlunos } from '@/hooks/useAlertasAlunos';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { ChatCasaCard } from '@/components/professor/ChatCasaCard';
 import { AlertBoxes } from '@/components/professor/AlertBoxes';
+import { BannerComeceAqui } from '@/components/professor/BannerComeceAqui';
+import { AlunosSemObservacaoModal } from '@/components/professor/AlunosSemObservacaoModal';
 import { AlunoStatusLinha } from '@/components/professor/AlunoStatusLinha';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -15,14 +18,16 @@ const AlunosPage = () => {
   const navigate = useNavigate();
   const { casaMentor, casaColor } = useProfessor();
   const { data: alunos, isLoading } = useAlunosCasa();
+  const { bannerComeceAqui } = useAlertasAlunos();
 
   // Estados de filtro
   const [serieFiltro, setSerieFiltro] = useState<string | null>(null);
   const [turmaFiltro, setTurmaFiltro] = useState<string | null>(null);
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>(null);
   const [busca, setBusca] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
 
-  // Séries e turmas FIXAS (sempre visíveis independente dos alunos)
+  // Séries e turmas FIXAS
   const seriesDisponiveis = ['6º', '7º', '8º', '9º'];
   const turmasDisponiveis = ['A', 'B', 'C'];
 
@@ -82,6 +87,17 @@ const AlunosPage = () => {
         </div>
       </div>
 
+      {/* Banner "Comece por aqui" */}
+      {bannerComeceAqui && (
+        <BannerComeceAqui
+          faseNome={bannerComeceAqui.faseNome}
+          faseEmoji={bannerComeceAqui.faseEmoji}
+          quantidade={bannerComeceAqui.quantidade}
+          alunos={bannerComeceAqui.alunos}
+          onVerLista={() => setModalOpen(true)}
+        />
+      )}
+
       {/* Sistema de Alertas */}
       <AlertBoxes onAlunoClick={handleAlunoClick} />
 
@@ -95,9 +111,9 @@ const AlunosPage = () => {
         />
       )}
 
-      {/* Seção de Filtros - Layout Compacto */}
+      {/* Seção de Filtros */}
       <div className="space-y-3">
-        {/* Série - Label + botões na mesma linha */}
+        {/* Série */}
         <div className="flex items-center gap-3">
           <span className="text-white/40 text-xs uppercase tracking-wider w-12 flex-shrink-0">
             Série
@@ -131,7 +147,7 @@ const AlunosPage = () => {
           </div>
         </div>
 
-        {/* Turma - Label + botões na mesma linha */}
+        {/* Turma */}
         <div className="flex items-center gap-3">
           <span className="text-white/40 text-xs uppercase tracking-wider w-12 flex-shrink-0">
             Turma
@@ -165,7 +181,7 @@ const AlunosPage = () => {
           </div>
         </div>
 
-        {/* Separador sutil + Status */}
+        {/* Status */}
         <div className="border-t border-white/5 pt-3">
           <div className="flex gap-2 flex-wrap">
             <button
@@ -212,7 +228,7 @@ const AlunosPage = () => {
         </div>
       </div>
 
-      {/* Campo de Busca - Mais compacto */}
+      {/* Campo de Busca */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
         <input
@@ -229,7 +245,6 @@ const AlunosPage = () => {
       {/* Lista de Alunos */}
       <div className="space-y-0.5">
         {isLoading ? (
-          // Loading state
           Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3 py-2.5 px-3">
               <Skeleton className="w-2.5 h-2.5 rounded-full" />
@@ -242,7 +257,6 @@ const AlunosPage = () => {
             </div>
           ))
         ) : alunosFiltrados.length === 0 ? (
-          // Empty state
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div 
               className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
@@ -261,7 +275,6 @@ const AlunosPage = () => {
             </p>
           </div>
         ) : (
-          // Lista de alunos
           alunosFiltrados.map(aluno => (
             <AlunoStatusLinha
               key={aluno.id}
@@ -278,6 +291,18 @@ const AlunosPage = () => {
         <p className="text-center text-white/30 text-xs font-light">
           {alunosFiltrados.length} de {alunos?.length} alunos
         </p>
+      )}
+
+      {/* Modal de alunos sem observação */}
+      {bannerComeceAqui && (
+        <AlunosSemObservacaoModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          faseNome={bannerComeceAqui.faseNome}
+          faseEmoji={bannerComeceAqui.faseEmoji}
+          alunos={bannerComeceAqui.alunos}
+          onAlunoClick={handleAlunoClick}
+        />
       )}
     </div>
   );
