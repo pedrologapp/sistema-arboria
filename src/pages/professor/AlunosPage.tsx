@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Users, Search, Trophy } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Users, Search, Trophy, Star } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
-import { useAlunosCasa } from '@/hooks/useAlunosCasa';
+import { useAlunosComEstado, estadosFiltroConfig, type EstadoCalculado } from '@/hooks/useAlunosComEstado';
 import { useAlertasAlunos } from '@/hooks/useAlertasAlunos';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { ChatCasaCard } from '@/components/professor/ChatCasaCard';
@@ -14,39 +14,87 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const AlunosPage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { casaMentor, casaColor } = useProfessor();
-  const { data: alunos, isLoading } = useAlunosCasa();
+  const { data: alunos, isLoading } = useAlunosComEstado();
   const { bannerComeceAqui } = useAlertasAlunos();
 
   // Estados de filtro
   const [serieFiltro, setSerieFiltro] = useState<string | null>(null);
   const [turmaFiltro, setTurmaFiltro] = useState<string | null>(null);
+  const [estadoFiltro, setEstadoFiltro] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Ler filtro de estado da URL (para navegação do grid 2x2)
+  useEffect(() => {
+    const estadoParam = searchParams.get('estado');
+    if (estadoParam) {
+      setEstadoFiltro(estadoParam);
+      // Limpar URL após aplicar
+      searchParams.delete('estado');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Séries e turmas FIXAS
   const seriesDisponiveis = ['6º', '7º', '8º', '9º'];
   const turmasDisponiveis = ['A', 'B', 'C'];
 
-  // Filtrar e ordenar alunos por pontuação (ranking)
-  const alunosFiltrados = useMemo(() => {
+  // Filtrar base (sem estado) para contagem
+  const alunosFiltradosBase = useMemo(() => {
     if (!alunos) return [];
 
-    return alunos
-      .filter(aluno => {
-        if (serieFiltro && !aluno.serie.startsWith(serieFiltro)) return false;
-        if (turmaFiltro && aluno.turma !== turmaFiltro) return false;
-        if (busca && !aluno.nome.toLowerCase().includes(busca.toLowerCase())) return false;
-        return true;
-      })
-      // Ordenar por pontuação DECRESCENTE, depois por nome A-Z
-      .sort((a, b) => {
-        if (b.pontosTotais !== a.pontosTotais) {
-          return b.pontosTotais - a.pontosTotais;
-        }
-        return a.nome.localeCompare(b.nome);
-      });
+    return alunos.filter(aluno => {
+      if (serieFiltro && !aluno.serie.startsWith(serieFiltro)) return false;
+      if (turmaFiltro && aluno.turma !== turmaFiltro) return false;
+      if (busca && !aluno.nome.toLowerCase().includes(busca.toLowerCase())) return false;
+      return true;
+    });
   }, [alunos, serieFiltro, turmaFiltro, busca]);
+
+  // Contagem por estado (baseado nos filtros de série/turma/busca)
+  const contagemPorEstado = useMemo(() => {
+    const contagem: Record<string, number> = { todos: alunosFiltradosBase.length };
+    
+    estadosFiltroConfig.forEach(config => {
+      if (config.id) {
+        contagem[config.id] = alunosFiltradosBase.filter(a => {
+          // Agrupar primeira_obs e neutro com sem_observacao
+          if (config.id === 'sem_observacao') {
+            return ['sem_observacao', 'primeira_obs', 'neutro'].includes(a.estadoCalculado);
+          }
+          return a.estadoCalculado === config.id;
+        }).length;
+      }
+    });
+    
+    return contagem;
+  }, [alunosFiltradosBase]);
+
+  // Filtrar e ordenar alunos por pontuação (ranking) + estado
+  const alunosFiltrados = useMemo(() => {
+    let filtrados = alunosFiltradosBase;
+
+    // Aplicar filtro de estado
+    if (estadoFiltro) {
+      filtrados = filtrados.filter(aluno => {
+        // Agrupar primeira_obs e neutro com sem_observacao
+        if (estadoFiltro === 'sem_observacao') {
+          return ['sem_observacao', 'primeira_obs', 'neutro'].includes(aluno.estadoCalculado);
+        }
+        return aluno.estadoCalculado === estadoFiltro;
+      });
+    }
+
+    // Ordenar por pontuação DECRESCENTE, depois por nome A-Z
+    return filtrados.sort((a, b) => {
+      if (b.pontosTotais !== a.pontosTotais) {
+        return b.pontosTotais - a.pontosTotais;
+      }
+      return a.nome.localeCompare(b.nome);
+    });
+  }, [alunosFiltradosBase, estadoFiltro]);
 
   const handleChatClick = () => {
     navigate('/professor/chat');
@@ -118,8 +166,8 @@ const AlunosPage = () => {
       {/* Seção de Filtros */}
       <div className="space-y-3">
         {/* Série */}
-        <div className="flex items-center gap-3">
-          <span className="text-white/40 text-xs uppercase tracking-wider w-12 flex-shrink-0">
+        <div className="space-y-1.5">
+          <span className="text-white/40 text-xs uppercase tracking-wider">
             Série
           </span>
           <div className="flex gap-1.5 flex-wrap">
@@ -152,8 +200,8 @@ const AlunosPage = () => {
         </div>
 
         {/* Turma */}
-        <div className="flex items-center gap-3">
-          <span className="text-white/40 text-xs uppercase tracking-wider w-12 flex-shrink-0">
+        <div className="space-y-1.5">
+          <span className="text-white/40 text-xs uppercase tracking-wider">
             Turma
           </span>
           <div className="flex gap-1.5 flex-wrap">
@@ -184,6 +232,66 @@ const AlunosPage = () => {
             ))}
           </div>
         </div>
+
+        {/* Estado */}
+        <div className="space-y-1.5">
+          <span className="text-white/40 text-xs uppercase tracking-wider">
+            Estado
+          </span>
+          <div className="flex gap-1.5 flex-wrap">
+            {estadosFiltroConfig.map(config => {
+              const isSelected = estadoFiltro === config.id;
+              const count = config.id ? contagemPorEstado[config.id] : contagemPorEstado.todos;
+              
+              return (
+                <button
+                  key={config.id || 'todos'}
+                  onClick={() => setEstadoFiltro(config.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium 
+                    flex items-center gap-1.5 transition-colors ${
+                    isSelected
+                      ? 'text-white border'
+                      : 'bg-gray-700/50 text-white/70 hover:bg-gray-600/50'
+                  }`}
+                  style={isSelected ? {
+                    backgroundColor: config.corFundo,
+                    borderColor: config.cor
+                  } : undefined}
+                >
+                  {/* Ícone (bolinha ou estrela) */}
+                  {config.icone === 'circle' && (
+                    <span 
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: config.cor }}
+                    />
+                  )}
+                  {config.icone === 'circle-empty' && (
+                    <span 
+                      className="w-2 h-2 rounded-full border"
+                      style={{ borderColor: config.cor }}
+                    />
+                  )}
+                  {config.icone === 'star' && (
+                    <Star 
+                      className="w-3 h-3" 
+                      style={{ color: config.cor }} 
+                      fill={config.cor} 
+                      strokeWidth={0}
+                    />
+                  )}
+                  
+                  {/* Texto do filtro */}
+                  <span>{config.label}</span>
+                  
+                  {/* Contagem */}
+                  <span className={isSelected ? 'text-white/60' : 'text-white/40'}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Campo de Busca */}
@@ -206,6 +314,7 @@ const AlunosPage = () => {
           Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3 py-2.5 px-3">
               <Skeleton className="w-6 h-4" />
+              <Skeleton className="w-4 h-4 rounded-full" />
               <Skeleton className="w-10 h-10 rounded-full" />
               <div className="flex-1 flex items-center gap-2">
                 <Skeleton className="h-4 w-28" />
@@ -226,7 +335,7 @@ const AlunosPage = () => {
               Nenhum aluno encontrado
             </h2>
             <p className="text-white/50 text-sm max-w-xs font-light">
-              {busca || serieFiltro || turmaFiltro
+              {busca || serieFiltro || turmaFiltro || estadoFiltro
                 ? 'Tente ajustar os filtros de busca'
                 : 'Não há alunos cadastrados nesta casa'
               }

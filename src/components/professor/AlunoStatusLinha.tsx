@@ -1,29 +1,46 @@
 import { ChevronRight, Star } from 'lucide-react';
-import type { AlunoComStatus } from '@/hooks/useAlunosCasa';
+import type { AlunoComEstado, EstadoCalculado } from '@/hooks/useAlunosComEstado';
+import { getEstadoVisual } from '@/hooks/useAlunosComEstado';
 
 interface AlunoStatusLinhaProps {
   posicao: number;
-  aluno: AlunoComStatus;
+  aluno: AlunoComEstado;
   onClick: () => void;
   casaColor: string;
 }
 
-const getStatusColor = (status: AlunoComStatus['status']) => {
-  switch (status) {
-    case 'destaque':
-      return '#22C55E'; // Verde
-    case 'risco':
-      return '#EF4444'; // Vermelho
-    case 'regular':
-      return '#EAB308'; // Amarelo
-    default:
-      return '#6B7280'; // Cinza
+const EstadoIndicador = ({ estado }: { estado: EstadoCalculado }) => {
+  const visual = getEstadoVisual(estado);
+  
+  if (visual.icone === 'star') {
+    return (
+      <Star 
+        className="w-3.5 h-3.5" 
+        style={{ color: visual.cor }} 
+        fill={visual.cor}
+        strokeWidth={0}
+      />
+    );
   }
+  
+  if (visual.icone === 'circle-empty') {
+    return (
+      <div 
+        className="w-2.5 h-2.5 rounded-full border-2"
+        style={{ borderColor: visual.cor }}
+      />
+    );
+  }
+  
+  return (
+    <div 
+      className="w-2.5 h-2.5 rounded-full"
+      style={{ backgroundColor: visual.cor }}
+    />
+  );
 };
 
 export const AlunoStatusLinha = ({ posicao, aluno, onClick, casaColor }: AlunoStatusLinhaProps) => {
-  const statusColor = getStatusColor(aluno.status);
-
   return (
     <button
       onClick={onClick}
@@ -35,7 +52,12 @@ export const AlunoStatusLinha = ({ posicao, aluno, onClick, casaColor }: AlunoSt
         {posicao}
       </span>
       
-      {/* Avatar com bolinha de status */}
+      {/* Indicador de estado */}
+      <div className="flex-shrink-0 w-4 flex items-center justify-center">
+        <EstadoIndicador estado={aluno.estadoCalculado} />
+      </div>
+      
+      {/* Avatar */}
       <div className="relative flex-shrink-0">
         {aluno.avatarUrl ? (
           <img 
@@ -51,11 +73,6 @@ export const AlunoStatusLinha = ({ posicao, aluno, onClick, casaColor }: AlunoSt
             {aluno.nome.charAt(0).toUpperCase()}
           </div>
         )}
-        {/* Bolinha de status */}
-        <div 
-          className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#0d0d0d]"
-          style={{ backgroundColor: statusColor }}
-        />
       </div>
       
       {/* Nome + Série/Turma (em linha) */}
