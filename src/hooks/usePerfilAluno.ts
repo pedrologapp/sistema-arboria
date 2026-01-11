@@ -21,6 +21,9 @@ interface Arquetipo {
   nome: string;
   significado: string;
   potencializar: string[];
+  sugestao_conversa?: string;
+  frases_evitar?: string[];
+  frases_preferir?: string[];
 }
 
 interface AlertaAtivo {
@@ -481,7 +484,7 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           if (alertaData.tipo_alerta === 'celebrar' && subtipo === 'descoberta' && casaCodigo && faseAtualCodigo) {
             const { data: arquetipoData } = await supabase
               .from('arquetipos')
-              .select('nome_arquetipo, significado, potencializar')
+              .select('nome_arquetipo, significado, potencializar, sugestao_conversa, frases_evitar, frases_preferir')
               .eq('casa_codigo', casaCodigo)
               .eq('fase_codigo', faseAtualCodigo)
               .eq('tipo', 'descoberta')
@@ -491,16 +494,19 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
               arquetipo = {
                 nome: arquetipoData.nome_arquetipo || '',
                 significado: substituirTemplate(arquetipoData.significado, { nome: primeiroNome }),
-                potencializar: arquetipoData.potencializar || []
+                potencializar: arquetipoData.potencializar || [],
+                sugestao_conversa: arquetipoData.sugestao_conversa ? substituirTemplate(arquetipoData.sugestao_conversa, { nome: primeiroNome }) : undefined,
+                frases_evitar: arquetipoData.frases_evitar || undefined,
+                frases_preferir: arquetipoData.frases_preferir || undefined
               };
             }
           } else if (alertaData.tipo_alerta === 'celebrar' && subtipo === 'confirmacao' && casaCodigo) {
             // Para confirmação: casa = fase (usar casaCodigo para ambos)
             const { data: arquetipoData } = await supabase
               .from('arquetipos')
-              .select('nome_arquetipo, significado, potencializar')
+              .select('nome_arquetipo, significado, potencializar, sugestao_conversa, frases_evitar, frases_preferir')
               .eq('casa_codigo', casaCodigo)
-              .eq('fase_codigo', casaCodigo) // Confirmação: fase = casa
+              .eq('fase_codigo', casaCodigo)
               .eq('tipo', 'confirmacao')
               .maybeSingle();
             
@@ -508,7 +514,10 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
               arquetipo = {
                 nome: arquetipoData.nome_arquetipo || '',
                 significado: substituirTemplate(arquetipoData.significado, { nome: primeiroNome }),
-                potencializar: arquetipoData.potencializar || []
+                potencializar: arquetipoData.potencializar || [],
+                sugestao_conversa: arquetipoData.sugestao_conversa ? substituirTemplate(arquetipoData.sugestao_conversa, { nome: primeiroNome }) : undefined,
+                frases_evitar: arquetipoData.frases_evitar || undefined,
+                frases_preferir: arquetipoData.frases_preferir || undefined
               };
             }
           }
@@ -609,7 +618,7 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
                 if (casaCodigo && faseAtualCodigo) {
                   const { data: arquetipoData } = await supabase
                     .from('arquetipos')
-                    .select('nome_arquetipo, significado, potencializar')
+                    .select('nome_arquetipo, significado, potencializar, sugestao_conversa, frases_evitar, frases_preferir')
                     .eq('casa_codigo', casaCodigo)
                     .eq('fase_codigo', faseAtualCodigo)
                     .eq('tipo', 'descoberta')
@@ -619,7 +628,10 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
                     arquetipoDinamico = {
                       nome: arquetipoData.nome_arquetipo || '',
                       significado: substituirTemplate(arquetipoData.significado, { nome: primeiroNome }),
-                      potencializar: arquetipoData.potencializar || []
+                      potencializar: arquetipoData.potencializar || [],
+                      sugestao_conversa: arquetipoData.sugestao_conversa ? substituirTemplate(arquetipoData.sugestao_conversa, { nome: primeiroNome }) : undefined,
+                      frases_evitar: arquetipoData.frases_evitar || undefined,
+                      frases_preferir: arquetipoData.frases_preferir || undefined
                     };
                   }
                 }

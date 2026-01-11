@@ -14,6 +14,99 @@ export type Database = {
   }
   public: {
     Tables: {
+      acoes_celebracao: {
+        Row: {
+          alerta_id: string | null
+          aluno_id: string
+          created_at: string | null
+          id: string
+          institution_id: string
+          observacoes: string | null
+          professor_id: string
+          reacao_aluno: string | null
+          tipo_acao: string
+        }
+        Insert: {
+          alerta_id?: string | null
+          aluno_id: string
+          created_at?: string | null
+          id?: string
+          institution_id: string
+          observacoes?: string | null
+          professor_id: string
+          reacao_aluno?: string | null
+          tipo_acao: string
+        }
+        Update: {
+          alerta_id?: string | null
+          aluno_id?: string
+          created_at?: string | null
+          id?: string
+          institution_id?: string
+          observacoes?: string | null
+          professor_id?: string
+          reacao_aluno?: string | null
+          tipo_acao?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acoes_celebracao_alerta_id_fkey"
+            columns: ["alerta_id"]
+            isOneToOne: false
+            referencedRelation: "alertas_alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acoes_celebracao_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acoes_celebracao_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
+            foreignKeyName: "acoes_celebracao_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estados_alunos"
+            referencedColumns: ["aluno_id"]
+          },
+          {
+            foreignKeyName: "acoes_celebracao_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acoes_celebracao_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acoes_celebracao_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
+            foreignKeyName: "acoes_celebracao_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estados_alunos"
+            referencedColumns: ["aluno_id"]
+          },
+        ]
+      }
       acoes_professor: {
         Row: {
           alerta_id: string
@@ -330,28 +423,37 @@ export type Database = {
         Row: {
           casa_codigo: string
           fase_codigo: string
+          frases_evitar: string[] | null
+          frases_preferir: string[] | null
           id: number
           nome_arquetipo: string | null
           potencializar: string[]
           significado: string
+          sugestao_conversa: string | null
           tipo: string
         }
         Insert: {
           casa_codigo: string
           fase_codigo: string
+          frases_evitar?: string[] | null
+          frases_preferir?: string[] | null
           id?: number
           nome_arquetipo?: string | null
           potencializar: string[]
           significado: string
+          sugestao_conversa?: string | null
           tipo: string
         }
         Update: {
           casa_codigo?: string
           fase_codigo?: string
+          frases_evitar?: string[] | null
+          frases_preferir?: string[] | null
           id?: number
           nome_arquetipo?: string | null
           potencializar?: string[]
           significado?: string
+          sugestao_conversa?: string | null
           tipo?: string
         }
         Relationships: []
