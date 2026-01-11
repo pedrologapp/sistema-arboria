@@ -50,6 +50,11 @@ interface AlertaAtivo {
   };
 }
 
+export interface ConversaRegistrada {
+  tipo_acao: string;
+  created_at: string;
+}
+
 export interface PerfilAlunoData {
   id: string;
   nome: string;
@@ -88,6 +93,7 @@ export interface PerfilAlunoData {
   temObsFaseAtual: boolean;
   faseAtualCodigo?: string;
   faseAtualNome?: string;
+  conversaRegistrada?: ConversaRegistrada | null;
 }
 
 // Função para substituir variáveis nos templates
@@ -678,6 +684,25 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
         }
       }
 
+      // 8. Buscar conversa registrada mais recente para celebrações
+      let conversaRegistrada: ConversaRegistrada | null = null;
+      if (alertaAtivo && ['celebrar', 'celebrar_descoberta', 'celebrar_confirmacao', 'brilhando'].includes(alertaAtivo.tipo)) {
+        const { data: conversaData } = await supabase
+          .from('acoes_celebracao')
+          .select('tipo_acao, created_at')
+          .eq('aluno_id', alunoId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (conversaData) {
+          conversaRegistrada = {
+            tipo_acao: conversaData.tipo_acao,
+            created_at: conversaData.created_at || ''
+          };
+        }
+      }
+
       // 7. Calcular métricas para status
       // Buscar total de missões liberadas para a instituição
       let totalMissoesDisponiveis = 0;
@@ -744,7 +769,8 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
         ultimaObservacao,
         temObsFaseAtual,
         faseAtualCodigo,
-        faseAtualNome
+        faseAtualNome,
+        conversaRegistrada
       };
     },
     enabled: !!alunoId && !!profile?.institution_id

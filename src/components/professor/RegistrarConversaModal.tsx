@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, MessageCircle, Loader2, Smile, Meh, ThumbsDown, Sparkles } from 'lucide-react';
+import { X, MessageCircle, Loader2, Smile, Meh, ThumbsDown, Sparkles, Edit3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useQueryClient } from '@tanstack/react-query';
@@ -19,14 +19,15 @@ const tiposAcao = [
   { value: 'conversei_descoberta', label: 'Conversei com o aluno sobre a descoberta' },
   { value: 'propus_desafio', label: 'Propus um desafio/próximo passo' },
   { value: 'papel_mentor', label: 'Dei papel de mentor para ajudar colega' },
+  { value: 'outro', label: 'Outro (descreva abaixo)' },
   { value: 'ainda_nao_conversei', label: 'Ainda não conversei' }
 ];
 
 const reacoesAluno = [
-  { value: 'animado', label: 'Animado/motivado', icon: Sparkles, color: 'text-green-400' },
-  { value: 'receptivo', label: 'Receptivo', icon: Smile, color: 'text-blue-400' },
-  { value: 'indiferente', label: 'Indiferente', icon: Meh, color: 'text-yellow-400' },
-  { value: 'desconfortavel', label: 'Desconfortável (não gostou de ser destacado)', icon: ThumbsDown, color: 'text-red-400' }
+  { value: 'animado', label: 'Animado', emoji: '🤩', bgColor: 'bg-green-500/20', borderColor: 'border-green-500/40' },
+  { value: 'receptivo', label: 'Receptivo', emoji: '😊', bgColor: 'bg-blue-500/20', borderColor: 'border-blue-500/40' },
+  { value: 'indiferente', label: 'Indiferente', emoji: '😐', bgColor: 'bg-yellow-500/20', borderColor: 'border-yellow-500/40' },
+  { value: 'desconfortavel', label: 'Desconfortável', emoji: '😬', bgColor: 'bg-red-500/20', borderColor: 'border-red-500/40' }
 ];
 
 const RegistrarConversaModal = ({
@@ -48,7 +49,11 @@ const RegistrarConversaModal = ({
 
   // Validação: tipo de ação obrigatório, reação opcional se "ainda não conversei"
   const ehAindaNaoConversei = tipoAcao === 'ainda_nao_conversei';
-  const podeSubmeter = tipoAcao !== '' && (ehAindaNaoConversei || reacaoAluno !== '');
+  const ehOutro = tipoAcao === 'outro';
+  // Para "outro", observações são obrigatórias
+  const podeSubmeter = tipoAcao !== '' && 
+    (ehAindaNaoConversei || reacaoAluno !== '') &&
+    (!ehOutro || observacoes.trim() !== '');
 
   const handleSalvar = async () => {
     if (!profile?.institution_id || !podeSubmeter) {
@@ -171,56 +176,51 @@ const RegistrarConversaModal = ({
             </div>
           </div>
 
+          {/* Campo: Como foi? (Observações) - MOVIDO PARA ANTES DA REAÇÃO */}
+          {tipoAcao && !ehAindaNaoConversei && (
+            <>
+              <div className="border-t border-white/10" />
+              <div>
+                <label className="block text-white text-sm font-medium mb-2 flex items-center gap-2">
+                  <Edit3 className="w-4 h-4 text-amber-400" />
+                  Como foi? {ehOutro && <span className="text-red-400">*</span>}
+                </label>
+                <textarea
+                  value={observacoes}
+                  onChange={(e) => setObservacoes(e.target.value)}
+                  placeholder={`Conte brevemente como foi a conversa com ${nomeAluno}. O que ele disse? Topou o desafio? Algo marcante que você percebeu?`}
+                  className="w-full h-28 px-4 py-3 rounded-xl bg-white/5 border-2 border-dashed border-amber-500/30 text-white placeholder-white/40 text-sm resize-none focus:outline-none focus:border-amber-500/60 transition-colors"
+                />
+              </div>
+            </>
+          )}
+
           {/* Campo: Como foi a reação? (se não for "ainda não conversei") */}
           {tipoAcao && !ehAindaNaoConversei && (
             <>
               <div className="border-t border-white/10" />
               <div>
                 <label className="block text-white/80 text-sm mb-3">
-                  Como foi a reação de {nomeAluno}? <span className="text-red-400">*</span>
+                  Qual foi a reação de {nomeAluno}? <span className="text-red-400">*</span>
                 </label>
-                <div className="space-y-2">
-                  {reacoesAluno.map((reacao) => {
-                    const IconComponent = reacao.icon;
-                    return (
-                      <button
-                        key={reacao.value}
-                        onClick={() => setReacaoAluno(reacao.value)}
-                        className={`w-full p-3 rounded-xl border text-left transition-colors flex items-center gap-3 ${
-                          reacaoAluno === reacao.value
-                            ? 'bg-white/10 border-white/20'
-                            : 'bg-white/5 border-white/10 hover:bg-white/10'
-                        }`}
-                      >
-                        <IconComponent 
-                          className={`w-5 h-5 ${reacaoAluno === reacao.value ? reacao.color : 'text-white/40'}`} 
-                          strokeWidth={1.5} 
-                        />
-                        <span className={`text-sm ${reacaoAluno === reacao.value ? 'text-white' : 'text-white/80'}`}>
-                          {reacao.label}
-                        </span>
-                      </button>
-                    );
-                  })}
+                <div className="grid grid-cols-4 gap-2">
+                  {reacoesAluno.map((reacao) => (
+                    <button
+                      key={reacao.value}
+                      onClick={() => setReacaoAluno(reacao.value)}
+                      className={`p-3 rounded-xl border-2 text-center transition-all duration-200 flex flex-col items-center gap-1.5 ${
+                        reacaoAluno === reacao.value
+                          ? `${reacao.bgColor} ${reacao.borderColor} scale-105`
+                          : 'bg-white/5 border-white/10 hover:bg-white/10 hover:scale-102'
+                      }`}
+                    >
+                      <span className="text-2xl">{reacao.emoji}</span>
+                      <span className={`text-xs ${reacaoAluno === reacao.value ? 'text-white font-medium' : 'text-white/60'}`}>
+                        {reacao.label}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-              </div>
-            </>
-          )}
-
-          {/* Campo: Observações (opcional) */}
-          {tipoAcao && (
-            <>
-              <div className="border-t border-white/10" />
-              <div>
-                <label className="block text-white/80 text-sm mb-2">
-                  Observações <span className="text-white/40">(opcional)</span>
-                </label>
-                <textarea
-                  value={observacoes}
-                  onChange={(e) => setObservacoes(e.target.value)}
-                  placeholder="Como foi a conversa? O aluno topou o desafio? Algo que você percebeu?"
-                  className="w-full h-24 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm resize-none focus:outline-none focus:border-amber-500/50"
-                />
               </div>
             </>
           )}
