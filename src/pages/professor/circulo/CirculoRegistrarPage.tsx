@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ThumbsUp, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, ThumbsUp, AlertTriangle, Plus } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import ConfirmarObservacaoModal from '@/components/professor/circulo/ConfirmarObservacaoModal';
+import { ObservacaoPersonalizadaModal } from '@/components/professor/circulo/ObservacaoPersonalizadaModal';
 
 interface Sinal {
   id: number;
@@ -43,6 +44,10 @@ const CirculoRegistrarPage = () => {
   const [selectedSinal, setSelectedSinal] = useState<Sinal | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  
+  // Estados para modal personalizado
+  const [modalPersonalizadoOpen, setModalPersonalizadoOpen] = useState(false);
+  const [tipoPersonalizado, setTipoPersonalizado] = useState<'positivo' | 'atencao'>('positivo');
 
   // Buscar dados do aluno
   const { data: aluno, isLoading: loadingAluno } = useQuery({
@@ -79,12 +84,18 @@ const CirculoRegistrarPage = () => {
     }
   });
 
-  const sinaisPositivos = sinais?.filter(s => s.valencia === 'positivo') || [];
-  const sinaisAtencao = sinais?.filter(s => s.valencia === 'atencao') || [];
+  // Filtrar sinais (excluir os "outro_" da lista normal)
+  const sinaisPositivos = sinais?.filter(s => s.valencia === 'positivo' && s.codigo !== 'outro_positivo') || [];
+  const sinaisAtencao = sinais?.filter(s => s.valencia === 'atencao' && s.codigo !== 'outro_atencao') || [];
 
   const handleSinalClick = (sinal: Sinal) => {
     setSelectedSinal(sinal);
     setModalOpen(true);
+  };
+
+  const handleOutroClick = (tipo: 'positivo' | 'atencao') => {
+    setTipoPersonalizado(tipo);
+    setModalPersonalizadoOpen(true);
   };
 
   const handleConfirm = async (nota: string | null) => {
@@ -139,6 +150,72 @@ const CirculoRegistrarPage = () => {
       navigate(`/professor/circulo/serie/${serieParam}/turma/${turmaParam}`);
     } catch (error) {
       console.error('Erro ao salvar observação:', error);
+      toast.error('Erro ao registrar observação');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleConfirmPersonalizado = async (texto: string) => {
+    if (!aluno || !profile || !faseAtual) {
+      toast.error('Dados incompletos');
+      return;
+    }
+
+    // Buscar o sinal correto (outro_positivo ou outro_atencao)
+    const codigoSinal = tipoPersonalizado === 'positivo' ? 'outro_positivo' : 'outro_atencao';
+    const sinalOutro = sinais?.find(s => s.codigo === codigoSinal);
+
+    if (!sinalOutro) {
+      toast.error('Sinal personalizado não configurado');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Buscar turma_id
+      const serieNum = parseInt(aluno.serie?.replace(/\D/g, '') || '6');
+      const { data: turmaData } = await supabase
+        .from('turmas')
+        .select('id')
+        .eq('institution_id', profile.institution_id!)
+        .eq('serie', serieNum)
+        .ilike('turma_letra', aluno.turma || 'A')
+        .maybeSingle();
+
+      if (!turmaData?.id) {
+        toast.error('Turma não encontrada');
+        setSaving(false);
+        return;
+      }
+
+      const faseInteligenciaId = faseAtual.inteligencia?.id;
+      const alunoInteligenciaId = aluno.casa_id;
+
+      // Inserir observação personalizada
+      const { error } = await supabase.from('observacoes').insert({
+        institution_id: profile.institution_id!,
+        aluno_id: aluno.id,
+        professor_id: profile.id,
+        turma_id: turmaData.id,
+        fase_id: faseAtual.id,
+        sinal_id: sinalOutro.id,
+        inteligencia_fase: faseInteligenciaId!,
+        inteligencia_expressa: alunoInteligenciaId!,
+        intensidade: 'normal',
+        observacao_texto: texto, // Texto obrigatório aqui
+        data_observacao: new Date().toISOString().split('T')[0]
+      });
+
+      if (error) throw error;
+
+      toast.success('Observação personalizada registrada!');
+      setModalPersonalizadoOpen(false);
+      
+      // Voltar para lista de alunos
+      navigate(`/professor/circulo/serie/${serieParam}/turma/${turmaParam}`);
+    } catch (error) {
+      console.error('Erro ao salvar observação personalizada:', error);
       toast.error('Erro ao registrar observação');
     } finally {
       setSaving(false);
@@ -207,6 +284,19 @@ const CirculoRegistrarPage = () => {
               {sinal.label_pt}
             </button>
           ))}
+          {/* Botão + Outro Positivo */}
+          <button
+            onClick={() => handleOutroClick('positivo')}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95 flex items-center gap-1"
+            style={{
+              backgroundColor: '#4B5563',
+              border: '1px dashed rgba(34, 197, 94, 0.4)',
+              color: '#9CA3AF'
+            }}
+          >
+            <Plus size={14} />
+            Outro
+          </button>
         </div>
       </div>
 
@@ -257,10 +347,23 @@ const CirculoRegistrarPage = () => {
               {sinal.label_pt}
             </button>
           ))}
+          {/* Botão + Outro Atenção */}
+          <button
+            onClick={() => handleOutroClick('atencao')}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95 flex items-center gap-1"
+            style={{
+              backgroundColor: '#4B5563',
+              border: '1px dashed rgba(239, 68, 68, 0.4)',
+              color: '#9CA3AF'
+            }}
+          >
+            <Plus size={14} />
+            Outro
+          </button>
         </div>
       </div>
 
-      {/* Modal de confirmação */}
+      {/* Modal de confirmação padrão */}
       <ConfirmarObservacaoModal
         isOpen={modalOpen}
         onClose={() => {
@@ -270,6 +373,16 @@ const CirculoRegistrarPage = () => {
         sinal={selectedSinal}
         aluno={aluno ? { id: aluno.id, full_name: aluno.full_name || aluno.nome || 'Aluno' } : null}
         onConfirm={handleConfirm}
+        saving={saving}
+      />
+
+      {/* Modal para observação personalizada */}
+      <ObservacaoPersonalizadaModal
+        isOpen={modalPersonalizadoOpen}
+        tipo={tipoPersonalizado}
+        alunoNome={aluno?.full_name || aluno?.nome || 'Aluno'}
+        onClose={() => setModalPersonalizadoOpen(false)}
+        onConfirm={handleConfirmPersonalizado}
         saving={saving}
       />
     </div>
