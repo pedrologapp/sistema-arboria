@@ -8,7 +8,9 @@ import {
   ChevronDown,
   ChevronUp,
   Lightbulb,
-  Target
+  Target,
+  Star,
+  Award
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -26,7 +28,8 @@ interface AcaoSugerida {
 
 interface FeedbackEstadoCardProps {
   estado: 'brilhando' | 'melhorando' | 'atencao_recente' | 'precisa_atencao' | 
-          'bom_comeco' | 'fique_de_olho' | 'aguardando' | 'celebrar';
+          'bom_comeco' | 'fique_de_olho' | 'aguardando' | 'celebrar' |
+          'celebrar_descoberta' | 'celebrar_confirmacao';
   nomeAluno: string;
   textoAcontecendo: string;
   sinalPrincipal?: string;
@@ -48,6 +51,8 @@ interface FeedbackEstadoCardProps {
   onRegistrarAcao?: () => void;
   onRegistrarObservacao?: () => void;
   casaColor?: string;
+  casaNome?: string;
+  faseNome?: string;
 }
 
 const estadoConfig = {
@@ -117,11 +122,29 @@ const estadoConfig = {
   celebrar: {
     titulo: 'CELEBRE!',
     icon: Sparkles,
-    bgColor: 'bg-[#14532D]',
+    bgColor: 'bg-[#78350F]',
     textColor: 'text-white',
     iconColor: 'text-yellow-300',
-    borderColor: 'border-green-600',
+    borderColor: 'border-amber-600',
     mensagemPadrao: 'Momento especial para celebrar!'
+  },
+  celebrar_descoberta: {
+    titulo: 'DESCOBERTA!',
+    icon: Star,
+    bgColor: 'bg-[#78350F]',
+    textColor: 'text-white',
+    iconColor: 'text-yellow-300',
+    borderColor: 'border-amber-600',
+    mensagemPadrao: 'Uma nova força está emergindo!'
+  },
+  celebrar_confirmacao: {
+    titulo: 'CONFIRMAÇÃO!',
+    icon: Award,
+    bgColor: 'bg-[#78350F]',
+    textColor: 'text-white',
+    iconColor: 'text-yellow-300',
+    borderColor: 'border-amber-600',
+    mensagemPadrao: 'A força principal está consolidada!'
   }
 };
 
@@ -138,7 +161,9 @@ export function FeedbackEstadoCard({
   arquetipo,
   onRegistrarAcao,
   onRegistrarObservacao,
-  casaColor
+  casaColor,
+  casaNome,
+  faseNome
 }: FeedbackEstadoCardProps) {
   const [expandido, setExpandido] = useState(false);
   
@@ -153,6 +178,12 @@ export function FeedbackEstadoCard({
   
   // Estados que mostram botão de ação
   const estadosComAcao = ['precisa_atencao', 'fique_de_olho', 'atencao_recente'];
+  
+  // Estados de celebração
+  const estadosCelebracao = ['celebrar', 'celebrar_descoberta', 'celebrar_confirmacao', 'brilhando'];
+  const ehCelebracao = estadosCelebracao.includes(estado);
+  const ehDescoberta = estado === 'celebrar_descoberta' || (estado === 'celebrar' && arquetipo);
+  const ehConfirmacao = estado === 'celebrar_confirmacao';
 
   return (
     <div className={cn(
@@ -190,8 +221,75 @@ export function FeedbackEstadoCard({
           </div>
         )}
         
-        {/* Arquétipo (para celebrações) */}
-        {arquetipo && (
+        {/* Arquétipo para celebrações de Descoberta */}
+        {ehDescoberta && arquetipo && (
+          <div className="mt-4 space-y-3">
+            {/* Seção Arquétipo */}
+            <div className="p-3 bg-black/20 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Lightbulb className="w-4 h-4 text-yellow-300" />
+                <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wide">
+                  Arquétipo Possível
+                </span>
+              </div>
+              <p className="text-white font-medium text-lg">
+                "{arquetipo.nome_arquetipo}"
+              </p>
+              <p className="text-white/80 text-sm mt-1">
+                {arquetipo.significado}
+              </p>
+            </div>
+            
+            {/* Como Potencializar */}
+            {arquetipo.potencializar && arquetipo.potencializar.length > 0 && (
+              <div className="p-3 bg-black/20 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="w-4 h-4 text-yellow-300" />
+                  <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wide">
+                    Como Potencializar
+                  </span>
+                </div>
+                <ul className="space-y-1.5">
+                  {arquetipo.potencializar.map((item, i) => (
+                    <li key={i} className="text-white/90 text-sm flex items-start gap-2">
+                      <span className="text-yellow-300">✨</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Para Confirmação - Sugestões de potencialização padrão */}
+        {ehConfirmacao && !arquetipo && (
+          <div className="mt-4 p-3 bg-black/20 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="w-4 h-4 text-yellow-300" />
+              <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wide">
+                Como Potencializar
+              </span>
+            </div>
+            <ul className="space-y-1.5">
+              <li className="text-white/90 text-sm flex items-start gap-2">
+                <span className="text-yellow-300">✨</span>
+                Desafios de nível avançado
+              </li>
+              <li className="text-white/90 text-sm flex items-start gap-2">
+                <span className="text-yellow-300">✨</span>
+                Papel de mentor para colegas
+              </li>
+              <li className="text-white/90 text-sm flex items-start gap-2">
+                <span className="text-yellow-300">✨</span>
+                Projetos de protagonismo{casaNome ? ` em ${casaNome}` : ''}
+              </li>
+            </ul>
+          </div>
+        )}
+        
+        {/* Arquétipo simples (para celebrar genérico) */}
+        {!ehDescoberta && !ehConfirmacao && arquetipo && (
           <div className="mt-3 p-2 bg-black/20 rounded-lg">
             <p className={cn('text-sm font-medium', config.textColor)}>
               🏆 {arquetipo.tipo}: {arquetipo.nome_arquetipo}
@@ -203,19 +301,6 @@ export function FeedbackEstadoCard({
         )}
         
       </div>
-      
-      {/* Botão "Registrar minha ação" - Estilo original, largo e azul */}
-      {estadosComAcao.includes(estado) && onRegistrarAcao && (
-        <div className="px-4 pb-4">
-          <button
-            onClick={onRegistrarAcao}
-            className="w-full py-3 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
-          >
-            <Target className="w-4 h-4 text-white" />
-            <span className="text-white font-medium">Registrar minha ação</span>
-          </button>
-        </div>
-      )}
       
       {/* Botão para aguardando */}
       {estado === 'aguardando' && onRegistrarObservacao && (
@@ -231,7 +316,7 @@ export function FeedbackEstadoCard({
       )}
       
       {/* Expandir detalhes (apenas para estados com mais info) */}
-      {temDetalhes && (
+      {temDetalhes && !ehCelebracao && (
         <>
           <button
             onClick={() => setExpandido(!expandido)}
@@ -335,8 +420,8 @@ export function FeedbackEstadoCard({
                 </div>
               )}
               
-              {/* Potencializar (para arquétipos) */}
-              {arquetipo?.potencializar && arquetipo.potencializar.length > 0 && (
+              {/* Potencializar (para arquétipos - dentro de expandido) */}
+              {!ehCelebracao && arquetipo?.potencializar && arquetipo.potencializar.length > 0 && (
                 <div>
                   <h4 className={cn('text-sm font-semibold mb-2 flex items-center gap-2', config.textColor)}>
                     <Sparkles className="w-4 h-4" />
@@ -351,9 +436,37 @@ export function FeedbackEstadoCard({
                   </ul>
                 </div>
               )}
+              
+              {/* Botão "Registrar minha ação" - após as ações sugeridas */}
+              {estadosComAcao.includes(estado) && onRegistrarAcao && (
+                <button
+                  onClick={onRegistrarAcao}
+                  className="w-full mt-2 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 
+                             hover:from-blue-500 hover:to-blue-400 transition-all duration-200
+                             flex items-center justify-center gap-2 shadow-lg border border-blue-400/30"
+                >
+                  <Target className="w-4 h-4 text-white" />
+                  <span className="text-white font-semibold">Registrar minha ação</span>
+                </button>
+              )}
             </div>
           )}
         </>
+      )}
+      
+      {/* Botão "Registrar minha ação" fora do expandido para quando não há detalhes */}
+      {!temDetalhes && estadosComAcao.includes(estado) && onRegistrarAcao && (
+        <div className="px-4 pb-4">
+          <button
+            onClick={onRegistrarAcao}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 
+                       hover:from-blue-500 hover:to-blue-400 transition-all duration-200
+                       flex items-center justify-center gap-2 shadow-lg border border-blue-400/30"
+          >
+            <Target className="w-4 h-4 text-white" />
+            <span className="text-white font-semibold">Registrar minha ação</span>
+          </button>
+        </div>
       )}
     </div>
   );

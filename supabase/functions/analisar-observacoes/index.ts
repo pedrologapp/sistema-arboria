@@ -314,8 +314,8 @@ const DICIONARIO_CELEBRACOES = `
 
 | Tipo | Condição | Título Sugerido |
 |------|----------|-----------------|
-| descoberta | 3+ positivos em fase ≠ casa | 🌟 DESCOBERTA! |
-| confirmacao | 5+ positivos em fase = casa | ⭐ CONFIRMAÇÃO! |
+| descoberta | 2+ positivos consecutivos em fase ≠ casa | 🌟 DESCOBERTA! |
+| confirmacao | 2+ positivos consecutivos em fase = casa | ⭐ CONFIRMAÇÃO! |
 | recuperacao | Saiu de alerta para positivo | 🎉 RECUPERAÇÃO! |
 | consistencia | 5+ positivos consecutivos | 🔥 CONSISTÊNCIA! |
 | lideranca | Sinal "liderou" registrado | 👑 LIDERANÇA! |
@@ -371,8 +371,8 @@ ${DICIONARIO_CELEBRACOES}
 ## Determinação do Estado
 1. As 2 ÚLTIMAS observações determinam o estado atual
 2. Se as 2 últimas são de ATENÇÃO → estado = "precisa_atencao", deve_gerar_alerta = true
-3. Se as 2 últimas são POSITIVAS → estado = "celebrar", deve_gerar_alerta = false (tratado separadamente)
-4. Se mistas (1 atenção + 1 positiva) → estado = "neutro", deve_gerar_alerta = false
+3. Se as 2 últimas são POSITIVAS → estado = "celebrar", deve_gerar_alerta = true (2 consecutivos já ativam celebração!)
+4. Se mistas (1 atenção + 1 positiva) → estado = "neutro" ou "melhorando"/"atencao_recente" dependendo da ordem
 
 ## Detecção de Padrões
 - Verifique se as 2 últimas observações formam algum padrão da tabela de combinações
@@ -551,12 +551,12 @@ function analiseFallback(observacoes: Observacao[], nomeAluno: string): AlertaGe
     };
   }
 
-  // 2 positivos consecutivos
+  // 2 positivos consecutivos = CELEBRAR
   if (estado === "brilhando") {
     const sinaisIguais = ultima.sinal_codigo === penultima.sinal_codigo;
     
     return {
-      estado: "brilhando",
+      estado: "celebrar",  // Mudar de "brilhando" para "celebrar" para criar alerta
       deve_gerar_alerta: true,
       alerta: {
         sinal_principal: ultima.sinal,
@@ -569,11 +569,13 @@ function analiseFallback(observacoes: Observacao[], nomeAluno: string): AlertaGe
           : `${nomeAluno} está indo muito bem! Últimas observações: '${ultima.sinal}' e '${penultima.sinal}'.`,
         contexto: [
           "Padrão positivo identificado nas observações recentes",
-          "Continue celebrando e reforçando o comportamento"
+          "2 observações positivas consecutivas - momento de celebrar!",
+          "Continue reforçando o comportamento positivo"
         ],
         hipoteses: [],
         acoes_sugeridas: [
-          { acao: "Continue observando e celebrando", prioridade: "media" as const }
+          { acao: "Celebre e reconheça o progresso", prioridade: "alta" as const },
+          { acao: "Continue observando e reforçando", prioridade: "media" as const }
         ],
       },
     };

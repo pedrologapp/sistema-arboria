@@ -24,7 +24,7 @@ interface Arquetipo {
 }
 
 interface AlertaAtivo {
-  tipo: 'precisa_atencao' | 'celebrar' | 'brilhando' | 'melhorando' | 'atencao_recente' | 'bom_comeco' | 'fique_de_olho';
+  tipo: 'precisa_atencao' | 'celebrar' | 'brilhando' | 'melhorando' | 'atencao_recente' | 'bom_comeco' | 'fique_de_olho' | 'celebrar_descoberta' | 'celebrar_confirmacao';
   subtipo?: 'descoberta' | 'confirmacao';
   motivo: string;
   contexto: string[];
@@ -352,7 +352,8 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
         : null;
 
 // Calcular estado baseado nas observações (quando não há alerta)
-      const calcularEstadoBaseadoEmObservacoes = (obs: Observacao[]): AlertaAtivo['tipo'] | null => {
+      // REGRA: 2 positivos consecutivos = celebrar (descoberta ou confirmação)
+      const calcularEstadoBaseadoEmObservacoes = (obs: Observacao[], casaCode: string, faseCode: string): AlertaAtivo['tipo'] | null => {
         if (obs.length === 0) return null;
         
         if (obs.length === 1) {
@@ -365,8 +366,10 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
         if (ultima.valencia === 'atencao' && penultima.valencia === 'atencao') {
           return 'precisa_atencao';
         }
+        // 2 positivos consecutivos = CELEBRAR
         if (ultima.valencia === 'positivo' && penultima.valencia === 'positivo') {
-          return 'brilhando';
+          // Descoberta se fase ≠ casa, Confirmação se fase = casa
+          return faseCode !== casaCode ? 'celebrar_descoberta' : 'celebrar_confirmacao';
         }
         if (ultima.valencia === 'atencao' && penultima.valencia === 'positivo') {
           return 'atencao_recente';
@@ -583,7 +586,7 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           };
         } else {
           // Se não há alerta no banco, calcular estado baseado nas observações
-          const estadoCalculado = calcularEstadoBaseadoEmObservacoes(observacoes);
+          const estadoCalculado = calcularEstadoBaseadoEmObservacoes(observacoes, casaCodigo, faseAtualCodigo);
           if (estadoCalculado && temObsFaseAtual) {
             const primeiroNome = (aluno.full_name || `${aluno.nome || ''} ${aluno.sobrenome || ''}`.trim() || 'Aluno').split(' ')[0];
             const ultimaObs = observacoes[0];
@@ -591,7 +594,33 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
             
             // Gerar texto baseado no estado calculado
             let textoGerado = '';
+            let arquetipoDinamico: Arquetipo | undefined;
+            
             switch (estadoCalculado) {
+              case 'celebrar_descoberta':
+                textoGerado = `${primeiroNome} está brilhando na Fase ${faseAtualNome}! Isso é fora da casa dele (${casaNome}).`;
+                // Buscar arquétipo para descoberta
+                if (casaCodigo && faseAtualCodigo) {
+                  const { data: arquetipoData } = await supabase
+                    .from('arquetipos')
+                    .select('nome_arquetipo, significado, potencializar')
+                    .eq('casa_codigo', casaCodigo)
+                    .eq('fase_codigo', faseAtualCodigo)
+                    .eq('tipo', 'descoberta')
+                    .maybeSingle();
+                  
+                  if (arquetipoData) {
+                    arquetipoDinamico = {
+                      nome: arquetipoData.nome_arquetipo || '',
+                      significado: substituirTemplate(arquetipoData.significado, { nome: primeiroNome }),
+                      potencializar: arquetipoData.potencializar || []
+                    };
+                  }
+                }
+                break;
+              case 'celebrar_confirmacao':
+                textoGerado = `${primeiroNome} confirmou sua força em ${casaNome}! Está brilhando na casa dele.`;
+                break;
               case 'brilhando':
                 textoGerado = ultimaObs.sinalLabel === penultimaObs?.sinalLabel
                   ? `${primeiroNome} está brilhando! Registrou "${ultimaObs.sinalLabel}" nas últimas 2 observações.`
@@ -614,12 +643,15 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
             }
             
             alertaAtivo = {
-              tipo: estadoCalculado,
+              tipo: estadoCalculado as AlertaAtivo['tipo'],
+              subtipo: estadoCalculado === 'celebrar_descoberta' ? 'descoberta' : 
+                       estadoCalculado === 'celebrar_confirmacao' ? 'confirmacao' : undefined,
               motivo: textoGerado,
               contexto: [],
               hipoteses: [],
               sugestoes: [],
               acoesSugeridas: [],
+              arquetipo: arquetipoDinamico,
               created_at: new Date().toISOString(),
               alertaId: '',
               textoAcontecendo: textoGerado

@@ -152,19 +152,29 @@ export const AlertaDetalheModal = ({
                     </AvatarFallback>
                   </Avatar>
 
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="text-white text-sm font-medium truncate">
-                      {alerta.aluno.nome}
-                    </span>
-                    <span className="text-white/40 text-xs flex-shrink-0">
-                      {alerta.aluno.serie}{alerta.aluno.turma}
-                    </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-white text-sm font-medium truncate">
+                        {alerta.aluno.nome}
+                      </span>
+                      <span className="text-white/40 text-xs flex-shrink-0">
+                        {alerta.aluno.serie}{alerta.aluno.turma}
+                      </span>
+                    </div>
+                    {/* Mostrar arquétipo para celebrações */}
+                    {tipo === 'celebrar' && alerta.dados_contexto?.arquetipo && (
+                      <div className="text-xs text-amber-400 mt-0.5">
+                        🏆 "{alerta.dados_contexto.arquetipo as string}"
+                      </div>
+                    )}
+                    {tipo === 'celebrar' && !alerta.dados_contexto?.arquetipo && (
+                      <div className="text-xs text-amber-400/70 mt-0.5">
+                        ✨ 2 positivos consecutivos
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-white/40 text-xs max-w-[100px] truncate">
-                      {alerta.motivo}
-                    </span>
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <ChevronRight className="w-4 h-4 text-white/30" />
                   </div>
                 </button>

@@ -327,13 +327,15 @@ const PerfilAlunoPage = () => {
           padrao={aluno.alertaAtivo?.padrao}
           arquetipo={aluno.alertaAtivo?.arquetipo ? {
             nome_arquetipo: aluno.alertaAtivo.arquetipo.nome,
-            tipo: 'Celebração',
+            tipo: aluno.alertaAtivo.subtipo === 'descoberta' ? 'Descoberta' : 'Confirmação',
             significado: aluno.alertaAtivo.arquetipo.significado,
             potencializar: aluno.alertaAtivo.arquetipo.potencializar
           } : undefined}
           onRegistrarAcao={handleRegistrarAcao}
           onRegistrarObservacao={handleRegistrarObservacao}
           casaColor={aluno.casaCor}
+          casaNome={aluno.casaNome}
+          faseNome={aluno.faseAtualNome}
         />
         
         {/* Histórico de Observações */}
