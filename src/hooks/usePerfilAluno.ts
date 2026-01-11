@@ -351,6 +351,33 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
         ? { sinal: observacoes[0].sinalLabel, dataHora: observacoes[0].dataHora }
         : null;
 
+// Calcular estado baseado nas observações (quando não há alerta)
+      const calcularEstadoBaseadoEmObservacoes = (obs: Observacao[]): AlertaAtivo['tipo'] | null => {
+        if (obs.length === 0) return null;
+        
+        if (obs.length === 1) {
+          return obs[0].valencia === 'positivo' ? 'bom_comeco' : 'fique_de_olho';
+        }
+        
+        const ultima = obs[0];
+        const penultima = obs[1];
+        
+        if (ultima.valencia === 'atencao' && penultima.valencia === 'atencao') {
+          return 'precisa_atencao';
+        }
+        if (ultima.valencia === 'positivo' && penultima.valencia === 'positivo') {
+          return 'brilhando';
+        }
+        if (ultima.valencia === 'atencao' && penultima.valencia === 'positivo') {
+          return 'atencao_recente';
+        }
+        if (ultima.valencia === 'positivo' && penultima.valencia === 'atencao') {
+          return 'melhorando';
+        }
+        
+        return null;
+      };
+
       // Buscar alerta ativo do aluno
       let alertaAtivo: AlertaAtivo | null = null;
       
@@ -360,7 +387,7 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           .select('*')
           .eq('aluno_id', alunoId)
           .eq('institution_id', aluno.institution_id)
-          .in('tipo_alerta', ['precisa_atencao', 'celebrar'])
+          .in('tipo_alerta', ['precisa_atencao', 'celebrar', 'brilhando', 'melhorando', 'atencao_recente', 'bom_comeco', 'fique_de_olho'])
           .in('status', ['ativo', 'visualizado', 'em_acompanhamento'])
           .order('created_at', { ascending: false })
           .limit(1)
@@ -537,7 +564,7 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           }
 
           alertaAtivo = {
-            tipo: alertaData.tipo_alerta as 'precisa_atencao' | 'celebrar',
+            tipo: alertaData.tipo_alerta as AlertaAtivo['tipo'],
             subtipo,
             motivo,
             contexto: (dadosContexto?.contexto as string[]) || [],
@@ -550,8 +577,54 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
             sinalCodigo,
             padraoCodigo,
             sinalPredominante: (dadosContexto?.sinal_predominante as string) || undefined,
-            quantidadeSinal: (dadosContexto?.quantidade as number) || undefined
+            sinalSecundario: (dadosContexto?.sinal_secundario as string) || undefined,
+            quantidadeSinal: (dadosContexto?.quantidade as number) || undefined,
+            textoAcontecendo: motivo
           };
+        } else {
+          // Se não há alerta no banco, calcular estado baseado nas observações
+          const estadoCalculado = calcularEstadoBaseadoEmObservacoes(observacoes);
+          if (estadoCalculado && temObsFaseAtual) {
+            const primeiroNome = (aluno.full_name || `${aluno.nome || ''} ${aluno.sobrenome || ''}`.trim() || 'Aluno').split(' ')[0];
+            const ultimaObs = observacoes[0];
+            const penultimaObs = observacoes[1];
+            
+            // Gerar texto baseado no estado calculado
+            let textoGerado = '';
+            switch (estadoCalculado) {
+              case 'brilhando':
+                textoGerado = ultimaObs.sinalLabel === penultimaObs?.sinalLabel
+                  ? `${primeiroNome} está brilhando! Registrou "${ultimaObs.sinalLabel}" nas últimas 2 observações.`
+                  : `${primeiroNome} está indo muito bem! Últimas observações: "${ultimaObs.sinalLabel}" e "${penultimaObs?.sinalLabel}".`;
+                break;
+              case 'melhorando':
+                textoGerado = `${primeiroNome} mostrou melhora! Após "${penultimaObs?.sinalLabel}", registrou "${ultimaObs.sinalLabel}".`;
+                break;
+              case 'atencao_recente':
+                textoGerado = `${primeiroNome} estava bem, mas a última observação foi "${ultimaObs.sinalLabel}". Fique atento!`;
+                break;
+              case 'bom_comeco':
+                textoGerado = `${primeiroNome} teve sua primeira observação positiva: "${ultimaObs.sinalLabel}".`;
+                break;
+              case 'fique_de_olho':
+                textoGerado = `A primeira observação de ${primeiroNome} foi "${ultimaObs.sinalLabel}". Fique de olho!`;
+                break;
+              default:
+                textoGerado = `Continue observando ${primeiroNome}.`;
+            }
+            
+            alertaAtivo = {
+              tipo: estadoCalculado,
+              motivo: textoGerado,
+              contexto: [],
+              hipoteses: [],
+              sugestoes: [],
+              acoesSugeridas: [],
+              created_at: new Date().toISOString(),
+              alertaId: '',
+              textoAcontecendo: textoGerado
+            };
+          }
         }
       }
 

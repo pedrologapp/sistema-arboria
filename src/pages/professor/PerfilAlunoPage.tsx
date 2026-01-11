@@ -308,13 +308,7 @@ const PerfilAlunoPage = () => {
         
         {/* Card de Feedback de Estado */}
         <FeedbackEstadoCard
-          estado={
-            aluno.alertaAtivo 
-              ? aluno.alertaAtivo.tipo
-              : aluno.temObsFaseAtual 
-                ? 'aguardando' 
-                : 'aguardando'
-          }
+          estado={aluno.alertaAtivo?.tipo || (aluno.temObsFaseAtual ? 'aguardando' : 'aguardando')}
           nomeAluno={primeiroNome}
           textoAcontecendo={
             aluno.alertaAtivo?.textoAcontecendo || 
