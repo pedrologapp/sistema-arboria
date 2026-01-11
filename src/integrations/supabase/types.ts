@@ -674,6 +674,24 @@ export type Database = {
           },
         ]
       }
+      config_alertas: {
+        Row: {
+          chave: string
+          descricao: string | null
+          valor: number
+        }
+        Insert: {
+          chave: string
+          descricao?: string | null
+          valor: number
+        }
+        Update: {
+          chave?: string
+          descricao?: string | null
+          valor?: number
+        }
+        Relationships: []
+      }
       conversa_participantes: {
         Row: {
           conversa_id: string
@@ -2432,6 +2450,10 @@ export type Database = {
       }
     }
     Functions: {
+      analisar_e_gerar_alertas: {
+        Args: { p_aluno_id: string }
+        Returns: undefined
+      }
       ensure_turma_exists: {
         Args: {
           p_ano_letivo: number
@@ -2508,6 +2530,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      migrar_alertas_fase_anterior: {
+        Args: { p_fase_anterior_id: string; p_fase_nova_id: string }
+        Returns: number
+      }
       user_participa_conversa: {
         Args: { p_conversa_id: string }
         Returns: boolean
@@ -2526,7 +2552,11 @@ export type Database = {
         | "em_acompanhamento"
         | "resolvido"
         | "arquivado"
-      tipo_alerta: "precisa_atencao" | "celebrar" | "nao_esquecer"
+      tipo_alerta:
+        | "precisa_atencao"
+        | "celebrar"
+        | "nao_esquecer"
+        | "fase_anterior"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2668,7 +2698,12 @@ export const Constants = {
         "resolvido",
         "arquivado",
       ],
-      tipo_alerta: ["precisa_atencao", "celebrar", "nao_esquecer"],
+      tipo_alerta: [
+        "precisa_atencao",
+        "celebrar",
+        "nao_esquecer",
+        "fase_anterior",
+      ],
     },
   },
 } as const

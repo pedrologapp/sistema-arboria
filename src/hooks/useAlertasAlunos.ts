@@ -11,7 +11,7 @@ export interface AlertaAluno {
     serie: string;
     turma: string;
   };
-  tipo_alerta: 'precisa_atencao' | 'celebrar' | 'nao_esquecer';
+  tipo_alerta: 'precisa_atencao' | 'celebrar' | 'nao_esquecer' | 'fase_anterior';
   motivo: string;
   dados_contexto: Record<string, unknown>;
   created_at: string;
@@ -226,7 +226,7 @@ export const useAlertasAlunos = () => {
             serie: alerta.aluno?.serie || '',
             turma: alerta.aluno?.turma || ''
           },
-          tipo_alerta: alerta.tipo_alerta as 'precisa_atencao' | 'celebrar' | 'nao_esquecer',
+          tipo_alerta: alerta.tipo_alerta as 'precisa_atencao' | 'celebrar' | 'nao_esquecer' | 'fase_anterior',
           motivo: alerta.motivo,
           dados_contexto: (alerta.dados_contexto as Record<string, unknown>) || {},
           created_at: alerta.created_at || '',
@@ -235,12 +235,16 @@ export const useAlertasAlunos = () => {
         }));
 
       // 7. Separar alertas da fase atual vs fase anterior
+      // Alertas de fase_anterior vêm diretamente do banco (tipo_alerta = 'fase_anterior')
+      // OU são alertas com fase_origem_id diferente da fase atual
       const alertasFaseAtual = alertasFiltrados.filter(a => 
-        !a.fase_origem_id || a.fase_origem_id === faseAtual?.id || a.fase_id === faseAtual?.id
+        a.tipo_alerta !== 'fase_anterior' && 
+        (!a.fase_origem_id || a.fase_origem_id === faseAtual?.id || a.fase_id === faseAtual?.id)
       );
       
       const alertasFaseAnteriorRaw = alertasFiltrados.filter(a => 
-        a.fase_origem_id && a.fase_origem_id !== faseAtual?.id
+        a.tipo_alerta === 'fase_anterior' ||
+        (a.fase_origem_id && a.fase_origem_id !== faseAtual?.id)
       );
 
       // 8. Buscar dados das fases anteriores para os alertas
