@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
-
+import { useEffect, useRef } from 'react';
 interface Observacao {
   id: string;
   sinalEmoji: string;
@@ -87,6 +87,40 @@ const substituirTemplate = (template: string, dados: Record<string, string | num
     resultado = resultado.replace(new RegExp(`\\{${chave}\\}`, 'g'), String(valor));
   }
   return resultado;
+};
+
+// Helper to check if AI analysis is stale (older than 1 hour)
+const shouldRefreshAnalysis = (timestampAnalise: string | undefined): boolean => {
+  if (!timestampAnalise) return true;
+  
+  const analysisTime = new Date(timestampAnalise).getTime();
+  const now = Date.now();
+  const oneHour = 60 * 60 * 1000;
+  
+  return now - analysisTime > oneHour;
+};
+
+// Function to trigger AI analysis
+const triggerAIAnalysis = async (alunoId: string): Promise<void> => {
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analisar-observacoes`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ aluno_id: alunoId }),
+      }
+    );
+    
+    if (!response.ok) {
+      console.warn('AI analysis request failed:', response.status);
+    }
+  } catch (error) {
+    console.warn('Failed to trigger AI analysis:', error);
+  }
 };
 
 export const usePerfilAluno = (alunoId: string | undefined) => {
@@ -330,12 +364,19 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           const dadosContexto = alertaData.dados_contexto as Record<string, unknown> | null;
           const sinalCodigo = (dadosContexto?.sinal_codigo as string) || '';
           const padraoCodigo = (dadosContexto?.padrao_codigo as string) || '';
+          const timestampAnalise = dadosContexto?.timestamp_analise as string | undefined;
+          const geradoPorIA = dadosContexto?.gerado_por === 'ia';
           
           // Formatar nome do aluno
           const nomeCompleto = aluno.full_name || 
             `${aluno.nome || ''} ${aluno.sobrenome || ''}`.trim() || 
             'Aluno';
           const primeiroNome = nomeCompleto.split(' ')[0];
+          
+          // Check if analysis is stale and trigger refresh (async, non-blocking)
+          if (shouldRefreshAnalysis(timestampAnalise)) {
+            triggerAIAnalysis(alunoId).catch(() => {}); // Fire and forget
+          }
           
           // Determinar subtipo para celebrar
           let subtipo: 'descoberta' | 'confirmacao' | undefined;
@@ -433,17 +474,25 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
             }
           }
           
-          // Buscar template de texto
+          // Buscar template de texto ou usar texto gerado pela IA
           let motivo = alertaData.motivo;
           
-          if (alertaData.tipo_alerta === 'precisa_atencao') {
-            // Determinar qual template usar baseado no motivo/padrão
+          // Priorizar texto gerado pela IA se disponível
+          const textoAcontecendo = dadosContexto?.texto_acontecendo as string | undefined;
+          
+          if (textoAcontecendo && geradoPorIA) {
+            // Usar texto gerado pela IA diretamente
+            motivo = textoAcontecendo;
+          } else if (alertaData.tipo_alerta === 'precisa_atencao') {
+            // Fallback para templates quando não há análise de IA
             let templateCodigo = 'alerta_mesmo_sinal'; // Default
             
             if (alertaData.motivo === 'padrao_negativo_consecutivo' || alertaData.motivo === 'mesmo_sinal_consecutivo') {
               templateCodigo = 'alerta_mesmo_sinal';
             } else if (alertaData.motivo === 'mudanca_abrupta') {
               templateCodigo = 'alerta_mudanca_abrupta';
+            } else if (alertaData.motivo === 'ultimas_2_atencao') {
+              templateCodigo = 'alerta_2_atencao';
             }
             
             const { data: templateData } = await supabase
@@ -456,7 +505,9 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
               motivo = substituirTemplate(templateData.template, {
                 nome: primeiroNome,
                 sinal: (dadosContexto?.sinal_predominante as string) || 'sinal de atenção',
-                quantidade: (dadosContexto?.quantidade as number) || 3
+                sinal_1: (dadosContexto?.sinal_1 as string) || (dadosContexto?.sinal_predominante as string) || 'sinal',
+                sinal_2: (dadosContexto?.sinal_2 as string) || (dadosContexto?.sinal_predominante as string) || 'sinal',
+                quantidade: (dadosContexto?.quantidade as number) || 2
               });
             }
           } else if (alertaData.tipo_alerta === 'celebrar') {
