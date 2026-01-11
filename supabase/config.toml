@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.get-users-with-emails]
 verify_jwt = false
+
+[functions.create-professor]
+verify_jwt = false
+
+[functions.analisar-observacoes]
+verify_jwt = false
