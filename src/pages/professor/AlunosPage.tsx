@@ -93,7 +93,6 @@ const AlunosPage = () => {
           faseNome={bannerComeceAqui.faseNome}
           faseEmoji={bannerComeceAqui.faseEmoji}
           quantidade={bannerComeceAqui.quantidade}
-          alunos={bannerComeceAqui.alunos}
           onVerLista={() => setModalOpen(true)}
         />
       )}
