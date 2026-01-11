@@ -5,6 +5,7 @@ import { useProfessor } from '@/contexts/ProfessorContext';
 import { useAlunosCasa } from '@/hooks/useAlunosCasa';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { ChatCasaCard } from '@/components/professor/ChatCasaCard';
+import { AlertBoxes } from '@/components/professor/AlertBoxes';
 import { AlunoStatusLinha } from '@/components/professor/AlunoStatusLinha';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -80,6 +81,9 @@ const AlunosPage = () => {
           )}
         </div>
       </div>
+
+      {/* Sistema de Alertas */}
+      <AlertBoxes onAlunoClick={handleAlunoClick} />
 
       {/* Card de Chat da Casa */}
       {casaMentor && (
