@@ -1,6 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Search, Trophy } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useAlunosCasa } from '@/hooks/useAlunosCasa';
 import { useAlertasAlunos } from '@/hooks/useAlertasAlunos';
@@ -14,7 +16,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const AlunosPage = () => {
   const navigate = useNavigate();
-  const { casaMentor, casaColor } = useProfessor();
+  const queryClient = useQueryClient();
+  const { casaMentor, casaColor, profile } = useProfessor();
   const { data: alunos, isLoading } = useAlunosCasa();
   const { bannerComeceAqui } = useAlertasAlunos();
 
@@ -27,6 +30,133 @@ const AlunosPage = () => {
   // Séries e turmas FIXAS
   const seriesDisponiveis = ['6º', '7º', '8º', '9º'];
   const turmasDisponiveis = ['A', 'B', 'C'];
+
+  // Buscar canais da casa mentor para badge de notificação
+  const { data: canais } = useQuery({
+    queryKey: ['canais-casa-badge', casaMentor?.id],
+    queryFn: async () => {
+      if (!casaMentor?.id || !profile?.institution_id) return [];
+      
+      const { data, error } = await supabase
+        .from('canais_casa')
+        .select('id')
+        .eq('casa_id', casaMentor.id)
+        .eq('institution_id', profile.institution_id);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!casaMentor?.id && !!profile?.institution_id
+  });
+
+  // Buscar última leitura do professor em cada canal
+  const { data: leituras } = useQuery({
+    queryKey: ['leituras-canais-badge', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('canal_leituras')
+        .select('canal_id, ultima_leitura')
+        .eq('usuario_id', profile.id);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!profile?.id
+  });
+
+  // Calcular total de mensagens não lidas nos canais
+  const { data: totalCanaisNaoLidas = 0 } = useQuery({
+    queryKey: ['total-canais-nao-lidas-badge', canais, leituras],
+    queryFn: async () => {
+      if (!canais || canais.length === 0) return 0;
+      
+      let total = 0;
+      
+      for (const canal of canais) {
+        const leitura = leituras?.find(l => l.canal_id === canal.id);
+        const ultimaLeitura = leitura?.ultima_leitura || '1970-01-01T00:00:00Z';
+        
+        const { count, error } = await supabase
+          .from('mensagens_canal')
+          .select('*', { count: 'exact', head: true })
+          .eq('canal_id', canal.id)
+          .gt('created_at', ultimaLeitura);
+        
+        if (!error && count !== null) {
+          total += count;
+        }
+      }
+      
+      return total;
+    },
+    enabled: !!canais && canais.length > 0
+  });
+
+  // Calcular DMs não lidas do professor
+  const { data: totalDmsNaoLidas = 0 } = useQuery({
+    queryKey: ['total-dms-nao-lidas-badge', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return 0;
+      
+      const { data: participacoes, error } = await supabase
+        .from('conversa_participantes')
+        .select(`
+          conversa_id,
+          ultima_leitura,
+          conversas_privadas!inner(id, updated_at)
+        `)
+        .eq('usuario_id', profile.id);
+      
+      if (error) return 0;
+      
+      let count = 0;
+      for (const part of participacoes || []) {
+        const ultimaLeitura = part.ultima_leitura ? new Date(part.ultima_leitura).getTime() : 0;
+        const updatedAt = part.conversas_privadas?.updated_at 
+          ? new Date(part.conversas_privadas.updated_at).getTime() 
+          : 0;
+        
+        if (updatedAt > ultimaLeitura) {
+          count++;
+        }
+      }
+      
+      return count;
+    },
+    enabled: !!profile?.id
+  });
+
+  // Total de mensagens não lidas (canais + DMs)
+  const totalNaoLidas = totalCanaisNaoLidas + totalDmsNaoLidas;
+
+  // Realtime para atualizar badges
+  useEffect(() => {
+    if (!casaMentor?.id) return;
+
+    const channel = supabase
+      .channel('alunos-page-chat-updates')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'mensagens_canal'
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['total-canais-nao-lidas-badge'] });
+      })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'mensagens_privadas'
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['total-dms-nao-lidas-badge'] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [casaMentor?.id, queryClient]);
 
   // Filtrar e ordenar alunos por pontuação (ranking)
   const alunosFiltrados = useMemo(() => {
@@ -102,7 +232,7 @@ const AlunosPage = () => {
         <ChatCasaCard
           casaNome={casaMentor.nome}
           casaColor={casaColor}
-          novasMensagens={0}
+          novasMensagens={totalNaoLidas}
           onClick={handleChatClick}
         />
       )}
