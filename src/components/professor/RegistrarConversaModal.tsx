@@ -115,28 +115,28 @@ const RegistrarConversaModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-      <div className="w-full max-w-md bg-[#1a1a1a] rounded-2xl border border-white/10 overflow-hidden max-h-[90vh] overflow-y-auto">
+      <div className="w-full max-w-md bg-[#1a1a1a] rounded-2xl border border-white/10 overflow-hidden max-h-[70vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10 bg-amber-900/20">
+        <div className="flex items-center justify-between p-3 border-b border-white/10 bg-amber-900/20">
           <div className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-6 h-6">
-              <MessageCircle className="w-5 h-5 text-amber-400" strokeWidth={1.5} />
+            <div className="flex items-center justify-center w-5 h-5">
+              <MessageCircle className="w-4 h-4 text-amber-400" strokeWidth={1.5} />
             </div>
-            <span className="text-white font-medium">Registrar conversa com {nomeAluno}</span>
+            <span className="text-white font-medium text-sm">Registrar conversa com {nomeAluno}</span>
           </div>
           <button
             onClick={handleClose}
             className="p-1 rounded-lg hover:bg-white/10 transition-colors"
           >
-            <X className="w-5 h-5 text-white/60" strokeWidth={1.5} />
+            <X className="w-4 h-4 text-white/60" strokeWidth={1.5} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-4 space-y-5">
+        <div className="p-3 space-y-4">
           {/* Campo: O que você fez? - Chips horizontais */}
           <div>
-            <label className="block text-white/80 text-sm mb-3">
+            <label className="block text-white/80 text-sm mb-2">
               O que você fez? <span className="text-red-400">*</span>
             </label>
             <div className="flex flex-wrap gap-2">
@@ -144,13 +144,13 @@ const RegistrarConversaModal = ({
                 <button
                   key={tipo.value}
                   onClick={() => setTipoAcao(tipo.value)}
-                  className={`px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                  className={`px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all duration-200 flex items-center gap-1.5 ${
                     tipoAcao === tipo.value
                       ? 'bg-amber-500/20 border-amber-500/60 text-amber-300'
                       : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:border-white/20'
                   }`}
                 >
-                  <span className="text-lg">{tipo.emoji}</span>
+                  <span className="text-base">{tipo.emoji}</span>
                   <span>{tipo.label}</span>
                 </button>
               ))}
@@ -158,7 +158,7 @@ const RegistrarConversaModal = ({
           </div>
 
           {/* Campo: Como foi? (sempre visível, opcional) */}
-          <div className="border-t border-white/10 pt-4">
+          <div className="border-t border-white/10 pt-3">
             <label className="block text-white/80 text-sm mb-2">
               Como foi? <span className="text-white/40 text-xs">(opcional)</span>
             </label>
@@ -166,13 +166,13 @@ const RegistrarConversaModal = ({
               value={observacoes}
               onChange={(e) => setObservacoes(e.target.value)}
               placeholder="Conte brevemente como foi..."
-              className="w-full h-24 px-4 py-3 rounded-xl bg-white/5 border-2 border-dashed border-amber-500/30 text-white placeholder-white/40 text-sm resize-none focus:outline-none focus:border-amber-500/60 transition-colors"
+              className="w-full h-20 px-3 py-2 rounded-xl bg-white/5 border-2 border-dashed border-amber-500/30 text-white placeholder-white/40 text-sm resize-none focus:outline-none focus:border-amber-500/60 transition-colors"
             />
           </div>
 
           {/* Campo: Reação do aluno (sempre visível, opcional) */}
-          <div className="border-t border-white/10 pt-4">
-            <label className="block text-white/80 text-sm mb-3">
+          <div className="border-t border-white/10 pt-3">
+            <label className="block text-white/80 text-sm mb-2">
               Reação do aluno? <span className="text-white/40 text-xs">(opcional)</span>
             </label>
             <div className="grid grid-cols-4 gap-2">
@@ -180,13 +180,13 @@ const RegistrarConversaModal = ({
                 <button
                   key={reacao.value}
                   onClick={() => setReacaoAluno(reacaoAluno === reacao.value ? '' : reacao.value)}
-                  className={`p-3 rounded-xl border-2 text-center transition-all duration-200 flex flex-col items-center gap-1.5 ${
+                  className={`p-2 rounded-xl border-2 text-center transition-all duration-200 flex flex-col items-center gap-1 ${
                     reacaoAluno === reacao.value
                       ? `${reacao.bgColor} ${reacao.borderColor} scale-105`
                       : 'bg-white/5 border-white/10 hover:bg-white/10'
                   }`}
                 >
-                  <span className="text-2xl">{reacao.emoji}</span>
+                  <span className="text-xl">{reacao.emoji}</span>
                   <span className={`text-xs ${reacaoAluno === reacao.value ? 'text-white font-medium' : 'text-white/60'}`}>
                     {reacao.label}
                   </span>
@@ -197,18 +197,18 @@ const RegistrarConversaModal = ({
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 p-4 border-t border-white/10">
+        <div className="flex gap-3 p-3 border-t border-white/10">
           <button
             onClick={handleClose}
             disabled={isSaving}
-            className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 text-sm hover:bg-white/10 transition-colors disabled:opacity-50"
+            className="flex-1 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 text-sm hover:bg-white/10 transition-colors disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             onClick={handleSalvar}
             disabled={isSaving || !podeSubmeter}
-            className={`flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            className={`flex-1 py-2 rounded-xl text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
               podeSubmeter 
                 ? 'bg-amber-600 hover:bg-amber-700' 
                 : 'bg-amber-600/50 cursor-not-allowed'
