@@ -25,12 +25,17 @@ const StudentHeader = ({ notificationCount = 0 }: StudentHeaderProps) => {
             {isLoading ? (
               <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
             ) : faseAtual?.inteligencia ? (
-              <span 
-                className="text-sm font-medium"
-                style={{ color: faseAtual.inteligencia.cor_hex || '#fff' }}
-              >
-                Semana {faseAtual.semana_atual || 1}
-              </span>
+              <div className="flex flex-col items-end">
+                <span 
+                  className="text-sm font-medium"
+                  style={{ color: faseAtual.inteligencia.cor_hex || '#fff' }}
+                >
+                  Fase {faseAtual.inteligencia.nome}
+                </span>
+                <span className="text-xs text-white/50">
+                  Semana {faseAtual.semana_atual || 1}
+                </span>
+              </div>
             ) : null}
             
             {/* Sino */}
