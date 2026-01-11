@@ -1,14 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, MessageCircle, Hash, Users, Eye, ArrowLeft } from 'lucide-react';
+import { Search, Hash, Users, Eye, ArrowLeft, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { CasaBrasao } from '@/components/CasaBrasao';
-import { CanalItem } from '@/components/chat/CanalItem';
-import { DmItem } from '@/components/chat/DmItem';
+import { MembroCard } from '@/components/chat/MembroCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { getStatusOnline } from '@/utils/statusOnline';
 import { toast } from 'sonner';
 
@@ -79,7 +79,7 @@ const ProfessorChatPage = () => {
     enabled: canais.length > 0 && !!profile?.id,
   });
 
-  // Buscar alunos da casa
+  // Buscar alunos da casa COM CARGOS
   const { data: alunosCasa = [] } = useQuery({
     queryKey: ['professor-alunos-chat', casaMentor?.id, profile?.institution_id],
     queryFn: async () => {
@@ -87,9 +87,18 @@ const ProfessorChatPage = () => {
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, nome, sobrenome, avatar_url, ultima_atividade')
+        .select(`
+          id, 
+          full_name, 
+          nome, 
+          sobrenome, 
+          avatar_url, 
+          ultima_atividade,
+          cargos_casa!cargos_casa_aluno_id_fkey(cargo, ativo)
+        `)
         .eq('casa_id', casaMentor.id)
-        .eq('institution_id', profile.institution_id);
+        .eq('institution_id', profile.institution_id)
+        .order('full_name');
       
       if (error) throw error;
       return data || [];
@@ -99,10 +108,10 @@ const ProfessorChatPage = () => {
   });
 
   // Buscar DMs não lidas
-  const { data: dmsNaoLidas = [] } = useQuery({
+  const { data: dmsNaoLidas = {} } = useQuery({
     queryKey: ['professor-dms-nao-lidas', profile?.id],
     queryFn: async () => {
-      if (!profile?.id) return [];
+      if (!profile?.id) return {};
       
       const { data: participacoes } = await supabase
         .from('conversa_participantes')
@@ -113,14 +122,14 @@ const ProfessorChatPage = () => {
         `)
         .eq('usuario_id', profile.id);
       
-      if (!participacoes) return [];
+      if (!participacoes) return {};
       
-      const naoLidas: { conversaId: string; outroUsuarioId: string }[] = [];
+      const naoLidasPorAluno: Record<string, boolean> = {};
       
       for (const p of participacoes) {
-        const ultimaLeitura = new Date(p.ultima_leitura || '1970-01-01');
+        const ultimaLeitura = new Date(p.ultima_leitura || '1970-01-01').getTime();
         const conversaData = p.conversa as { updated_at: string | null } | null;
-        const ultimaMsg = new Date(conversaData?.updated_at || '1970-01-01');
+        const ultimaMsg = new Date(conversaData?.updated_at || '1970-01-01').getTime();
         
         if (ultimaMsg > ultimaLeitura) {
           const { data: outro } = await supabase
@@ -131,15 +140,12 @@ const ProfessorChatPage = () => {
             .single();
           
           if (outro) {
-            naoLidas.push({ 
-              conversaId: p.conversa_id, 
-              outroUsuarioId: outro.usuario_id 
-            });
+            naoLidasPorAluno[outro.usuario_id] = true;
           }
         }
       }
       
-      return naoLidas;
+      return naoLidasPorAluno;
     },
     enabled: !!profile?.id,
     staleTime: 10000,
@@ -182,6 +188,23 @@ const ProfessorChatPage = () => {
     }).length;
   }, [alunosCasa]);
 
+  // Separar liderança e membros comuns
+  const { lideranca, membrosComuns } = useMemo(() => {
+    const liderancaList: typeof alunosCasa = [];
+    const membrosComunsList: typeof alunosCasa = [];
+    
+    for (const aluno of alunosCasa) {
+      const cargoAtivo = aluno.cargos_casa?.find(c => c.ativo);
+      if (cargoAtivo) {
+        liderancaList.push(aluno);
+      } else {
+        membrosComunsList.push(aluno);
+      }
+    }
+    
+    return { lideranca: liderancaList, membrosComuns: membrosComunsList };
+  }, [alunosCasa]);
+
   // Filtrar canais e alunos pelo termo de busca
   const canaisFiltrados = useMemo(() => {
     if (!searchTerm) return canais;
@@ -189,15 +212,25 @@ const ProfessorChatPage = () => {
     return canais.filter(c => c.nome.toLowerCase().includes(termo));
   }, [canais, searchTerm]);
 
-  const alunosFiltrados = useMemo(() => {
-    if (!searchTerm) return alunosCasa;
+  const liderancaFiltrada = useMemo(() => {
+    if (!searchTerm) return lideranca;
     const termo = searchTerm.toLowerCase();
-    return alunosCasa.filter(a => {
+    return lideranca.filter(a => {
       const nome = a.nome?.toLowerCase() || '';
       const fullName = a.full_name?.toLowerCase() || '';
       return nome.includes(termo) || fullName.includes(termo);
     });
-  }, [alunosCasa, searchTerm]);
+  }, [lideranca, searchTerm]);
+
+  const membrosComunsFiltrados = useMemo(() => {
+    if (!searchTerm) return membrosComuns;
+    const termo = searchTerm.toLowerCase();
+    return membrosComuns.filter(a => {
+      const nome = a.nome?.toLowerCase() || '';
+      const fullName = a.full_name?.toLowerCase() || '';
+      return nome.includes(termo) || fullName.includes(termo);
+    });
+  }, [membrosComuns, searchTerm]);
 
   // Função para iniciar/retomar conversa com aluno
   const iniciarConversa = async (alunoId: string) => {
@@ -269,7 +302,7 @@ const ProfessorChatPage = () => {
   }
 
   return (
-    <div className="py-4 space-y-4">
+    <div className="py-4 space-y-4 pb-24">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button
@@ -288,7 +321,7 @@ const ProfessorChatPage = () => {
         />
         <div className="flex-1">
           <h1 className="text-lg font-bold text-white">
-            Chat - Casa {casaMentor.nome}
+            Casa {casaMentor.nome}
           </h1>
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-green-500" />
@@ -327,80 +360,136 @@ const ProfessorChatPage = () => {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
         <Input
-          placeholder="Buscar canais ou alunos..."
+          placeholder="Buscar..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40"
+          className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40 text-base"
         />
       </div>
 
-      {/* Seção: Canais de Texto */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 px-1">
-          <Hash className="w-4 h-4 text-white/40" />
-          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider">
-            Canais de Texto
-          </h2>
-        </div>
-        
-        {canaisFiltrados.length === 0 ? (
-          <p className="text-sm text-white/40 text-center py-4">
-            Nenhum canal disponível
-          </p>
-        ) : (
-          <div className="space-y-1">
-            {canaisFiltrados.map((canal) => (
-              <CanalItem
-                key={canal.id}
-                canal={canal}
-                naoLidas={mensagensNaoLidas[canal.id] || 0}
-                casaColor={casaColor}
-                onClick={() => navigate(`/professor/chat/canal/${canal.id}`)}
-              />
-            ))}
+      <ScrollArea className="flex-1">
+        <div className="space-y-6">
+          {/* Seção: Canais de Texto */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 px-1">
+              <Hash className="w-4 h-4 text-white/40" />
+              <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider">
+                Canais de Texto
+              </h2>
+            </div>
+            
+            {canaisFiltrados.length === 0 ? (
+              <p className="text-sm text-white/40 text-center py-4">
+                Nenhum canal disponível
+              </p>
+            ) : (
+              <div className="space-y-1">
+                {canaisFiltrados.map((canal) => {
+                  const naoLidas = mensagensNaoLidas[canal.id] || 0;
+                  
+                  return (
+                    <button
+                      key={canal.id}
+                      onClick={() => navigate(`/professor/chat/canal/${canal.id}`)}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                    >
+                      <span className="text-lg">{canal.icone || '💬'}</span>
+                      <span className="text-white/70 flex-1 text-left">{canal.nome}</span>
+                      
+                      {canal.apenas_lideranca && (
+                        <Lock className="w-4 h-4 text-white/30" />
+                      )}
+                      
+                      {naoLidas > 0 && (
+                        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-500 text-white">
+                          {naoLidas}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Seção: Alunos (DMs) */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 px-1">
-          <MessageCircle className="w-4 h-4 text-white/40" />
-          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider">
-            Mensagens Diretas
-          </h2>
-          <span className="text-xs text-white/30">({alunosFiltrados.length} alunos)</span>
-        </div>
-        
-        <div className="space-y-1">
-          {alunosFiltrados.length === 0 ? (
-            <p className="text-sm text-white/40 text-center py-4">
-              Nenhum aluno encontrado
-            </p>
-          ) : (
-            alunosFiltrados.map((aluno) => {
-              const dmNaoLida = dmsNaoLidas.find(dm => dm.outroUsuarioId === aluno.id);
+          {/* Seção: Mensagens Diretas */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <span className="text-white/40 text-xs font-semibold uppercase tracking-wider">
+                💬 Mensagens Diretas
+              </span>
+            </div>
+
+            {/* Liderança */}
+            {liderancaFiltrada.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 px-1">
+                  <span className="text-lg">🦅</span>
+                  <span className="text-white/50 text-xs font-semibold uppercase tracking-wider">
+                    Liderança
+                  </span>
+                </div>
+                
+                <div className="space-y-1">
+                  {liderancaFiltrada.map((aluno) => {
+                    const cargoAtivo = aluno.cargos_casa?.find(c => c.ativo);
+                    
+                    return (
+                      <MembroCard
+                        key={aluno.id}
+                        membro={{
+                          id: aluno.id,
+                          nome: aluno.full_name || aluno.nome || 'Aluno',
+                          avatar_url: aluno.avatar_url,
+                          ultima_atividade: aluno.ultima_atividade,
+                          cargos_casa: cargoAtivo ? [{ cargo: cargoAtivo.cargo, ativo: true }] : []
+                        }}
+                        isMe={false}
+                        temDmNaoLida={!!dmsNaoLidas[aluno.id]}
+                        onIniciarConversa={() => iniciarConversa(aluno.id)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Membros Comuns */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 px-1">
+                <Users className="w-4 h-4 text-white/50" />
+                <span className="text-white/50 text-xs font-semibold uppercase tracking-wider">
+                  Membros ({membrosComunsFiltrados.length})
+                </span>
+              </div>
               
-              return (
-                <DmItem
-                  key={aluno.id}
-                  usuario={{
-                    id: aluno.id,
-                    nome: aluno.nome,
-                    sobrenome: aluno.sobrenome,
-                    full_name: aluno.full_name,
-                    avatar_url: aluno.avatar_url,
-                    ultima_atividade: aluno.ultima_atividade
-                  }}
-                  naoLidas={dmNaoLida ? 1 : 0}
-                  onClick={() => iniciarConversa(aluno.id)}
-                  casaColor={casaColor}
-                />
-              );
-            })
-          )}
+              <div className="space-y-1">
+                {membrosComunsFiltrados.length === 0 ? (
+                  <p className="text-sm text-white/40 text-center py-4">
+                    Nenhum membro encontrado
+                  </p>
+                ) : (
+                  membrosComunsFiltrados.map((aluno) => (
+                    <MembroCard
+                      key={aluno.id}
+                      membro={{
+                        id: aluno.id,
+                        nome: aluno.full_name || aluno.nome || 'Aluno',
+                        avatar_url: aluno.avatar_url,
+                        ultima_atividade: aluno.ultima_atividade,
+                        cargos_casa: []
+                      }}
+                      isMe={false}
+                      temDmNaoLida={!!dmsNaoLidas[aluno.id]}
+                      onIniciarConversa={() => iniciarConversa(aluno.id)}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </ScrollArea>
     </div>
   );
 };
