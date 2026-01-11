@@ -21,15 +21,9 @@ const AlunosPage = () => {
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>(null);
   const [busca, setBusca] = useState('');
 
-  // Extrair séries e turmas únicas dos alunos
-  const { seriesUnicas, turmasUnicas } = useMemo(() => {
-    if (!alunos) return { seriesUnicas: [], turmasUnicas: [] };
-    
-    const series = [...new Set(alunos.map(a => a.serie))].sort();
-    const turmas = [...new Set(alunos.map(a => a.turma))].sort();
-    
-    return { seriesUnicas: series, turmasUnicas: turmas };
-  }, [alunos]);
+  // Séries e turmas FIXAS (sempre visíveis independente dos alunos)
+  const seriesDisponiveis = ['6º', '7º', '8º', '9º'];
+  const turmasDisponiveis = ['A', 'B', 'C'];
 
   // Filtrar alunos
   const alunosFiltrados = useMemo(() => {
@@ -117,7 +111,7 @@ const AlunosPage = () => {
             >
               Todas
             </button>
-            {seriesUnicas.map(serie => (
+            {seriesDisponiveis.map(serie => (
               <button
                 key={serie}
                 onClick={() => setSerieFiltro(serie)}
@@ -149,7 +143,7 @@ const AlunosPage = () => {
             >
               Todas
             </button>
-            {turmasUnicas.map(turma => (
+            {turmasDisponiveis.map(turma => (
               <button
                 key={turma}
                 onClick={() => setTurmaFiltro(turma)}
