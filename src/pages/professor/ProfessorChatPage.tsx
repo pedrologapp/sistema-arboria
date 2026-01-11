@@ -420,6 +420,35 @@ const ProfessorChatPage = () => {
               </span>
             </div>
 
+            {/* Mentor da Casa (Próprio Professor) */}
+            {profile && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 px-1">
+                  <span className="text-lg">🎓</span>
+                  <span className="text-white/50 text-xs font-semibold uppercase tracking-wider">
+                    Mentor da Casa
+                  </span>
+                </div>
+                
+                <div className="space-y-1">
+                  <MembroCard
+                    membro={{
+                      id: profile.id,
+                      nome: profile.full_name || profile.nome || 'Professor',
+                      sobrenome: null,
+                      full_name: profile.full_name || null,
+                      avatar_url: profile.avatar_url || null,
+                      ultima_atividade: null,
+                      cargos_casa: []
+                    }}
+                    isMe={true}
+                    hideStatus={true}
+                    onIniciarConversa={() => {}}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Liderança */}
             {liderancaFiltrada.length > 0 && (
               <div className="space-y-2">

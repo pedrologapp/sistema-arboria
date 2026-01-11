@@ -162,6 +162,39 @@ const ChatPage = () => {
     };
   }, [profile?.id, casa?.id, queryClient]);
 
+  // Buscar mentor da casa (professor)
+  const { data: mentorCasa } = useQuery({
+    queryKey: ['mentor-casa', casa?.id, profile?.institution_id],
+    queryFn: async () => {
+      if (!casa?.id || !profile?.institution_id) return null;
+      
+      const { data, error } = await supabase
+        .from('professor_casa')
+        .select(`
+          professor_id,
+          profiles!professor_casa_professor_id_fkey(
+            id, full_name, nome, sobrenome, avatar_url
+          )
+        `)
+        .eq('casa_id', casa.id)
+        .eq('institution_id', profile.institution_id)
+        .eq('ativo', true)
+        .eq('eh_mentor_principal', true)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Erro ao buscar mentor:', error);
+        return null;
+      }
+      
+      // Type assertion para acessar profiles corretamente
+      const profileData = data?.profiles as { id: string; full_name: string | null; nome: string | null; sobrenome: string | null; avatar_url: string | null } | null;
+      return profileData || null;
+    },
+    staleTime: 60000,
+    enabled: !!casa?.id && !!profile?.institution_id,
+  });
+
   // Buscar membros da casa com cargos
   const { data: membrosCasa = [] } = useQuery({
     queryKey: ['membros-chat', casa?.id, profile?.institution_id],
@@ -224,6 +257,16 @@ const ChatPage = () => {
     const termo = searchTerm.toLowerCase();
     return canais.filter(c => c.nome.toLowerCase().includes(termo));
   }, [canais, searchTerm]);
+
+  // Filtrar mentor pelo termo de busca
+  const mentorFiltrado = useMemo(() => {
+    if (!mentorCasa) return null;
+    if (!searchTerm) return mentorCasa;
+    const termo = searchTerm.toLowerCase();
+    const nome = mentorCasa.nome?.toLowerCase() || '';
+    const fullName = mentorCasa.full_name?.toLowerCase() || '';
+    return nome.includes(termo) || fullName.includes(termo) ? mentorCasa : null;
+  }, [mentorCasa, searchTerm]);
 
   const liderancaFiltrada = useMemo(() => {
     if (!searchTerm) return lideranca;
@@ -413,6 +456,33 @@ const ChatPage = () => {
             Mensagens Diretas
           </h2>
         </div>
+
+        {/* Mentor da Casa */}
+        {mentorFiltrado && (
+          <div className="space-y-2">
+            <h3 className="text-xs text-white/50 px-1 flex items-center gap-1.5">
+              <span>🎓</span> MENTOR DA CASA
+            </h3>
+            <div className="space-y-1">
+              <MembroCard
+                membro={{
+                  id: mentorFiltrado.id,
+                  nome: mentorFiltrado.nome,
+                  sobrenome: mentorFiltrado.sobrenome,
+                  full_name: mentorFiltrado.full_name,
+                  avatar_url: mentorFiltrado.avatar_url,
+                  ultima_atividade: null,
+                  cargos_casa: []
+                }}
+                isMe={false}
+                hideStatus={true}
+                onIniciarConversa={iniciarConversa}
+                casaColor={casaColor}
+                temDmNaoLida={dmsNaoLidas.some(dm => dm.outroUsuarioId === mentorFiltrado.id)}
+              />
+            </div>
+          </div>
+        )}
         
         {/* Liderança */}
         {liderancaFiltrada.length > 0 && (
