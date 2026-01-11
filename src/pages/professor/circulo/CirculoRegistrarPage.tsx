@@ -213,22 +213,24 @@ const CirculoRegistrarPage = () => {
       {/* Separador + Foto do aluno */}
       <div className="py-3">
         <div className="h-px bg-white/10 mb-4" />
-        <div className="flex flex-col items-center gap-1.5">
-          <Avatar className="w-[70px] h-[70px] border-2" style={{ borderColor: casaColor }}>
+        <div className="flex items-center justify-center gap-3">
+          <Avatar className="w-[48px] h-[48px] border-2" style={{ borderColor: casaColor }}>
             <AvatarImage src={aluno?.avatar_url || undefined} alt={aluno?.full_name || 'Aluno'} />
             <AvatarFallback 
-              className="text-white text-xl font-medium"
+              className="text-white text-lg font-medium"
               style={{ backgroundColor: `${casaColor}30` }}
             >
               {getInitials()}
             </AvatarFallback>
           </Avatar>
-          <h2 className="text-base font-semibold text-white">
-            {aluno?.full_name || aluno?.nome || 'Aluno'}
-          </h2>
-          <p className="text-white/60 text-xs">
-            {aluno?.serie} {aluno?.turma} • {aluno?.inteligencias?.nome || 'Sem casa'}
-          </p>
+          <div>
+            <h2 className="text-base font-semibold text-white">
+              {aluno?.full_name || aluno?.nome || 'Aluno'}
+            </h2>
+            <p className="text-white/60 text-xs">
+              {aluno?.serie} {aluno?.turma} • {aluno?.inteligencias?.nome || 'Sem casa'}
+            </p>
+          </div>
         </div>
         <div className="h-px bg-white/10 mt-4" />
       </div>
