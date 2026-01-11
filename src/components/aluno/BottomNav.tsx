@@ -20,8 +20,8 @@ const BottomNav = () => {
   const { missoesPendentes, mensagensNaoLidas } = useNotificacoes();
 
   const navItems: NavItemConfig[] = [
+    { id: 'home', icon: <Home />, label: 'Home', path: '/aluno/home' },
     { id: 'missoes', icon: <Target />, label: 'Missões', path: '/aluno/missoes', badge: missoesPendentes > 0 ? missoesPendentes : undefined },
-    { id: 'casa', icon: <Home />, label: 'Casa', path: '/aluno/casa' },
     { id: 'chat', icon: <MessageCircle />, label: 'Chat', path: '/aluno/chat', badge: mensagensNaoLidas > 0 ? mensagensNaoLidas : undefined },
     { id: 'perfil', icon: <User />, label: 'Perfil', path: '/aluno/perfil' },
   ];
