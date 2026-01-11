@@ -1,9 +1,24 @@
-import { ArrowLeft, MessageCircle, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { 
+  ArrowLeft, 
+  MessageCircle, 
+  Loader2, 
+  Star, 
+  BarChart3, 
+  AlertTriangle, 
+  Brain, 
+  Eye,
+  ClipboardList,
+  CheckCircle,
+  PlusCircle
+} from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { usePerfilAluno, type PerfilAlunoData } from '@/hooks/usePerfilAluno';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import AlertaAtivoCard from '@/components/professor/AlertaAtivoCard';
+import EstadoVazioObservacao from '@/components/professor/EstadoVazioObservacao';
+import HistoricoObservacoes from '@/components/professor/HistoricoObservacoes';
+import AcaoProfessorModal from '@/components/professor/AcaoProfessorModal';
 
 // ============ COMPONENTES AUXILIARES ============
 
@@ -19,29 +34,31 @@ const StatusCard = ({ status, percentual, media }: StatusCardProps) => {
       bg: 'bg-green-500/10',
       border: 'border-green-500/20',
       texto: 'text-green-400',
-      icone: '⭐',
+      Icon: Star,
       label: 'DESTAQUE'
     },
     regular: {
       bg: 'bg-yellow-500/10',
       border: 'border-yellow-500/20',
       texto: 'text-yellow-400',
-      icone: '📊',
+      Icon: BarChart3,
       label: 'REGULAR'
     },
     risco: {
       bg: 'bg-red-500/10',
       border: 'border-red-500/20',
       texto: 'text-red-400',
-      icone: '⚠️',
+      Icon: AlertTriangle,
       label: 'EM RISCO'
     }
   }[status];
 
+  const IconComponent = config.Icon;
+
   return (
     <div className={`p-4 rounded-xl border ${config.bg} ${config.border}`}>
       <p className={`font-semibold ${config.texto} flex items-center gap-2`}>
-        <span>{config.icone}</span>
+        <IconComponent className="w-4 h-4" strokeWidth={2} />
         <span>{config.label}</span>
       </p>
       <p className="text-white/60 text-sm mt-1">
@@ -85,10 +102,10 @@ interface MissaoStatusLinhaProps {
 
 const MissaoStatusLinha = ({ missao }: MissaoStatusLinhaProps) => {
   const statusConfig = {
-    aprovada: { icone: '✅', cor: 'text-green-400' },
-    aguardando: { icone: '🟡', cor: 'text-yellow-400' },
-    pendente: { icone: '🟠', cor: 'text-orange-400' },
-    nao_entregue: { icone: '🔴', cor: 'text-red-400' }
+    aprovada: { color: '#22C55E', label: 'Aprovada' },
+    aguardando: { color: '#EAB308', label: 'Aguardando' },
+    pendente: { color: '#F97316', label: 'Pendente' },
+    nao_entregue: { color: '#EF4444', label: 'Não entregue' }
   }[missao.status];
 
   const titulo = missao.semana 
@@ -97,45 +114,23 @@ const MissaoStatusLinha = ({ missao }: MissaoStatusLinhaProps) => {
 
   const statusTexto = missao.status === 'aprovada' && missao.nota !== null
     ? `${missao.nota}/10`
-    : missao.status === 'aguardando'
-    ? 'Aguardando'
-    : missao.status === 'pendente'
-    ? 'Pendente'
-    : 'Não entregue';
+    : statusConfig.label;
 
   return (
     <div className="flex items-center justify-between py-2.5 px-3 bg-white/5 rounded-lg">
       <div className="flex items-center gap-2 flex-1 min-w-0">
-        <span className="flex-shrink-0">{statusConfig.icone}</span>
+        <div 
+          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+          style={{ backgroundColor: statusConfig.color }}
+        />
         <span className="text-white/80 text-sm truncate">{titulo}</span>
       </div>
-      <span className={`text-sm flex-shrink-0 ml-2 ${statusConfig.cor}`}>
+      <span 
+        className="text-sm flex-shrink-0 ml-2"
+        style={{ color: statusConfig.color }}
+      >
         {statusTexto}
       </span>
-    </div>
-  );
-};
-
-interface ObservacaoLinhaProps {
-  observacao: PerfilAlunoData['observacoes'][0];
-}
-
-const ObservacaoLinha = ({ observacao }: ObservacaoLinhaProps) => {
-  const tempoRelativo = formatDistanceToNow(new Date(observacao.dataHora), { 
-    locale: ptBR, 
-    addSuffix: true 
-  });
-
-  return (
-    <div className="py-2.5 px-3 bg-white/5 rounded-lg">
-      <div className="flex items-center gap-2">
-        <span>{observacao.sinalEmoji}</span>
-        <span className="text-white/60 text-sm">{observacao.sinalLabel}</span>
-        <span className="text-white/30 text-xs">• {tempoRelativo}</span>
-      </div>
-      {observacao.texto && (
-        <p className="text-white/40 text-xs mt-1 truncate">{observacao.texto}</p>
-      )}
     </div>
   );
 };
@@ -146,7 +141,11 @@ const PerfilAlunoPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { casaColor } = useProfessor();
-  const { data: aluno, isLoading, error } = usePerfilAluno(id);
+  const { data: aluno, isLoading, error, refetch } = usePerfilAluno(id);
+
+  // Estados para modal de ação
+  const [modalAcaoOpen, setModalAcaoOpen] = useState(false);
+  const [tipoAcaoSelecionada, setTipoAcaoSelecionada] = useState('');
 
   // Loading state
   if (isLoading) {
@@ -173,9 +172,37 @@ const PerfilAlunoPage = () => {
   }
 
   const handleChatClick = () => {
-    // Navegar para chat DM com o aluno (será implementado no futuro)
     navigate(`/professor/chat/dm/${id}`);
   };
+
+  const handleAcaoClick = (tipoAcao: string) => {
+    setTipoAcaoSelecionada(tipoAcao);
+    setModalAcaoOpen(true);
+  };
+
+  const handleRegistrarObservacao = () => {
+    // Navegar para tela de registro de observação (será implementada)
+    navigate(`/professor/alunos/${id}/observar`);
+  };
+
+  const handleSalvarAcao = () => {
+    refetch();
+  };
+
+  const handleVerHistorico = () => {
+    navigate(`/professor/alunos/${id}/observacoes`);
+  };
+
+  // Extrair primeiro nome
+  const primeiroNome = aluno.nome.split(' ')[0];
+
+  // Mapear observações para o formato do HistoricoObservacoes
+  const observacoesHistorico = aluno.observacoes.map(obs => ({
+    id: obs.id,
+    data: obs.dataHora,
+    sinal: obs.sinalLabel,
+    valencia: obs.valencia || 'neutra'
+  }));
 
   return (
     <div className="space-y-4 pb-24">
@@ -220,7 +247,7 @@ const PerfilAlunoPage = () => {
         
         {/* Série/Turma e Casa */}
         <p className="text-white/50 text-sm mt-1">
-          {aluno.serie} {aluno.turma} • {aluno.casaEmoji} {aluno.casaNome}
+          {aluno.serie} {aluno.turma} • {aluno.casaNome}
         </p>
 
         {/* Cards de Pontos e Ranking */}
@@ -242,8 +269,9 @@ const PerfilAlunoPage = () => {
 
       {/* Card de Status */}
       <div className="px-0">
-        <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-1">
-          📊 Status
+        <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
+          <BarChart3 className="w-3.5 h-3.5" strokeWidth={1.5} />
+          Status
         </p>
         <StatusCard 
           status={aluno.status} 
@@ -254,8 +282,9 @@ const PerfilAlunoPage = () => {
 
       {/* Inteligências */}
       <div className="px-0">
-        <p className="text-white/40 text-xs uppercase tracking-wider mb-3 flex items-center gap-1">
-          🧠 Inteligências
+        <p className="text-white/40 text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
+          <Brain className="w-3.5 h-3.5" strokeWidth={1.5} />
+          Inteligências
         </p>
         <div className="space-y-2.5 bg-white/5 rounded-xl p-4 border border-white/10">
           {aluno.inteligencias.map((intel) => (
@@ -270,11 +299,60 @@ const PerfilAlunoPage = () => {
         </div>
       </div>
 
+      {/* OBSERVAÇÕES DO PROFESSOR - NOVA SEÇÃO */}
+      <div className="px-0">
+        <p className="text-white/40 text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
+          <Eye className="w-3.5 h-3.5" strokeWidth={1.5} />
+          Observações do Professor
+        </p>
+        
+        {/* Card de Alerta ou Estado Vazio */}
+        {aluno.alertaAtivo ? (
+          <AlertaAtivoCard
+            tipo={aluno.alertaAtivo.tipo}
+            nomeAluno={primeiroNome}
+            motivo={aluno.alertaAtivo.motivo}
+            contexto={aluno.alertaAtivo.contexto}
+            hipoteses={aluno.alertaAtivo.hipoteses}
+            sugestoes={aluno.alertaAtivo.sugestoes}
+            onAcaoClick={handleAcaoClick}
+            casaColor={aluno.casaCor}
+          />
+        ) : (
+          <EstadoVazioObservacao
+            tipo={aluno.temObsFaseAtual ? 'tudo_bem' : 'aguardando'}
+            nomeAluno={primeiroNome}
+            ultimaObservacao={aluno.ultimaObservacao}
+            onRegistrarClick={handleRegistrarObservacao}
+            casaColor={aluno.casaCor}
+          />
+        )}
+        
+        {/* Histórico de Observações */}
+        {observacoesHistorico.length > 0 && (
+          <HistoricoObservacoes
+            observacoes={observacoesHistorico}
+            onVerTudo={handleVerHistorico}
+            casaColor={aluno.casaCor}
+          />
+        )}
+        
+        {/* Botão Registrar Observação */}
+        <button
+          onClick={handleRegistrarObservacao}
+          className="w-full mt-4 py-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 flex items-center justify-center gap-2 hover:bg-green-500/20 transition-colors"
+        >
+          <PlusCircle className="w-4 h-4" strokeWidth={1.5} />
+          <span className="text-sm font-medium">Registrar observação</span>
+        </button>
+      </div>
+
       {/* Missões da Fase */}
       {aluno.missoes.length > 0 && (
         <div className="px-0">
-          <p className="text-white/40 text-xs uppercase tracking-wider mb-3 flex items-center gap-1">
-            📋 Missões da Fase
+          <p className="text-white/40 text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
+            <ClipboardList className="w-3.5 h-3.5" strokeWidth={1.5} />
+            Missões da Fase
           </p>
           <div className="space-y-2">
             {aluno.missoes.map((missao) => (
@@ -284,37 +362,15 @@ const PerfilAlunoPage = () => {
         </div>
       )}
 
-      {/* Observações Recentes */}
-      {aluno.observacoes.length > 0 && (
-        <div className="px-0">
-          <p className="text-white/40 text-xs uppercase tracking-wider mb-3 flex items-center gap-1">
-            📝 Observações Recentes
-          </p>
-          <div className="space-y-2">
-            {aluno.observacoes.map((obs) => (
-              <ObservacaoLinha key={obs.id} observacao={obs} />
-            ))}
-          </div>
-          {aluno.observacoes.length >= 5 && (
-            <button 
-              onClick={() => navigate(`/professor/alunos/${id}/observacoes`)}
-              className="text-sm mt-3 hover:underline"
-              style={{ color: aluno.casaCor }}
-            >
-              Ver todas →
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Mensagem se não houver dados */}
-      {aluno.missoes.length === 0 && aluno.observacoes.length === 0 && (
-        <div className="text-center py-8">
-          <p className="text-white/30 text-sm">
-            Nenhuma atividade registrada ainda
-          </p>
-        </div>
-      )}
+      {/* Modal de Ação do Professor */}
+      <AcaoProfessorModal
+        isOpen={modalAcaoOpen}
+        onClose={() => setModalAcaoOpen(false)}
+        tipoAcao={tipoAcaoSelecionada}
+        nomeAluno={primeiroNome}
+        alertaId={aluno.alertaAtivo?.alertaId || ''}
+        onSalvar={handleSalvarAcao}
+      />
     </div>
   );
 };

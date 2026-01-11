@@ -2,6 +2,25 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 
+interface Observacao {
+  id: string;
+  sinalEmoji: string;
+  sinalLabel: string;
+  texto?: string | null;
+  dataHora: string;
+  valencia: string;
+}
+
+interface AlertaAtivo {
+  tipo: 'precisa_atencao' | 'celebrar';
+  motivo: string;
+  contexto: string[];
+  hipoteses: { titulo: string; descricao: string }[];
+  sugestoes: string[];
+  created_at: string;
+  alertaId: string;
+}
+
 export interface PerfilAlunoData {
   id: string;
   nome: string;
@@ -33,13 +52,10 @@ export interface PerfilAlunoData {
     status: 'aprovada' | 'aguardando' | 'pendente' | 'nao_entregue';
     nota?: number | null;
   }[];
-  observacoes: {
-    id: string;
-    sinalEmoji: string;
-    sinalLabel: string;
-    texto?: string | null;
-    dataHora: string;
-  }[];
+  observacoes: Observacao[];
+  alertaAtivo: AlertaAtivo | null;
+  ultimaObservacao: { sinal: string; dataHora: string } | null;
+  temObsFaseAtual: boolean;
 }
 
 export const usePerfilAluno = (alunoId: string | undefined) => {
@@ -194,7 +210,7 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
         });
       }
 
-      // 6. Observações recentes (últimas 5)
+      // 6. Observações recentes (últimas 20 para histórico)
       const { data: observacoesData } = await supabase
         .from('observacoes')
         .select(`
@@ -205,27 +221,76 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
         `)
         .eq('aluno_id', alunoId)
         .order('data_observacao', { ascending: false })
-        .limit(5);
+        .limit(20);
 
       // Buscar sinais separadamente
       const sinaisIds = [...new Set(observacoesData?.map(o => o.sinal_id) || [])];
       const { data: sinaisData } = await supabase
         .from('sinais')
-        .select('id, emoji, label_pt')
+        .select('id, emoji, label_pt, valencia')
         .in('id', sinaisIds.length > 0 ? sinaisIds : [0]);
 
       const sinaisMap = new Map(sinaisData?.map(s => [s.id, s]) || []);
 
-      const observacoes = (observacoesData || []).map(o => {
+      const observacoes: Observacao[] = (observacoesData || []).map(o => {
         const sinal = sinaisMap.get(o.sinal_id);
         return {
           id: o.id,
           sinalEmoji: sinal?.emoji || '📝',
           sinalLabel: sinal?.label_pt || 'Observação',
           texto: o.observacao_texto,
-          dataHora: o.data_observacao
+          dataHora: o.data_observacao,
+          valencia: sinal?.valencia || 'neutra'
         };
       });
+
+      // Verificar se tem observação na fase atual
+      let temObsFaseAtual = false;
+      if (faseAtual?.id) {
+        const { count } = await supabase
+          .from('observacoes')
+          .select('id', { count: 'exact', head: true })
+          .eq('aluno_id', alunoId)
+          .eq('fase_id', faseAtual.id);
+        
+        temObsFaseAtual = (count || 0) > 0;
+      }
+
+      // Última observação
+      const ultimaObservacao = observacoes.length > 0 
+        ? { sinal: observacoes[0].sinalLabel, dataHora: observacoes[0].dataHora }
+        : null;
+
+      // Buscar alerta ativo do aluno
+      let alertaAtivo: AlertaAtivo | null = null;
+      
+      if (aluno.institution_id) {
+        const { data: alertaData } = await supabase
+          .from('alertas_alunos')
+          .select('*')
+          .eq('aluno_id', alunoId)
+          .eq('institution_id', aluno.institution_id)
+          .in('tipo_alerta', ['precisa_atencao', 'celebrar'])
+          .in('status', ['ativo', 'visualizado'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (alertaData) {
+          // Parse dados_contexto do alerta
+          const dadosContexto = alertaData.dados_contexto as Record<string, unknown> | null;
+          
+          alertaAtivo = {
+            tipo: alertaData.tipo_alerta as 'precisa_atencao' | 'celebrar',
+            motivo: alertaData.motivo,
+            contexto: (dadosContexto?.contexto as string[]) || [],
+            hipoteses: (dadosContexto?.hipoteses as { titulo: string; descricao: string }[]) || [],
+            sugestoes: (dadosContexto?.sugestoes as string[]) || [],
+            created_at: alertaData.created_at || '',
+            alertaId: alertaData.id
+          };
+        }
+      }
 
       // 7. Calcular métricas para status
       // Buscar total de missões liberadas para a instituição
@@ -287,7 +352,10 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
         mediaNotas,
         inteligencias,
         missoes,
-        observacoes
+        observacoes,
+        alertaAtivo,
+        ultimaObservacao,
+        temObsFaseAtual
       };
     },
     enabled: !!alunoId && !!profile?.institution_id
