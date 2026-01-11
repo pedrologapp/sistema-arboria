@@ -336,6 +336,7 @@ const PerfilAlunoPage = () => {
           casaColor={aluno.casaCor}
           casaNome={aluno.casaNome}
           faseNome={aluno.faseAtualNome}
+          celebracaoSubtipo={aluno.alertaAtivo?.subtipo as 'descoberta' | 'confirmacao' | undefined}
         />
         
         {/* Histórico de Observações */}
