@@ -202,28 +202,33 @@ export function FeedbackEstadoCard({
           </div>
         )}
         
-        {/* Botões de ação */}
-        {(onRegistrarAcao || onRegistrarObservacao) && (
-          <div className="mt-4 flex gap-2">
-            {estadosComAcao.includes(estado) && onRegistrarAcao && (
-              <button
-                onClick={onRegistrarAcao}
-                className="flex-1 py-2 px-3 rounded-lg bg-white/20 hover:bg-white/30 transition-colors text-white text-sm font-medium"
-              >
-                Registrar ação
-              </button>
-            )}
-            {estado === 'aguardando' && onRegistrarObservacao && (
-              <button
-                onClick={onRegistrarObservacao}
-                className="flex-1 py-2 px-3 rounded-lg bg-white/20 hover:bg-white/30 transition-colors text-white text-sm font-medium"
-              >
-                Registrar observação
-              </button>
-            )}
-          </div>
-        )}
       </div>
+      
+      {/* Botão "Registrar minha ação" - Estilo original, largo e azul */}
+      {estadosComAcao.includes(estado) && onRegistrarAcao && (
+        <div className="px-4 pb-4">
+          <button
+            onClick={onRegistrarAcao}
+            className="w-full py-3 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+          >
+            <Target className="w-4 h-4 text-white" />
+            <span className="text-white font-medium">Registrar minha ação</span>
+          </button>
+        </div>
+      )}
+      
+      {/* Botão para aguardando */}
+      {estado === 'aguardando' && onRegistrarObservacao && (
+        <div className="px-4 pb-4">
+          <button
+            onClick={onRegistrarObservacao}
+            className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
+          >
+            <Eye className="w-4 h-4 text-white/60" />
+            <span className="text-white/60 font-medium">Registrar observação</span>
+          </button>
+        </div>
+      )}
       
       {/* Expandir detalhes (apenas para estados com mais info) */}
       {temDetalhes && (
