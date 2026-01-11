@@ -87,7 +87,7 @@ const ProfessorDashboard = () => {
     { 
       icon: <ClipboardList size={24} />, 
       label: 'Fazer Observação', 
-      path: '/professor/missoes/nova',
+      path: '/professor/circulo',
       description: 'Nova observação para alunos',
       isModal: false
     },
