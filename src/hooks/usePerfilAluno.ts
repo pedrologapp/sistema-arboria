@@ -75,6 +75,7 @@ export interface PerfilAlunoData {
   ultimaObservacao: { sinal: string; dataHora: string } | null;
   temObsFaseAtual: boolean;
   faseAtualCodigo?: string;
+  faseAtualNome?: string;
 }
 
 // Função para substituir variáveis nos templates
@@ -135,17 +136,19 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
         }
       }
 
-      // Buscar código da fase atual
+      // Buscar código e nome da fase atual
       let faseAtualCodigo = '';
+      let faseAtualNome = '';
       if (faseAtual?.inteligencia?.id) {
         const { data: faseInteligencia } = await supabase
           .from('inteligencias')
-          .select('codigo')
+          .select('codigo, nome')
           .eq('id', faseAtual.inteligencia.id)
           .single();
         
         if (faseInteligencia) {
           faseAtualCodigo = faseInteligencia.codigo;
+          faseAtualNome = faseInteligencia.nome;
         }
       }
 
@@ -531,7 +534,8 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
         alertaAtivo,
         ultimaObservacao,
         temObsFaseAtual,
-        faseAtualCodigo
+        faseAtualCodigo,
+        faseAtualNome
       };
     },
     enabled: !!alunoId && !!profile?.institution_id

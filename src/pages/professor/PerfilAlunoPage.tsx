@@ -204,6 +204,9 @@ const PerfilAlunoPage = () => {
     valencia: obs.valencia || 'neutra'
   }));
 
+  // Nome da fase atual para o histórico
+  const faseAtualNome = aluno.faseAtualNome || 'Fase Atual';
+
   return (
     <div className="space-y-4 pb-24">
       {/* Header */}
@@ -335,6 +338,7 @@ const PerfilAlunoPage = () => {
         {observacoesHistorico.length > 0 && (
           <HistoricoObservacoes
             observacoes={observacoesHistorico}
+            faseAtualNome={faseAtualNome}
             onVerTudo={handleVerHistorico}
             casaColor={aluno.casaCor}
           />
