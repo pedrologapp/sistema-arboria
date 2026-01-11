@@ -111,12 +111,10 @@ const CirculoRegistrarPage = () => {
         return;
       }
 
-      // Calcular se é cross-IM
       const faseInteligenciaId = faseAtual.inteligencia?.id;
       const alunoInteligenciaId = aluno.casa_id;
-      const foiCrossIm = faseInteligenciaId !== alunoInteligenciaId;
 
-      // Inserir observação
+      // Inserir observação (foi_cross_im é calculado automaticamente pelo banco)
       const { error } = await supabase.from('observacoes').insert({
         institution_id: profile.institution_id!,
         aluno_id: aluno.id,
@@ -126,7 +124,6 @@ const CirculoRegistrarPage = () => {
         sinal_id: selectedSinal.id,
         inteligencia_fase: faseInteligenciaId!,
         inteligencia_expressa: alunoInteligenciaId!,
-        foi_cross_im: foiCrossIm,
         intensidade: 'normal',
         observacao_texto: nota || null,
         data_observacao: new Date().toISOString().split('T')[0]
@@ -176,7 +173,7 @@ const CirculoRegistrarPage = () => {
   }
 
   return (
-    <div className="space-y-4 pt-4 pb-8">
+    <div className="space-y-3 pt-3 pb-6">
       {/* Header com voltar */}
       <div className="flex items-center gap-3">
         <button 
@@ -199,7 +196,7 @@ const CirculoRegistrarPage = () => {
             <button
               key={sinal.id}
               onClick={() => handleSinalClick(sinal)}
-              className="px-4 py-2 rounded-full text-sm font-medium transition-all active:scale-95"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95"
               style={{
                 backgroundColor: selectedSinal?.id === sinal.id ? '#14532D' : '#374151',
                 borderWidth: '1px',
@@ -214,26 +211,26 @@ const CirculoRegistrarPage = () => {
       </div>
 
       {/* Separador + Foto do aluno */}
-      <div className="py-4">
-        <div className="h-px bg-white/10 mb-6" />
-        <div className="flex flex-col items-center gap-2">
-          <Avatar className="w-[100px] h-[100px] border-2" style={{ borderColor: casaColor }}>
+      <div className="py-3">
+        <div className="h-px bg-white/10 mb-4" />
+        <div className="flex flex-col items-center gap-1.5">
+          <Avatar className="w-[70px] h-[70px] border-2" style={{ borderColor: casaColor }}>
             <AvatarImage src={aluno?.avatar_url || undefined} alt={aluno?.full_name || 'Aluno'} />
             <AvatarFallback 
-              className="text-white text-2xl font-medium"
+              className="text-white text-xl font-medium"
               style={{ backgroundColor: `${casaColor}30` }}
             >
               {getInitials()}
             </AvatarFallback>
           </Avatar>
-          <h2 className="text-lg font-semibold text-white">
+          <h2 className="text-base font-semibold text-white">
             {aluno?.full_name || aluno?.nome || 'Aluno'}
           </h2>
-          <p className="text-white/60 text-sm">
+          <p className="text-white/60 text-xs">
             {aluno?.serie} {aluno?.turma} • {aluno?.inteligencias?.nome || 'Sem casa'}
           </p>
         </div>
-        <div className="h-px bg-white/10 mt-6" />
+        <div className="h-px bg-white/10 mt-4" />
       </div>
 
       {/* Seção ATENÇÃO */}
@@ -247,7 +244,7 @@ const CirculoRegistrarPage = () => {
             <button
               key={sinal.id}
               onClick={() => handleSinalClick(sinal)}
-              className="px-4 py-2 rounded-full text-sm font-medium transition-all active:scale-95"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95"
               style={{
                 backgroundColor: selectedSinal?.id === sinal.id ? '#7F1D1D' : '#374151',
                 borderWidth: '1px',
