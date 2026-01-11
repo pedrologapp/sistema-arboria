@@ -43,7 +43,7 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
       onClick={onClose}
     >
       <div 
-        className="bg-[rgba(26,26,30,0.85)] backdrop-blur-xl rounded-2xl w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col border border-white/10 shadow-2xl shadow-black/50"
+        className="bg-[rgba(26,26,30,0.85)] backdrop-blur-xl rounded-2xl w-full max-w-md max-h-[70vh] overflow-hidden flex flex-col border border-white/10 shadow-2xl shadow-black/50"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
