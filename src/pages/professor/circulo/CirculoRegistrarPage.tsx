@@ -146,8 +146,12 @@ const CirculoRegistrarPage = () => {
       setModalOpen(false);
       setSelectedSinal(null);
       
-      // Voltar para lista de alunos
-      navigate(`/professor/circulo/serie/${serieParam}/turma/${turmaParam}`);
+      // Voltar para onde veio
+      if (serieParam && turmaParam) {
+        navigate(`/professor/circulo/serie/${serieParam}/turma/${turmaParam}`);
+      } else {
+        navigate(-1);
+      }
     } catch (error) {
       console.error('Erro ao salvar observação:', error);
       toast.error('Erro ao registrar observação');
@@ -212,8 +216,12 @@ const CirculoRegistrarPage = () => {
       toast.success('Observação personalizada registrada!');
       setModalPersonalizadoOpen(false);
       
-      // Voltar para lista de alunos
-      navigate(`/professor/circulo/serie/${serieParam}/turma/${turmaParam}`);
+      // Voltar para onde veio
+      if (serieParam && turmaParam) {
+        navigate(`/professor/circulo/serie/${serieParam}/turma/${turmaParam}`);
+      } else {
+        navigate(-1);
+      }
     } catch (error) {
       console.error('Erro ao salvar observação personalizada:', error);
       toast.error('Erro ao registrar observação');
@@ -233,7 +241,8 @@ const CirculoRegistrarPage = () => {
     if (serieParam && turmaParam) {
       navigate(`/professor/circulo/serie/${serieParam}/turma/${turmaParam}`);
     } else {
-      navigate('/professor/circulo');
+      // Veio de um atalho (perfil, banner, etc) - volta pelo histórico
+      navigate(-1);
     }
   };
 

@@ -56,6 +56,11 @@ const AlunosPage = () => {
     navigate(`/professor/alunos/${alunoId}`);
   };
 
+  // Atalho: ir direto para registro de observação (usado pelo banner "Seu olhar importa")
+  const handleAlunoObservarDireto = (alunoId: string) => {
+    navigate(`/professor/circulo/aluno/${alunoId}`);
+  };
+
   return (
     <div className="space-y-4 pt-4 pb-24">
       {/* Header */}
@@ -247,7 +252,7 @@ const AlunosPage = () => {
         </p>
       )}
 
-      {/* Modal de alunos sem observação */}
+      {/* Modal de alunos sem observação - vai DIRETO para registro */}
       {bannerComeceAqui && (
         <AlunosSemObservacaoModal
           isOpen={modalOpen}
@@ -255,7 +260,7 @@ const AlunosPage = () => {
           faseNome={bannerComeceAqui.faseNome}
           faseEmoji={bannerComeceAqui.faseEmoji}
           alunos={bannerComeceAqui.alunos}
-          onAlunoClick={handleAlunoClick}
+          onAlunoClick={handleAlunoObservarDireto}
         />
       )}
     </div>
