@@ -3,6 +3,7 @@ import { Home, ClipboardList, PenLine, Sparkles, Users } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAlertasAlunos } from '@/hooks/useAlertasAlunos';
 
 interface NavItemConfig {
   id: string;
@@ -16,6 +17,13 @@ const ProfessorBottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { casaColor, profile, casaMentor } = useProfessor();
+  const { badgesAtivos } = useAlertasAlunos();
+  
+  // Calcular total de alertas para badge
+  const totalAlertas = (badgesAtivos?.precisaAtencao || 0) + 
+                       (badgesAtivos?.celebrar || 0) + 
+                       (badgesAtivos?.naoEsquecer || 0) + 
+                       (badgesAtivos?.atencaoFaseAnterior || 0);
 
   // Query: Entregas Pendentes
   const { data: entregasPendentes = 0 } = useQuery({
@@ -54,7 +62,7 @@ const ProfessorBottomNav = () => {
     { id: 'missoes', icon: <ClipboardList size={20} />, label: 'Missões', path: '/professor/missoes' },
     { id: 'avaliar', icon: <PenLine size={20} />, label: 'Avaliar', path: '/professor/entregas', badge: entregasPendentes >= 1 ? entregasPendentes : undefined },
     { id: 'circulo', icon: <Sparkles size={20} />, label: 'Círculo', path: '/professor/circulo' },
-    { id: 'alunos', icon: <Users size={20} />, label: 'Alunos', path: '/professor/alunos' },
+    { id: 'alunos', icon: <Users size={20} />, label: 'Alunos', path: '/professor/alunos', badge: totalAlertas > 0 ? totalAlertas : undefined },
   ];
 
   const getActiveIndex = (): number => {
