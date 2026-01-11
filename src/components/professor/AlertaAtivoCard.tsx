@@ -35,18 +35,27 @@ interface AlertaAtivoCardProps {
   arquetipo?: Arquetipo;
   onAcaoClick: (tipoAcao: string) => void;
   casaColor: string;
+  sinalPredominante?: string;
+  quantidadeSinal?: number;
 }
 
 // Mapear ícones de string para componentes
 const iconeMap: Record<string, typeof MessageCircle> = {
+  // Kebab-case (Lucide padrão)
   'message-circle': MessageCircle,
   'eye': Eye,
   'users': Users,
   'home': Home,
+  // Códigos de ação
   'conversar': MessageCircle,
   'observar': Eye,
   'falar_colegas': Users,
-  'verificar_familia': Home
+  'verificar_familia': Home,
+  // PascalCase (como vem do banco)
+  'MessageCircle': MessageCircle,
+  'Eye': Eye,
+  'Users': Users,
+  'Home': Home,
 };
 
 const AlertaAtivoCard = ({
@@ -60,7 +69,9 @@ const AlertaAtivoCard = ({
   acoesSugeridas,
   arquetipo,
   onAcaoClick,
-  casaColor
+  casaColor,
+  sinalPredominante,
+  quantidadeSinal
 }: AlertaAtivoCardProps) => {
   const isPrecisaAtencao = tipo === 'precisa_atencao';
   const isDescoberta = tipo === 'celebrar' && subtipo === 'descoberta';
@@ -102,6 +113,19 @@ const AlertaAtivoCard = ({
           <HeaderIcon className="w-4 h-4" strokeWidth={2} />
           <span className="text-sm uppercase tracking-wide">{headerText}</span>
         </div>
+        
+        {/* Badge do sinal (apenas para precisa_atencao) */}
+        {isPrecisaAtencao && sinalPredominante && (
+          <div className="flex items-center gap-2 mb-3">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-900/50 text-red-200 border border-red-500/30">
+              <span className="w-2 h-2 rounded-full bg-red-400" />
+              {sinalPredominante}
+              {quantidadeSinal && quantidadeSinal > 1 && (
+                <span className="text-red-300">({quantidadeSinal}x)</span>
+              )}
+            </span>
+          </div>
+        )}
         
         {/* Motivo / O que está acontecendo */}
         <div className="mb-4">
@@ -201,11 +225,12 @@ const AlertaAtivoCard = ({
             {acoesParaRenderizar.map((acao, index) => {
               const IconComponent = iconeMap[acao.icone] || MessageCircle;
               
-              // Cores específicas para cada ícone
+              // Cores específicas para cada ícone (normalizado para lowercase)
+              const iconeNormalizado = acao.icone.toLowerCase();
               let iconColor = 'text-blue-400';
-              if (acao.icone === 'eye' || acao.icone === 'observar') iconColor = 'text-purple-400';
-              if (acao.icone === 'users' || acao.icone === 'falar_colegas') iconColor = 'text-green-400';
-              if (acao.icone === 'home' || acao.icone === 'verificar_familia') iconColor = 'text-orange-400';
+              if (iconeNormalizado === 'eye' || iconeNormalizado === 'observar') iconColor = 'text-purple-400';
+              if (iconeNormalizado === 'users' || iconeNormalizado === 'falar_colegas') iconColor = 'text-green-400';
+              if (iconeNormalizado === 'home' || iconeNormalizado === 'verificar_familia') iconColor = 'text-orange-400';
               
               return (
                 <button
