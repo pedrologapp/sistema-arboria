@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import ConteudoModal from '@/components/professor/ConteudoModal';
+import { useAlertasAlunos } from '@/hooks/useAlertasAlunos';
 
 // Detectar gênero pelo primeiro nome (heurística simples)
 const getGenero = (nome: string): 'masculino' | 'feminino' => {
@@ -34,6 +35,13 @@ const ProfessorDashboard = () => {
   const { profile, casaMentor, casaColor, faseAtual } = useProfessor();
   const navigate = useNavigate();
   const [showConteudoModal, setShowConteudoModal] = useState(false);
+  const { badgesAtivos } = useAlertasAlunos();
+  
+  // Calcular total de alertas para badge
+  const totalAlertas = (badgesAtivos?.precisaAtencao || 0) + 
+                       (badgesAtivos?.celebrar || 0) + 
+                       (badgesAtivos?.naoEsquecer || 0) + 
+                       (badgesAtivos?.atencaoFaseAnterior || 0);
 
   // Query: Missões Ativas
   const { data: missoesAtivas } = useQuery({
@@ -198,7 +206,7 @@ const ProfessorDashboard = () => {
             <button
               key={action.label}
               onClick={() => handleActionClick(action)}
-              className="flex items-center gap-4 p-4 rounded-xl text-left group
+              className="relative flex items-center gap-4 p-4 rounded-xl text-left group
                 bg-gradient-to-r from-white/[0.06] to-white/[0.02]
                 backdrop-blur-sm border border-white/10
                 hover:scale-[1.02] hover:border-white/20
@@ -214,6 +222,12 @@ const ProfessorDashboard = () => {
                 e.currentTarget.style.boxShadow = `0 4px 20px -4px ${casaColor}15`;
               }}
             >
+              {/* Badge para Meus Alunos */}
+              {action.label === 'Meus Alunos' && totalAlertas > 0 && (
+                <span className="absolute top-2 right-2 min-w-[20px] h-[20px] flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full px-1.5 shadow-lg">
+                  {totalAlertas > 99 ? '99+' : totalAlertas}
+                </span>
+              )}
               <div 
                 className="p-3 rounded-lg shadow-lg transition-all duration-300 group-hover:scale-110"
                 style={{ 

@@ -440,6 +440,8 @@ const ProfessorChatPage = () => {
                         membro={{
                           id: aluno.id,
                           nome: aluno.full_name || aluno.nome || 'Aluno',
+                          sobrenome: null,
+                          full_name: aluno.full_name || null,
                           avatar_url: aluno.avatar_url,
                           ultima_atividade: aluno.ultima_atividade,
                           cargos_casa: cargoAtivo ? [{ cargo: cargoAtivo.cargo, ativo: true }] : []
@@ -475,6 +477,8 @@ const ProfessorChatPage = () => {
                       membro={{
                         id: aluno.id,
                         nome: aluno.full_name || aluno.nome || 'Aluno',
+                        sobrenome: null,
+                        full_name: aluno.full_name || null,
                         avatar_url: aluno.avatar_url,
                         ultima_atividade: aluno.ultima_atividade,
                         cargos_casa: []

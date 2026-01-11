@@ -41,9 +41,17 @@ export const MembroCard = ({ membro, isMe, onIniciarConversa, temDmNaoLida = fal
         />
         
         {/* Avatar pequeno */}
-        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs text-white/70 flex-shrink-0">
-          {nomeExibido.charAt(0).toUpperCase()}
-        </div>
+        {membro.avatar_url ? (
+          <img 
+            src={membro.avatar_url} 
+            alt={nomeExibido}
+            className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+          />
+        ) : (
+          <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs text-white/70 flex-shrink-0">
+            {nomeExibido.charAt(0).toUpperCase()}
+          </div>
+        )}
         
         {/* Nome + Cargo na mesma linha */}
         <span className="text-white text-sm truncate">{nomeExibido}</span>
