@@ -24,7 +24,12 @@ export const useAlunosCasa = () => {
         return [];
       }
 
-      // 1. Buscar alunos da casa (users com role 'user' e casa_id correspondente)
+      console.log('=== DEBUG useAlunosCasa ===');
+      console.log('casaMentor.id:', casaMentor.id);
+      console.log('institution_id:', profile.institution_id);
+
+      // 1. Buscar alunos da casa
+      // A RLS de profiles já garante que só retornará alunos que o professor pode ver
       const { data: alunos, error: alunosError } = await supabase
         .from('profiles')
         .select(`
@@ -39,26 +44,16 @@ export const useAlunosCasa = () => {
         .eq('casa_id', casaMentor.id)
         .eq('institution_id', profile.institution_id);
 
+      console.log('Alunos encontrados:', alunos?.length || 0);
+      console.log('Erro:', alunosError);
+
       if (alunosError) {
         console.error('Erro ao buscar alunos:', alunosError);
         throw alunosError;
       }
 
-      if (!alunos || alunos.length === 0) {
-        return [];
-      }
-
-      // Filtrar apenas alunos (quem tem role 'user')
-      const alunoIds = alunos.map(a => a.id);
-      
-      const { data: userRoles } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'user')
-        .in('user_id', alunoIds);
-
-      const alunoIdsValidos = new Set(userRoles?.map(r => r.user_id) || []);
-      const alunosValidos = alunos.filter(a => alunoIdsValidos.has(a.id));
+      // Usar diretamente os alunos retornados (RLS já filtrou)
+      const alunosValidos = alunos || [];
 
       if (alunosValidos.length === 0) {
         return [];
