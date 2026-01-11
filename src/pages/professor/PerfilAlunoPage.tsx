@@ -179,8 +179,8 @@ const PerfilAlunoPage = () => {
   };
 
   const handleRegistrarObservacao = () => {
-    // Navegar para tela de registro de observação (será implementada)
-    navigate(`/professor/alunos/${id}/observar`);
+    // Navegar diretamente para tela de registro de observação (Círculo)
+    navigate(`/professor/circulo/aluno/${id}`);
   };
 
   const handleSalvarAcao = () => {
