@@ -40,9 +40,10 @@ const AlunosPage = () => {
 
   // Contadores por status
   const contadores = useMemo(() => {
-    if (!alunos) return { destaque: 0, regular: 0, risco: 0 };
+    if (!alunos) return { todos: 0, destaque: 0, regular: 0, risco: 0 };
     
     return {
+      todos: alunos.length,
       destaque: alunos.filter(a => a.status === 'destaque').length,
       regular: alunos.filter(a => a.status === 'regular').length,
       risco: alunos.filter(a => a.status === 'risco').length
@@ -58,7 +59,7 @@ const AlunosPage = () => {
   };
 
   return (
-    <div className="space-y-6 pt-4 pb-24">
+    <div className="space-y-4 pt-4 pb-24">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -90,22 +91,20 @@ const AlunosPage = () => {
         />
       )}
 
-      {/* Seção de Filtros */}
-      <div 
-        className="p-4 rounded-xl space-y-4
-          bg-gradient-to-r from-white/[0.04] to-transparent
-          border border-white/5"
-      >
-        {/* Filtro por Série */}
-        <div>
-          <p className="text-white/40 text-xs uppercase tracking-widest mb-2 font-medium">Série</p>
-          <div className="flex gap-2 flex-wrap">
+      {/* Seção de Filtros - Layout Compacto */}
+      <div className="space-y-3">
+        {/* Série - Label + botões na mesma linha */}
+        <div className="flex items-center gap-3">
+          <span className="text-white/40 text-xs uppercase tracking-wider w-12 flex-shrink-0">
+            Série
+          </span>
+          <div className="flex gap-1.5 flex-wrap">
             <button
               onClick={() => setSerieFiltro(null)}
-              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                 serieFiltro === null
                   ? 'text-white'
-                  : 'bg-white/5 text-white/60 hover:bg-white/10'
+                  : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70'
               }`}
               style={serieFiltro === null ? { backgroundColor: casaColor } : undefined}
             >
@@ -115,10 +114,10 @@ const AlunosPage = () => {
               <button
                 key={serie}
                 onClick={() => setSerieFiltro(serie)}
-                className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                   serieFiltro === serie
                     ? 'text-white'
-                    : 'bg-white/5 text-white/60 hover:bg-white/10'
+                    : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70'
                 }`}
                 style={serieFiltro === serie ? { backgroundColor: casaColor } : undefined}
               >
@@ -128,16 +127,18 @@ const AlunosPage = () => {
           </div>
         </div>
 
-        {/* Filtro por Turma */}
-        <div>
-          <p className="text-white/40 text-xs uppercase tracking-widest mb-2 font-medium">Turma</p>
-          <div className="flex gap-2 flex-wrap">
+        {/* Turma - Label + botões na mesma linha */}
+        <div className="flex items-center gap-3">
+          <span className="text-white/40 text-xs uppercase tracking-wider w-12 flex-shrink-0">
+            Turma
+          </span>
+          <div className="flex gap-1.5 flex-wrap">
             <button
               onClick={() => setTurmaFiltro(null)}
-              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                 turmaFiltro === null
                   ? 'text-white'
-                  : 'bg-white/5 text-white/60 hover:bg-white/10'
+                  : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70'
               }`}
               style={turmaFiltro === null ? { backgroundColor: casaColor } : undefined}
             >
@@ -147,10 +148,10 @@ const AlunosPage = () => {
               <button
                 key={turma}
                 onClick={() => setTurmaFiltro(turma)}
-                className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                   turmaFiltro === turma
                     ? 'text-white'
-                    : 'bg-white/5 text-white/60 hover:bg-white/10'
+                    : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70'
                 }`}
                 style={turmaFiltro === turma ? { backgroundColor: casaColor } : undefined}
               >
@@ -160,85 +161,80 @@ const AlunosPage = () => {
           </div>
         </div>
 
-        {/* Filtro por Status */}
-        <div>
-          <p className="text-white/40 text-xs uppercase tracking-widest mb-2 font-medium">Status</p>
+        {/* Separador sutil + Status */}
+        <div className="border-t border-white/5 pt-3">
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setStatusFiltro(null)}
-              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                 statusFiltro === null
-                  ? 'text-white'
-                  : 'bg-white/5 text-white/60 hover:bg-white/10'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-white/5 text-white/50 hover:bg-white/10'
               }`}
-              style={statusFiltro === null ? { backgroundColor: casaColor } : undefined}
             >
-              Todos ({alunos?.length || 0})
+              Todos {contadores.todos}
             </button>
             <button
               onClick={() => setStatusFiltro('destaque')}
-              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
                 statusFiltro === 'destaque'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-green-500/10 text-green-400 hover:bg-green-500/20'
+                  ? 'bg-green-500/30 text-green-300'
+                  : 'bg-green-500/10 text-green-400/60 hover:bg-green-500/20 hover:text-green-400'
               }`}
             >
-              ⭐ Destaque ({contadores.destaque})
+              ⭐ {contadores.destaque}
             </button>
             <button
               onClick={() => setStatusFiltro('regular')}
-              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
                 statusFiltro === 'regular'
-                  ? 'bg-yellow-600 text-white'
-                  : 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20'
+                  ? 'bg-yellow-500/30 text-yellow-300'
+                  : 'bg-yellow-500/10 text-yellow-400/60 hover:bg-yellow-500/20 hover:text-yellow-400'
               }`}
             >
-              📊 Regular ({contadores.regular})
+              📊 {contadores.regular}
             </button>
             <button
               onClick={() => setStatusFiltro('risco')}
-              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
                 statusFiltro === 'risco'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
+                  ? 'bg-red-500/30 text-red-300'
+                  : 'bg-red-500/10 text-red-400/60 hover:bg-red-500/20 hover:text-red-400'
               }`}
             >
-              ⚠️ Em Risco ({contadores.risco})
+              ⚠️ {contadores.risco}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Campo de Busca */}
+      {/* Campo de Busca - Mais compacto */}
       <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
         <input
           type="text"
           placeholder="Buscar aluno..."
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl 
-                     text-white text-sm placeholder:text-white/40 
+          className="w-full pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg 
+                     text-white text-sm placeholder:text-white/30 
                      focus:outline-none focus:border-white/20 transition-colors"
-          style={{
-            boxShadow: busca ? `0 0 0 1px ${casaColor}30` : undefined
-          }}
         />
       </div>
 
       {/* Lista de Alunos */}
-      <div className="space-y-2">
+      <div className="space-y-0.5">
         {isLoading ? (
           // Loading state
           Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 p-3">
+            <div key={i} className="flex items-center gap-3 py-2.5 px-3">
               <Skeleton className="w-2.5 h-2.5 rounded-full" />
-              <Skeleton className="w-10 h-10 rounded-full" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-24" />
+              <Skeleton className="w-8 h-8 rounded-full" />
+              <div className="flex-1 flex items-center gap-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-3 w-8" />
               </div>
-              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-14" />
             </div>
           ))
         ) : alunosFiltrados.length === 0 ? (
