@@ -323,6 +323,8 @@ const PerfilAlunoPage = () => {
             arquetipo={aluno.alertaAtivo.arquetipo}
             onAcaoClick={handleAcaoClick}
             casaColor={aluno.casaCor}
+            sinalPredominante={aluno.alertaAtivo.sinalPredominante}
+            quantidadeSinal={aluno.alertaAtivo.quantidadeSinal}
           />
         ) : (
           <EstadoVazioObservacao

@@ -36,6 +36,8 @@ interface AlertaAtivo {
   alertaId: string;
   sinalCodigo?: string;
   padraoCodigo?: string;
+  sinalPredominante?: string;
+  quantidadeSinal?: number;
 }
 
 export interface PerfilAlunoData {
@@ -433,7 +435,31 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           
           // Buscar template de texto
           let motivo = alertaData.motivo;
-          if (alertaData.tipo_alerta === 'celebrar') {
+          
+          if (alertaData.tipo_alerta === 'precisa_atencao') {
+            // Determinar qual template usar baseado no motivo/padrão
+            let templateCodigo = 'alerta_mesmo_sinal'; // Default
+            
+            if (alertaData.motivo === 'padrao_negativo_consecutivo' || alertaData.motivo === 'mesmo_sinal_consecutivo') {
+              templateCodigo = 'alerta_mesmo_sinal';
+            } else if (alertaData.motivo === 'mudanca_abrupta') {
+              templateCodigo = 'alerta_mudanca_abrupta';
+            }
+            
+            const { data: templateData } = await supabase
+              .from('templates_texto')
+              .select('template')
+              .eq('codigo', templateCodigo)
+              .maybeSingle();
+            
+            if (templateData?.template) {
+              motivo = substituirTemplate(templateData.template, {
+                nome: primeiroNome,
+                sinal: (dadosContexto?.sinal_predominante as string) || 'sinal de atenção',
+                quantidade: (dadosContexto?.quantidade as number) || 3
+              });
+            }
+          } else if (alertaData.tipo_alerta === 'celebrar') {
             const templateCodigo = subtipo === 'descoberta' ? 'celebrar_descoberta' : 'celebrar_confirmacao';
             const { data: templateData } = await supabase
               .from('templates_texto')
@@ -464,7 +490,9 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
             created_at: alertaData.created_at || '',
             alertaId: alertaData.id,
             sinalCodigo,
-            padraoCodigo
+            padraoCodigo,
+            sinalPredominante: (dadosContexto?.sinal_predominante as string) || undefined,
+            quantidadeSinal: (dadosContexto?.quantidade as number) || undefined
           };
         }
       }
