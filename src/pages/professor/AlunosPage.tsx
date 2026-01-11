@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Search } from 'lucide-react';
+import { Users, Search, Trophy } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useAlunosCasa } from '@/hooks/useAlunosCasa';
 import { useAlertasAlunos } from '@/hooks/useAlertasAlunos';
@@ -12,8 +12,6 @@ import { AlunosSemObservacaoModal } from '@/components/professor/AlunosSemObserv
 import { AlunoStatusLinha } from '@/components/professor/AlunoStatusLinha';
 import { Skeleton } from '@/components/ui/skeleton';
 
-type StatusFiltro = 'destaque' | 'regular' | 'risco' | null;
-
 const AlunosPage = () => {
   const navigate = useNavigate();
   const { casaMentor, casaColor } = useProfessor();
@@ -23,7 +21,6 @@ const AlunosPage = () => {
   // Estados de filtro
   const [serieFiltro, setSerieFiltro] = useState<string | null>(null);
   const [turmaFiltro, setTurmaFiltro] = useState<string | null>(null);
-  const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>(null);
   const [busca, setBusca] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -31,30 +28,25 @@ const AlunosPage = () => {
   const seriesDisponiveis = ['6º', '7º', '8º', '9º'];
   const turmasDisponiveis = ['A', 'B', 'C'];
 
-  // Filtrar alunos
+  // Filtrar e ordenar alunos por pontuação (ranking)
   const alunosFiltrados = useMemo(() => {
     if (!alunos) return [];
 
-    return alunos.filter(aluno => {
-      if (serieFiltro && !aluno.serie.startsWith(serieFiltro)) return false;
-      if (turmaFiltro && aluno.turma !== turmaFiltro) return false;
-      if (statusFiltro && aluno.status !== statusFiltro) return false;
-      if (busca && !aluno.nome.toLowerCase().includes(busca.toLowerCase())) return false;
-      return true;
-    });
-  }, [alunos, serieFiltro, turmaFiltro, statusFiltro, busca]);
-
-  // Contadores por status
-  const contadores = useMemo(() => {
-    if (!alunos) return { todos: 0, destaque: 0, regular: 0, risco: 0 };
-    
-    return {
-      todos: alunos.length,
-      destaque: alunos.filter(a => a.status === 'destaque').length,
-      regular: alunos.filter(a => a.status === 'regular').length,
-      risco: alunos.filter(a => a.status === 'risco').length
-    };
-  }, [alunos]);
+    return alunos
+      .filter(aluno => {
+        if (serieFiltro && !aluno.serie.startsWith(serieFiltro)) return false;
+        if (turmaFiltro && aluno.turma !== turmaFiltro) return false;
+        if (busca && !aluno.nome.toLowerCase().includes(busca.toLowerCase())) return false;
+        return true;
+      })
+      // Ordenar por pontuação DECRESCENTE, depois por nome A-Z
+      .sort((a, b) => {
+        if (b.pontosTotais !== a.pontosTotais) {
+          return b.pontosTotais - a.pontosTotais;
+        }
+        return a.nome.localeCompare(b.nome);
+      });
+  }, [alunos, serieFiltro, turmaFiltro, busca]);
 
   const handleChatClick = () => {
     navigate('/professor/chat');
@@ -109,6 +101,14 @@ const AlunosPage = () => {
           onClick={handleChatClick}
         />
       )}
+
+      {/* Título do Ranking */}
+      <div className="flex items-center gap-2 pt-2">
+        <Trophy className="w-4 h-4 text-yellow-500" strokeWidth={1.5} />
+        <span className="text-white/40 text-xs uppercase tracking-wider font-medium">
+          Ranking de Pontos
+        </span>
+      </div>
 
       {/* Seção de Filtros */}
       <div className="space-y-3">
@@ -179,52 +179,6 @@ const AlunosPage = () => {
             ))}
           </div>
         </div>
-
-        {/* Status */}
-        <div className="border-t border-white/5 pt-3">
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => setStatusFiltro(null)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                statusFiltro === null
-                  ? 'bg-white/20 text-white'
-                  : 'bg-white/5 text-white/50 hover:bg-white/10'
-              }`}
-            >
-              Todos {contadores.todos}
-            </button>
-            <button
-              onClick={() => setStatusFiltro('destaque')}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
-                statusFiltro === 'destaque'
-                  ? 'bg-green-500/30 text-green-300'
-                  : 'bg-green-500/10 text-green-400/60 hover:bg-green-500/20 hover:text-green-400'
-              }`}
-            >
-              ⭐ {contadores.destaque}
-            </button>
-            <button
-              onClick={() => setStatusFiltro('regular')}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
-                statusFiltro === 'regular'
-                  ? 'bg-yellow-500/30 text-yellow-300'
-                  : 'bg-yellow-500/10 text-yellow-400/60 hover:bg-yellow-500/20 hover:text-yellow-400'
-              }`}
-            >
-              📊 {contadores.regular}
-            </button>
-            <button
-              onClick={() => setStatusFiltro('risco')}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
-                statusFiltro === 'risco'
-                  ? 'bg-red-500/30 text-red-300'
-                  : 'bg-red-500/10 text-red-400/60 hover:bg-red-500/20 hover:text-red-400'
-              }`}
-            >
-              ⚠️ {contadores.risco}
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Campo de Busca */}
@@ -241,18 +195,18 @@ const AlunosPage = () => {
         />
       </div>
 
-      {/* Lista de Alunos */}
+      {/* Lista de Alunos (Ranking) */}
       <div className="space-y-0.5">
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3 py-2.5 px-3">
-              <Skeleton className="w-2.5 h-2.5 rounded-full" />
-              <Skeleton className="w-8 h-8 rounded-full" />
+              <Skeleton className="w-6 h-4" />
+              <Skeleton className="w-10 h-10 rounded-full" />
               <div className="flex-1 flex items-center gap-2">
                 <Skeleton className="h-4 w-28" />
                 <Skeleton className="h-3 w-8" />
               </div>
-              <Skeleton className="h-4 w-14" />
+              <Skeleton className="h-4 w-16" />
             </div>
           ))
         ) : alunosFiltrados.length === 0 ? (
@@ -267,16 +221,17 @@ const AlunosPage = () => {
               Nenhum aluno encontrado
             </h2>
             <p className="text-white/50 text-sm max-w-xs font-light">
-              {busca || serieFiltro || turmaFiltro || statusFiltro
+              {busca || serieFiltro || turmaFiltro
                 ? 'Tente ajustar os filtros de busca'
                 : 'Não há alunos cadastrados nesta casa'
               }
             </p>
           </div>
         ) : (
-          alunosFiltrados.map(aluno => (
+          alunosFiltrados.map((aluno, index) => (
             <AlunoStatusLinha
               key={aluno.id}
+              posicao={index + 1}
               aluno={aluno}
               casaColor={casaColor}
               onClick={() => handleAlunoClick(aluno.id)}
