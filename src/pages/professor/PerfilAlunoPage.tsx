@@ -18,7 +18,7 @@ import { usePerfilAluno, type PerfilAlunoData } from '@/hooks/usePerfilAluno';
 import AlertaAtivoCard from '@/components/professor/AlertaAtivoCard';
 import EstadoVazioObservacao from '@/components/professor/EstadoVazioObservacao';
 import HistoricoObservacoes from '@/components/professor/HistoricoObservacoes';
-import AcaoProfessorModal from '@/components/professor/AcaoProfessorModal';
+import RegistrarAcaoModal from '@/components/professor/RegistrarAcaoModal';
 
 // ============ COMPONENTES AUXILIARES ============
 
@@ -143,9 +143,8 @@ const PerfilAlunoPage = () => {
   const { casaColor } = useProfessor();
   const { data: aluno, isLoading, error, refetch } = usePerfilAluno(id);
 
-  // Estados para modal de ação
-  const [modalAcaoOpen, setModalAcaoOpen] = useState(false);
-  const [tipoAcaoSelecionada, setTipoAcaoSelecionada] = useState('');
+  // Estado para modal de registrar ação
+  const [modalRegistrarOpen, setModalRegistrarOpen] = useState(false);
 
   // Loading state
   if (isLoading) {
@@ -175,9 +174,8 @@ const PerfilAlunoPage = () => {
     navigate(`/professor/chat/dm/${id}`);
   };
 
-  const handleAcaoClick = (tipoAcao: string) => {
-    setTipoAcaoSelecionada(tipoAcao);
-    setModalAcaoOpen(true);
+  const handleRegistrarAcao = () => {
+    setModalRegistrarOpen(true);
   };
 
   const handleRegistrarObservacao = () => {
@@ -321,7 +319,7 @@ const PerfilAlunoPage = () => {
             sugestoes={aluno.alertaAtivo.sugestoes}
             acoesSugeridas={aluno.alertaAtivo.acoesSugeridas}
             arquetipo={aluno.alertaAtivo.arquetipo}
-            onAcaoClick={handleAcaoClick}
+            onRegistrarAcaoClick={handleRegistrarAcao}
             casaColor={aluno.casaCor}
             sinalPredominante={aluno.alertaAtivo.sinalPredominante}
             quantidadeSinal={aluno.alertaAtivo.quantidadeSinal}
@@ -371,12 +369,12 @@ const PerfilAlunoPage = () => {
         </div>
       )}
 
-      {/* Modal de Ação do Professor */}
-      <AcaoProfessorModal
-        isOpen={modalAcaoOpen}
-        onClose={() => setModalAcaoOpen(false)}
-        tipoAcao={tipoAcaoSelecionada}
+      {/* Modal de Registrar Ação */}
+      <RegistrarAcaoModal
+        isOpen={modalRegistrarOpen}
+        onClose={() => setModalRegistrarOpen(false)}
         nomeAluno={primeiroNome}
+        alunoId={aluno.id}
         alertaId={aluno.alertaAtivo?.alertaId || ''}
         onSalvar={handleSalvarAcao}
       />
