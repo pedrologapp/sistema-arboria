@@ -1,7 +1,7 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, X } from 'lucide-react';
 import { AlertaAluno, AlertaFaseAnterior } from '@/hooks/useAlertasAlunos';
 
 interface AlertaDetalheModalProps {
@@ -17,22 +17,22 @@ const configByTipo = {
   precisa_atencao: {
     icon: '🔴',
     title: 'Precisam de você',
-    color: '#8B0000'
+    subtitle: 'Alunos que precisam de atenção'
   },
   celebrar: {
     icon: '✨',
     title: 'Celebre',
-    color: '#B8860B'
+    subtitle: 'Alunos para reconhecer'
   },
   nao_esquecer: {
     icon: '🟡',
     title: 'Não esqueça',
-    color: '#CC7000'
+    subtitle: 'Alunos sem observação recente'
   },
   atencao_fase_anterior: {
     icon: '⚠️',
-    title: 'Atenção da fase anterior',
-    color: '#8B4000'
+    title: 'Fase anterior',
+    subtitle: 'Alertas pendentes da fase anterior'
   }
 };
 
@@ -56,28 +56,46 @@ export const AlertaDetalheModal = ({
   const config = configByTipo[tipo];
   const isFaseAnterior = tipo === 'atencao_fase_anterior';
   const items = isFaseAnterior ? alertasFaseAnterior : alertas;
+  const count = items.length;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#1a1a1a] border-white/10 text-white max-w-md">
-        <DialogHeader>
-          <DialogTitle 
-            className="flex items-center gap-2 text-lg font-semibold"
-            style={{ color: config.color }}
-          >
-            <span>{config.icon}</span>
-            {config.title}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="bg-[#1a1a1a] border-white/10 text-white max-w-md p-0" hideCloseButton>
+        {/* Header */}
+        <div className="p-4 border-b border-white/10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-white font-medium text-base flex items-center gap-2">
+                <span>{config.icon}</span>
+                {config.title}
+              </h2>
+              <p className="text-white/40 text-xs mt-0.5">
+                {config.subtitle}
+              </p>
+            </div>
+            <button 
+              onClick={onClose}
+              className="p-1 rounded hover:bg-white/10 transition-colors"
+            >
+              <X className="w-5 h-5 text-white/40 hover:text-white" />
+            </button>
+          </div>
+        </div>
 
-        <ScrollArea className="max-h-[60vh] pr-2">
-          <div className="space-y-2">
-            {items.length === 0 ? (
-              <p className="text-white/50 text-sm text-center py-4">
+        {/* Cabeçalho de colunas */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
+          <span className="text-white/30 text-xs uppercase tracking-wider">Aluno</span>
+          <span className="text-white/30 text-xs uppercase tracking-wider">Motivo</span>
+        </div>
+
+        {/* Lista compacta */}
+        <ScrollArea className="max-h-[50vh]">
+          <div className="divide-y divide-white/5">
+            {count === 0 ? (
+              <p className="text-white/50 text-sm text-center py-8">
                 Nenhum alerta nesta categoria
               </p>
             ) : isFaseAnterior ? (
-              // Render fase anterior items
               alertasFaseAnterior.map((alerta) => (
                 <button
                   key={alerta.id}
@@ -85,38 +103,39 @@ export const AlertaDetalheModal = ({
                     onAlunoClick(alerta.aluno.id);
                     onClose();
                   }}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-left"
+                  className="w-full flex items-center gap-3 py-2.5 px-4 hover:bg-white/5 transition-colors text-left"
                 >
-                  <Avatar className="h-10 w-10 border border-white/20">
+                  <Avatar className="h-7 w-7">
                     <AvatarImage src={alerta.aluno.avatarUrl || ''} />
-                    <AvatarFallback className="bg-white/10 text-white text-sm">
+                    <AvatarFallback className="bg-white/10 text-white text-xs">
                       {getInitials(alerta.aluno.nome)}
                     </AvatarFallback>
                   </Avatar>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-white truncate">
+                      <span className="text-white text-sm font-medium truncate">
                         {alerta.aluno.nome}
                       </span>
-                      <span className="text-xs text-white/50">
-                        {alerta.aluno.serie} {alerta.aluno.turma}
+                      <span className="text-white/40 text-xs flex-shrink-0">
+                        {alerta.aluno.serie}{alerta.aluno.turma}
                       </span>
                     </div>
-                    <div className="text-xs text-white/60 mt-0.5">
+                    <div className="text-xs text-white/50 mt-0.5">
                       <span className="mr-1">{alerta.faseAnteriorEmoji}</span>
                       Fase {alerta.faseAnteriorNome}
                     </div>
-                    <p className="text-xs text-white/40 truncate mt-0.5">
-                      {alerta.motivo}
-                    </p>
                   </div>
 
-                  <ChevronRight className="w-4 h-4 text-white/30 flex-shrink-0" />
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-white/40 text-xs max-w-[80px] truncate">
+                      {alerta.motivo}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-white/30" />
+                  </div>
                 </button>
               ))
             ) : (
-              // Render regular alerts
               alertas.map((alerta) => (
                 <button
                   key={alerta.id}
@@ -124,35 +143,42 @@ export const AlertaDetalheModal = ({
                     onAlunoClick(alerta.aluno.id);
                     onClose();
                   }}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-left"
+                  className="w-full flex items-center gap-3 py-2.5 px-4 hover:bg-white/5 transition-colors text-left"
                 >
-                  <Avatar className="h-10 w-10 border border-white/20">
+                  <Avatar className="h-7 w-7">
                     <AvatarImage src={alerta.aluno.avatarUrl || ''} />
-                    <AvatarFallback className="bg-white/10 text-white text-sm">
+                    <AvatarFallback className="bg-white/10 text-white text-xs">
                       {getInitials(alerta.aluno.nome)}
                     </AvatarFallback>
                   </Avatar>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-white truncate">
-                        {alerta.aluno.nome}
-                      </span>
-                      <span className="text-xs text-white/50">
-                        {alerta.aluno.serie} {alerta.aluno.turma}
-                      </span>
-                    </div>
-                    <p className="text-xs text-white/40 truncate mt-0.5">
-                      {alerta.motivo}
-                    </p>
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="text-white text-sm font-medium truncate">
+                      {alerta.aluno.nome}
+                    </span>
+                    <span className="text-white/40 text-xs flex-shrink-0">
+                      {alerta.aluno.serie}{alerta.aluno.turma}
+                    </span>
                   </div>
 
-                  <ChevronRight className="w-4 h-4 text-white/30 flex-shrink-0" />
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-white/40 text-xs max-w-[100px] truncate">
+                      {alerta.motivo}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-white/30" />
+                  </div>
                 </button>
               ))
             )}
           </div>
         </ScrollArea>
+
+        {/* Footer */}
+        <div className="p-3 border-t border-white/10">
+          <p className="text-white/40 text-xs text-center">
+            {count} {count === 1 ? 'aluno' : 'alunos'}
+          </p>
+        </div>
       </DialogContent>
     </Dialog>
   );
