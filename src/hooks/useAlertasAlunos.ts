@@ -134,25 +134,44 @@ export const useAlertasAlunos = () => {
         throw alertasError;
       }
 
-      // 3. Buscar observações da FASE ATUAL para cada aluno
-      let observacoesFaseAtual: Record<string, { count: number; ultimaData: string | null }> = {};
+      // 3. Buscar observações da FASE ATUAL para cada aluno (incluindo sinal para valencia)
+      let observacoesFaseAtual: Record<string, { count: number; ultimaData: string | null; observacoes: { valencia: string }[] }> = {};
       
       if (alunoIds.length > 0 && faseAtual?.id) {
         const { data: observacoes, error: obsError } = await supabase
           .from('observacoes')
-          .select('aluno_id, created_at')
+          .select('aluno_id, created_at, sinal_id')
           .in('aluno_id', alunoIds)
           .eq('fase_id', faseAtual.id)
           .order('created_at', { ascending: false });
 
+        // Buscar sinais para saber a valencia
+        const sinaisIds = [...new Set(observacoes?.map(o => o.sinal_id) || [])];
+        let sinaisMap: Record<number, string> = {};
+        if (sinaisIds.length > 0) {
+          const { data: sinaisData } = await supabase
+            .from('sinais')
+            .select('id, valencia')
+            .in('id', sinaisIds);
+          if (sinaisData) {
+            sinaisData.forEach(s => { sinaisMap[s.id] = s.valencia; });
+          }
+        }
+
         if (!obsError && observacoes) {
           observacoes.forEach(obs => {
             if (!observacoesFaseAtual[obs.aluno_id]) {
-              observacoesFaseAtual[obs.aluno_id] = { count: 0, ultimaData: null };
+              observacoesFaseAtual[obs.aluno_id] = { count: 0, ultimaData: null, observacoes: [] };
             }
             observacoesFaseAtual[obs.aluno_id].count += 1;
             if (!observacoesFaseAtual[obs.aluno_id].ultimaData) {
               observacoesFaseAtual[obs.aluno_id].ultimaData = obs.created_at || null;
+            }
+            // Adicionar valencia às observações (máximo 2 para verificar padrão)
+            if (observacoesFaseAtual[obs.aluno_id].observacoes.length < 2) {
+              observacoesFaseAtual[obs.aluno_id].observacoes.push({
+                valencia: sinaisMap[obs.sinal_id] || 'neutra'
+              });
             }
           });
         }
@@ -291,8 +310,43 @@ export const useAlertasAlunos = () => {
 
       // 10. Agrupar alertas da fase atual por tipo
       const precisaAtencao = alertasFaseAtual.filter(a => a.tipo_alerta === 'precisa_atencao');
-      const celebrar = alertasFaseAtual.filter(a => a.tipo_alerta === 'celebrar');
+      const celebrarDb = alertasFaseAtual.filter(a => a.tipo_alerta === 'celebrar');
       const naoEsquecerDb = alertasFaseAtual.filter(a => a.tipo_alerta === 'nao_esquecer');
+      
+      // 10.1 Calcular celebrações dinâmicas (2 positivos consecutivos)
+      const celebracoesDinamicas: AlertaAluno[] = [];
+      const alunosJaCelebrados = new Set(celebrarDb.map(c => c.aluno.id));
+      
+      for (const aluno of alunosCasa || []) {
+        // Pular se já tem alerta de celebração no banco
+        if (alunosJaCelebrados.has(aluno.id)) continue;
+        
+        const obsData = observacoesFaseAtual[aluno.id];
+        if (!obsData || obsData.observacoes.length < 2) continue;
+        
+        const [ultima, penultima] = obsData.observacoes;
+        
+        // 2 positivos consecutivos = celebrar
+        if (ultima.valencia === 'positivo' && penultima.valencia === 'positivo') {
+          celebracoesDinamicas.push({
+            id: `celebrar-dinamico-${aluno.id}`,
+            aluno: {
+              id: aluno.id,
+              nome: `${aluno.nome || ''} ${aluno.sobrenome || ''}`.trim() || 'Aluno',
+              avatarUrl: aluno.avatar_url || undefined,
+              serie: aluno.serie || '',
+              turma: aluno.turma || ''
+            },
+            tipo_alerta: 'celebrar',
+            motivo: '2 positivos consecutivos!',
+            dados_contexto: { dinamico: true },
+            created_at: new Date().toISOString()
+          });
+        }
+      }
+      
+      // Combinar celebrações do banco + dinâmicas
+      const celebrar = [...celebrarDb, ...celebracoesDinamicas];
       
       // Combinar nao_esquecer do banco + calculados dinamicamente
       const naoEsquecer = [...naoEsquecerDb, ...alunosNaoEsquecer];
@@ -303,10 +357,11 @@ export const useAlertasAlunos = () => {
         a.tipo_alerta === 'precisa_atencao' && 
         (!a.fase_origem_id || a.fase_origem_id === faseAtual?.id)
       ).length;
-      const badgesCelebrar = alertasComBadge.filter(a => 
+      const badgesCelebrarDb = alertasComBadge.filter(a => 
         a.tipo_alerta === 'celebrar' && 
         (!a.fase_origem_id || a.fase_origem_id === faseAtual?.id)
       ).length;
+      const badgesCelebrar = badgesCelebrarDb + celebracoesDinamicas.length;
       const badgesNaoEsquecer = alertasComBadge.filter(a => 
         a.tipo_alerta === 'nao_esquecer' && 
         (!a.fase_origem_id || a.fase_origem_id === faseAtual?.id)
