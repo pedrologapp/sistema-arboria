@@ -82,6 +82,30 @@ export type Database = {
           },
         ]
       }
+      acoes_sugeridas: {
+        Row: {
+          icone: string
+          id: number
+          ordem: number
+          tipo_alerta: string
+          titulo: string
+        }
+        Insert: {
+          icone: string
+          id?: number
+          ordem: number
+          tipo_alerta: string
+          titulo: string
+        }
+        Update: {
+          icone?: string
+          id?: number
+          ordem?: number
+          tipo_alerta?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
       alertas_alunos: {
         Row: {
           acao_tomada: string | null
@@ -246,6 +270,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      arquetipos: {
+        Row: {
+          casa_codigo: string
+          fase_codigo: string
+          id: number
+          nome_arquetipo: string | null
+          potencializar: string[]
+          significado: string
+          tipo: string
+        }
+        Insert: {
+          casa_codigo: string
+          fase_codigo: string
+          id?: number
+          nome_arquetipo?: string | null
+          potencializar: string[]
+          significado: string
+          tipo: string
+        }
+        Update: {
+          casa_codigo?: string
+          fase_codigo?: string
+          id?: number
+          nome_arquetipo?: string | null
+          potencializar?: string[]
+          significado?: string
+          tipo?: string
+        }
+        Relationships: []
       }
       bonus_solicitacoes: {
         Row: {
@@ -873,6 +927,54 @@ export type Database = {
             referencedColumns: ["casa_id"]
           },
         ]
+      }
+      hipoteses_por_padrao: {
+        Row: {
+          descricao: string
+          id: number
+          ordem: number
+          padrao_codigo: string
+          titulo: string
+        }
+        Insert: {
+          descricao: string
+          id?: number
+          ordem: number
+          padrao_codigo: string
+          titulo: string
+        }
+        Update: {
+          descricao?: string
+          id?: number
+          ordem?: number
+          padrao_codigo?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
+      hipoteses_por_sinal: {
+        Row: {
+          descricao: string
+          id: number
+          ordem: number
+          sinal_codigo: string
+          titulo: string
+        }
+        Insert: {
+          descricao: string
+          id?: number
+          ordem: number
+          sinal_codigo: string
+          titulo: string
+        }
+        Update: {
+          descricao?: string
+          id?: number
+          ordem?: number
+          sinal_codigo?: string
+          titulo?: string
+        }
+        Relationships: []
       }
       institution_settings: {
         Row: {
@@ -2117,6 +2219,24 @@ export type Database = {
         }
         Relationships: []
       }
+      templates_texto: {
+        Row: {
+          categoria: string
+          codigo: string
+          template: string
+        }
+        Insert: {
+          categoria: string
+          codigo: string
+          template: string
+        }
+        Update: {
+          categoria?: string
+          codigo?: string
+          template?: string
+        }
+        Relationships: []
+      }
       turmas: {
         Row: {
           ano_letivo: number
@@ -2319,6 +2439,23 @@ export type Database = {
           serie: string
           sobrenome: string
           turma: string
+        }[]
+      }
+      get_arquetipo: {
+        Args: { p_casa_codigo: string; p_fase_codigo: string }
+        Returns: {
+          nome_arquetipo: string
+          potencializar: string[]
+          significado: string
+          tipo: string
+        }[]
+      }
+      get_hipoteses_para_alerta: {
+        Args: { p_padrao_codigo?: string; p_sinal_codigo: string }
+        Returns: {
+          descricao: string
+          ordem: number
+          titulo: string
         }[]
       }
       get_missoes_do_aluno: {
