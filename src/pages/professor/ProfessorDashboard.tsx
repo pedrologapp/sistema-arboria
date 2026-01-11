@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useProfessor } from '@/contexts/ProfessorContext';
-import { ClipboardList, PenLine, Users, Settings, BookOpen } from 'lucide-react';
+import { ClipboardList, PenLine, Users, Settings, BookOpen, ChevronRight } from 'lucide-react';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -128,10 +128,13 @@ const ProfessorDashboard = () => {
     <div className="p-4 space-y-6">
       {/* Welcome Section */}
       <div className="relative text-center pt-2">
-        {/* Settings Icon */}
+        {/* Settings Icon - Premium */}
         <button
           onClick={() => navigate('/professor/configuracoes')}
-          className="absolute top-0 right-0 p-2 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+          className="absolute top-0 right-0 p-2 rounded-full 
+            text-white/40 bg-white/5
+            hover:text-white hover:bg-white/10 hover:scale-110
+            transition-all duration-200"
           aria-label="Configurações"
         >
           <Settings className="w-5 h-5" />
@@ -141,37 +144,52 @@ const ProfessorDashboard = () => {
           Olá, {firstName}! 👋
         </h1>
 
-        {/* Casa Card - Novo Layout */}
+        {/* Casa Card - Premium Glassmorphism */}
         {casaMentor && (
           <div 
-            className="p-6 rounded-2xl border text-center"
+            className="relative overflow-hidden p-6 rounded-2xl text-center
+              bg-[rgba(26,26,30,0.85)] backdrop-blur-xl
+              border border-white/10
+              shadow-xl transition-all duration-300"
             style={{
-              backgroundColor: `${casaColor}10`,
-              borderColor: `${casaColor}30`
+              boxShadow: `0 20px 40px -12px ${casaColor}30`
             }}
           >
-            <div className="flex justify-center mb-3">
-              <CasaBrasao 
-                brasaoUrl={casaMentor.brasao_url} 
-                emoji={casaMentor.emoji} 
-                nome={casaMentor.nome}
-                size="large"
-              />
+            {/* Glow decorativo superior direito */}
+            <div 
+              className="absolute -top-12 -right-12 w-40 h-40 rounded-full blur-3xl opacity-20 pointer-events-none"
+              style={{ backgroundColor: casaColor }}
+            />
+            {/* Glow decorativo inferior esquerdo */}
+            <div 
+              className="absolute -bottom-12 -left-12 w-32 h-32 rounded-full blur-2xl opacity-15 pointer-events-none"
+              style={{ backgroundColor: casaColor }}
+            />
+            
+            <div className="relative z-10">
+              <div className="flex justify-center mb-3">
+                <CasaBrasao 
+                  brasaoUrl={casaMentor.brasao_url} 
+                  emoji={casaMentor.emoji} 
+                  nome={casaMentor.nome}
+                  size="large"
+                />
+              </div>
+              <h2 
+                className="text-xl font-bold mb-1"
+                style={{ color: casaColor }}
+              >
+                Casa {casaMentor.nome}
+              </h2>
+              <p className="text-white/50 text-sm font-light">{tituloMentor}</p>
             </div>
-            <h2 
-              className="text-xl font-bold mb-1"
-              style={{ color: casaColor }}
-            >
-              Casa {casaMentor.nome}
-            </h2>
-            <p className="text-white/50 text-sm">{tituloMentor}</p>
           </div>
         )}
       </div>
 
       {/* Quick Actions */}
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-white/40 uppercase tracking-wider">
+        <h3 className="text-xs font-medium text-white/50 uppercase tracking-widest">
           Ações Rápidas
         </h3>
         
@@ -180,36 +198,83 @@ const ProfessorDashboard = () => {
             <button
               key={action.label}
               onClick={() => handleActionClick(action)}
-              className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-left group"
+              className="flex items-center gap-4 p-4 rounded-xl text-left group
+                bg-gradient-to-r from-white/[0.06] to-white/[0.02]
+                backdrop-blur-sm border border-white/10
+                hover:scale-[1.02] hover:border-white/20
+                transition-all duration-300 ease-out
+                active:scale-[0.98]"
+              style={{
+                boxShadow: `0 4px 20px -4px ${casaColor}15`
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = `0 8px 30px -4px ${casaColor}30`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = `0 4px 20px -4px ${casaColor}15`;
+              }}
             >
               <div 
-                className="p-3 rounded-lg"
+                className="p-3 rounded-lg shadow-lg transition-all duration-300 group-hover:scale-110"
                 style={{ 
                   backgroundColor: `${casaColor}20`,
-                  color: casaColor 
+                  color: casaColor,
+                  boxShadow: `0 4px 12px -2px ${casaColor}30`
                 }}
               >
                 {action.icon}
               </div>
               <div className="flex-1">
-                <span className="text-white font-medium block">{action.label}</span>
-                <span className="text-white/40 text-sm">{action.description}</span>
+                <span className="text-white font-semibold block">{action.label}</span>
+                <span className="text-white/50 text-sm font-light">{action.description}</span>
               </div>
-              <span className="text-white/30 group-hover:text-white/60 transition-colors">→</span>
+              <ChevronRight 
+                className="w-5 h-5 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all duration-300" 
+              />
             </button>
           ))}
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats - Premium */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
+        <div 
+          className="p-4 rounded-xl text-center
+            bg-gradient-to-br from-white/[0.06] to-white/[0.02]
+            backdrop-blur-sm border border-white/10
+            hover:scale-[1.02] transition-all duration-300
+            active:scale-[0.98] cursor-pointer"
+          style={{
+            boxShadow: `0 4px 20px -4px ${casaColor}15`
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = `0 8px 25px -4px ${casaColor}25`;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = `0 4px 20px -4px ${casaColor}15`;
+          }}
+        >
           <div className="text-2xl font-bold text-white">
             {missoesAtivas ?? '--'}
           </div>
-          <div className="text-xs text-white/40">Missões Ativas</div>
+          <div className="text-xs text-white/50 font-light">Missões Ativas</div>
         </div>
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
+        <div 
+          className="p-4 rounded-xl text-center
+            bg-gradient-to-br from-white/[0.06] to-white/[0.02]
+            backdrop-blur-sm border border-white/10
+            hover:scale-[1.02] transition-all duration-300
+            active:scale-[0.98] cursor-pointer"
+          style={{
+            boxShadow: `0 4px 20px -4px ${casaColor}15`
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = `0 8px 25px -4px ${casaColor}25`;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = `0 4px 20px -4px ${casaColor}15`;
+          }}
+        >
           <div className={cn(
             "text-2xl font-bold",
             entregasPendentes && entregasPendentes > 0 
@@ -218,7 +283,7 @@ const ProfessorDashboard = () => {
           )}>
             {entregasPendentes ?? '--'}
           </div>
-          <div className="text-xs text-white/40">Entregas Pendentes</div>
+          <div className="text-xs text-white/50 font-light">Entregas Pendentes</div>
         </div>
       </div>
 
