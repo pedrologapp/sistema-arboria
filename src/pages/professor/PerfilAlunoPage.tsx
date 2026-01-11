@@ -350,6 +350,7 @@ const PerfilAlunoPage = () => {
           casaNome={aluno.casaNome}
           faseNome={aluno.faseAtualNome}
           celebracaoSubtipo={aluno.alertaAtivo?.subtipo as 'descoberta' | 'confirmacao' | undefined}
+          conversaRegistrada={aluno.conversaRegistrada}
         />
         
         {/* Histórico de Observações */}
