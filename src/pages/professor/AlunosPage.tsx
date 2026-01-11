@@ -56,8 +56,7 @@ const AlunosPage = () => {
   }, [alunos]);
 
   const handleChatClick = () => {
-    // Futura implementação: navegar para /professor/chat
-    console.log('Navegar para chat da casa');
+    navigate('/professor/chat');
   };
 
   const handleAlunoClick = (alunoId: string) => {
