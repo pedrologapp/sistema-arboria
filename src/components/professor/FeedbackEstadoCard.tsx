@@ -10,7 +10,10 @@ import {
   Lightbulb,
   Target,
   Star,
-  Award
+  Award,
+  MessageCircle,
+  AlertOctagon,
+  ThumbsUp
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -25,6 +28,19 @@ interface AcaoSugerida {
   acao: string;
   prioridade: 'alta' | 'media' | 'baixa';
 }
+
+// Frases padrão baseadas em Carol Dweck
+const FRASES_EVITAR_PADRAO = [
+  '"Você é muito inteligente!" (elogio de pessoa)',
+  '"Incrível! Perfeito!" (elogio inflado)',
+  '"Você é natural nisso" (desvaloriza esforço)'
+];
+
+const FRASES_PREFERIR_PADRAO = [
+  '"Eu vi como você se dedicou a isso" (processo)',
+  '"Você encontrou uma forma criativa de..." (específico)',
+  '"Percebi que você tentou de vários jeitos até conseguir" (persistência)'
+];
 
 interface FeedbackEstadoCardProps {
   estado: 'brilhando' | 'melhorando' | 'atencao_recente' | 'precisa_atencao' | 
@@ -47,9 +63,13 @@ interface FeedbackEstadoCardProps {
     tipo: string;
     significado: string;
     potencializar: string[];
+    sugestao_conversa?: string;
+    frases_evitar?: string[];
+    frases_preferir?: string[];
   };
   onRegistrarAcao?: () => void;
   onRegistrarObservacao?: () => void;
+  onRegistrarConversa?: () => void;
   casaColor?: string;
   casaNome?: string;
   faseNome?: string;
@@ -162,6 +182,7 @@ export function FeedbackEstadoCard({
   arquetipo,
   onRegistrarAcao,
   onRegistrarObservacao,
+  onRegistrarConversa,
   casaColor,
   casaNome,
   faseNome,
@@ -352,7 +373,80 @@ export function FeedbackEstadoCard({
           </div>
         )}
         
+        {/* SEÇÃO: COMO FALAR COM O ALUNO (apenas para celebrações) */}
+        {ehCelebracao && (
+          <div className="mt-4 space-y-3">
+            {/* Sugestão de conversa */}
+            <div className="p-3 bg-black/20 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <MessageCircle className="w-4 h-4 text-yellow-300" />
+                <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wide">
+                  Como falar com {nomeAluno}
+                </span>
+              </div>
+              <p className="text-white/90 text-sm leading-relaxed italic">
+                {arquetipo?.sugestao_conversa || (
+                  subtipoFinal === 'descoberta' 
+                    ? `"${nomeAluno}, eu percebi algo especial acontecendo. Você mostrou uma habilidade que eu não tinha visto antes. Isso é um sinal de que você está desenvolvendo algo novo. Que tal tentarmos um desafio maior nessa área?"`
+                    : `"${nomeAluno}, você está mostrando muita força em ${casaNome || 'sua área'}. Eu vi como você se dedicou. Sabe o que estou pensando? Acho que você poderia ajudar um colega que está com dificuldade nisso. Topa?"`
+                )}
+              </p>
+            </div>
+            
+            {/* EVITAR */}
+            <div className="p-3 bg-red-900/20 rounded-lg border border-red-500/20">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertOctagon className="w-4 h-4 text-red-400" />
+                <span className="text-sm font-semibold text-red-400 uppercase tracking-wide">
+                  Evitar
+                </span>
+              </div>
+              <ul className="space-y-1">
+                {(arquetipo?.frases_evitar || FRASES_EVITAR_PADRAO).map((frase, i) => (
+                  <li key={i} className="text-white/70 text-sm flex items-start gap-2">
+                    <span className="text-red-400">✗</span>
+                    {frase}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            
+            {/* PREFERIR */}
+            <div className="p-3 bg-green-900/20 rounded-lg border border-green-500/20">
+              <div className="flex items-center gap-2 mb-2">
+                <ThumbsUp className="w-4 h-4 text-green-400" />
+                <span className="text-sm font-semibold text-green-400 uppercase tracking-wide">
+                  Preferir
+                </span>
+              </div>
+              <ul className="space-y-1">
+                {(arquetipo?.frases_preferir || FRASES_PREFERIR_PADRAO).map((frase, i) => (
+                  <li key={i} className="text-white/70 text-sm flex items-start gap-2">
+                    <span className="text-green-400">✓</span>
+                    {frase}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+        
       </div>
+      
+      {/* Botão "Registrar que conversei" para celebrações */}
+      {ehCelebracao && onRegistrarConversa && (
+        <div className="px-4 pb-4">
+          <button
+            onClick={onRegistrarConversa}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 
+                       hover:from-amber-500 hover:to-amber-400 transition-all duration-200
+                       flex items-center justify-center gap-2 shadow-lg border border-amber-400/30"
+          >
+            <MessageCircle className="w-4 h-4 text-white" />
+            <span className="text-white font-semibold">Registrar que conversei com {nomeAluno}</span>
+          </button>
+        </div>
+      )}
       
       {/* Botão para aguardando */}
       {estado === 'aguardando' && onRegistrarObservacao && (

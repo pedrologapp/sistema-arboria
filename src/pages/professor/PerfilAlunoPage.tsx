@@ -18,6 +18,7 @@ import { usePerfilAluno, type PerfilAlunoData } from '@/hooks/usePerfilAluno';
 import { FeedbackEstadoCard } from '@/components/professor/FeedbackEstadoCard';
 import HistoricoObservacoes from '@/components/professor/HistoricoObservacoes';
 import RegistrarAcaoModal from '@/components/professor/RegistrarAcaoModal';
+import RegistrarConversaModal from '@/components/professor/RegistrarConversaModal';
 
 // ============ COMPONENTES AUXILIARES ============
 
@@ -144,6 +145,9 @@ const PerfilAlunoPage = () => {
 
   // Estado para modal de registrar ação
   const [modalRegistrarOpen, setModalRegistrarOpen] = useState(false);
+  
+  // Estado para modal de registrar conversa (celebração)
+  const [modalConversaOpen, setModalConversaOpen] = useState(false);
 
   // Loading state
   if (isLoading) {
@@ -182,7 +186,15 @@ const PerfilAlunoPage = () => {
     navigate(`/professor/circulo/aluno/${id}`);
   };
 
+  const handleRegistrarConversa = () => {
+    setModalConversaOpen(true);
+  };
+
   const handleSalvarAcao = () => {
+    refetch();
+  };
+
+  const handleSalvarConversa = () => {
     refetch();
   };
 
@@ -333,6 +345,7 @@ const PerfilAlunoPage = () => {
           } : undefined}
           onRegistrarAcao={handleRegistrarAcao}
           onRegistrarObservacao={handleRegistrarObservacao}
+          onRegistrarConversa={handleRegistrarConversa}
           casaColor={aluno.casaCor}
           casaNome={aluno.casaNome}
           faseNome={aluno.faseAtualNome}
@@ -382,6 +395,17 @@ const PerfilAlunoPage = () => {
         alunoId={aluno.id}
         alertaId={aluno.alertaAtivo?.alertaId || ''}
         onSalvar={handleSalvarAcao}
+      />
+
+      {/* Modal de Registrar Conversa (Celebração) */}
+      <RegistrarConversaModal
+        isOpen={modalConversaOpen}
+        onClose={() => setModalConversaOpen(false)}
+        nomeAluno={primeiroNome}
+        alunoId={aluno.id}
+        alertaId={aluno.alertaAtivo?.alertaId}
+        subtipo={aluno.alertaAtivo?.subtipo as 'descoberta' | 'confirmacao' | undefined}
+        onSalvar={handleSalvarConversa}
       />
     </div>
   );
