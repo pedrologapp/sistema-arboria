@@ -88,6 +88,8 @@ export type Database = {
           aluno_id: string
           created_at: string | null
           dados_contexto: Json | null
+          fase_id: string | null
+          fase_origem_id: string | null
           id: string
           institution_id: string
           motivo: string
@@ -102,6 +104,8 @@ export type Database = {
           aluno_id: string
           created_at?: string | null
           dados_contexto?: Json | null
+          fase_id?: string | null
+          fase_origem_id?: string | null
           id?: string
           institution_id: string
           motivo: string
@@ -116,6 +120,8 @@ export type Database = {
           aluno_id?: string
           created_at?: string | null
           dados_contexto?: Json | null
+          fase_id?: string | null
+          fase_origem_id?: string | null
           id?: string
           institution_id?: string
           motivo?: string
@@ -139,6 +145,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ranking_alunos_por_casa"
             referencedColumns: ["aluno_id"]
+          },
+          {
+            foreignKeyName: "alertas_alunos_fase_id_fkey"
+            columns: ["fase_id"]
+            isOneToOne: false
+            referencedRelation: "fases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alertas_alunos_fase_origem_id_fkey"
+            columns: ["fase_origem_id"]
+            isOneToOne: false
+            referencedRelation: "fases"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "alertas_alunos_institution_id_fkey"
