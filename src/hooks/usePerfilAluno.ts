@@ -495,10 +495,12 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
               };
             }
           } else if (alertaData.tipo_alerta === 'celebrar' && subtipo === 'confirmacao' && casaCodigo) {
+            // Para confirmação: casa = fase (usar casaCodigo para ambos)
             const { data: arquetipoData } = await supabase
               .from('arquetipos')
               .select('nome_arquetipo, significado, potencializar')
               .eq('casa_codigo', casaCodigo)
+              .eq('fase_codigo', casaCodigo) // Confirmação: fase = casa
               .eq('tipo', 'confirmacao')
               .maybeSingle();
             
@@ -556,11 +558,15 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
               .maybeSingle();
             
             if (templateData?.template) {
-              const contagem = (dadosContexto?.contagem as number) || 3;
+              // Usar quantidade_positivos ou contagem do contexto
+              const quantidade = (dadosContexto?.quantidade_positivos as number) || 
+                                 (dadosContexto?.quantidade as number) || 
+                                 (dadosContexto?.contagem as number) || 2;
               motivo = substituirTemplate(templateData.template, {
                 nome: primeiroNome,
-                contagem: contagem,
-                fase: faseAtualCodigo,
+                quantidade: quantidade, // Variável correta para o template
+                contagem: quantidade,   // Manter compatibilidade
+                fase: faseAtualNome || casaNome, // Usar nome legível da fase
                 casa: casaNome
               });
             }
