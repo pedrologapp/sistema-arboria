@@ -16,11 +16,17 @@ interface Sinal {
   valencia: string;
 }
 
+interface AlunoSimples {
+  id: string;
+  full_name: string;
+}
+
 interface ConfirmarObservacaoModalProps {
   isOpen: boolean;
   onClose: () => void;
   sinal: Sinal | null;
-  aluno: { id: string; full_name: string } | null;
+  aluno: AlunoSimples | null;
+  alunos?: AlunoSimples[]; // Para múltiplos alunos
   onConfirm: (nota: string | null) => void;
   saving?: boolean;
 }
@@ -30,6 +36,7 @@ const ConfirmarObservacaoModal = ({
   onClose,
   sinal,
   aluno,
+  alunos,
   onConfirm,
   saving = false
 }: ConfirmarObservacaoModalProps) => {
@@ -50,7 +57,18 @@ const ConfirmarObservacaoModal = ({
     onClose();
   };
 
-  if (!sinal || !aluno) return null;
+  // Suporte para múltiplos alunos ou aluno único
+  const temAlunos = alunos && alunos.length > 0;
+  const temAluno = aluno !== null;
+  
+  if (!sinal || (!temAluno && !temAlunos)) return null;
+
+  const getNomesResumo = () => {
+    if (!alunos || alunos.length === 0) return '';
+    const nomes = alunos.map(a => a.full_name.split(' ')[0]);
+    if (nomes.length <= 3) return nomes.join(', ');
+    return `${nomes.slice(0, 2).join(', ')} e +${nomes.length - 2}`;
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -65,7 +83,7 @@ const ConfirmarObservacaoModal = ({
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
-          {/* Info do sinal e aluno */}
+          {/* Info do sinal e aluno(s) */}
           <div className="space-y-1 text-sm">
             <p>
               <span className="text-white/60">Sinal:</span>{' '}
@@ -76,10 +94,18 @@ const ConfirmarObservacaoModal = ({
                 {sinal.label_pt}
               </span>
             </p>
-            <p>
-              <span className="text-white/60">Aluno:</span>{' '}
-              <span className="font-medium">{aluno.full_name}</span>
-            </p>
+            {temAlunos ? (
+              <div>
+                <span className="text-white/60">Alunos:</span>{' '}
+                <span className="font-medium">{alunos.length} selecionados</span>
+                <p className="text-white/50 text-xs mt-0.5">{getNomesResumo()}</p>
+              </div>
+            ) : (
+              <p>
+                <span className="text-white/60">Aluno:</span>{' '}
+                <span className="font-medium">{aluno?.full_name}</span>
+              </p>
+            )}
           </div>
 
           {/* Nota opcional */}
