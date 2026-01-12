@@ -15,7 +15,8 @@ import {
   AlertCircle,
   Image as ImageIcon,
   Loader2,
-  Trophy
+  Trophy,
+  Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,6 +42,7 @@ interface MissaoDetalhe {
   requer_arquivo: boolean;
   requer_texto: boolean;
   permite_entrega_atrasada: boolean;
+  casa_id: number | null;
   casa_nome: string | null;
   casa_cor: string | null;
   casa_emoji: string | null;
@@ -176,6 +178,7 @@ const MissaoDetalhePage = () => {
         requer_arquivo: missaoData.requer_arquivo ?? false,
         requer_texto: missaoData.requer_texto ?? true,
         permite_entrega_atrasada: missaoData.permite_entrega_atrasada ?? false,
+        casa_id: missaoData.casa_id ?? null,
         casa_nome: inteligenciaData?.nome ?? null,
         casa_cor: inteligenciaData?.cor_hex ?? null,
         casa_emoji: inteligenciaData?.emoji ?? null,
@@ -449,6 +452,11 @@ const MissaoDetalhePage = () => {
   // Pode enviar resposta?
   const podeEnviar = () => {
     if (!missao) return false;
+
+    // Se a missão é de uma casa específica e não é a casa do aluno, não pode enviar
+    if (missao.casa_id !== null && missao.casa_id !== profile?.casa_id) {
+      return false;
+    }
     
     // Se nunca enviou
     if (!entrega) {
@@ -468,6 +476,9 @@ const MissaoDetalhePage = () => {
     // Se está pendente, não pode (aguardando avaliação)
     return false;
   };
+
+  // É missão de outra casa?
+  const ehMissaoDeOutraCasa = missao?.casa_id !== null && missao?.casa_id !== profile?.casa_id;
 
   // Loading state
   if (loading) {
@@ -571,6 +582,27 @@ const MissaoDetalhePage = () => {
       </div>
 
       <div className="h-px bg-white/10" />
+
+      {/* Banner de aviso para missão de outra casa */}
+      {ehMissaoDeOutraCasa && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30"
+        >
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-medium text-blue-300">
+                Esta missão é da Casa {missao.casa_nome}
+              </p>
+              <p className="text-sm text-blue-300/70 mt-1">
+                Você está visualizando esta missão, mas não pode realizá-la pois pertence a outra casa.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Contexto - sempre visível */}
       <motion.div
