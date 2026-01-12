@@ -250,7 +250,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
         institution_id: institutionId,
         semana: semanaAtual,
         tipo_missao: 'geral',
-        tipo: 'fase',
+        tipo: 'principal',
         casa_id: null,
         titulo,
         contexto: contexto || null,

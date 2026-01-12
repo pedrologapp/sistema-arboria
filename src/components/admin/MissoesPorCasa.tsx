@@ -291,7 +291,7 @@ const MissoesPorCasa = ({
         institution_id: institutionId,
         semana,
         tipo_missao: 'individual' as const,
-        tipo: 'fase',
+        tipo: 'principal',
         casa_id: casaAtual.id,
         titulo,
         contexto: contexto || null,
