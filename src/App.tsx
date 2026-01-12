@@ -23,6 +23,8 @@ import NotFound from "./pages/NotFound";
 // Admin pages
 import MonitorPage from "./pages/admin/MonitorPage";
 import PessoasPage from "./pages/admin/PessoasPage";
+import PerfilAlunoAdminPage from "./pages/admin/PerfilAlunoAdminPage";
+import PerfilProfessorAdminPage from "./pages/admin/PerfilProfessorAdminPage";
 import CasasPage from "./pages/admin/CasasPage";
 import FasesPage from "./pages/admin/FasesPage";
 import FaseDetalhesPage from "./pages/admin/FaseDetalhesPage";
@@ -114,6 +116,20 @@ const App = () => (
               <ProtectedRoute requireAdmin>
                 <AdminLayout>
                   <PessoasPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/pessoas/aluno/:id" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <PerfilAlunoAdminPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/pessoas/professor/:id" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <PerfilProfessorAdminPage />
                 </AdminLayout>
               </ProtectedRoute>
             } />
