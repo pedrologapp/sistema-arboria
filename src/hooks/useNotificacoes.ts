@@ -67,11 +67,30 @@ export const useNotificacoes = () => {
     refetchInterval: 120000,
   });
 
-  // 3. Notificações detalhadas por fase
+  // 3. Notificações detalhadas por fase (APENAS do ano letivo atual)
   const { data: notificacoesPorFase = [] } = useQuery<NotificacoesPorFase[]>({
-    queryKey: ['notificacoes-por-fase', user?.id],
+    queryKey: ['notificacoes-por-fase', user?.id, profile?.institution_id],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!user?.id || !profile?.institution_id) return [];
+      
+      // PRIMEIRO: Descobrir o ano letivo correto baseado na fase ativa
+      const { data: faseAtiva } = await supabase
+        .from('fases')
+        .select('ano_letivo')
+        .eq('institution_id', profile.institution_id)
+        .eq('ativo', true)
+        .maybeSingle();
+      
+      const anoLetivo = faseAtiva?.ano_letivo || new Date().getFullYear();
+      
+      // Buscar IDs das fases do ano correto
+      const { data: fasesAnoAtual } = await supabase
+        .from('fases')
+        .select('id')
+        .eq('institution_id', profile.institution_id)
+        .eq('ano_letivo', anoLetivo);
+      
+      const faseIdsValidos = new Set(fasesAnoAtual?.map(f => f.id) || []);
       
       // Buscar missões do aluno
       const { data: missoes, error: missaoError } = await supabase.rpc('get_missoes_do_aluno', {
@@ -97,12 +116,13 @@ export const useNotificacoes = () => {
         .select('id, fase_id')
         .in('id', missaoIds);
       
-      // Agrupar por fase_id
+      // Agrupar por fase_id (APENAS fases do ano atual)
       const faseMap = new Map<string, NotificacoesPorFase>();
       
       for (const m of missoes) {
         const mf = missaoFases?.find(mf => mf.id === m.id);
-        if (!mf?.fase_id) continue;
+        // FILTRAR: só processar se a fase_id pertence ao ano atual
+        if (!mf?.fase_id || !faseIdsValidos.has(mf.fase_id)) continue;
         
         if (!faseMap.has(mf.fase_id)) {
           faseMap.set(mf.fase_id, { faseId: mf.fase_id, pendentes: 0, aprovadas: 0 });
@@ -123,16 +143,35 @@ export const useNotificacoes = () => {
       
       return Array.from(faseMap.values());
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!profile?.institution_id,
     staleTime: 60000,
     refetchInterval: 120000,
   });
 
-  // 4. Notificações detalhadas por semana
+  // 4. Notificações detalhadas por semana (APENAS do ano letivo atual)
   const { data: notificacoesPorSemana = [] } = useQuery<NotificacoesPorSemana[]>({
-    queryKey: ['notificacoes-por-semana', user?.id],
+    queryKey: ['notificacoes-por-semana', user?.id, profile?.institution_id],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!user?.id || !profile?.institution_id) return [];
+      
+      // PRIMEIRO: Descobrir o ano letivo correto baseado na fase ativa
+      const { data: faseAtiva } = await supabase
+        .from('fases')
+        .select('ano_letivo')
+        .eq('institution_id', profile.institution_id)
+        .eq('ativo', true)
+        .maybeSingle();
+      
+      const anoLetivo = faseAtiva?.ano_letivo || new Date().getFullYear();
+      
+      // Buscar IDs das fases do ano correto
+      const { data: fasesAnoAtual } = await supabase
+        .from('fases')
+        .select('id')
+        .eq('institution_id', profile.institution_id)
+        .eq('ano_letivo', anoLetivo);
+      
+      const faseIdsValidos = new Set(fasesAnoAtual?.map(f => f.id) || []);
       
       // Buscar missões do aluno
       const { data: missoes, error: missaoError } = await supabase.rpc('get_missoes_do_aluno', {
@@ -158,12 +197,13 @@ export const useNotificacoes = () => {
         .select('id, fase_id, semana')
         .in('id', missaoIds);
       
-      // Agrupar por fase_id + semana
+      // Agrupar por fase_id + semana (APENAS fases do ano atual)
       const semanaMap = new Map<string, NotificacoesPorSemana>();
       
       for (const m of missoes) {
         const mi = missaoInfo?.find(mi => mi.id === m.id);
-        if (!mi?.fase_id || mi.semana == null) continue;
+        // FILTRAR: só processar se a fase_id pertence ao ano atual
+        if (!mi?.fase_id || mi.semana == null || !faseIdsValidos.has(mi.fase_id)) continue;
         
         const key = `${mi.fase_id}_${mi.semana}`;
         
@@ -191,7 +231,7 @@ export const useNotificacoes = () => {
       
       return Array.from(semanaMap.values());
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!profile?.institution_id,
     staleTime: 60000,
     refetchInterval: 120000,
   });
