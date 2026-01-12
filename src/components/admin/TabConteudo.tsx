@@ -8,7 +8,8 @@ import {
   Eye, 
   RefreshCw,
   Loader2,
-  Copy
+  Copy,
+  Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatarData, parseDataLocal } from '@/utils/timezone';
@@ -219,21 +220,75 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
     return conteudos?.find(c => c.semana === semana);
   };
 
-  // Visualizar PDF com fallback
-  const visualizarPDF = async (url: string) => {
+  // Visualizar PDF com múltiplos fallbacks
+  const visualizarPDF = async (url: string, nomeArquivo: string) => {
+    // Primeiro copiar o link (sempre funciona)
     try {
-      const newWindow = window.open(url, '_blank');
+      await navigator.clipboard.writeText(url);
+    } catch {}
+
+    // Tentar abrir em nova aba
+    const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+    
+    // Se popup foi bloqueado, fazer download direto
+    if (!newWindow) {
+      toast.info('Popup bloqueado. Iniciando download...', {
+        description: 'O link também foi copiado para sua área de transferência.'
+      });
       
-      if (!newWindow || newWindow.closed) {
-        await navigator.clipboard.writeText(url);
-        toast.info('Link copiado! Cole em uma nova aba para visualizar.', {
-          description: 'O popup pode ter sido bloqueado pelo navegador.'
+      try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = nomeArquivo;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      } catch {
+        toast.error('Não foi possível baixar. Use o link copiado.', {
+          description: 'Cole o link em uma nova aba do navegador.'
         });
       }
+      return;
+    }
+    
+    // Verificar se a janela foi fechada (bloqueada)
+    setTimeout(() => {
+      try {
+        if (newWindow.closed) {
+          toast.info('Link copiado para sua área de transferência', {
+            description: 'Cole em uma nova aba para visualizar o PDF.'
+          });
+        }
+      } catch {}
+    }, 1000);
+  };
+
+  // Download direto do PDF
+  const baixarPDF = async (url: string, nomeArquivo: string) => {
+    try {
+      toast.info('Iniciando download...');
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = nomeArquivo;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+      
+      toast.success('Download concluído!');
     } catch {
       await navigator.clipboard.writeText(url);
-      toast.info('Link copiado para a área de transferência', {
-        description: 'Cole o link em uma nova aba para visualizar o PDF.'
+      toast.error('Erro no download. Link copiado.', {
+        description: 'Cole o link no navegador para baixar.'
       });
     }
   };
@@ -314,11 +369,18 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
                   {/* Ações */}
                   <div className="flex gap-2">
                     <button
-                      onClick={() => visualizarPDF(conteudo.arquivo_url)}
+                      onClick={() => visualizarPDF(conteudo.arquivo_url, conteudo.arquivo_nome)}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
                     >
                       <Eye className="w-4 h-4" />
                       Visualizar
+                    </button>
+                    <button
+                      onClick={() => baixarPDF(conteudo.arquivo_url, conteudo.arquivo_nome)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
+                    >
+                      <Download className="w-4 h-4" />
+                      Baixar
                     </button>
                     <button
                       onClick={() => copiarLink(conteudo.arquivo_url)}
