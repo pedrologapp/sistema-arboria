@@ -76,10 +76,6 @@ const HomePage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Greeting */}
-      <h1 className="text-2xl font-bold text-white mt-2">
-        Olá, {firstName}!
-      </h1>
 
       {/* Main Card - House Info - Premium Glassmorphism */}
       <div 
@@ -122,9 +118,9 @@ const HomePage = () => {
             Casa {casa?.nome || 'Desconhecida'}
           </h2>
 
-          {/* Cargo */}
+          {/* Nome + Cargo */}
           <p className="text-white/50 text-sm font-light mb-4">
-            {cargo || 'Membro'}
+            {profile?.nome || 'Aluno'}, {cargo || 'Membro'}
           </p>
 
           {/* Points - Premium Badge */}
@@ -144,18 +140,16 @@ const HomePage = () => {
           {/* Current Phase Card - Enhanced */}
           {faseAtual && (
             <div 
-              className="w-full rounded-xl p-4 border backdrop-blur-sm"
+              className="w-full rounded-xl px-4 py-3 border backdrop-blur-sm"
               style={{
                 backgroundColor: `${faseAtual.inteligencia?.cor_hex || casaColor}12`,
                 borderColor: `${faseAtual.inteligencia?.cor_hex || casaColor}25`,
                 boxShadow: `inset 0 1px 0 0 rgba(255,255,255,0.05)`
               }}
             >
-              <p className="text-white font-semibold">
-                Fase atual: <span style={{ color: faseAtual.inteligencia?.cor_hex || casaColor }}>{faseAtual.inteligencia?.nome?.toUpperCase() || 'Carregando...'}</span>
-              </p>
-              <p className="text-white/50 text-sm font-light mt-1">
-                Semana {faseAtual.semana_atual || 1} de 4
+              <p className="text-sm text-white/80">
+                Fase atual: <span className="font-medium" style={{ color: faseAtual.inteligencia?.cor_hex || casaColor }}>{faseAtual.inteligencia?.nome || 'Carregando...'}</span>
+                <span className="text-white/50 ml-2">| Semana {faseAtual.semana_atual || 1} de 4</span>
               </p>
             </div>
           )}
