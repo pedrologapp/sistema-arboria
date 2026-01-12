@@ -18,6 +18,7 @@ import {
   formatarDataBrasil,
   inicioDoDiaBrasil,
   calcularSemanaAtual,
+  parseDataLocal,
 } from '@/utils/timezone';
 
 type FaseStatus = 'nao_configurada' | 'bloqueada' | 'proxima' | 'em_andamento' | 'concluida';
@@ -196,11 +197,12 @@ const FasesPage = () => {
     // Se fase.ativo === true → 'em_andamento'
     if (fase.ativo) return 'em_andamento';
 
-    const fim = new Date(fase.data_fim);
-    fim.setHours(23, 59, 59, 999);
+    // Usar parseDataLocal para evitar bug de timezone
+    const fim = parseDataLocal(fase.data_fim);
+    const fimDia = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate(), 23, 59, 59, 999);
 
     // Se data_fim < hoje → 'concluida'
-    if (fim < hoje) return 'concluida';
+    if (fimDia < hoje) return 'concluida';
 
     // Encontrar a próxima fase (primeira futura não ativa)
     const fasesOrdenadas = [...todasFases].sort((a, b) => a.numero_fase - b.numero_fase);
@@ -208,7 +210,7 @@ const FasesPage = () => {
     
     if (!faseAtiva) {
       // Se não há fase ativa, a primeira futura é 'proxima'
-      const primeiraFutura = fasesOrdenadas.find(f => new Date(f.data_inicio) > hoje);
+      const primeiraFutura = fasesOrdenadas.find(f => parseDataLocal(f.data_inicio) > hoje);
       if (primeiraFutura?.id === fase.id) return 'proxima';
     } else {
       // A fase logo após a ativa é 'proxima'
