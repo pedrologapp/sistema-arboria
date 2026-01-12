@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronRight, AlertCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { ChevronRight, AlertCircle, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { cn } from '@/lib/utils';
@@ -16,6 +14,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  formatarDataBrasil,
+  inicioDoDiaBrasil,
+  calcularSemanaAtual,
+} from '@/utils/timezone';
 
 type FaseStatus = 'nao_configurada' | 'bloqueada' | 'proxima' | 'em_andamento' | 'concluida';
 
@@ -180,10 +183,9 @@ const FasesPage = () => {
     enabled: !!fases?.length,
   });
 
-  // Determinar status de cada fase
+  // Determinar status de cada fase (usando timezone Brasil)
   const getStatusFase = (fase: FaseDB, todasFases: FaseDB[]): FaseStatus => {
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
+    const hoje = inicioDoDiaBrasil();
 
     // Se fase.ativo === true → 'em_andamento'
     if (fase.ativo) return 'em_andamento';
@@ -254,12 +256,16 @@ const FasesPage = () => {
   // Encontrar fase atual (em andamento e configurada)
   const faseAtual = fasesCompletas.find(f => f.status === 'em_andamento' && f.configurada);
 
-  // Formatar período
+  // Formatar período (usando timezone Brasil)
   const formatPeriodo = (dataInicio: string, dataFim: string) => {
-    const inicio = format(new Date(dataInicio), 'dd/MM', { locale: ptBR });
-    const fim = format(new Date(dataFim), 'dd/MM', { locale: ptBR });
+    const inicio = formatarDataBrasil(dataInicio, 'dd/MM');
+    const fim = formatarDataBrasil(dataFim, 'dd/MM');
     return `${inicio} - ${fim}`;
   };
+
+  // Data/hora atual no Brasil (para exibição no header)
+  const horaAtual = formatarDataBrasil(new Date(), 'HH:mm');
+  const dataAtual = formatarDataBrasil(new Date(), "dd 'de' MMMM");
 
   // Cor da barra de progresso
   const getProgressColor = (count: number, total: number) => {
@@ -312,11 +318,21 @@ const FasesPage = () => {
     <div className="min-h-screen bg-[#0A0A0A] px-4 py-6">
       <div className="max-w-lg mx-auto">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white mb-1">Fases</h1>
-          <p className="text-white/50 text-sm">
-            Configure o calendário e as missões
-          </p>
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-white mb-1">Fases</h1>
+            <p className="text-white/50 text-sm">
+              Configure o calendário e as missões
+            </p>
+          </div>
+          {/* Horário atual (Brasil) */}
+          <div className="text-right">
+            <div className="flex items-center gap-1.5 text-white/60 text-sm">
+              <Clock className="w-4 h-4" />
+              {horaAtual}
+            </div>
+            <p className="text-white/40 text-xs">{dataAtual}</p>
+          </div>
         </div>
 
         {/* Seletor de Ano */}
@@ -369,7 +385,9 @@ const FasesPage = () => {
                   <div className="flex items-center gap-2 text-sm text-green-400 mt-0.5">
                     <span>Em andamento</span>
                     <span className="text-white/20">•</span>
-                    <span>Semana {faseAtual.semana_atual || 1} de 4</span>
+                    <span>Semana {faseAtual.data_inicio && faseAtual.data_fim 
+                      ? calcularSemanaAtual(faseAtual.data_inicio, faseAtual.data_fim) 
+                      : faseAtual.semana_atual || 1} de 4</span>
                   </div>
                   {faseAtual.data_inicio && faseAtual.data_fim && (
                     <span className="text-xs text-white/40 mt-1 block">
