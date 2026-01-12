@@ -28,6 +28,7 @@ import HomePage from "./pages/aluno/HomePage";
 import MissoesPage from "./pages/aluno/MissoesPage";
 import MissoesFasePage from "./pages/aluno/MissoesFasePage";
 import MissoesSemanaPageAluno from "./pages/aluno/MissoesSemanaPage";
+import MissoesCasaPage from "./pages/aluno/MissoesCasaPage";
 import MissaoDetalhePage from "./pages/aluno/MissaoDetalhePage";
 import CasaPage from "./pages/aluno/CasaPage";
 import ChatPage from "./pages/aluno/ChatPage";
@@ -364,6 +365,13 @@ const App = () => (
               <StudentProtectedRoute>
                 <StudentLayout>
                   <MissoesSemanaPageAluno />
+                </StudentLayout>
+              </StudentProtectedRoute>
+            } />
+            <Route path="/aluno/missoes/fase/:faseId/semana/:semana/casa/:casaId" element={
+              <StudentProtectedRoute>
+                <StudentLayout>
+                  <MissoesCasaPage />
                 </StudentLayout>
               </StudentProtectedRoute>
             } />
