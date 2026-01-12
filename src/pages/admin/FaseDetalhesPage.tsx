@@ -17,6 +17,7 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { agoraBrasil, parseDataLocal, formatarData } from '@/utils/timezone';
 import { CasaBrasao } from '@/components/CasaBrasao';
+import TabConteudo from '@/components/admin/TabConteudo';
 
 type TabType = 'periodo' | 'conteudo' | 'missoes';
 type StatusType = 'bloqueada' | 'proxima' | 'em_andamento' | 'concluida';
@@ -499,14 +500,13 @@ const FaseDetalhesPage = () => {
           </>
         )}
 
-        {tabAtiva === 'conteudo' && (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <FileText className="w-12 h-12 text-white/20 mb-4" />
-            <h3 className="text-white font-medium mb-2">Tab Conteúdo</h3>
-            <p className="text-white/40 text-sm">
-              Será implementada no próximo prompt
-            </p>
-          </div>
+        {tabAtiva === 'conteudo' && fase && (
+          <TabConteudo 
+            faseId={fase.id}
+            institutionId={fase.institution_id}
+            dataInicio={dataInicio}
+            dataFim={dataFim}
+          />
         )}
 
         {tabAtiva === 'missoes' && (
