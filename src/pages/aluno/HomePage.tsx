@@ -75,8 +75,7 @@ const HomePage = () => {
   ];
 
   return (
-    <div className="space-y-6">
-
+    <div className="space-y-6 mt-4">
       {/* Main Card - House Info - Premium Glassmorphism */}
       <div 
         className="relative overflow-hidden p-6 rounded-2xl text-center
@@ -147,10 +146,14 @@ const HomePage = () => {
                 boxShadow: `inset 0 1px 0 0 rgba(255,255,255,0.05)`
               }}
             >
-              <p className="text-sm text-white/80">
-                Fase atual: <span className="font-medium" style={{ color: faseAtual.inteligencia?.cor_hex || casaColor }}>{faseAtual.inteligencia?.nome || 'Carregando...'}</span>
-                <span className="text-white/50 ml-2">| Semana {faseAtual.semana_atual || 1} de 4</span>
-              </p>
+              <div className="text-center">
+                <p className="text-sm text-white/80">
+                  Fase atual: <span className="font-medium" style={{ color: faseAtual.inteligencia?.cor_hex || casaColor }}>{faseAtual.inteligencia?.nome || 'Carregando...'}</span>
+                </p>
+                <p className="text-xs text-white/50 mt-1">
+                  Semana {faseAtual.semana_atual || 1} de 4
+                </p>
+              </div>
             </div>
           )}
         </div>
