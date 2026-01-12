@@ -216,19 +216,32 @@ const MissoesPage = () => {
               onClick={() => handleFaseClick(item)}
               disabled={isFutura}
               className={cn(
-                'w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden',
-                isFutura && 'opacity-50 cursor-not-allowed bg-gray-800/50 border-gray-700',
+                'w-full p-4 rounded-xl text-left transition-all relative overflow-hidden',
+                // BLOQUEADA - muito apagada
+                isFutura && 'cursor-not-allowed bg-[#1F2937] border border-transparent',
+                // ATUAL - vibrante e destacada
                 isAtual && 'border-2 cursor-pointer hover:scale-[1.02] active:scale-[0.98]',
-                isPassada && 'bg-white/5 border-white/10 cursor-pointer hover:bg-white/10 active:scale-[0.98]'
+                // PASSADA - liberada mas discreta
+                isPassada && 'bg-white/[0.03] border border-white/10 cursor-pointer hover:bg-white/[0.08] active:scale-[0.98]'
               )}
               style={isAtual ? { 
-                backgroundColor: `${corFase}15`, 
-                borderColor: corFase 
+                background: `linear-gradient(135deg, ${corFase}25 0%, ${corFase}10 100%)`,
+                borderColor: corFase,
+                boxShadow: `0 0 20px ${corFase}20`
               } : undefined}
             >
               <div className="flex items-center gap-4">
-                {/* Brasão */}
-                <div className={cn(isFutura && 'opacity-50')}>
+                {/* Brasão com estilos condicionais */}
+                <div 
+                  className={cn(
+                    'transition-all',
+                    isFutura && 'opacity-40 grayscale-[50%]',
+                    isPassada && 'opacity-80'
+                  )}
+                  style={isAtual ? { 
+                    filter: `drop-shadow(0 0 8px ${corFase}50)` 
+                  } : undefined}
+                >
                   <CasaBrasao
                     brasaoUrl={item.inteligencia.brasao_url}
                     emoji={item.inteligencia.emoji}
@@ -240,20 +253,19 @@ const MissoesPage = () => {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span 
-                      className={cn(
-                        'font-semibold text-base',
-                        isFutura ? 'text-gray-400' : 'text-white'
-                      )}
-                      style={isAtual ? { color: corFase } : undefined}
-                    >
+                    <span className={cn(
+                      'font-semibold text-base',
+                      isFutura && 'text-gray-500',
+                      isAtual && 'text-white',
+                      isPassada && 'text-white/90'
+                    )}>
                       {item.inteligencia.nome}
                     </span>
+                    
                     {isAtual && (
                       <Badge 
-                        variant="secondary" 
-                        className="text-xs px-2 py-0.5"
-                        style={{ backgroundColor: `${corFase}30`, color: corFase }}
+                        className="text-xs px-2 py-0.5 text-white font-medium border-0"
+                        style={{ backgroundColor: corFase }}
                       >
                         atual
                       </Badge>
@@ -262,7 +274,9 @@ const MissoesPage = () => {
                   
                   <p className={cn(
                     'text-sm mt-0.5',
-                    isFutura ? 'text-gray-500' : 'text-white/50'
+                    isFutura && 'text-gray-600',
+                    isAtual && 'text-white/70',
+                    isPassada && 'text-white/50'
                   )}>
                     {isFutura && 'Fase futura'}
                     {isAtual && item.fase && `Semana ${item.fase.semana_atual || 1} de 4`}
@@ -270,16 +284,15 @@ const MissoesPage = () => {
                   </p>
                 </div>
 
-                {/* Ícone de status */}
+                {/* Ícones de status */}
                 <div className="flex-shrink-0">
-                  {isFutura && (
-                    <Lock className="w-5 h-5 text-gray-500" />
-                  )}
-                  {isAtual && (
-                    <ChevronRight className="w-5 h-5" style={{ color: corFase }} />
-                  )}
+                  {isFutura && <Lock className="w-5 h-5 text-gray-600" />}
+                  {isAtual && <ChevronRight className="w-5 h-5" style={{ color: corFase }} />}
                   {isPassada && (
-                    <CheckCircle className="w-5 h-5 text-green-400" />
+                    <div className="flex items-center gap-1">
+                      <CheckCircle className="w-5 h-5 text-green-400" />
+                      <ChevronRight className="w-4 h-4 text-white/40" />
+                    </div>
                   )}
                 </div>
               </div>
