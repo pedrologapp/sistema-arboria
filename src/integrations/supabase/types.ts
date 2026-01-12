@@ -1098,6 +1098,63 @@ export type Database = {
           },
         ]
       }
+      fase_conteudos: {
+        Row: {
+          arquivo_nome: string
+          arquivo_tamanho: number | null
+          arquivo_url: string
+          created_at: string | null
+          descricao: string | null
+          fase_id: string
+          id: string
+          institution_id: string
+          semana: number
+          titulo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          arquivo_nome: string
+          arquivo_tamanho?: number | null
+          arquivo_url: string
+          created_at?: string | null
+          descricao?: string | null
+          fase_id: string
+          id?: string
+          institution_id: string
+          semana: number
+          titulo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          arquivo_nome?: string
+          arquivo_tamanho?: number | null
+          arquivo_url?: string
+          created_at?: string | null
+          descricao?: string | null
+          fase_id?: string
+          id?: string
+          institution_id?: string
+          semana?: number
+          titulo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fase_conteudos_fase_id_fkey"
+            columns: ["fase_id"]
+            isOneToOne: false
+            referencedRelation: "fases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fase_conteudos_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fases: {
         Row: {
           ano_letivo: number
