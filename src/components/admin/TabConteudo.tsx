@@ -9,11 +9,20 @@ import {
   RefreshCw,
   Loader2,
   Copy,
-  Download
+  Download,
+  MoreVertical,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatarData, parseDataLocal } from '@/utils/timezone';
 import { addDays, differenceInDays } from 'date-fns';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
 interface TabConteudoProps {
   faseId: string;
@@ -296,87 +305,100 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
 
               {/* Conteúdo ou Upload */}
               {conteudo ? (
-                <div className="bg-white/5 rounded-xl p-4 space-y-3">
+                <div className="bg-white/5 rounded-xl p-4">
+                  {/* Header com info e menu */}
                   <div className="flex items-start gap-3">
+                    {/* Ícone PDF */}
                     <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-5 h-5 text-white/60" />
+                      <FileText className="w-5 h-5 text-white/50" />
                     </div>
                     
+                    {/* Info do arquivo */}
                     <div className="flex-1 min-w-0">
                       <p className="text-white text-sm font-medium truncate">
                         {conteudo.arquivo_nome}
                       </p>
-                      {conteudo.titulo && (
-                        <p className="text-white/60 text-xs mt-0.5">
-                          {conteudo.titulo}
-                        </p>
-                      )}
                       {conteudo.arquivo_tamanho && (
                         <p className="text-white/40 text-xs mt-0.5">
                           {formatarTamanho(conteudo.arquivo_tamanho)}
                         </p>
                       )}
                     </div>
-                  </div>
-
-                  {/* Ações */}
-                  <div className="space-y-2">
-                    {/* Linha 1: Ações do PDF */}
-                    <div className="flex flex-wrap gap-2">
-                      <a
-                        href={conteudo.arquivo_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
-                      >
-                        <Eye className="w-4 h-4" />
-                        Visualizar
-                      </a>
-                      <button
-                        onClick={() => baixarPDF(conteudo.arquivo_url, conteudo.arquivo_nome)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
-                      >
-                        <Download className="w-4 h-4" />
-                        Baixar
-                      </button>
-                      <button
-                        onClick={() => copiarLink(conteudo.arquivo_url)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
-                      >
-                        <Copy className="w-4 h-4" />
-                        Copiar Link
-                      </button>
-                    </div>
                     
-                    {/* Linha 2: Ações administrativas */}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => abrirModal(semana.numero, conteudo)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
+                    {/* Menu de ações secundárias */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white/60 transition-colors">
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent 
+                        align="end" 
+                        className="bg-[#1E293B] border-white/10 min-w-[160px]"
                       >
-                        <RefreshCw className="w-4 h-4" />
-                        Substituir
-                      </button>
-                      <button
-                        onClick={() => removerMutation.mutate(conteudo.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 rounded-lg text-red-400 text-sm hover:bg-red-500/20 transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                        Remover
-                      </button>
-                    </div>
+                        <DropdownMenuItem 
+                          onClick={() => copiarLink(conteudo.arquivo_url)}
+                          className="text-white/70 hover:text-white hover:bg-white/10 cursor-pointer"
+                        >
+                          <Copy className="w-4 h-4 mr-2" />
+                          Copiar link
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => abrirModal(semana.numero, conteudo)}
+                          className="text-white/70 hover:text-white hover:bg-white/10 cursor-pointer"
+                        >
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Substituir
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-white/10" />
+                        <DropdownMenuItem 
+                          onClick={() => removerMutation.mutate(conteudo.id)}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Remover
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  
+                  {/* Botões principais */}
+                  <div className="flex gap-2 mt-4">
+                    <a
+                      href={conteudo.arquivo_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-4 py-2 border border-white/20 rounded-lg text-white/70 text-sm hover:bg-white/5 hover:text-white transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Visualizar
+                    </a>
+                    <button
+                      onClick={() => baixarPDF(conteudo.arquivo_url, conteudo.arquivo_nome)}
+                      className="flex items-center gap-1.5 px-4 py-2 border border-white/20 rounded-lg text-white/70 text-sm hover:bg-white/5 hover:text-white transition-colors"
+                    >
+                      <Download className="w-4 h-4" />
+                      Baixar
+                    </button>
                   </div>
                 </div>
               ) : (
                 <button
                   onClick={() => abrirModal(semana.numero)}
-                  className="w-full p-6 border border-dashed border-white/20 rounded-xl hover:border-white/40 hover:bg-white/5 transition-colors group"
+                  className="w-full p-8 border-2 border-dashed border-white/15 rounded-xl hover:border-white/30 hover:bg-white/[0.02] transition-colors group"
                 >
-                  <div className="flex flex-col items-center gap-2">
-                    <Upload className="w-6 h-6 text-white/30 group-hover:text-white/50" />
-                    <p className="text-white/40 text-sm group-hover:text-white/60">
-                      Clique para adicionar PDF
-                    </p>
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                      <Upload className="w-5 h-5 text-white/30 group-hover:text-white/50" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-white/50 text-sm group-hover:text-white/70">
+                        Clique para adicionar PDF
+                      </p>
+                      <p className="text-white/30 text-xs mt-1">
+                        ou arraste o arquivo aqui
+                      </p>
+                    </div>
                   </div>
                 </button>
               )}
