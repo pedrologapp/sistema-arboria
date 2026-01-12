@@ -224,6 +224,9 @@ const MissoesPage = () => {
           const pendentes = notificacoes?.pendentes || 0;
           const aprovadas = notificacoes?.aprovadas || 0;
 
+          // Cor da inteligência para usar em elementos dinâmicos
+          const corInteligencia = item.inteligencia.cor_hex || '#22C55E';
+
           return (
             <motion.button
               key={item.inteligencia.id}
@@ -232,23 +235,27 @@ const MissoesPage = () => {
               transition={{ delay: index * 0.03 }}
               onClick={() => handleFaseClick(item)}
               disabled={isFutura}
+              style={isAtual ? {
+                background: `linear-gradient(to right, ${corInteligencia}18, #1E293B)`,
+                borderColor: `${corInteligencia}50`
+              } : undefined}
               className={cn(
-                'w-full py-5 px-4 rounded-xl text-left transition-all relative overflow-hidden',
-                isFutura && 'cursor-not-allowed bg-[#1E293B]/50 opacity-50',
-                isAtual && 'bg-gradient-to-r from-[#22C55E]/15 to-[#1E293B] border border-[#22C55E]/40 hover:from-[#22C55E]/20',
-                isPassada && 'bg-[#1E293B] hover:bg-[#283548]'
+                'w-full py-5 px-4 rounded-xl text-left transition-all relative overflow-hidden border',
+                isFutura && 'cursor-not-allowed bg-[#1E293B]/50 opacity-50 border-transparent',
+                isAtual && 'border hover:brightness-110',
+                isPassada && 'bg-[#1E293B] hover:bg-[#283548] border-transparent'
               )}
             >
-              {/* Badges no canto superior direito */}
+              {/* Badges de notificação - posição melhorada */}
               {!isFutura && (pendentes > 0 || aprovadas > 0) && (
-                <div className="absolute -top-2 -right-2 flex items-center gap-1 z-10">
+                <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
                   {pendentes > 0 && (
-                    <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-[#EF4444] text-white text-[11px] font-semibold px-1.5 border-2 border-[#0A0A0A] shadow-md">
+                    <span className="min-w-[22px] h-[22px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1.5 shadow-lg shadow-red-500/30">
                       {pendentes > 99 ? '99+' : pendentes}
                     </span>
                   )}
                   {aprovadas > 0 && (
-                    <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-[#22C55E] text-white text-[11px] font-semibold px-1.5 border-2 border-[#0A0A0A] shadow-md">
+                    <span className="min-w-[22px] h-[22px] flex items-center justify-center rounded-full bg-emerald-500 text-white text-[10px] font-bold px-1.5 shadow-lg shadow-emerald-500/30">
                       {aprovadas > 99 ? '99+' : aprovadas}
                     </span>
                   )}
@@ -256,12 +263,13 @@ const MissoesPage = () => {
               )}
 
               <div className="flex items-center gap-4">
-                {/* Brasão */}
-                <div className={cn(
-                  'transition-all',
-                  isFutura && 'opacity-40 grayscale',
-                  isAtual && 'ring-2 ring-[#22C55E]/50 ring-offset-2 ring-offset-[#0A0A0A] rounded-full'
-                )}>
+                {/* Brasão com ring na cor da inteligência */}
+                <div 
+                  className={cn('transition-all rounded-full', isFutura && 'opacity-40 grayscale')}
+                  style={isAtual ? {
+                    boxShadow: `0 0 0 2px #0A0A0A, 0 0 0 4px ${corInteligencia}60`
+                  } : undefined}
+                >
                   <CasaBrasao
                     brasaoUrl={item.inteligencia.brasao_url}
                     emoji={item.inteligencia.emoji}
@@ -272,7 +280,7 @@ const MissoesPage = () => {
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className={cn(
                       'text-[15px] font-medium',
                       isFutura && 'text-[#64748B]',
@@ -281,8 +289,25 @@ const MissoesPage = () => {
                       {item.inteligencia.nome}
                     </span>
                     {isAtual && (
-                      <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#22C55E]/20 text-[#22C55E]">
-                        Fase Atual
+                      <span 
+                        className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md backdrop-blur-sm border"
+                        style={{
+                          backgroundColor: `${corInteligencia}15`,
+                          color: corInteligencia,
+                          borderColor: `${corInteligencia}30`
+                        }}
+                      >
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span 
+                            className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                            style={{ backgroundColor: corInteligencia }}
+                          />
+                          <span 
+                            className="relative inline-flex rounded-full h-1.5 w-1.5"
+                            style={{ backgroundColor: corInteligencia }}
+                          />
+                        </span>
+                        ATIVA
                       </span>
                     )}
                   </div>
@@ -299,14 +324,13 @@ const MissoesPage = () => {
                   </p>
                 </div>
 
-
                 {/* Status icons */}
                 <div className="flex-shrink-0">
                   {isFutura && <Lock className="w-4 h-4 text-[#475569]" />}
-                  {isAtual && <ChevronRight className="w-5 h-5 text-[#22C55E]" />}
+                  {isAtual && <ChevronRight className="w-5 h-5" style={{ color: corInteligencia }} />}
                   {isPassada && (
                     <div className="flex items-center gap-1">
-                      <CheckCircle className="w-4 h-4 text-[#22C55E]" />
+                      <CheckCircle className="w-4 h-4 text-emerald-500" />
                       <ChevronRight className="w-4 h-4 text-[#64748B]" />
                     </div>
                   )}

@@ -16,7 +16,9 @@ import {
   Image as ImageIcon,
   Loader2,
   Trophy,
-  Info
+  Info,
+  ExternalLink,
+  Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -46,6 +48,8 @@ interface MissaoDetalhe {
   casa_nome: string | null;
   casa_cor: string | null;
   casa_emoji: string | null;
+  arquivo_pdf_url: string | null;
+  arquivo_pdf_nome: string | null;
 }
 
 interface ArquivoEntrega {
@@ -153,6 +157,8 @@ const MissaoDetalhePage = () => {
           requer_texto,
           permite_entrega_atrasada,
           casa_id,
+          arquivo_pdf_url,
+          arquivo_pdf_nome,
           casa:inteligencias!missoes_casa_id_fkey (
             nome,
             cor_hex,
@@ -183,6 +189,8 @@ const MissaoDetalhePage = () => {
         casa_nome: inteligenciaData?.nome ?? null,
         casa_cor: inteligenciaData?.cor_hex ?? null,
         casa_emoji: inteligenciaData?.emoji ?? null,
+        arquivo_pdf_url: missaoData.arquivo_pdf_url ?? null,
+        arquivo_pdf_nome: missaoData.arquivo_pdf_nome ?? null,
       });
 
       // Buscar entrega existente
@@ -690,6 +698,39 @@ const MissaoDetalhePage = () => {
           </ReactMarkdown>
         </div>
       </motion.div>
+
+      {/* Material de Apoio (PDF do Admin) */}
+      {missao.arquivo_pdf_url && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="rounded-xl border border-white/10 bg-white/5 p-4"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <FileText className="w-4 h-4 text-blue-400" />
+            <h3 className="text-sm font-medium text-white">📎 Material de Apoio</h3>
+          </div>
+          
+          <a
+            href={missao.arquivo_pdf_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 transition-all group"
+          >
+            <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+              <FileText className="w-5 h-5 text-blue-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">
+                {missao.arquivo_pdf_nome || 'Material da Missão.pdf'}
+              </p>
+              <p className="text-xs text-white/50">Clique para visualizar</p>
+            </div>
+            <ExternalLink className="w-4 h-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+          </a>
+        </motion.div>
+      )}
 
       {/* Separador antes da seção de entrega */}
       <div className="h-px bg-white/10" />
