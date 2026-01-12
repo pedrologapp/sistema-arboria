@@ -1843,7 +1843,10 @@ export type Database = {
       }
       missoes: {
         Row: {
+          arquivo_pdf_nome: string | null
+          arquivo_pdf_url: string | null
           casa_id: number | null
+          contexto: string | null
           criado_por: string
           data_criacao: string | null
           data_liberacao: string
@@ -1871,7 +1874,10 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          arquivo_pdf_nome?: string | null
+          arquivo_pdf_url?: string | null
           casa_id?: number | null
+          contexto?: string | null
           criado_por: string
           data_criacao?: string | null
           data_liberacao: string
@@ -1899,7 +1905,10 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          arquivo_pdf_nome?: string | null
+          arquivo_pdf_url?: string | null
           casa_id?: number | null
+          contexto?: string | null
           criado_por?: string
           data_criacao?: string | null
           data_liberacao?: string

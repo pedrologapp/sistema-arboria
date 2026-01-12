@@ -12,7 +12,9 @@ import {
   Check,
   X,
   Loader2,
-  Home
+  Home,
+  FileText,
+  Upload
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseDataLocal } from '@/utils/timezone';
@@ -33,11 +35,14 @@ interface Missao {
   tipo_missao: string | null;
   casa_id: number | null;
   titulo: string;
-  descricao: string | null;
+  contexto: string | null;
+  instrucoes: string | null;
   pontos_base: number;
   requer_texto: boolean | null;
   requer_arquivo: boolean | null;
   status: string | null;
+  arquivo_pdf_url: string | null;
+  arquivo_pdf_nome: string | null;
 }
 
 const TIPOS_ENTREGA = [
@@ -58,9 +63,13 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
   
   // Form state
   const [titulo, setTitulo] = useState('');
-  const [descricao, setDescricao] = useState('');
+  const [contexto, setContexto] = useState('');
+  const [instrucoes, setInstrucoes] = useState('');
   const [pontos, setPontos] = useState(10);
   const [tiposEntrega, setTiposEntrega] = useState<string[]>(['texto']);
+  const [arquivoPdfUrl, setArquivoPdfUrl] = useState<string | null>(null);
+  const [arquivoPdfNome, setArquivoPdfNome] = useState<string | null>(null);
+  const [uploadando, setUploadando] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
   // Calcular semanas
@@ -91,7 +100,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
     queryFn: async () => {
       const { data, error } = await supabase
         .from('missoes')
-        .select('id, fase_id, semana, tipo_missao, casa_id, titulo, descricao, pontos_base, requer_texto, requer_arquivo, status')
+        .select('id, fase_id, semana, tipo_missao, casa_id, titulo, contexto, instrucoes, pontos_base, requer_texto, requer_arquivo, status, arquivo_pdf_url, arquivo_pdf_nome')
         .eq('fase_id', faseId)
         .order('semana')
         .order('tipo_missao');
@@ -136,14 +145,54 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
     return tipos.length > 0 ? tipos.join(', ') : 'Texto';
   };
 
+  // Upload de PDF
+  const handleUploadPdf = async (file: File) => {
+    if (!file || file.type !== 'application/pdf') {
+      toast.error('Apenas arquivos PDF são permitidos');
+      return;
+    }
+    
+    setUploadando(true);
+    try {
+      const fileName = `missoes/${faseId}_semana${semanaAtual}_${Date.now()}.pdf`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('fase-conteudos')
+        .upload(fileName, file, { upsert: true });
+        
+      if (uploadError) throw uploadError;
+      
+      const { data: urlData } = supabase.storage
+        .from('fase-conteudos')
+        .getPublicUrl(fileName);
+        
+      setArquivoPdfUrl(urlData.publicUrl);
+      setArquivoPdfNome(file.name);
+      toast.success('PDF enviado');
+    } catch (error: any) {
+      toast.error('Erro ao enviar PDF: ' + error.message);
+    } finally {
+      setUploadando(false);
+    }
+  };
+
+  // Remover PDF
+  const removerPdf = () => {
+    setArquivoPdfUrl(null);
+    setArquivoPdfNome(null);
+  };
+
   // Abrir modal para criar/editar
   const abrirModal = (semana: number, missao?: Missao) => {
     setSemanaAtual(semana);
     if (missao) {
       setMissaoEditando(missao);
       setTitulo(missao.titulo);
-      setDescricao(missao.descricao || '');
+      setContexto(missao.contexto || '');
+      setInstrucoes(missao.instrucoes || '');
       setPontos(missao.pontos_base);
+      setArquivoPdfUrl(missao.arquivo_pdf_url);
+      setArquivoPdfNome(missao.arquivo_pdf_nome);
       
       const tipos: string[] = [];
       if (missao.requer_texto) tipos.push('texto');
@@ -152,9 +201,12 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
     } else {
       setMissaoEditando(null);
       setTitulo('');
-      setDescricao('');
+      setContexto('');
+      setInstrucoes('');
       setPontos(10);
       setTiposEntrega(['texto']);
+      setArquivoPdfUrl(null);
+      setArquivoPdfNome(null);
     }
     setModalAberto(true);
   };
@@ -164,9 +216,12 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
     setModalAberto(false);
     setMissaoEditando(null);
     setTitulo('');
-    setDescricao('');
+    setContexto('');
+    setInstrucoes('');
     setPontos(10);
     setTiposEntrega(['texto']);
+    setArquivoPdfUrl(null);
+    setArquivoPdfNome(null);
   };
 
   // Toggle tipo de entrega
@@ -196,10 +251,14 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
         tipo: 'fase',
         casa_id: null,
         titulo,
-        descricao: descricao || null,
+        contexto: contexto || null,
+        instrucoes: instrucoes || null,
+        descricao: null,
         pontos_base: pontos,
         requer_texto: requerTexto,
         requer_arquivo: requerArquivo,
+        arquivo_pdf_url: arquivoPdfUrl,
+        arquivo_pdf_nome: arquivoPdfNome,
         status: 'liberada',
         criado_por: user?.id,
         data_liberacao: new Date().toISOString(),
@@ -211,10 +270,14 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
           .from('missoes')
           .update({
             titulo,
-            descricao: descricao || null,
+            contexto: contexto || null,
+            instrucoes: instrucoes || null,
+            descricao: null,
             pontos_base: pontos,
             requer_texto: requerTexto,
             requer_arquivo: requerArquivo,
+            arquivo_pdf_url: arquivoPdfUrl,
+            arquivo_pdf_nome: arquivoPdfNome,
             updated_at: new Date().toISOString()
           })
           .eq('id', missaoEditando.id);
@@ -451,18 +514,79 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                 />
               </div>
 
-              {/* Descrição */}
+              {/* Contexto */}
               <div>
                 <label className="text-white/60 text-sm mb-1.5 block">
-                  Descrição
+                  Contexto
                 </label>
                 <textarea
-                  value={descricao}
-                  onChange={(e) => setDescricao(e.target.value)}
-                  placeholder="Descreva o que o aluno deve fazer..."
+                  value={contexto}
+                  onChange={(e) => setContexto(e.target.value)}
+                  placeholder="Por que essa missão é importante para o aluno..."
+                  rows={3}
+                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none"
+                />
+              </div>
+
+              {/* Missão */}
+              <div>
+                <label className="text-white/60 text-sm mb-1.5 block">
+                  Missão
+                </label>
+                <textarea
+                  value={instrucoes}
+                  onChange={(e) => setInstrucoes(e.target.value)}
+                  placeholder="O que o aluno deve fazer..."
                   rows={4}
                   className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none"
                 />
+              </div>
+
+              {/* PDF da Missão */}
+              <div>
+                <label className="text-white/60 text-sm mb-1.5 block">
+                  PDF da Missão (opcional)
+                </label>
+                {arquivoPdfUrl ? (
+                  <div className="p-3 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                        <FileText className="w-5 h-5 text-red-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-white text-sm truncate">{arquivoPdfNome}</p>
+                        <p className="text-white/40 text-xs">PDF</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={removerPdf}
+                      className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                    >
+                      <X className="w-4 h-4 text-white/40" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="w-full p-4 border border-dashed border-white/20 rounded-xl hover:border-white/40 hover:bg-white/5 transition-colors cursor-pointer flex items-center justify-center gap-2">
+                    {uploadando ? (
+                      <>
+                        <Loader2 className="w-4 h-4 text-white/40 animate-spin" />
+                        <span className="text-white/40 text-sm">Enviando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 text-white/30" />
+                        <span className="text-white/40 text-sm">Clique para adicionar PDF</span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => e.target.files?.[0] && handleUploadPdf(e.target.files[0])}
+                      className="hidden"
+                      disabled={uploadando}
+                    />
+                  </label>
+                )}
               </div>
 
               {/* Pontuação */}
