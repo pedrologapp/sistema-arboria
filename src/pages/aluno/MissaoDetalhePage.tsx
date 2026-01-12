@@ -65,6 +65,7 @@ interface Entrega {
   pontos_concedidos: number | null;
   feedback_professor: string | null;
   numero_tentativa: number | null;
+  visualizada_pelo_aluno: boolean | null;
   arquivos: ArquivoEntrega[];
 }
 
@@ -195,7 +196,8 @@ const MissaoDetalhePage = () => {
           nota,
           pontos_concedidos,
           feedback_professor,
-          numero_tentativa
+          numero_tentativa,
+          visualizada_pelo_aluno
         `)
         .eq('missao_id', id)
         .eq('aluno_id', user.id)
@@ -214,6 +216,19 @@ const MissaoDetalhePage = () => {
           ...entregaData,
           arquivos: arquivosData || []
         });
+        
+        // Se a entrega foi aprovada e ainda não foi visualizada, marcar como visualizada
+        if (entregaData.status === 'aprovada' && entregaData.visualizada_pelo_aluno === false) {
+          await supabase
+            .from('entregas')
+            .update({ visualizada_pelo_aluno: true })
+            .eq('id', entregaData.id);
+          
+          // Invalidar caches de notificações
+          queryClient.invalidateQueries({ queryKey: ['count-aprovadas-nao-vistas'] });
+          queryClient.invalidateQueries({ queryKey: ['notificacoes-por-fase'] });
+          queryClient.invalidateQueries({ queryKey: ['notificacoes-por-semana'] });
+        }
       }
 
     } catch (err: any) {

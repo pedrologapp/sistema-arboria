@@ -17,11 +17,11 @@ const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { casaColor } = useStudent();
-  const { missoesPendentes, mensagensNaoLidas } = useNotificacoes();
+  const { totalMissoesNotificacoes, mensagensNaoLidas } = useNotificacoes();
 
   const navItems: NavItemConfig[] = [
     { id: 'home', icon: <Home />, label: 'Home', path: '/aluno/home' },
-    { id: 'missoes', icon: <Target />, label: 'Missões', path: '/aluno/missoes', badge: missoesPendentes > 0 ? missoesPendentes : undefined },
+    { id: 'missoes', icon: <Target />, label: 'Missões', path: '/aluno/missoes', badge: totalMissoesNotificacoes > 0 ? totalMissoesNotificacoes : undefined },
     { id: 'casa', icon: <Shield />, label: 'Casa', path: '/aluno/casa' },
     { id: 'chat', icon: <MessageCircle />, label: 'Chat', path: '/aluno/chat', badge: mensagensNaoLidas > 0 ? mensagensNaoLidas : undefined },
     { id: 'perfil', icon: <User />, label: 'Perfil', path: '/aluno/perfil' },
