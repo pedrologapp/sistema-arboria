@@ -257,12 +257,28 @@ const MissoesFasePage = () => {
               onClick={() => handleSemanaClick(semana)}
               disabled={isFutura}
               className={cn(
-                'w-full py-5 px-4 rounded-xl text-left transition-all',
+                'w-full py-5 px-4 rounded-xl text-left transition-all relative',
                 isFutura && 'cursor-not-allowed bg-[#1E293B]/50 opacity-50',
                 isAtual && 'bg-[#1E293B] border border-[#3B82F6]/30 hover:bg-[#283548]',
                 isPassada && 'bg-[#1E293B] hover:bg-[#283548]'
               )}
             >
+              {/* Badges no canto superior direito */}
+              {!isFutura && (pendentes > 0 || aprovadas > 0) && (
+                <div className="absolute -top-2 -right-2 flex items-center gap-1 z-10">
+                  {pendentes > 0 && (
+                    <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-[#EF4444] text-white text-[11px] font-semibold px-1.5 border-2 border-[#0A0A0A] shadow-md">
+                      {pendentes > 99 ? '99+' : pendentes}
+                    </span>
+                  )}
+                  {aprovadas > 0 && (
+                    <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-[#22C55E] text-white text-[11px] font-semibold px-1.5 border-2 border-[#0A0A0A] shadow-md">
+                      {aprovadas > 99 ? '99+' : aprovadas}
+                    </span>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2">
@@ -293,24 +309,6 @@ const MissoesFasePage = () => {
                   </p>
                 </div>
 
-                {/* Badges de notificação */}
-                {!isFutura && (pendentes > 0 || aprovadas > 0) && (
-                  <div className="flex items-center gap-1.5 mr-2">
-                    {/* Badge vermelho - pendentes */}
-                    {pendentes > 0 && (
-                      <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-[#EF4444] text-white text-[11px] font-semibold px-1.5">
-                        {pendentes > 99 ? '99+' : pendentes}
-                      </span>
-                    )}
-                    
-                    {/* Badge verde - aprovadas não vistas */}
-                    {aprovadas > 0 && (
-                      <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-[#22C55E] text-white text-[11px] font-semibold px-1.5">
-                        {aprovadas > 99 ? '99+' : aprovadas}
-                      </span>
-                    )}
-                  </div>
-                )}
 
                 {/* Status icon */}
                 <div className="flex-shrink-0">
