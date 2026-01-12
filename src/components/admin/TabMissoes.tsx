@@ -653,7 +653,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
             </div>
 
             {/* Footer */}
-            <div className="flex gap-3 p-4 border-t border-white/10 sticky bottom-0 bg-[#1a1a1a]">
+            <div className="flex gap-3 p-4 border-t border-white/10 bg-[#1a1a1a] flex-shrink-0">
               {missaoEditando && (
                 <button
                   onClick={() => excluirMutation.mutate(missaoEditando.id)}
@@ -671,15 +671,17 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
               <button
                 onClick={() => salvarMutation.mutate()}
                 disabled={!titulo.trim() || salvando}
-                className="flex-1 p-3 bg-white text-black font-medium rounded-xl hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 p-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {salvando ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Salvando...
                   </>
+                ) : missaoEditando ? (
+                  'Salvar Alterações'
                 ) : (
-                  'Salvar'
+                  'Criar Missão'
                 )}
               </button>
             </div>
