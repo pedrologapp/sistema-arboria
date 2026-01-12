@@ -781,30 +781,6 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                   <p className="text-xs text-white/30 mt-1.5">Deixe vazio para todas as turmas</p>
                 )}
               </div>
-                  {SERIES.map((serie) => (
-                    <button
-                      key={serie.id}
-                      onClick={() => toggleSerie(serie.id)}
-                      className={`flex-1 p-3 rounded-xl border transition-colors flex items-center justify-center gap-2 ${
-                        seriesSelecionadas.includes(serie.id)
-                          ? 'bg-white/10 border-white/30 text-white'
-                          : 'bg-white/5 border-white/10 text-white/40'
-                      }`}
-                    >
-                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                        seriesSelecionadas.includes(serie.id)
-                          ? 'bg-white border-white'
-                          : 'border-white/20'
-                      }`}>
-                        {seriesSelecionadas.includes(serie.id) && (
-                          <Check className="w-3 h-3 text-black" />
-                        )}
-                      </div>
-                      <span className="text-sm">{serie.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               {/* Divisor - Conteúdo */}
               <div className="border-t border-white/10 pt-4">
