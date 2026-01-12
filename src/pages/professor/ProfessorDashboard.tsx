@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import ConteudoModal from '@/components/professor/ConteudoModal';
 import { useAlertasAlunos } from '@/hooks/useAlertasAlunos';
+import BannerFaseInfo from '@/components/professor/BannerFaseInfo';
 
 // Detectar gênero pelo primeiro nome (heurística simples)
 const getGenero = (nome: string): 'masculino' | 'feminino' => {
@@ -32,7 +33,7 @@ const getGenero = (nome: string): 'masculino' | 'feminino' => {
 };
 
 const ProfessorDashboard = () => {
-  const { profile, casaMentor, casaColor, faseAtual } = useProfessor();
+  const { profile, casaMentor, casaColor, faseAtual, faseCasaMentor } = useProfessor();
   const navigate = useNavigate();
   const [showConteudoModal, setShowConteudoModal] = useState(false);
   const { badgesAtivos } = useAlertasAlunos();
@@ -148,11 +149,16 @@ const ProfessorDashboard = () => {
           <Settings className="w-5 h-5" />
         </button>
         
-        <h1 className="text-2xl font-bold text-white mb-6">
-          Olá, {firstName}! 👋
+        <h1 className="text-2xl font-bold text-white mb-4">
+          Olá, {firstName}!
         </h1>
 
-        {/* Casa Card - Premium Glassmorphism */}
+        {/* Banner Informativo de Fase */}
+        <BannerFaseInfo 
+          faseAtual={faseAtual}
+          faseCasaMentor={faseCasaMentor}
+          casaMentor={casaMentor}
+        />
         {casaMentor && (
           <div 
             className="relative overflow-hidden p-6 rounded-2xl text-center

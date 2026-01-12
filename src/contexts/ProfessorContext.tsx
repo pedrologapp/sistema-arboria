@@ -30,12 +30,21 @@ interface FaseAtual {
   inteligencia: Inteligencia | null;
 }
 
+interface FaseCasaMentor {
+  id: string;
+  numero_fase: number;
+  data_inicio: string;
+  data_fim: string;
+  inteligencia_id: number;
+}
+
 interface ProfessorContextType {
   profile: Profile | null;
   casaMentor: Inteligencia | null;
   casaColor: string;
   institutionName: string | null;
   faseAtual: FaseAtual | null;
+  faseCasaMentor: FaseCasaMentor | null;
   isLoading: boolean;
   error: string | null;
   refreshData: () => Promise<void>;
@@ -61,6 +70,7 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
   const [casaMentor, setCasaMentor] = useState<Inteligencia | null>(null);
   const [institutionName, setInstitutionName] = useState<string | null>(null);
   const [faseAtual, setFaseAtual] = useState<FaseAtual | null>(null);
+  const [faseCasaMentor, setFaseCasaMentor] = useState<FaseCasaMentor | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -108,9 +118,11 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
         console.error('Error fetching professor casa:', professorCasaError);
       }
 
+      let casaMentorData: Inteligencia | null = null;
       if (professorCasaData?.inteligencias) {
         const intel = professorCasaData.inteligencias as unknown as Inteligencia;
         setCasaMentor(intel);
+        casaMentorData = intel;
       }
 
       // 3. Fetch institution name
@@ -162,6 +174,23 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
             inteligencia: faseData.inteligencias as unknown as Inteligencia || null
           });
         }
+
+        // 5. Fetch fase da casa do mentor (para o banner informativo)
+        if (casaMentorData) {
+          const { data: faseProfData, error: faseProfError } = await supabase
+            .from('fases')
+            .select('id, numero_fase, data_inicio, data_fim, inteligencia_id')
+            .eq('institution_id', profileData.institution_id)
+            .eq('inteligencia_id', casaMentorData.id)
+            .eq('ano_letivo', new Date().getFullYear())
+            .maybeSingle();
+
+          if (faseProfError) {
+            console.error('Error fetching fase casa mentor:', faseProfError);
+          } else if (faseProfData) {
+            setFaseCasaMentor(faseProfData);
+          }
+        }
       }
     } catch (err) {
       console.error('Error fetching professor data:', err);
@@ -183,6 +212,7 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
     casaColor,
     institutionName,
     faseAtual,
+    faseCasaMentor,
     isLoading,
     error,
     refreshData: fetchProfessorData
