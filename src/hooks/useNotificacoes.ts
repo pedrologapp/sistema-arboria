@@ -22,26 +22,57 @@ export const useNotificacoes = () => {
   const { profile, casa } = useStudent();
   const queryClient = useQueryClient();
 
-  // 1. Contar missões pendentes (não entregues ou reprovadas, dentro do prazo)
+  // 1. Contar missões pendentes (APENAS do ano letivo atual)
   const { data: missoesPendentes = 0 } = useQuery({
-    queryKey: ['count-missoes-pendentes', user?.id],
+    queryKey: ['count-missoes-pendentes', user?.id, profile?.institution_id],
     queryFn: async () => {
-      if (!user?.id) return 0;
+      if (!user?.id || !profile?.institution_id) return 0;
       
-      const { data, error } = await supabase.rpc('get_missoes_do_aluno', {
+      // Buscar ano letivo da fase ativa
+      const { data: faseAtiva } = await supabase
+        .from('fases')
+        .select('ano_letivo')
+        .eq('institution_id', profile.institution_id)
+        .eq('ativo', true)
+        .maybeSingle();
+      
+      const anoLetivo = faseAtiva?.ano_letivo || new Date().getFullYear();
+      
+      // Buscar IDs das fases do ano correto
+      const { data: fasesAnoAtual } = await supabase
+        .from('fases')
+        .select('id')
+        .eq('institution_id', profile.institution_id)
+        .eq('ano_letivo', anoLetivo);
+      
+      const faseIdsValidos = new Set(fasesAnoAtual?.map(f => f.id) || []);
+      
+      // Buscar missões do aluno
+      const { data: missoes, error } = await supabase.rpc('get_missoes_do_aluno', {
         p_aluno_id: user.id,
       });
       
-      if (error || !data) return 0;
+      if (error || !missoes) return 0;
       
-      // Filtrar: não entregou E não está atrasada OU status = 'refazer'
-      const pendentes = data.filter((m: any) => 
-        (!m.ja_entregou && !m.atrasada) || m.status_entrega === 'refazer'
-      );
+      // Buscar fase_id de cada missão
+      const missaoIds = missoes.map((m: any) => m.id);
+      if (missaoIds.length === 0) return 0;
+      
+      const { data: missaoFases } = await supabase
+        .from('missoes')
+        .select('id, fase_id')
+        .in('id', missaoIds);
+      
+      // Filtrar: ano atual + (não entregou OU refazer)
+      const pendentes = missoes.filter((m: any) => {
+        const mf = missaoFases?.find(mf => mf.id === m.id);
+        if (!mf?.fase_id || !faseIdsValidos.has(mf.fase_id)) return false;
+        return (!m.ja_entregou && !m.atrasada) || m.status_entrega === 'refazer';
+      });
       
       return pendentes.length;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!profile?.institution_id,
     staleTime: 60000,
     refetchInterval: 120000,
   });

@@ -298,34 +298,44 @@ const MissoesSemanaPage = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {missoesGerais.map((missao, index) => (
-              <motion.button
-                key={missao.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.03 }}
-                onClick={() => handleMissaoClick(missao.id)}
-                className="w-full py-4 px-4 rounded-xl bg-[#1E293B] hover:bg-[#283548] transition-all text-left"
-              >
-                <div className="flex items-center gap-3">
-                  {renderStatusIcon(missao.status)}
+            {missoesGerais.map((missao, index) => {
+              // Badge de notificação: disponível ou refazer
+              const precisaBadge = missao.status === 'disponivel' || missao.status === 'refazer';
+              
+              return (
+                <motion.button
+                  key={missao.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  onClick={() => handleMissaoClick(missao.id)}
+                  className="w-full py-4 px-4 rounded-xl bg-[#1E293B] hover:bg-[#283548] transition-all text-left relative"
+                >
+                  {/* Badge de pendente */}
+                  {precisaBadge && (
+                    <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  )}
                   
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[15px] font-medium text-white block">{missao.titulo}</span>
-                    {missao.descricao && (
-                      <p className="text-[13px] text-[#94A3B8] line-clamp-1 mt-0.5">{missao.descricao}</p>
-                    )}
+                  <div className="flex items-center gap-3">
+                    {renderStatusIcon(missao.status)}
+                    
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[15px] font-medium text-white block">{missao.titulo}</span>
+                      {missao.descricao && (
+                        <p className="text-[13px] text-[#94A3B8] line-clamp-1 mt-0.5">{missao.descricao}</p>
+                      )}
+                    </div>
+                    
+                    <div className="text-right flex-shrink-0 pr-3">
+                      <span className={cn('text-xs', getStatusColor(missao.status))}>
+                        {getStatusLabel(missao.status)}
+                      </span>
+                      <p className="text-xs text-[#64748B] mt-0.5">+{missao.pontos_base} pts</p>
+                    </div>
                   </div>
-                  
-                  <div className="text-right flex-shrink-0">
-                    <span className={cn('text-xs', getStatusColor(missao.status))}>
-                      {getStatusLabel(missao.status)}
-                    </span>
-                    <p className="text-xs text-[#64748B] mt-0.5">+{missao.pontos_base} pts</p>
-                  </div>
-                </div>
-              </motion.button>
-            ))}
+                </motion.button>
+              );
+            })}
           </div>
         )}
       </div>
