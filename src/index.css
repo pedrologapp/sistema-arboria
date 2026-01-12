@@ -129,3 +129,24 @@ All colors MUST be HSL.
     display: none;
   }
 }
+
+/* Estilo para selects no tema escuro */
+select {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+select option {
+  background-color: #1a1a1a;
+  color: white;
+  padding: 8px 12px;
+}
+
+select option:hover,
+select option:focus {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+select option:checked {
+  background-color: rgba(99, 102, 241, 0.3);
+}

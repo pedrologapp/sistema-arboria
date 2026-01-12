@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { X, Upload, Download, FileText, Loader2, Check, AlertCircle } from 'lucide-react';
+import { X, Upload, Download, FileText, Loader2, Check, AlertCircle, HelpCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import Papa from 'papaparse';
+import ModalInstrucoesImportacao from './ModalInstrucoesImportacao';
 
 interface ModalImportarCSVProps {
   tipo: 'alunos' | 'professores';
@@ -18,6 +19,15 @@ interface AlunoCSV {
   serie: string;
   turma: string;
   casa_id: string;
+  // Colunas opcionais de inteligências
+  int_intrapessoal?: string;
+  int_interpessoal?: string;
+  int_naturalista?: string;
+  int_logico?: string;
+  int_linguistica?: string;
+  int_espacial?: string;
+  int_corporal?: string;
+  int_musical?: string;
 }
 
 interface ProfessorCSV {
@@ -27,6 +37,18 @@ interface ProfessorCSV {
   casa_id: string;
 }
 
+// Mapeamento de colunas CSV para IDs de inteligência
+const INTELIGENCIAS_MAP = [
+  { coluna: 'int_linguistica', id: 1 },
+  { coluna: 'int_logico', id: 2 },
+  { coluna: 'int_espacial', id: 3 },
+  { coluna: 'int_musical', id: 4 },
+  { coluna: 'int_corporal', id: 5 },
+  { coluna: 'int_naturalista', id: 6 },
+  { coluna: 'int_interpessoal', id: 7 },
+  { coluna: 'int_intrapessoal', id: 8 },
+];
+
 const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProps) => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -35,15 +57,30 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
   const [erros, setErros] = useState<string[]>([]);
   const [importando, setImportando] = useState(false);
   const [resultado, setResultado] = useState<{ sucesso: number; erros: string[] } | null>(null);
+  const [mostrarInstrucoes, setMostrarInstrucoes] = useState(false);
 
-  const colunasAlunos = ['nome', 'sobrenome', 'email', 'serie', 'turma', 'casa_id'];
+  // Colunas obrigatórias (inteligências são opcionais)
+  const colunasObrigatoriasAlunos = ['nome', 'sobrenome', 'email', 'serie', 'turma', 'casa_id'];
+  const colunasOpcionaisAlunos = ['int_intrapessoal', 'int_interpessoal', 'int_naturalista', 'int_logico', 'int_linguistica', 'int_espacial', 'int_corporal', 'int_musical'];
+  const colunasAlunos = [...colunasObrigatoriasAlunos, ...colunasOpcionaisAlunos];
   const colunasProfessores = ['nome', 'sobrenome', 'email', 'casa_id'];
+  
   const colunas = tipo === 'alunos' ? colunasAlunos : colunasProfessores;
+  const colunasObrigatorias = tipo === 'alunos' ? colunasObrigatoriasAlunos : ['nome', 'sobrenome', 'email'];
+
+  // Verificar se tem inteligências nos dados
+  const temInteligencias = tipo === 'alunos' && dados.length > 0 && dados.some((item) => {
+    const aluno = item as AlunoCSV;
+    return colunasOpcionaisAlunos.some(col => {
+      const valor = parseInt((aluno as any)[col]) || 0;
+      return valor > 0;
+    });
+  });
 
   const baixarModelo = () => {
     const header = colunas.join(',');
     const exemplo = tipo === 'alunos'
-      ? 'João,Silva,joao@escola.com,6º ano,A,1\nMaria,Santos,maria@escola.com,7º ano,B,2'
+      ? 'João,Silva,joao@escola.com,6º ano,A,1,60,70,40,85,75,50,55,30\nMaria,Santos,maria@escola.com,7º ano,B,2,75,80,60,50,90,45,40,65'
       : 'Ana,Paula,ana@escola.com,1\nCarlos,Santos,carlos@escola.com,2';
     
     const csv = `${header}\n${exemplo}`;
@@ -72,7 +109,8 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
         const errosEncontrados: string[] = [];
 
         results.data.forEach((row: any, index) => {
-          const camposFaltando = colunas.filter(col => !row[col]?.toString().trim());
+          // Apenas validar colunas obrigatórias
+          const camposFaltando = colunasObrigatorias.filter(col => !row[col]?.toString().trim());
           
           if (camposFaltando.length > 0) {
             errosEncontrados.push(`Linha ${index + 2}: falta ${camposFaltando.join(', ')}`);
@@ -112,7 +150,16 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
             serie: aluno.serie,
             turma: aluno.turma,
             casa_id: parseInt(aluno.casa_id),
-            instituicao: institutionId
+            instituicao: institutionId,
+            // Incluir inteligências se existirem
+            int_intrapessoal: parseInt(aluno.int_intrapessoal || '0') || 0,
+            int_interpessoal: parseInt(aluno.int_interpessoal || '0') || 0,
+            int_naturalista: parseInt(aluno.int_naturalista || '0') || 0,
+            int_logico: parseInt(aluno.int_logico || '0') || 0,
+            int_linguistica: parseInt(aluno.int_linguistica || '0') || 0,
+            int_espacial: parseInt(aluno.int_espacial || '0') || 0,
+            int_corporal: parseInt(aluno.int_corporal || '0') || 0,
+            int_musical: parseInt(aluno.int_musical || '0') || 0,
           };
         } else {
           const prof = item as ProfessorCSV;
@@ -120,7 +167,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
             email: prof.email,
             nome: prof.nome,
             sobrenome: prof.sobrenome,
-            casa_id: parseInt(prof.casa_id),
+            casa_id: parseInt(prof.casa_id) || null,
             instituicao: institutionId
           };
         }
@@ -167,6 +214,9 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
     }
   };
 
+  // Colunas a mostrar na pré-visualização (apenas obrigatórias)
+  const colunasPreview = colunasObrigatorias;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
       <div className="w-full max-w-lg bg-[#0A0A0A] border border-white/10 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
@@ -175,9 +225,18 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
           <h2 className="text-lg font-semibold text-white">
             Importar {tipo === 'alunos' ? 'Alunos' : 'Professores'}
           </h2>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-white/60" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setMostrarInstrucoes(true)}
+              className="flex items-center gap-1 px-2 py-1 text-indigo-400 text-sm hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition-colors"
+            >
+              <HelpCircle className="w-4 h-4" />
+              Instruções
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+              <X className="w-5 h-5 text-white/60" />
+            </button>
+          </div>
         </div>
 
         {/* Conteúdo */}
@@ -185,7 +244,13 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
           {/* Formato */}
           <div className="p-3 bg-white/5 rounded-lg">
             <p className="text-sm text-white/80 font-medium mb-1">Colunas obrigatórias:</p>
-            <p className="text-sm text-white/50">{colunas.join(', ')}</p>
+            <p className="text-sm text-white/50">{colunasObrigatorias.join(', ')}</p>
+            {tipo === 'alunos' && (
+              <>
+                <p className="text-sm text-white/80 font-medium mt-2 mb-1">Colunas opcionais (inteligências):</p>
+                <p className="text-sm text-white/50">{colunasOpcionaisAlunos.join(', ')}</p>
+              </>
+            )}
           </div>
 
           {/* Baixar modelo */}
@@ -214,6 +279,11 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
                   <p className="text-white font-medium truncate">{arquivo.name}</p>
                   <p className="text-sm text-white/50">
                     {dados.length} registros válidos
+                    {temInteligencias && (
+                      <span className="ml-2 px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs rounded">
+                        Inclui estatísticas
+                      </span>
+                    )}
                   </p>
                 </div>
                 <button 
@@ -279,7 +349,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-white/10">
-                      {colunas.map(col => (
+                      {colunasPreview.map(col => (
                         <th key={col} className="text-left p-2 text-white/60 font-medium">
                           {col}
                         </th>
@@ -289,7 +359,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
                   <tbody>
                     {dados.slice(0, 3).map((row, i) => (
                       <tr key={i} className="border-b border-white/5">
-                        {colunas.map(col => (
+                        {colunasPreview.map(col => (
                           <td key={col} className="p-2 text-white/80">
                             {(row as any)[col]}
                           </td>
@@ -335,6 +405,14 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
           </button>
         </div>
       </div>
+
+      {/* Modal de Instruções */}
+      {mostrarInstrucoes && (
+        <ModalInstrucoesImportacao
+          tipo={tipo}
+          onClose={() => setMostrarInstrucoes(false)}
+        />
+      )}
     </div>
   );
 };

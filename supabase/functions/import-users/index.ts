@@ -12,7 +12,16 @@ interface ImportUser {
   instituicao: string;
   serie?: string;
   turma?: string;
-  casa?: string;
+  casa_id?: number;
+  // Inteligências opcionais (0-100)
+  int_intrapessoal?: number;
+  int_interpessoal?: number;
+  int_naturalista?: number;
+  int_logico?: number;
+  int_linguistica?: number;
+  int_espacial?: number;
+  int_corporal?: number;
+  int_musical?: number;
 }
 
 interface ImportError {
@@ -20,6 +29,18 @@ interface ImportError {
   email: string;
   error: string;
 }
+
+// Mapeamento de campos para IDs de inteligência
+const INTELIGENCIAS_MAP = [
+  { campo: 'int_linguistica', id: 1 },
+  { campo: 'int_logico', id: 2 },
+  { campo: 'int_espacial', id: 3 },
+  { campo: 'int_musical', id: 4 },
+  { campo: 'int_corporal', id: 5 },
+  { campo: 'int_naturalista', id: 6 },
+  { campo: 'int_interpessoal', id: 7 },
+  { campo: 'int_intrapessoal', id: 8 },
+];
 
 // Normalize surname to create password: remove accents, apostrophes, spaces, lowercase
 function normalizeSobrenome(sobrenome: string): string {
@@ -89,7 +110,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Parse request body
-    const { users } = await req.json() as { users: ImportUser[] };
+    const { users, tipo } = await req.json() as { users: ImportUser[], tipo?: string };
 
     if (!users || !Array.isArray(users) || users.length === 0) {
       return new Response(JSON.stringify({ error: 'Nenhum usuário para importar' }), {
@@ -98,17 +119,10 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    console.log(`Starting import of ${users.length} users`);
+    console.log(`Starting import of ${users.length} users (tipo: ${tipo || 'alunos'})`);
 
-    // Fetch all institutions for name lookup
-    const { data: institutions } = await supabaseAdmin
-      .from('institutions')
-      .select('id, name');
-
-    const institutionMap = new Map<string, string>();
-    institutions?.forEach(inst => {
-      institutionMap.set(inst.name.toLowerCase().trim(), inst.id);
-    });
+    // Get current year for ano_letivo
+    const anoLetivo = new Date().getFullYear();
 
     const errors: ImportError[] = [];
     let successCount = 0;
@@ -136,12 +150,8 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        // Find institution ID
-        const institutionId = institutionMap.get(user.instituicao.toLowerCase().trim());
-        if (!institutionId) {
-          errors.push({ line: lineNumber, email: user.email, error: `Instituição "${user.instituicao}" não encontrada` });
-          continue;
-        }
+        // Institution ID is passed directly now
+        const institutionId = user.instituicao;
 
         // Generate password from surname
         const normalizedSobrenome = normalizeSobrenome(user.sobrenome);
@@ -153,6 +163,9 @@ Deno.serve(async (req: Request) => {
           errors.push({ line: lineNumber, email: user.email, error: 'Sobrenome muito curto para gerar senha válida (mínimo 3 letras)' });
           continue;
         }
+
+        // Determine role based on tipo
+        const userRole = tipo === 'professores' ? 'professor' : 'user';
 
         // Create the user using admin API
         const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -166,7 +179,7 @@ Deno.serve(async (req: Request) => {
             institution_id: institutionId,
             serie: user.serie?.trim() || null,
             turma: user.turma?.trim() || null,
-            casa: user.casa?.trim() || null,
+            casa_id: user.casa_id || null,
             must_change_password: true
           }
         });
@@ -187,10 +200,9 @@ Deno.serve(async (req: Request) => {
             sobrenome: user.sobrenome.trim(),
             full_name: fullName,
             institution_id: institutionId,
-            institution: user.instituicao.trim(),
             serie: user.serie?.trim() || null,
             turma: user.turma?.trim() || null,
-            casa: user.casa?.trim() || null,
+            casa_id: user.casa_id || null,
             must_change_password: true
           })
           .eq('id', newUser.user.id);
@@ -200,8 +212,43 @@ Deno.serve(async (req: Request) => {
           .from('user_roles')
           .insert({
             user_id: newUser.user.id,
-            role: 'user'
+            role: userRole
           });
+
+        // If professor with casa_id, create professor_casa link
+        if (userRole === 'professor' && user.casa_id) {
+          await supabaseAdmin
+            .from('professor_casa')
+            .insert({
+              professor_id: newUser.user.id,
+              casa_id: user.casa_id,
+              institution_id: institutionId,
+              ano_letivo: anoLetivo,
+              eh_mentor_principal: true,
+              ativo: true
+            });
+        }
+
+        // Insert intelligence scores if provided (for alunos only)
+        if (userRole === 'user') {
+          for (const int of INTELIGENCIAS_MAP) {
+            const valor = (user as any)[int.campo] || 0;
+            if (valor > 0) {
+              const scoreNormalizado = Math.min(100, Math.max(0, valor));
+              
+              await supabaseAdmin
+                .from('inteligencia_scores')
+                .upsert({
+                  aluno_id: newUser.user.id,
+                  inteligencia_id: int.id,
+                  score_atual: scoreNormalizado,
+                  ano_letivo: anoLetivo
+                }, {
+                  onConflict: 'aluno_id,inteligencia_id,ano_letivo'
+                });
+            }
+          }
+        }
 
         successCount++;
       } catch (error) {
@@ -215,8 +262,8 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ 
       success: true, 
       total: users.length,
-      successCount,
-      errors
+      success_count: successCount,
+      errors: errors.map(e => `Linha ${e.line}: ${e.email} - ${e.error}`)
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
