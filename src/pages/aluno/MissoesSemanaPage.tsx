@@ -5,7 +5,7 @@ import { useStudent } from '@/contexts/StudentContext';
 import { ArrowLeft, ClipboardList, Home, CheckCircle, Circle, Clock, RefreshCw, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { CasaBrasao } from '@/components/CasaBrasao';
-import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface MissaoGeral {
@@ -44,20 +44,6 @@ interface Entrega {
   status: string;
 }
 
-const statusLabels: Record<string, string> = {
-  'disponivel': 'Disponível',
-  'enviada': 'Enviada',
-  'aprovada': 'Aprovada',
-  'refazer': 'Refazer'
-};
-
-const statusColors: Record<string, string> = {
-  'disponivel': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  'enviada': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-  'aprovada': 'bg-green-500/20 text-green-300 border-green-500/30',
-  'refazer': 'bg-orange-500/20 text-orange-300 border-orange-500/30'
-};
-
 const MissoesSemanaPage = () => {
   const { faseId, semana } = useParams<{ faseId: string; semana: string }>();
   const navigate = useNavigate();
@@ -79,7 +65,6 @@ const MissoesSemanaPage = () => {
         setIsLoading(true);
         setError(null);
 
-        // 1. Buscar dados da fase
         const { data: faseData, error: faseError } = await supabase
           .from('fases')
           .select(`
@@ -104,7 +89,6 @@ const MissoesSemanaPage = () => {
         };
         setFase(faseFormatted);
 
-        // 2. Buscar missões GERAIS da semana
         const { data: geraisData, error: geraisError } = await supabase
           .from('missoes')
           .select('id, titulo, descricao, pontos_base')
@@ -115,7 +99,6 @@ const MissoesSemanaPage = () => {
 
         if (geraisError) throw geraisError;
 
-        // 3. Buscar missões INDIVIDUAIS
         const { data: individuaisData, error: individuaisError } = await supabase
           .from('missoes')
           .select('id, titulo, casa_id')
@@ -126,7 +109,6 @@ const MissoesSemanaPage = () => {
 
         if (individuaisError) throw individuaisError;
 
-        // 4. Buscar entregas do aluno
         const allMissaoIds = [
           ...(geraisData || []).map(m => m.id),
           ...(individuaisData || []).map(m => m.id)
@@ -145,7 +127,6 @@ const MissoesSemanaPage = () => {
           entregas = entregasData || [];
         }
 
-        // 5. Buscar todas as inteligências
         const { data: inteligenciasData, error: inteligenciasError } = await supabase
           .from('inteligencias')
           .select('id, nome, cor_hex, brasao_url, emoji')
@@ -153,7 +134,6 @@ const MissoesSemanaPage = () => {
 
         if (inteligenciasError) throw inteligenciasError;
 
-        // Processar status das missões gerais
         const getStatusMissao = (missaoId: string): 'disponivel' | 'enviada' | 'aprovada' | 'refazer' => {
           const entrega = entregas.find(e => e.missao_id === missaoId);
           if (!entrega) return 'disponivel';
@@ -171,7 +151,6 @@ const MissoesSemanaPage = () => {
         }));
         setMissoesGerais(missoesGeraisProcessadas);
 
-        // Processar casas com contagem de missões
         const casasProcessadas: CasaInfo[] = (inteligenciasData || []).map(intel => {
           const missoesDaCasa = (individuaisData || []).filter(m => m.casa_id === intel.id);
           const concluidas = missoesDaCasa.filter(m => getStatusMissao(m.id) === 'aprovada').length;
@@ -188,7 +167,6 @@ const MissoesSemanaPage = () => {
           };
         });
 
-        // Ordenar: minha casa primeiro
         const casasOrdenadas = [
           ...casasProcessadas.filter(c => c.ehMinhaCasa),
           ...casasProcessadas.filter(c => !c.ehMinhaCasa)
@@ -207,8 +185,6 @@ const MissoesSemanaPage = () => {
     fetchData();
   }, [faseId, semanaNum, profile?.id, profile?.casa_id]);
 
-  const corFase = fase?.inteligencia?.cor_hex || '#6366F1';
-
   const handleMissaoClick = (missaoId: string) => {
     navigate(`/aluno/missoes/${missaoId}`);
   };
@@ -220,30 +196,46 @@ const MissoesSemanaPage = () => {
   const renderStatusIcon = (status: string) => {
     switch (status) {
       case 'aprovada':
-        return <CheckCircle className="w-5 h-5 text-green-400" />;
+        return <CheckCircle className="w-4 h-4 text-[#22C55E]" />;
       case 'enviada':
-        return <Clock className="w-5 h-5 text-amber-400" />;
+        return <Clock className="w-4 h-4 text-[#F59E0B]" />;
       case 'refazer':
-        return <RefreshCw className="w-5 h-5 text-orange-400" />;
+        return <RefreshCw className="w-4 h-4 text-[#F97316]" />;
       default:
-        return <Circle className="w-5 h-5 text-white/40" />;
+        return <Circle className="w-4 h-4 text-[#64748B]" />;
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'aprovada': return 'Aprovada';
+      case 'enviada': return 'Enviada';
+      case 'refazer': return 'Refazer';
+      default: return 'Disponível';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'aprovada': return 'text-[#22C55E]';
+      case 'enviada': return 'text-[#F59E0B]';
+      case 'refazer': return 'text-[#F97316]';
+      default: return 'text-[#3B82F6]';
     }
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0D1117] text-white pb-24">
-        <div className="px-4 py-4">
-          <div className="h-6 w-32 bg-white/10 rounded animate-pulse mb-6" />
-          <div className="flex flex-col items-center gap-3 mb-6">
-            <div className="w-16 h-16 bg-white/10 rounded-full animate-pulse" />
-            <div className="h-6 w-48 bg-white/10 rounded animate-pulse" />
-          </div>
-          <div className="space-y-4">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-20 bg-white/5 rounded-xl animate-pulse" />
-            ))}
-          </div>
+      <div className="min-h-screen bg-[#0F172A] px-5 py-6">
+        <div className="h-5 w-24 bg-[#1E293B] rounded animate-pulse mb-8" />
+        <div className="flex flex-col items-center gap-3 mb-8">
+          <div className="w-10 h-10 bg-[#1E293B] rounded-full animate-pulse" />
+          <div className="h-5 w-40 bg-[#1E293B] rounded animate-pulse" />
+        </div>
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-16 bg-[#1E293B] rounded-xl animate-pulse" />
+          ))}
         </div>
       </div>
     );
@@ -251,11 +243,11 @@ const MissoesSemanaPage = () => {
 
   if (error || !fase) {
     return (
-      <div className="min-h-screen bg-[#0D1117] text-white flex flex-col items-center justify-center p-4">
-        <p className="text-white/60 mb-4">{error || 'Fase não encontrada'}</p>
+      <div className="min-h-screen bg-[#0F172A] flex flex-col items-center justify-center p-5">
+        <p className="text-[#64748B] text-sm mb-4">{error || 'Fase não encontrada'}</p>
         <button
           onClick={() => navigate(`/aluno/missoes/fase/${faseId}`)}
-          className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+          className="px-4 py-2 bg-[#1E293B] rounded-lg hover:bg-[#283548] text-sm text-white transition-colors"
         >
           Voltar
         </button>
@@ -264,173 +256,158 @@ const MissoesSemanaPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0D1117] text-white pb-24">
-      {/* Header */}
-      <div className="px-4 py-4">
-        <button
-          onClick={() => navigate(`/aluno/missoes/fase/${faseId}`)}
-          className="flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-6"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span>Semana {semanaNum}</span>
-        </button>
+    <div className="min-h-screen bg-[#0F172A] px-5 py-6 pb-24">
+      {/* Back button */}
+      <button
+        onClick={() => navigate(`/aluno/missoes/fase/${faseId}`)}
+        className="flex items-center gap-2 text-[#94A3B8] hover:text-white transition-colors mb-8"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span className="text-sm">Semana {semanaNum}</span>
+      </button>
 
-        {/* Brasão e Info da Fase */}
-        <div className="flex flex-col items-center gap-3 mb-8">
-          <div style={{ filter: `drop-shadow(0 0 12px ${corFase}60)` }}>
-            <CasaBrasao
-              brasaoUrl={fase.inteligencia.brasao_url}
-              emoji={fase.inteligencia.emoji}
-              nome={fase.inteligencia.nome}
-              size="large"
-            />
-          </div>
-          <div className="text-center">
-            <h1 className="text-xl font-bold" style={{ color: corFase }}>
-              Fase {fase.inteligencia.nome}
-            </h1>
-            <p className="text-white/60">Missões da Semana {semanaNum}</p>
-          </div>
+      {/* Centered header */}
+      <div className="flex flex-col items-center gap-3 mb-8">
+        <CasaBrasao
+          brasaoUrl={fase.inteligencia.brasao_url}
+          emoji={fase.inteligencia.emoji}
+          nome={fase.inteligencia.nome}
+          size="medium"
+        />
+        <div className="text-center">
+          <h1 className="text-xl font-semibold text-white tracking-tight">
+            Fase {fase.inteligencia.nome}
+          </h1>
+          <p className="text-sm text-[#94A3B8]">Missões da Semana {semanaNum}</p>
+        </div>
+      </div>
+
+      {/* GERAL Section */}
+      <div className="mb-8">
+        <div className="flex items-center gap-2 mb-4">
+          <ClipboardList className="w-4 h-4 text-[#94A3B8]" />
+          <span className="text-xs font-medium text-[#9CA3AF] uppercase tracking-widest">
+            Geral
+          </span>
+          <span className="text-xs text-[#64748B]">· Todos os alunos fazem</span>
         </div>
 
-        {/* Seção GERAL */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div 
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: `${corFase}20` }}
-            >
-              <ClipboardList className="w-5 h-5" style={{ color: corFase }} />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">GERAL</h2>
-              <p className="text-sm text-white/50">Todos os alunos fazem</p>
-            </div>
+        {missoesGerais.length === 0 ? (
+          <div className="py-4 px-4 rounded-xl bg-[#1E293B] text-center">
+            <p className="text-[#64748B] text-sm">Nenhuma missão geral nesta semana</p>
           </div>
-
-          {missoesGerais.length === 0 ? (
-            <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 text-center">
-              <p className="text-white/50">Nenhuma missão geral nesta semana</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {missoesGerais.map((missao, index) => (
-                <motion.button
-                  key={missao.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  onClick={() => handleMissaoClick(missao.id)}
-                  className="w-full p-4 rounded-xl bg-white/[0.03] border border-white/10 
-                             hover:bg-white/[0.08] transition-all text-left"
-                >
-                  <div className="flex items-start gap-3">
-                    {renderStatusIcon(missao.status)}
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium text-white block">{missao.titulo}</span>
-                      {missao.descricao && (
-                        <p className="text-sm text-white/60 line-clamp-1 mt-0.5">{missao.descricao}</p>
-                      )}
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <Badge className={statusColors[missao.status]}>
-                        {statusLabels[missao.status]}
-                      </Badge>
-                      <p className="text-sm text-white/50 mt-1">+{missao.pontos_base} pts</p>
-                    </div>
-                  </div>
-                </motion.button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Separador */}
-        <div className="h-px bg-white/10 mb-8" />
-
-        {/* Seção INDIVIDUAL */}
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <div 
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: `${corFase}20` }}
-            >
-              <Home className="w-5 h-5" style={{ color: corFase }} />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">INDIVIDUAL (por casa)</h2>
-              <p className="text-sm text-white/50">Cada casa tem missões específicas</p>
-            </div>
-          </div>
-
+        ) : (
           <div className="space-y-3">
-            {casasInfo.map((casa, index) => (
+            {missoesGerais.map((missao, index) => (
               <motion.button
-                key={casa.id}
+                key={missao.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: (missoesGerais.length + index) * 0.05 }}
-                onClick={() => handleCasaClick(casa.id)}
-                className={`w-full p-4 rounded-xl transition-all text-left ${
-                  casa.ehMinhaCasa
-                    ? 'border-2 hover:scale-[1.02]'
-                    : 'bg-white/[0.03] border border-white/10 hover:bg-white/[0.08]'
-                }`}
-                style={casa.ehMinhaCasa ? {
-                  background: `linear-gradient(135deg, ${casa.cor_hex}25 0%, ${casa.cor_hex}10 100%)`,
-                  borderColor: casa.cor_hex,
-                  boxShadow: `0 0 20px ${casa.cor_hex}20`
-                } : undefined}
+                transition={{ delay: index * 0.03 }}
+                onClick={() => handleMissaoClick(missao.id)}
+                className="w-full py-4 px-4 rounded-xl bg-[#1E293B] hover:bg-[#283548] transition-all text-left"
               >
-                <div className="flex items-center gap-4">
-                  <div className={casa.ehMinhaCasa ? '' : 'opacity-50'}>
-                    <CasaBrasao
-                      brasaoUrl={casa.brasao_url}
-                      emoji={casa.emoji}
-                      nome={casa.nome}
-                      size="medium"
-                    />
-                  </div>
+                <div className="flex items-center gap-3">
+                  {renderStatusIcon(missao.status)}
+                  
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`font-semibold ${casa.ehMinhaCasa ? 'text-white' : 'text-white/70'}`}>
-                        {casa.nome}
-                      </span>
-                      {casa.ehMinhaCasa && (
-                        <Badge 
-                          className="text-xs"
-                          style={{ backgroundColor: casa.cor_hex, color: 'white' }}
-                        >
-                          sua casa
-                        </Badge>
-                      )}
-                    </div>
-                    <p className={`text-sm ${casa.ehMinhaCasa ? 'text-white/70' : 'text-white/50'}`}>
-                      {casa.totalMissoes === 0 
-                        ? 'Nenhuma missão nesta semana'
-                        : `${casa.totalMissoes} ${casa.totalMissoes === 1 ? 'missão' : 'missões'} disponíveis`
-                      }
-                    </p>
+                    <span className="text-[15px] font-medium text-white block">{missao.titulo}</span>
+                    {missao.descricao && (
+                      <p className="text-[13px] text-[#94A3B8] line-clamp-1 mt-0.5">{missao.descricao}</p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`font-semibold ${
-                      casa.ehMinhaCasa 
-                        ? casa.concluidas === casa.totalMissoes && casa.totalMissoes > 0
-                          ? 'text-green-400'
-                          : 'text-white'
-                        : 'text-white/40'
-                    }`}>
-                      {casa.concluidas}/{casa.totalMissoes}
+                  
+                  <div className="text-right flex-shrink-0">
+                    <span className={cn('text-xs', getStatusColor(missao.status))}>
+                      {getStatusLabel(missao.status)}
                     </span>
-                    <ChevronRight 
-                      className="w-5 h-5" 
-                      style={{ color: casa.ehMinhaCasa ? casa.cor_hex : 'rgba(255,255,255,0.3)' }}
-                    />
+                    <p className="text-xs text-[#64748B] mt-0.5">+{missao.pontos_base} pts</p>
                   </div>
                 </div>
               </motion.button>
             ))}
           </div>
+        )}
+      </div>
+
+      {/* Separator */}
+      <div className="h-px bg-[#334155] mb-8" />
+
+      {/* INDIVIDUAL Section */}
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <Home className="w-4 h-4 text-[#94A3B8]" />
+          <span className="text-xs font-medium text-[#9CA3AF] uppercase tracking-widest">
+            Individual
+          </span>
+          <span className="text-xs text-[#64748B]">· Por casa</span>
+        </div>
+
+        <div className="space-y-3">
+          {casasInfo.map((casa, index) => (
+            <motion.button
+              key={casa.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: (missoesGerais.length + index) * 0.03 }}
+              onClick={() => handleCasaClick(casa.id)}
+              className={cn(
+                'w-full py-4 px-4 rounded-xl transition-all text-left',
+                casa.ehMinhaCasa
+                  ? 'bg-[#1E293B] border border-[#3B82F6]/40 hover:bg-[#283548]'
+                  : 'bg-[#1E293B] hover:bg-[#283548]'
+              )}
+            >
+              <div className="flex items-center gap-4">
+                <div className={casa.ehMinhaCasa ? '' : 'opacity-50'}>
+                  <CasaBrasao
+                    brasaoUrl={casa.brasao_url}
+                    emoji={casa.emoji}
+                    nome={casa.nome}
+                    size="mini"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      'text-[15px] font-medium',
+                      casa.ehMinhaCasa ? 'text-white' : 'text-[#94A3B8]'
+                    )}>
+                      {casa.nome}
+                    </span>
+                    {casa.ehMinhaCasa && (
+                      <span className="text-xs text-[#3B82F6]">sua casa</span>
+                    )}
+                  </div>
+                  <p className={cn(
+                    'text-[13px]',
+                    casa.ehMinhaCasa ? 'text-[#94A3B8]' : 'text-[#64748B]'
+                  )}>
+                    {casa.totalMissoes === 0 
+                      ? 'Nenhuma missão nesta semana'
+                      : `${casa.totalMissoes} ${casa.totalMissoes === 1 ? 'missão' : 'missões'} disponíveis`
+                    }
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    'text-sm font-medium',
+                    casa.ehMinhaCasa 
+                      ? casa.concluidas === casa.totalMissoes && casa.totalMissoes > 0
+                        ? 'text-[#22C55E]'
+                        : 'text-white'
+                      : 'text-[#64748B]'
+                  )}>
+                    {casa.concluidas}/{casa.totalMissoes}
+                  </span>
+                  <ChevronRight className={cn(
+                    'w-4 h-4',
+                    casa.ehMinhaCasa ? 'text-[#3B82F6]' : 'text-[#475569]'
+                  )} />
+                </div>
+              </div>
+            </motion.button>
+          ))}
         </div>
       </div>
     </div>

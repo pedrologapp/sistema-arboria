@@ -4,7 +4,6 @@ import {
   Lock, 
   CheckCircle, 
   ChevronRight, 
-  Target,
   RefreshCw,
   AlertCircle
 } from 'lucide-react';
@@ -13,7 +12,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { toast } from 'sonner';
 import { clearAppBadge } from '@/hooks/useAppBadge';
@@ -42,7 +40,7 @@ interface ItemFase {
 
 const MissoesPage = () => {
   const navigate = useNavigate();
-  const { profile, casaColor, isLoading: contextLoading } = useStudent();
+  const { profile, isLoading: contextLoading } = useStudent();
   const [itens, setItens] = useState<ItemFase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -54,7 +52,6 @@ const MissoesPage = () => {
     try {
       setError(null);
       
-      // Buscar todas as inteligências
       const { data: inteligencias, error: intError } = await supabase
         .from('inteligencias')
         .select('id, nome, cor_hex, brasao_url, emoji')
@@ -62,7 +59,6 @@ const MissoesPage = () => {
 
       if (intError) throw intError;
 
-      // Buscar fases da instituição
       const { data: fases, error: fasesError } = await supabase
         .from('fases')
         .select('id, numero_fase, semana_atual, ativo, inteligencia_id')
@@ -70,10 +66,8 @@ const MissoesPage = () => {
 
       if (fasesError) throw fasesError;
 
-      // Encontrar a fase atual (ativo = true)
       const faseAtual = fases?.find(f => f.ativo) || null;
 
-      // Combinar inteligências com suas fases
       const itensLista: ItemFase[] = (inteligencias || []).map(intel => {
         const fase = fases?.find(f => f.inteligencia_id === intel.id) || null;
         
@@ -88,7 +82,6 @@ const MissoesPage = () => {
             status = 'futura';
           }
         }
-        // Se não tem fase, status permanece 'futura'
 
         return {
           inteligencia: intel,
@@ -125,7 +118,6 @@ const MissoesPage = () => {
     navigate(`/aluno/missoes/fase/${item.fase.id}`);
   };
 
-  // Ordenar: atual primeiro, depois passadas, depois futuras (por ordem de inteligência)
   const itensOrdenados = useMemo(() => {
     const atual = itens.filter(i => i.status === 'atual');
     const passadas = itens.filter(i => i.status === 'passada').sort((a, b) => 
@@ -139,14 +131,15 @@ const MissoesPage = () => {
 
   if (contextLoading || isLoading) {
     return (
-      <div className="py-6 space-y-6 mt-4">
-        <div className="flex items-center justify-between">
-          <div className="h-8 w-48 bg-white/10 rounded-lg animate-pulse" />
-          <div className="h-10 w-10 bg-white/10 rounded-full animate-pulse" />
+      <div className="min-h-screen bg-[#0F172A] px-5 py-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="h-6 w-24 bg-[#1E293B] rounded animate-pulse" />
+          <div className="h-8 w-8 bg-[#1E293B] rounded-full animate-pulse" />
         </div>
+        <div className="h-4 w-32 bg-[#1E293B] rounded animate-pulse mb-4" />
         <div className="space-y-3">
           {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-            <div key={i} className="h-20 bg-white/10 rounded-xl animate-pulse" />
+            <div key={i} className="h-[72px] bg-[#1E293B] rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -155,14 +148,14 @@ const MissoesPage = () => {
 
   if (error) {
     return (
-      <div className="py-6 mt-4">
-        <div className="p-6 rounded-xl border border-red-500/30 bg-red-500/10 text-center">
-          <AlertCircle className="w-10 h-10 mx-auto mb-3 text-red-400" />
-          <p className="text-white/80 mb-4">{error}</p>
+      <div className="min-h-screen bg-[#0F172A] px-5 py-6">
+        <div className="p-6 rounded-xl border border-red-500/20 bg-[#1E293B] text-center">
+          <AlertCircle className="w-8 h-8 mx-auto mb-3 text-red-400" />
+          <p className="text-[#94A3B8] text-sm mb-4">{error}</p>
           <Button 
             variant="outline" 
             onClick={fetchData}
-            className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+            className="border-[#334155] text-[#94A3B8] hover:bg-[#283548]"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Tentar novamente
@@ -173,36 +166,30 @@ const MissoesPage = () => {
   }
 
   return (
-    <div className="py-6 space-y-5 mt-4">
+    <div className="min-h-screen bg-[#0F172A] px-5 py-6 pb-24">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Target className="w-6 h-6" style={{ color: casaColor }} />
-          <h1 className="text-xl font-bold">Missões</h1>
-        </div>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-xl font-semibold text-white tracking-tight">Missões</h1>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
           className={cn(
-            'p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors',
+            'p-2 rounded-full hover:bg-[#1E293B] transition-colors',
             refreshing && 'opacity-50'
           )}
         >
-          <RefreshCw className={cn('w-5 h-5', refreshing && 'animate-spin')} />
+          <RefreshCw className={cn('w-4 h-4 text-[#64748B]', refreshing && 'animate-spin')} />
         </button>
       </div>
 
-      {/* Título da seção */}
-      <div className="pt-2">
-        <h2 className="text-sm font-medium text-white/60 uppercase tracking-wider">
-          Selecione a Fase
-        </h2>
-      </div>
+      {/* Section title */}
+      <p className="text-xs font-medium text-[#9CA3AF] uppercase tracking-widest mb-4">
+        Selecione a Fase
+      </p>
 
-      {/* Lista de Inteligências/Fases */}
+      {/* List */}
       <div className="space-y-3">
         {itensOrdenados.map((item, index) => {
-          const corFase = item.inteligencia.cor_hex || casaColor;
           const isFutura = item.status === 'futura';
           const isAtual = item.status === 'atual';
           const isPassada = item.status === 'passada';
@@ -210,38 +197,24 @@ const MissoesPage = () => {
           return (
             <motion.button
               key={item.inteligencia.id}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
+              transition={{ delay: index * 0.03 }}
               onClick={() => handleFaseClick(item)}
               disabled={isFutura}
               className={cn(
-                'w-full p-4 rounded-xl text-left transition-all relative overflow-hidden',
-                // BLOQUEADA - muito apagada
-                isFutura && 'cursor-not-allowed bg-[#1F2937] border border-transparent',
-                // ATUAL - vibrante e destacada
-                isAtual && 'border-2 cursor-pointer hover:scale-[1.02] active:scale-[0.98]',
-                // PASSADA - liberada mas discreta
-                isPassada && 'bg-white/[0.03] border border-white/10 cursor-pointer hover:bg-white/[0.08] active:scale-[0.98]'
+                'w-full py-5 px-4 rounded-xl text-left transition-all',
+                isFutura && 'cursor-not-allowed bg-[#1E293B]/50 opacity-50',
+                isAtual && 'bg-[#1E293B] border-l-2 border-[#3B82F6] hover:bg-[#283548]',
+                isPassada && 'bg-[#1E293B] hover:bg-[#283548]'
               )}
-              style={isAtual ? { 
-                background: `linear-gradient(135deg, ${corFase}25 0%, ${corFase}10 100%)`,
-                borderColor: corFase,
-                boxShadow: `0 0 20px ${corFase}20`
-              } : undefined}
             >
               <div className="flex items-center gap-4">
-                {/* Brasão com estilos condicionais */}
-                <div 
-                  className={cn(
-                    'transition-all',
-                    isFutura && 'opacity-40 grayscale-[50%]',
-                    isPassada && 'opacity-80'
-                  )}
-                  style={isAtual ? { 
-                    filter: `drop-shadow(0 0 8px ${corFase}50)` 
-                  } : undefined}
-                >
+                {/* Brasão */}
+                <div className={cn(
+                  'transition-opacity',
+                  isFutura && 'opacity-40 grayscale'
+                )}>
                   <CasaBrasao
                     brasaoUrl={item.inteligencia.brasao_url}
                     emoji={item.inteligencia.emoji}
@@ -254,29 +227,22 @@ const MissoesPage = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className={cn(
-                      'font-semibold text-base',
-                      isFutura && 'text-gray-500',
-                      isAtual && 'text-white',
-                      isPassada && 'text-white/90'
+                      'text-[15px] font-medium',
+                      isFutura && 'text-[#64748B]',
+                      (isAtual || isPassada) && 'text-white'
                     )}>
                       {item.inteligencia.nome}
                     </span>
-                    
                     {isAtual && (
-                      <Badge 
-                        className="text-xs px-2 py-0.5 text-white font-medium border-0"
-                        style={{ backgroundColor: corFase }}
-                      >
-                        atual
-                      </Badge>
+                      <span className="text-sm text-[#3B82F6]">· atual</span>
                     )}
                   </div>
                   
                   <p className={cn(
-                    'text-sm mt-0.5',
-                    isFutura && 'text-gray-600',
-                    isAtual && 'text-white/70',
-                    isPassada && 'text-white/50'
+                    'text-[13px] mt-0.5',
+                    isFutura && 'text-[#475569]',
+                    isAtual && 'text-[#94A3B8]',
+                    isPassada && 'text-[#64748B]'
                   )}>
                     {isFutura && 'Fase futura'}
                     {isAtual && item.fase && `Semana ${item.fase.semana_atual || 1} de 4`}
@@ -284,14 +250,14 @@ const MissoesPage = () => {
                   </p>
                 </div>
 
-                {/* Ícones de status */}
+                {/* Status icons */}
                 <div className="flex-shrink-0">
-                  {isFutura && <Lock className="w-5 h-5 text-gray-600" />}
-                  {isAtual && <ChevronRight className="w-5 h-5" style={{ color: corFase }} />}
+                  {isFutura && <Lock className="w-4 h-4 text-[#475569]" />}
+                  {isAtual && <ChevronRight className="w-4 h-4 text-[#3B82F6]" />}
                   {isPassada && (
                     <div className="flex items-center gap-1">
-                      <CheckCircle className="w-5 h-5 text-green-400" />
-                      <ChevronRight className="w-4 h-4 text-white/40" />
+                      <CheckCircle className="w-4 h-4 text-[#22C55E]" />
+                      <ChevronRight className="w-4 h-4 text-[#64748B]" />
                     </div>
                   )}
                 </div>
@@ -304,15 +270,14 @@ const MissoesPage = () => {
       {/* Empty state */}
       {itensOrdenados.length === 0 && (
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-8 rounded-xl border border-white/10 bg-white/5 text-center"
+          className="p-8 rounded-xl bg-[#1E293B] text-center"
         >
-          <Target className="w-12 h-12 mx-auto mb-4 text-white/30" />
-          <h3 className="font-medium text-lg mb-2">
+          <h3 className="font-medium text-[15px] text-white mb-2">
             Nenhuma fase disponível
           </h3>
-          <p className="text-white/60 text-sm">
+          <p className="text-[#64748B] text-[13px]">
             As fases serão liberadas em breve.
           </p>
         </motion.div>
