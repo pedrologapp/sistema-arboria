@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner';
 import { parseDataLocal } from '@/utils/timezone';
 import { addDays, differenceInDays, format } from 'date-fns';
+import MissoesPorCasa from './MissoesPorCasa';
 import { ptBR } from 'date-fns/locale';
 
 interface TabMissoesProps {
@@ -60,6 +61,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
   const [modalAberto, setModalAberto] = useState(false);
   const [semanaAtual, setSemanaAtual] = useState(1);
   const [missaoEditando, setMissaoEditando] = useState<Missao | null>(null);
+  const [semanaMissoesCasa, setSemanaMissoesCasa] = useState<number | null>(null);
   
   // Form state
   const [titulo, setTitulo] = useState('');
@@ -326,13 +328,27 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
 
   // Handler para abrir missões por casa
   const handleAbrirMissoesCasa = (semana: number) => {
-    toast.info(`Missões por casa da semana ${semana} — Em breve!`);
+    setSemanaMissoesCasa(semana);
   };
 
   // Formatar data
   const formatarData = (data: Date) => {
     return format(data, "dd MMM", { locale: ptBR });
   };
+
+  // Se estiver vendo missões por casa, mostrar esse componente
+  if (semanaMissoesCasa !== null) {
+    return (
+      <MissoesPorCasa
+        faseId={faseId}
+        institutionId={institutionId}
+        semana={semanaMissoesCasa}
+        dataInicio={dataInicio}
+        dataFim={dataFim}
+        onVoltar={() => setSemanaMissoesCasa(null)}
+      />
+    );
+  }
 
   if (isLoading) {
     return (
