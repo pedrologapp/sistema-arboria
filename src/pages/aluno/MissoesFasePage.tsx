@@ -156,7 +156,7 @@ const MissoesFasePage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0F172A] px-5 py-6">
+      <div className="min-h-screen bg-[#0A0A0A] px-5 py-6">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-8 h-8 bg-[#1E293B] rounded-full animate-pulse" />
           <div className="h-5 w-32 bg-[#1E293B] rounded animate-pulse" />
@@ -178,7 +178,7 @@ const MissoesFasePage = () => {
 
   if (error || !fase) {
     return (
-      <div className="min-h-screen bg-[#0F172A] px-5 py-6">
+      <div className="min-h-screen bg-[#0A0A0A] px-5 py-6">
         <button
           onClick={() => navigate('/aluno/missoes')}
           className="flex items-center gap-2 text-[#94A3B8] hover:text-white transition-colors mb-8"
@@ -200,7 +200,7 @@ const MissoesFasePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0F172A] px-5 py-6 pb-24">
+    <div className="min-h-screen bg-[#0A0A0A] px-5 py-6 pb-24">
       {/* Back button */}
       <button
         onClick={() => navigate('/aluno/missoes')}

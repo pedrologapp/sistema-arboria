@@ -208,7 +208,7 @@ const MissoesCasaPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0F172A] px-5 py-6">
+      <div className="min-h-screen bg-[#0A0A0A] px-5 py-6">
         <div className="h-5 w-40 bg-[#1E293B] rounded animate-pulse mb-8" />
         <div className="flex items-center gap-4 mb-6">
           <div className="w-10 h-10 bg-[#1E293B] rounded-full animate-pulse" />
@@ -226,7 +226,7 @@ const MissoesCasaPage = () => {
 
   if (error || !fase || !casa) {
     return (
-      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-5">
+      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center p-5">
         <div className="text-center">
           <p className="text-[#64748B] text-sm mb-4">{error || 'Dados não encontrados'}</p>
           <Button variant="outline" onClick={handleVoltar} className="border-[#334155]">
@@ -238,7 +238,7 @@ const MissoesCasaPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0F172A] px-5 py-6 pb-24">
+    <div className="min-h-screen bg-[#0A0A0A] px-5 py-6 pb-24">
       {/* Back button */}
       <button
         onClick={handleVoltar}
