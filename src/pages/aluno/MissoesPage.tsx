@@ -131,7 +131,7 @@ const MissoesPage = () => {
 
   if (contextLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-[#0F172A] px-5 py-6">
+      <div className="min-h-screen bg-[#0A0A0A] px-5 py-6">
         <div className="flex items-center justify-between mb-6">
           <div className="h-6 w-24 bg-[#1E293B] rounded animate-pulse" />
           <div className="h-8 w-8 bg-[#1E293B] rounded-full animate-pulse" />
@@ -148,7 +148,7 @@ const MissoesPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0F172A] px-5 py-6">
+      <div className="min-h-screen bg-[#0A0A0A] px-5 py-6">
         <div className="p-6 rounded-xl border border-red-500/20 bg-[#1E293B] text-center">
           <AlertCircle className="w-8 h-8 mx-auto mb-3 text-red-400" />
           <p className="text-[#94A3B8] text-sm mb-4">{error}</p>
@@ -166,7 +166,7 @@ const MissoesPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0F172A] px-5 py-6 pb-24">
+    <div className="min-h-screen bg-[#0A0A0A] px-5 py-6 pb-24">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold text-white tracking-tight">Missões</h1>

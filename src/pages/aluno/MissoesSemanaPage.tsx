@@ -243,7 +243,7 @@ const MissoesSemanaPage = () => {
 
   if (error || !fase) {
     return (
-      <div className="min-h-screen bg-[#0F172A] flex flex-col items-center justify-center p-5">
+      <div className="min-h-screen bg-[#0A0A0A] flex flex-col items-center justify-center p-5">
         <p className="text-[#64748B] text-sm mb-4">{error || 'Fase não encontrada'}</p>
         <button
           onClick={() => navigate(`/aluno/missoes/fase/${faseId}`)}
@@ -256,7 +256,7 @@ const MissoesSemanaPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0F172A] px-5 py-6 pb-24">
+    <div className="min-h-screen bg-[#0A0A0A] px-5 py-6 pb-24">
       {/* Back button */}
       <button
         onClick={() => navigate(`/aluno/missoes/fase/${faseId}`)}

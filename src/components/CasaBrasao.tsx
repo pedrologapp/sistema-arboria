@@ -11,13 +11,13 @@ interface CasaBrasaoProps {
 
 const sizeMap = {
   mini: 'w-5 h-5',       // 20px - barras de inteligência
-  medium: 'w-8 h-8',     // 32px - cards e seções
+  medium: 'w-14 h-14',   // 56px - headers de fase/semana
   large: 'w-24 h-24',    // 96px - header da casa
 };
 
 const emojiSizeMap = {
   mini: 'text-base',
-  medium: 'text-2xl',
+  medium: 'text-4xl',
   large: 'text-5xl',
 };
 
