@@ -503,7 +503,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
       {/* Modal Missão Geral */}
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-[#1a1a1a] rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="w-full max-w-lg bg-[#1a1a1a] rounded-t-2xl sm:rounded-2xl max-h-[70vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-white/10">
               <h3 className="text-white font-medium">
