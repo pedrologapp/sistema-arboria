@@ -1008,6 +1008,7 @@ export type Database = {
           status: string | null
           texto_resposta: string | null
           updated_at: string | null
+          visualizada_pelo_aluno: boolean | null
         }
         Insert: {
           aluno_id: string
@@ -1025,6 +1026,7 @@ export type Database = {
           status?: string | null
           texto_resposta?: string | null
           updated_at?: string | null
+          visualizada_pelo_aluno?: boolean | null
         }
         Update: {
           aluno_id?: string
@@ -1042,6 +1044,7 @@ export type Database = {
           status?: string | null
           texto_resposta?: string | null
           updated_at?: string | null
+          visualizada_pelo_aluno?: boolean | null
         }
         Relationships: [
           {

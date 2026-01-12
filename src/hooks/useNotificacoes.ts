@@ -4,12 +4,25 @@ import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
 import { useAuth } from '@/contexts/AuthContext';
 
+export interface NotificacoesPorFase {
+  faseId: string;
+  pendentes: number;
+  aprovadas: number;
+}
+
+export interface NotificacoesPorSemana {
+  faseId: string;
+  semana: number;
+  pendentes: number;
+  aprovadas: number;
+}
+
 export const useNotificacoes = () => {
   const { user } = useAuth();
   const { profile, casa } = useStudent();
   const queryClient = useQueryClient();
 
-  // 1. Contar missões pendentes (não entregues, dentro do prazo)
+  // 1. Contar missões pendentes (não entregues ou reprovadas, dentro do prazo)
   const { data: missoesPendentes = 0 } = useQuery({
     queryKey: ['count-missoes-pendentes', user?.id],
     queryFn: async () => {
@@ -21,9 +34,9 @@ export const useNotificacoes = () => {
       
       if (error || !data) return 0;
       
-      // Filtrar: não entregou E não está atrasada
+      // Filtrar: não entregou E não está atrasada OU status = 'refazer'
       const pendentes = data.filter((m: any) => 
-        !m.ja_entregou && !m.atrasada
+        (!m.ja_entregou && !m.atrasada) || m.status_entrega === 'refazer'
       );
       
       return pendentes.length;
@@ -33,7 +46,157 @@ export const useNotificacoes = () => {
     refetchInterval: 120000,
   });
 
-  // 2. Contar mensagens não lidas nos canais
+  // 2. Contar aprovadas não visualizadas
+  const { data: aprovadasNaoVistas = 0 } = useQuery({
+    queryKey: ['count-aprovadas-nao-vistas', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return 0;
+      
+      const { count, error } = await supabase
+        .from('entregas')
+        .select('*', { count: 'exact', head: true })
+        .eq('aluno_id', user.id)
+        .eq('status', 'aprovada')
+        .eq('visualizada_pelo_aluno', false);
+      
+      if (error) return 0;
+      return count || 0;
+    },
+    enabled: !!user?.id,
+    staleTime: 30000,
+    refetchInterval: 120000,
+  });
+
+  // 3. Notificações detalhadas por fase
+  const { data: notificacoesPorFase = [] } = useQuery<NotificacoesPorFase[]>({
+    queryKey: ['notificacoes-por-fase', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      
+      // Buscar missões do aluno
+      const { data: missoes, error: missaoError } = await supabase.rpc('get_missoes_do_aluno', {
+        p_aluno_id: user.id,
+      });
+      
+      if (missaoError || !missoes) return [];
+      
+      // Buscar entregas aprovadas não vistas
+      const { data: entregasAprovadas } = await supabase
+        .from('entregas')
+        .select('missao_id')
+        .eq('aluno_id', user.id)
+        .eq('status', 'aprovada')
+        .eq('visualizada_pelo_aluno', false);
+      
+      // Buscar info de fase de cada missão
+      const missaoIds = missoes.map((m: any) => m.id);
+      if (missaoIds.length === 0) return [];
+      
+      const { data: missaoFases } = await supabase
+        .from('missoes')
+        .select('id, fase_id')
+        .in('id', missaoIds);
+      
+      // Agrupar por fase_id
+      const faseMap = new Map<string, NotificacoesPorFase>();
+      
+      for (const m of missoes) {
+        const mf = missaoFases?.find(mf => mf.id === m.id);
+        if (!mf?.fase_id) continue;
+        
+        if (!faseMap.has(mf.fase_id)) {
+          faseMap.set(mf.fase_id, { faseId: mf.fase_id, pendentes: 0, aprovadas: 0 });
+        }
+        
+        const entry = faseMap.get(mf.fase_id)!;
+        
+        // Pendente: não entregou ou precisa refazer
+        if ((!m.ja_entregou && !m.atrasada) || m.status_entrega === 'refazer') {
+          entry.pendentes++;
+        }
+        
+        // Aprovada não vista
+        if (entregasAprovadas?.some(e => e.missao_id === m.id)) {
+          entry.aprovadas++;
+        }
+      }
+      
+      return Array.from(faseMap.values());
+    },
+    enabled: !!user?.id,
+    staleTime: 60000,
+    refetchInterval: 120000,
+  });
+
+  // 4. Notificações detalhadas por semana
+  const { data: notificacoesPorSemana = [] } = useQuery<NotificacoesPorSemana[]>({
+    queryKey: ['notificacoes-por-semana', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      
+      // Buscar missões do aluno
+      const { data: missoes, error: missaoError } = await supabase.rpc('get_missoes_do_aluno', {
+        p_aluno_id: user.id,
+      });
+      
+      if (missaoError || !missoes) return [];
+      
+      // Buscar entregas aprovadas não vistas
+      const { data: entregasAprovadas } = await supabase
+        .from('entregas')
+        .select('missao_id')
+        .eq('aluno_id', user.id)
+        .eq('status', 'aprovada')
+        .eq('visualizada_pelo_aluno', false);
+      
+      // Buscar info de fase e semana de cada missão
+      const missaoIds = missoes.map((m: any) => m.id);
+      if (missaoIds.length === 0) return [];
+      
+      const { data: missaoInfo } = await supabase
+        .from('missoes')
+        .select('id, fase_id, semana')
+        .in('id', missaoIds);
+      
+      // Agrupar por fase_id + semana
+      const semanaMap = new Map<string, NotificacoesPorSemana>();
+      
+      for (const m of missoes) {
+        const mi = missaoInfo?.find(mi => mi.id === m.id);
+        if (!mi?.fase_id || mi.semana == null) continue;
+        
+        const key = `${mi.fase_id}_${mi.semana}`;
+        
+        if (!semanaMap.has(key)) {
+          semanaMap.set(key, { 
+            faseId: mi.fase_id, 
+            semana: mi.semana, 
+            pendentes: 0, 
+            aprovadas: 0 
+          });
+        }
+        
+        const entry = semanaMap.get(key)!;
+        
+        // Pendente: não entregou ou precisa refazer
+        if ((!m.ja_entregou && !m.atrasada) || m.status_entrega === 'refazer') {
+          entry.pendentes++;
+        }
+        
+        // Aprovada não vista
+        if (entregasAprovadas?.some(e => e.missao_id === m.id)) {
+          entry.aprovadas++;
+        }
+      }
+      
+      return Array.from(semanaMap.values());
+    },
+    enabled: !!user?.id,
+    staleTime: 60000,
+    refetchInterval: 120000,
+  });
+
+  // 5. Contar mensagens não lidas nos canais
   const { data: canaisNaoLidos = 0 } = useQuery({
     queryKey: ['count-canais-nao-lidos', profile?.id, casa?.id],
     queryFn: async () => {
@@ -75,7 +238,7 @@ export const useNotificacoes = () => {
     staleTime: 30000,
   });
 
-  // 3. Contar DMs não lidas
+  // 6. Contar DMs não lidas
   const { data: dmsNaoLidas = 0 } = useQuery({
     queryKey: ['count-dms-nao-lidas', profile?.id],
     queryFn: async () => {
@@ -109,7 +272,7 @@ export const useNotificacoes = () => {
     staleTime: 30000,
   });
 
-  // Real-time: escutar novas mensagens
+  // Real-time: escutar novas mensagens e entregas
   useEffect(() => {
     if (!profile?.id) return;
     
@@ -133,6 +296,17 @@ export const useNotificacoes = () => {
           queryClient.invalidateQueries({ queryKey: ['count-dms-nao-lidas'] });
         }
       })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'entregas'
+      }, () => {
+        // Invalidar caches de notificações de missões quando entregas são atualizadas
+        queryClient.invalidateQueries({ queryKey: ['count-aprovadas-nao-vistas'] });
+        queryClient.invalidateQueries({ queryKey: ['notificacoes-por-fase'] });
+        queryClient.invalidateQueries({ queryKey: ['notificacoes-por-semana'] });
+        queryClient.invalidateQueries({ queryKey: ['count-missoes-pendentes'] });
+      })
       .subscribe();
 
     return () => {
@@ -140,8 +314,24 @@ export const useNotificacoes = () => {
     };
   }, [profile?.id, queryClient]);
 
+  // Helpers para buscar notificações específicas
+  const getNotificacoesFase = (faseId: string): NotificacoesPorFase | null => {
+    return notificacoesPorFase.find(n => n.faseId === faseId) || null;
+  };
+
+  const getNotificacoesSemana = (faseId: string, semana: number): NotificacoesPorSemana | null => {
+    return notificacoesPorSemana.find(n => n.faseId === faseId && n.semana === semana) || null;
+  };
+
   return {
     missoesPendentes,
+    aprovadasNaoVistas,
     mensagensNaoLidas: canaisNaoLidos + dmsNaoLidas,
+    notificacoesPorFase,
+    notificacoesPorSemana,
+    getNotificacoesFase,
+    getNotificacoesSemana,
+    // Total de notificações de missões para o badge na nav
+    totalMissoesNotificacoes: missoesPendentes + aprovadasNaoVistas,
   };
 };

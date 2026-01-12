@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { toast } from 'sonner';
 import { clearAppBadge } from '@/hooks/useAppBadge';
+import { useNotificacoes } from '@/hooks/useNotificacoes';
 
 interface Inteligencia {
   id: number;
@@ -41,6 +42,7 @@ interface ItemFase {
 const MissoesPage = () => {
   const navigate = useNavigate();
   const { profile, isLoading: contextLoading } = useStudent();
+  const { getNotificacoesFase } = useNotificacoes();
   const [itens, setItens] = useState<ItemFase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -193,6 +195,11 @@ const MissoesPage = () => {
           const isFutura = item.status === 'futura';
           const isAtual = item.status === 'atual';
           const isPassada = item.status === 'passada';
+          
+          // Buscar notificações para esta fase
+          const notificacoes = item.fase ? getNotificacoesFase(item.fase.id) : null;
+          const pendentes = notificacoes?.pendentes || 0;
+          const aprovadas = notificacoes?.aprovadas || 0;
 
           return (
             <motion.button
@@ -249,6 +256,25 @@ const MissoesPage = () => {
                     {isPassada && 'Concluída'}
                   </p>
                 </div>
+
+                {/* Badges de notificação */}
+                {!isFutura && (pendentes > 0 || aprovadas > 0) && (
+                  <div className="flex items-center gap-1.5">
+                    {/* Badge vermelho - pendentes */}
+                    {pendentes > 0 && (
+                      <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-[#EF4444] text-white text-[11px] font-semibold px-1.5">
+                        {pendentes > 99 ? '99+' : pendentes}
+                      </span>
+                    )}
+                    
+                    {/* Badge verde - aprovadas não vistas */}
+                    {aprovadas > 0 && (
+                      <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-[#22C55E] text-white text-[11px] font-semibold px-1.5">
+                        {aprovadas > 99 ? '99+' : aprovadas}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {/* Status icons */}
                 <div className="flex-shrink-0">

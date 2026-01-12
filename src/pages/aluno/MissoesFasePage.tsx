@@ -7,6 +7,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CasaBrasao } from '@/components/CasaBrasao';
+import { useNotificacoes } from '@/hooks/useNotificacoes';
 
 interface Inteligencia {
   id: number;
@@ -35,6 +36,7 @@ const MissoesFasePage = () => {
   const { faseId } = useParams();
   const navigate = useNavigate();
   const { profile } = useStudent();
+  const { getNotificacoesSemana } = useNotificacoes();
 
   const [fase, setFase] = useState<FaseData | null>(null);
   const [semanas, setSemanas] = useState<SemanaInfo[]>([]);
@@ -240,6 +242,11 @@ const MissoesFasePage = () => {
           const isFutura = semana.status === 'futura';
           const isPassada = semana.status === 'passada';
           const completouTodas = semana.concluidas === semana.totalMissoes && semana.totalMissoes > 0;
+          
+          // Buscar notificações para esta semana
+          const notificacoes = faseId ? getNotificacoesSemana(faseId, semana.numero) : null;
+          const pendentes = notificacoes?.pendentes || 0;
+          const aprovadas = notificacoes?.aprovadas || 0;
 
           return (
             <motion.button
@@ -285,6 +292,25 @@ const MissoesFasePage = () => {
                     {(isAtual || isPassada) && semana.totalMissoes === 0 && 'Nenhuma missão ainda'}
                   </p>
                 </div>
+
+                {/* Badges de notificação */}
+                {!isFutura && (pendentes > 0 || aprovadas > 0) && (
+                  <div className="flex items-center gap-1.5 mr-2">
+                    {/* Badge vermelho - pendentes */}
+                    {pendentes > 0 && (
+                      <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-[#EF4444] text-white text-[11px] font-semibold px-1.5">
+                        {pendentes > 99 ? '99+' : pendentes}
+                      </span>
+                    )}
+                    
+                    {/* Badge verde - aprovadas não vistas */}
+                    {aprovadas > 0 && (
+                      <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-[#22C55E] text-white text-[11px] font-semibold px-1.5">
+                        {aprovadas > 99 ? '99+' : aprovadas}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {/* Status icon */}
                 <div className="flex-shrink-0">
