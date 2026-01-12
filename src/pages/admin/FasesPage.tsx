@@ -1,15 +1,29 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Plus, ChevronRight, Lock, CheckCircle, Calendar } from 'lucide-react';
-import { format } from 'date-fns';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, ChevronRight, Lock, CheckCircle, Calendar, Loader2 } from 'lucide-react';
+import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+
+// Ordem pedagógica das fases do Projeto Arboria
+const FASES_CONFIG = [
+  { numero: 1, inteligencia_id: 8, nome: 'Intrapessoal' },
+  { numero: 2, inteligencia_id: 7, nome: 'Interpessoal' },
+  { numero: 3, inteligencia_id: 6, nome: 'Naturalista' },
+  { numero: 4, inteligencia_id: 2, nome: 'Lógico-Matemática' },
+  { numero: 5, inteligencia_id: 1, nome: 'Linguística' },
+  { numero: 6, inteligencia_id: 3, nome: 'Espacial' },
+  { numero: 7, inteligencia_id: 5, nome: 'Corporal-Cinestésica' },
+  { numero: 8, inteligencia_id: 4, nome: 'Musical' },
+];
 
 type StatusFase = 'bloqueada' | 'proxima' | 'em_andamento' | 'concluida';
 
@@ -36,9 +50,12 @@ const TOTAL_MISSOES_ESPERADAS = 36;
 
 const FasesPage = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const currentYear = new Date().getFullYear();
-  const [anoSelecionado, setAnoSelecionado] = useState<string>(currentYear.toString());
+  const [anoSelecionado, setAnoSelecionado] = useState<string>("2026");
   const [institutionId, setInstitutionId] = useState<string | null>(null);
+  const [showCriarFasesModal, setShowCriarFasesModal] = useState(false);
+  const [criandoFases, setCriandoFases] = useState(false);
 
   // Buscar institution (para admin)
   useEffect(() => {
@@ -193,6 +210,59 @@ const FasesPage = () => {
     }
   };
 
+  // Calcular datas para preview no modal
+  const calcularDatasPreview = (ano: number) => {
+    const dataBase = new Date(ano, 1, 16); // 16 de fevereiro
+    return FASES_CONFIG.map((config, index) => {
+      const dataInicio = addDays(dataBase, index * 28);
+      const dataFim = addDays(dataInicio, 27);
+      return {
+        nome: config.nome,
+        periodo: `${format(dataInicio, 'dd/MM')} - ${format(dataFim, 'dd/MM')}`
+      };
+    });
+  };
+
+  // Função para criar fases para um ano
+  const criarFasesParaAno = async (ano: number) => {
+    if (!institutionId) return;
+    
+    setCriandoFases(true);
+    try {
+      const dataBase = new Date(ano, 1, 16); // 16 de fevereiro
+      
+      const fasesParaInserir = FASES_CONFIG.map((config, index) => {
+        const dataInicio = addDays(dataBase, index * 28);
+        const dataFim = addDays(dataInicio, 27);
+        
+        return {
+          institution_id: institutionId,
+          inteligencia_id: config.inteligencia_id,
+          ano_letivo: ano,
+          numero_fase: config.numero,
+          data_inicio: format(dataInicio, 'yyyy-MM-dd'),
+          data_fim: format(dataFim, 'yyyy-MM-dd'),
+          ativo: index === 0, // Primeira fase ativa
+        };
+      });
+
+      const { error } = await supabase
+        .from('fases')
+        .insert(fasesParaInserir);
+
+      if (error) throw error;
+      
+      toast.success(`8 fases criadas para ${ano}`);
+      setShowCriarFasesModal(false);
+      queryClient.invalidateQueries({ queryKey: ['admin-fases'] });
+    } catch (error) {
+      console.error('Erro ao criar fases:', error);
+      toast.error('Erro ao criar fases');
+    } finally {
+      setCriandoFases(false);
+    }
+  };
+
   // Handler de clique no card
   const handleFaseClick = (fase: FaseData, status: StatusFase) => {
     if (status === 'bloqueada') {
@@ -204,6 +274,7 @@ const FasesPage = () => {
 
   // Anos disponíveis para seleção
   const anosDisponiveis = [currentYear - 1, currentYear, currentYear + 1];
+  const temFasesNoAno = fases && fases.length > 0;
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] px-4 py-6 pb-24">
@@ -212,8 +283,14 @@ const FasesPage = () => {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-semibold text-white">Fases</h1>
           <button 
-            className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:bg-white/10 hover:text-white transition-colors"
-            onClick={() => toast.info('Funcionalidade em desenvolvimento')}
+            className={cn(
+              "w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center transition-colors",
+              temFasesNoAno 
+                ? "text-white/30 cursor-not-allowed" 
+                : "text-white/60 hover:bg-white/10 hover:text-white"
+            )}
+            onClick={() => !temFasesNoAno && setShowCriarFasesModal(true)}
+            disabled={temFasesNoAno}
           >
             <Plus className="w-5 h-5" />
           </button>
@@ -356,13 +433,76 @@ const FasesPage = () => {
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
                 <Calendar className="w-8 h-8 text-white/30" />
               </div>
-              <p className="text-white/60 text-sm">
+              <p className="text-white/60 text-sm mb-4">
                 Nenhuma fase encontrada para {anoSelecionado}
               </p>
+              <Button
+                variant="outline"
+                onClick={() => setShowCriarFasesModal(true)}
+                className="border-white/20 text-white hover:bg-white/10"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Criar fases para {anoSelecionado}
+              </Button>
             </div>
           )}
         </div>
       </div>
+
+      {/* Modal de criação de fases */}
+      <Dialog open={showCriarFasesModal} onOpenChange={setShowCriarFasesModal}>
+        <DialogContent className="bg-[#1E293B] border-white/10 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle>Criar fases para {anoSelecionado}</DialogTitle>
+            <DialogDescription className="text-white/60">
+              Serão criadas as 8 fases do Projeto Arboria seguindo a ordem pedagógica.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <p className="text-sm text-white/80 mb-3">Ordem das fases:</p>
+            <div className="space-y-1.5">
+              {calcularDatasPreview(parseInt(anoSelecionado)).map((fase, index) => (
+                <div key={index} className="flex items-center justify-between text-sm">
+                  <span className="text-white/70">
+                    {index + 1}. {fase.nome}
+                  </span>
+                  <span className="text-white/50 text-xs">
+                    {fase.periodo}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-white/50 mt-4">
+              As datas podem ser editadas depois.
+            </p>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setShowCriarFasesModal(false)}
+              className="text-white/60 hover:text-white hover:bg-white/10"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => criarFasesParaAno(parseInt(anoSelecionado))}
+              disabled={criandoFases}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {criandoFases ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Criando...
+                </>
+              ) : (
+                'Criar fases'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
