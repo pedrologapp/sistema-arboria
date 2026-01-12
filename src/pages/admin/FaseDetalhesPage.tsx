@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { agoraBrasil, parseDataLocal, formatarData } from '@/utils/timezone';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import TabConteudo from '@/components/admin/TabConteudo';
+import TabMissoes from '@/components/admin/TabMissoes';
 
 type TabType = 'periodo' | 'conteudo' | 'missoes';
 type StatusType = 'bloqueada' | 'proxima' | 'em_andamento' | 'concluida';
@@ -509,14 +510,13 @@ const FaseDetalhesPage = () => {
           />
         )}
 
-        {tabAtiva === 'missoes' && (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <Target className="w-12 h-12 text-white/20 mb-4" />
-            <h3 className="text-white font-medium mb-2">Tab Missões</h3>
-            <p className="text-white/40 text-sm">
-              Será implementada no próximo prompt
-            </p>
-          </div>
+        {tabAtiva === 'missoes' && fase && (
+          <TabMissoes 
+            faseId={fase.id}
+            institutionId={fase.institution_id}
+            dataInicio={dataInicio}
+            dataFim={dataFim}
+          />
         )}
       </div>
 
