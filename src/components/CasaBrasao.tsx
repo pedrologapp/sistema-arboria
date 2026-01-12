@@ -5,18 +5,20 @@ interface CasaBrasaoProps {
   brasaoUrl?: string | null;
   emoji?: string | null;
   nome?: string;
-  size: 'mini' | 'medium' | 'large';
+  size: 'mini' | 'small' | 'medium' | 'large';
   className?: string;
 }
 
 const sizeMap = {
   mini: 'w-5 h-5',       // 20px - barras de inteligência
+  small: 'w-10 h-10',    // 40px - lista de fases
   medium: 'w-14 h-14',   // 56px - headers de fase/semana
   large: 'w-24 h-24',    // 96px - header da casa
 };
 
 const emojiSizeMap = {
   mini: 'text-base',
+  small: 'text-2xl',
   medium: 'text-4xl',
   large: 'text-5xl',
 };
