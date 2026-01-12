@@ -26,6 +26,7 @@ import NotFound from "./pages/NotFound";
 // Aluno pages
 import HomePage from "./pages/aluno/HomePage";
 import MissoesPage from "./pages/aluno/MissoesPage";
+import MissoesFasePage from "./pages/aluno/MissoesFasePage";
 import MissaoDetalhePage from "./pages/aluno/MissaoDetalhePage";
 import CasaPage from "./pages/aluno/CasaPage";
 import ChatPage from "./pages/aluno/ChatPage";
@@ -348,6 +349,13 @@ const App = () => (
               <StudentProtectedRoute>
                 <StudentLayout>
                   <MissoesPage />
+                </StudentLayout>
+              </StudentProtectedRoute>
+            } />
+            <Route path="/aluno/missoes/fase/:faseId" element={
+              <StudentProtectedRoute>
+                <StudentLayout>
+                  <MissoesFasePage />
                 </StudentLayout>
               </StudentProtectedRoute>
             } />
