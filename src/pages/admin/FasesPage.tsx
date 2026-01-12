@@ -130,7 +130,13 @@ const FasesPage = () => {
   const { data: fases, isLoading: isLoadingFases } = useQuery({
     queryKey: ['fases-admin', profile?.institution_id, anoLetivo],
     queryFn: async () => {
-      if (!profile?.institution_id) return [];
+      if (!profile?.institution_id) {
+        console.log('⚠️ FasesPage: institution_id não definido no perfil');
+        return [];
+      }
+      
+      console.log('🔍 Buscando fases:', { institution_id: profile.institution_id, ano_letivo: anoLetivo });
+      
       const { data, error } = await supabase
         .from('fases')
         .select('id, numero_fase, data_inicio, data_fim, ativo, semana_atual, inteligencia_id')
@@ -138,7 +144,12 @@ const FasesPage = () => {
         .eq('ano_letivo', anoLetivo)
         .order('numero_fase');
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao buscar fases:', error);
+        throw error;
+      }
+      
+      console.log('✅ Fases encontradas:', data?.length);
       return (data as FaseDB[]) || [];
     },
     enabled: !!profile?.institution_id,
@@ -262,6 +273,24 @@ const FasesPage = () => {
   const anosDisponiveis = [2025, 2026, 2027];
 
   const isLoading = isLoadingInteligencias || isLoadingFases || !profile;
+
+  // Tratamento quando institution_id não está configurado
+  if (profile && !profile.institution_id) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0A] px-4 py-6">
+        <div className="max-w-lg mx-auto text-center py-12">
+          <AlertCircle className="w-12 h-12 mx-auto text-amber-400 mb-4" />
+          <h2 className="text-white text-lg font-medium mb-2">
+            Instituição não configurada
+          </h2>
+          <p className="text-white/50 text-sm">
+            Seu perfil de administrador não está associado a nenhuma instituição.
+            Entre em contato com o suporte para corrigir.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
