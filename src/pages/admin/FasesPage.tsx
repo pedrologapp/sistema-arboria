@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronRight, Calendar, AlertCircle } from 'lucide-react';
+import { ChevronRight, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-type FaseStatus = 'bloqueada' | 'proxima' | 'em_andamento' | 'concluida';
+type FaseStatus = 'nao_configurada' | 'bloqueada' | 'proxima' | 'em_andamento' | 'concluida';
 
 interface Inteligencia {
   id: number;
@@ -36,45 +36,57 @@ interface FaseDB {
   ativo: boolean | null;
   semana_atual: number | null;
   inteligencia_id: number;
-  inteligencias: Inteligencia;
 }
 
 interface FaseComStatus {
   id: string;
+  inteligenciaId: number;
   numero_fase: number;
-  data_inicio: string;
-  data_fim: string;
+  data_inicio: string | null;
+  data_fim: string | null;
   ativo: boolean | null;
   semana_atual: number | null;
   inteligencia: Inteligencia;
   status: FaseStatus;
   missoesCount: number;
+  configurada: boolean;
 }
 
 const TOTAL_MISSOES_ESPERADO = 36;
 
-const statusConfig: Record<FaseStatus, { label: string; text: string; bg: string; border: string }> = {
-  em_andamento: {
-    label: 'Em andamento',
-    text: 'text-green-400',
-    bg: 'bg-green-500/10',
-    border: 'border-green-500/30',
-  },
-  proxima: {
-    label: 'Próxima',
-    text: 'text-blue-400',
-    bg: 'bg-blue-500/10',
-    border: 'border-blue-500/20',
-  },
-  concluida: {
-    label: 'Concluída',
-    text: 'text-white/40',
+const statusConfig: Record<FaseStatus, { label: string; sublabel: string | null; text: string; bg: string; border: string }> = {
+  nao_configurada: {
+    label: 'Não configurada',
+    sublabel: 'Clique para configurar',
+    text: 'text-white/30',
     bg: 'bg-white/5',
     border: 'border-white/10',
   },
   bloqueada: {
     label: 'Bloqueada',
-    text: 'text-white/30',
+    sublabel: null,
+    text: 'text-white/40',
+    bg: 'bg-white/5',
+    border: 'border-white/10',
+  },
+  proxima: {
+    label: 'Próxima',
+    sublabel: null,
+    text: 'text-blue-400',
+    bg: 'bg-blue-500/10',
+    border: 'border-blue-500/20',
+  },
+  em_andamento: {
+    label: 'Em andamento',
+    sublabel: null,
+    text: 'text-green-400',
+    bg: 'bg-green-500/10',
+    border: 'border-green-500/30',
+  },
+  concluida: {
+    label: 'Concluída',
+    sublabel: null,
+    text: 'text-white/50',
     bg: 'bg-white/5',
     border: 'border-white/10',
   },
@@ -101,31 +113,33 @@ const FasesPage = () => {
     enabled: !!user?.id,
   });
 
-  // Buscar fases do ano com inteligência
+  // Buscar TODAS as 8 inteligências (fixas)
+  const { data: inteligencias, isLoading: isLoadingInteligencias } = useQuery({
+    queryKey: ['inteligencias'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('inteligencias')
+        .select('id, nome, codigo, cor_hex, emoji, brasao_url')
+        .order('id');
+      if (error) throw error;
+      return data as Inteligencia[];
+    },
+  });
+
+  // Buscar fases configuradas do ano (pode retornar 0, algumas ou todas)
   const { data: fases, isLoading: isLoadingFases } = useQuery({
     queryKey: ['fases-admin', profile?.institution_id, anoLetivo],
     queryFn: async () => {
       if (!profile?.institution_id) return [];
       const { data, error } = await supabase
         .from('fases')
-        .select(`
-          id,
-          numero_fase,
-          data_inicio,
-          data_fim,
-          ativo,
-          semana_atual,
-          inteligencia_id,
-          inteligencias (
-            id, nome, codigo, cor_hex, emoji, brasao_url
-          )
-        `)
+        .select('id, numero_fase, data_inicio, data_fim, ativo, semana_atual, inteligencia_id')
         .eq('institution_id', profile.institution_id)
         .eq('ano_letivo', anoLetivo)
         .order('numero_fase');
 
       if (error) throw error;
-      return (data as unknown as FaseDB[]) || [];
+      return (data as FaseDB[]) || [];
     },
     enabled: !!profile?.institution_id,
   });
@@ -188,21 +202,46 @@ const FasesPage = () => {
     return 'bloqueada';
   };
 
-  // Processar fases com status e contagem
-  const fasesComStatus: FaseComStatus[] = (fases || []).map(fase => ({
-    id: fase.id,
-    numero_fase: fase.numero_fase,
-    data_inicio: fase.data_inicio,
-    data_fim: fase.data_fim,
-    ativo: fase.ativo,
-    semana_atual: fase.semana_atual,
-    inteligencia: fase.inteligencias,
-    status: getStatusFase(fase, fases || []),
-    missoesCount: missoesPorFase?.[fase.id] || 0,
-  }));
+  // SEMPRE mapear as 8 inteligências, verificando se existem fases no banco
+  const fasesCompletas: FaseComStatus[] = (inteligencias || []).map((intel, index) => {
+    // Procurar se existe fase configurada no banco para esta inteligência
+    const faseDB = fases?.find(f => f.inteligencia_id === intel.id);
 
-  // Encontrar fase atual (em andamento)
-  const faseAtual = fasesComStatus.find(f => f.status === 'em_andamento');
+    if (faseDB) {
+      // Fase existe no banco - usar dados reais
+      return {
+        id: faseDB.id,
+        inteligenciaId: intel.id,
+        numero_fase: faseDB.numero_fase,
+        data_inicio: faseDB.data_inicio,
+        data_fim: faseDB.data_fim,
+        ativo: faseDB.ativo,
+        semana_atual: faseDB.semana_atual,
+        inteligencia: intel,
+        status: getStatusFase(faseDB, fases || []),
+        missoesCount: missoesPorFase?.[faseDB.id] || 0,
+        configurada: true,
+      };
+    } else {
+      // Fase NÃO existe no banco - mostrar como não configurada
+      return {
+        id: `temp-${intel.id}`,
+        inteligenciaId: intel.id,
+        numero_fase: index + 1,
+        data_inicio: null,
+        data_fim: null,
+        ativo: null,
+        semana_atual: null,
+        inteligencia: intel,
+        status: 'nao_configurada' as FaseStatus,
+        missoesCount: 0,
+        configurada: false,
+      };
+    }
+  });
+
+  // Encontrar fase atual (em andamento e configurada)
+  const faseAtual = fasesCompletas.find(f => f.status === 'em_andamento' && f.configurada);
 
   // Formatar período
   const formatPeriodo = (dataInicio: string, dataFim: string) => {
@@ -222,7 +261,7 @@ const FasesPage = () => {
   // Anos disponíveis para seleção
   const anosDisponiveis = [2025, 2026, 2027];
 
-  const isLoading = isLoadingFases || !profile;
+  const isLoading = isLoadingInteligencias || isLoadingFases || !profile;
 
   if (isLoading) {
     return (
@@ -303,9 +342,11 @@ const FasesPage = () => {
                     <span className="text-white/20">•</span>
                     <span>Semana {faseAtual.semana_atual || 1} de 4</span>
                   </div>
-                  <span className="text-xs text-white/40 mt-1 block">
-                    {formatPeriodo(faseAtual.data_inicio, faseAtual.data_fim)}
-                  </span>
+                  {faseAtual.data_inicio && faseAtual.data_fim && (
+                    <span className="text-xs text-white/40 mt-1 block">
+                      {formatPeriodo(faseAtual.data_inicio, faseAtual.data_fim)}
+                    </span>
+                  )}
                 </div>
                 <ChevronRight className="w-5 h-5 text-green-400/50" />
               </div>
@@ -313,72 +354,87 @@ const FasesPage = () => {
           </div>
         )}
 
-        {/* Lista de Todas as Fases */}
+        {/* Lista de Todas as Fases (SEMPRE 8 inteligências) */}
         <div>
           <span className="text-xs text-white/40 uppercase tracking-wider block mb-3">
             Todas as Fases
           </span>
 
-          {fasesComStatus.length === 0 ? (
-            <div className="text-center py-12">
-              <Calendar className="w-12 h-12 mx-auto text-white/20 mb-4" />
-              <p className="text-white/40">Nenhuma fase configurada para {anoLetivo}</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {fasesComStatus.map((fase) => {
-                const config = statusConfig[fase.status];
-                const temAlerta = fase.missoesCount < TOTAL_MISSOES_ESPERADO && 
-                                 (fase.status === 'em_andamento' || fase.status === 'proxima');
+          <div className="space-y-3">
+            {fasesCompletas.map((fase) => {
+              const config = statusConfig[fase.status];
+              const temAlerta = fase.configurada &&
+                fase.missoesCount < TOTAL_MISSOES_ESPERADO && 
+                (fase.status === 'em_andamento' || fase.status === 'proxima');
 
-                return (
-                  <button
-                    key={fase.id}
-                    onClick={() => navigate(`/admin/fases/${fase.id}`)}
-                    className={cn(
-                      "w-full p-4 rounded-xl border text-left transition-colors",
-                      config.bg,
-                      config.border,
-                      "hover:bg-white/5",
-                      fase.status === 'em_andamento' && "border-l-4 border-l-green-500"
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {/* Número da fase */}
-                        <span className="w-6 h-6 rounded-full bg-white/10 text-white/60 text-xs flex items-center justify-center font-medium">
-                          {fase.numero_fase}
-                        </span>
+              return (
+                <button
+                  key={fase.id}
+                  onClick={() => {
+                    if (fase.configurada) {
+                      navigate(`/admin/fases/${fase.id}`);
+                    } else {
+                      navigate(`/admin/fases/nova`, {
+                        state: { inteligencia: fase.inteligencia, anoLetivo }
+                      });
+                    }
+                  }}
+                  className={cn(
+                    "w-full p-4 rounded-xl border text-left transition-colors",
+                    config.bg,
+                    config.border,
+                    "hover:bg-white/5",
+                    fase.status === 'em_andamento' && "border-l-4 border-l-green-500"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {/* Brasão */}
+                      <CasaBrasao
+                        brasaoUrl={fase.inteligencia.brasao_url}
+                        emoji={fase.inteligencia.emoji}
+                        nome={fase.inteligencia.nome}
+                        size="medium"
+                      />
 
-                        {/* Brasão */}
-                        <CasaBrasao
-                          brasaoUrl={fase.inteligencia.brasao_url}
-                          emoji={fase.inteligencia.emoji}
-                          nome={fase.inteligencia.nome}
-                          size="medium"
-                        />
+                      {/* Info */}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={cn(
+                            "font-medium",
+                            fase.status === 'em_andamento' ? 'text-white' : 
+                            fase.status === 'nao_configurada' ? 'text-white/60' : config.text
+                          )}>
+                            {fase.inteligencia.nome}
+                          </span>
+                          {temAlerta && (
+                            <AlertCircle className="w-4 h-4 text-amber-400" />
+                          )}
+                        </div>
 
-                        {/* Info */}
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className={cn("font-medium", fase.status === 'em_andamento' ? 'text-white' : config.text)}>
-                              {fase.inteligencia.nome}
-                            </span>
-                            {temAlerta && (
-                              <AlertCircle className="w-4 h-4 text-amber-400" />
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs mt-0.5">
-                            <span className={config.text}>
-                              {config.label}
-                            </span>
-                            <span className="text-white/20">•</span>
-                            <span className="text-white/40">
-                              {formatPeriodo(fase.data_inicio, fase.data_fim)}
-                            </span>
-                          </div>
+                        <div className="flex items-center gap-2 text-xs mt-0.5">
+                          <span className={config.text}>
+                            {config.label}
+                          </span>
+                          {fase.configurada && fase.data_inicio && fase.data_fim && (
+                            <>
+                              <span className="text-white/20">•</span>
+                              <span className="text-white/40">
+                                {formatPeriodo(fase.data_inicio, fase.data_fim)}
+                              </span>
+                            </>
+                          )}
+                        </div>
 
-                          {/* Contador de missões e barra de progresso */}
+                        {/* Sublabel para fases não configuradas */}
+                        {config.sublabel && (
+                          <span className="text-white/20 text-xs block mt-0.5">
+                            {config.sublabel}
+                          </span>
+                        )}
+
+                        {/* Contador de missões e barra de progresso (só se configurada) */}
+                        {fase.configurada && (
                           <div className="mt-2">
                             <span className="text-xs text-white/30">
                               {fase.missoesCount}/{TOTAL_MISSOES_ESPERADO} missões
@@ -393,17 +449,17 @@ const FasesPage = () => {
                               />
                             </div>
                           </div>
-                        </div>
+                        )}
                       </div>
-
-                      {/* Seta */}
-                      <ChevronRight className="w-5 h-5 text-white/20" />
                     </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+
+                    {/* Seta */}
+                    <ChevronRight className="w-5 h-5 text-white/20" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
