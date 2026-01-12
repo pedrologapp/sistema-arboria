@@ -296,22 +296,57 @@ const PessoasPage = () => {
               {alunosFiltrados?.length || 0} alunos encontrados
             </p>
 
-            {/* Lista */}
+            {/* Lista Compacta - Estilo Discord */}
             {loadingAlunos ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
               </div>
             ) : (
-              <div className="space-y-2">
-                {alunosFiltrados?.map((aluno) => (
-                  <PessoaCard
-                    key={aluno.id}
-                    nome={aluno.full_name || `${aluno.nome} ${aluno.sobrenome}`}
-                    avatarUrl={aluno.avatar_url}
-                    subtitulo={`${aluno.serie || ''} ${aluno.turma || ''} • ${getNomeCasa(aluno.casa_id) || 'Sem casa'}`}
-                    onClick={() => navigate(`/admin/pessoas/aluno/${aluno.id}`)}
-                  />
-                ))}
+              <div className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center px-4 py-2 border-b border-white/10 bg-white/5">
+                  <span className="text-white/30 text-xs uppercase font-medium flex-1">Aluno</span>
+                  <span className="text-white/30 text-xs uppercase font-medium w-24 text-right">Casa</span>
+                </div>
+                
+                {/* Lista */}
+                <div className="max-h-[50vh] overflow-y-auto">
+                  {alunosFiltrados?.map((aluno) => (
+                    <button
+                      key={aluno.id}
+                      onClick={() => navigate(`/admin/pessoas/aluno/${aluno.id}`)}
+                      className="w-full flex items-center gap-3 py-2.5 px-4 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0"
+                    >
+                      {/* Avatar 28px */}
+                      {aluno.avatar_url ? (
+                        <img 
+                          src={aluno.avatar_url} 
+                          alt={aluno.nome}
+                          className="w-7 h-7 rounded-full object-cover flex-shrink-0" 
+                        />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+                          {aluno.nome?.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      
+                      {/* Nome + Série/Turma inline */}
+                      <div className="flex-1 min-w-0 flex items-center">
+                        <span className="text-white text-sm font-medium truncate">
+                          {aluno.full_name || `${aluno.nome} ${aluno.sobrenome}`}
+                        </span>
+                        <span className="text-white/40 text-xs ml-2 flex-shrink-0">
+                          {aluno.serie?.replace(' ano', '')} {aluno.turma}
+                        </span>
+                      </div>
+                      
+                      {/* Casa */}
+                      <span className="text-white/50 text-xs w-24 text-right truncate">
+                        {getNomeCasa(aluno.casa_id) || '-'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
                 
                 {alunosFiltrados?.length === 0 && (
                   <div className="text-center py-12">
