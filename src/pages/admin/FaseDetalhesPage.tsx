@@ -15,7 +15,7 @@ import {
 import { addDays, differenceInDays, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { agoraBrasil } from '@/utils/timezone';
+import { agoraBrasil, parseDataLocal, formatarData } from '@/utils/timezone';
 import { CasaBrasao } from '@/components/CasaBrasao';
 
 type TabType = 'periodo' | 'conteudo' | 'missoes';
@@ -101,8 +101,8 @@ const FaseDetalhesPage = () => {
       } else {
         // Se não está ativo, verificar datas para determinar status
         const agora = agoraBrasil();
-        const inicio = fase.data_inicio ? new Date(fase.data_inicio) : null;
-        const fim = fase.data_fim ? new Date(fase.data_fim) : null;
+        const inicio = fase.data_inicio ? parseDataLocal(fase.data_inicio) : null;
+        const fim = fase.data_fim ? parseDataLocal(fase.data_fim) : null;
         
         if (fim && agora > fim) {
           setStatus('concluida');
@@ -119,8 +119,9 @@ const FaseDetalhesPage = () => {
   const semanas = useMemo(() => {
     if (!dataInicio || !dataFim) return [];
 
-    const inicio = new Date(dataInicio);
-    const fim = new Date(dataFim);
+    // USAR parseDataLocal para evitar bug de timezone
+    const inicio = parseDataLocal(dataInicio);
+    const fim = parseDataLocal(dataFim);
     const totalDias = differenceInDays(fim, inicio) + 1;
     const diasPorSemana = Math.ceil(totalDias / 4);
     
@@ -137,9 +138,14 @@ const FaseDetalhesPage = () => {
       
       // Só calcular status de semanas se fase está em andamento
       if (status === 'em_andamento') {
-        if (agora > semanaFim) {
+        // Comparar apenas datas (ignorar horas)
+        const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+        const fimSemana = new Date(semanaFim.getFullYear(), semanaFim.getMonth(), semanaFim.getDate());
+        const inicioSemana = new Date(semanaInicio.getFullYear(), semanaInicio.getMonth(), semanaInicio.getDate());
+        
+        if (hoje > fimSemana) {
           statusSemana = 'concluida';
-        } else if (agora >= semanaInicio && agora <= semanaFim) {
+        } else if (hoje >= inicioSemana && hoje <= fimSemana) {
           statusSemana = 'atual';
         }
       } else if (status === 'concluida') {
@@ -464,7 +470,7 @@ const FaseDetalhesPage = () => {
                         </div>
                         
                         <p className="text-white/60 text-sm">
-                          {format(semana.inicio, 'dd/MM', { locale: ptBR })} - {format(semana.fim, 'dd/MM', { locale: ptBR })}
+                          {formatarData(semana.inicio)} - {formatarData(semana.fim)}
                         </p>
                       </div>
                     </div>
