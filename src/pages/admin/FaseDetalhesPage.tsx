@@ -9,7 +9,8 @@ import {
   Target,
   Check,
   Circle,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import { addDays, differenceInDays, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -30,6 +31,7 @@ const FaseDetalhesPage = () => {
   const [dataFim, setDataFim] = useState('');
   const [status, setStatus] = useState<StatusType>('bloqueada');
   const [hasChanges, setHasChanges] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Buscar dados da fase com inteligência
   const { data: fase, isLoading } = useQuery({
@@ -45,6 +47,8 @@ const FaseDetalhesPage = () => {
           ativo,
           semana_atual,
           inteligencia_id,
+          institution_id,
+          ano_letivo,
           inteligencias (
             id,
             nome,
@@ -61,6 +65,29 @@ const FaseDetalhesPage = () => {
       return data;
     },
     enabled: !!id
+  });
+
+  // Buscar fase atualmente ativa (para detectar conflito)
+  const { data: faseAtivaAtual } = useQuery({
+    queryKey: ['fase-ativa', fase?.institution_id, fase?.ano_letivo],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('fases')
+        .select(`
+          id, 
+          numero_fase,
+          inteligencias (nome)
+        `)
+        .eq('institution_id', fase?.institution_id)
+        .eq('ano_letivo', fase?.ano_letivo)
+        .eq('ativo', true)
+        .neq('id', id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!fase?.institution_id && !!fase?.ano_letivo
   });
 
   // Preencher campos quando carregar
@@ -88,7 +115,7 @@ const FaseDetalhesPage = () => {
     }
   }, [fase]);
 
-  // Calcular semanas automaticamente
+  // Calcular semanas automaticamente (considerando status)
   const semanas = useMemo(() => {
     if (!dataInicio || !dataFim) return [];
 
@@ -107,11 +134,18 @@ const FaseDetalhesPage = () => {
         : addDays(semanaInicio, diasPorSemana - 1);
 
       let statusSemana: 'concluida' | 'atual' | 'futura' = 'futura';
-      if (agora > semanaFim) {
+      
+      // Só calcular status de semanas se fase está em andamento
+      if (status === 'em_andamento') {
+        if (agora > semanaFim) {
+          statusSemana = 'concluida';
+        } else if (agora >= semanaInicio && agora <= semanaFim) {
+          statusSemana = 'atual';
+        }
+      } else if (status === 'concluida') {
         statusSemana = 'concluida';
-      } else if (agora >= semanaInicio && agora <= semanaFim) {
-        statusSemana = 'atual';
       }
+      // Se status é 'bloqueada' ou 'proxima', todas são 'futura'
 
       resultado.push({
         numero: i + 1,
@@ -122,37 +156,80 @@ const FaseDetalhesPage = () => {
     }
 
     return resultado;
-  }, [dataInicio, dataFim]);
+  }, [dataInicio, dataFim, status]);
 
-  // Mutation para salvar
+  // Handler para mudança de status
+  const handleStatusChange = (novoStatus: StatusType) => {
+    setStatus(novoStatus);
+    
+    // Se está tentando ativar e já existe outra fase ativa, mostrar aviso
+    if (novoStatus === 'em_andamento' && faseAtivaAtual) {
+      setShowConfirmDialog(true);
+    }
+  };
+
+  // Mutation para salvar (com sincronização)
   const salvarMutation = useMutation({
     mutationFn: async () => {
+      const novoStatusAtivo = status === 'em_andamento';
+      
+      // CRÍTICO: Se vai ativar esta fase, desativar a anterior
+      if (novoStatusAtivo && faseAtivaAtual) {
+        const { error: errorDesativar } = await supabase
+          .from('fases')
+          .update({ ativo: false })
+          .eq('id', faseAtivaAtual.id);
+
+        if (errorDesativar) throw errorDesativar;
+      }
+
+      // Atualizar a fase atual
       const { error } = await supabase
         .from('fases')
         .update({
           data_inicio: dataInicio,
           data_fim: dataFim,
-          ativo: status === 'em_andamento',
+          ativo: novoStatusAtivo,
         })
         .eq('id', id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Fase atualizada com sucesso');
+      const mensagem = status === 'em_andamento' 
+        ? 'Fase ativada! Alunos e professores já podem acessar o novo conteúdo.'
+        : 'Fase atualizada com sucesso';
+      toast.success(mensagem);
       setHasChanges(false);
-      queryClient.invalidateQueries({ queryKey: ['fase-detalhe', id] });
+      setShowConfirmDialog(false);
+      
+      // Invalidar TODOS os caches relacionados
+      queryClient.invalidateQueries({ queryKey: ['fase-detalhe'] });
       queryClient.invalidateQueries({ queryKey: ['fases-admin'] });
+      queryClient.invalidateQueries({ queryKey: ['fase-ativa'] });
+      queryClient.invalidateQueries({ queryKey: ['fase-atual'] });
+      queryClient.invalidateQueries({ queryKey: ['missoes'] });
+      queryClient.invalidateQueries({ queryKey: ['aluno-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['professor-dashboard'] });
     },
     onError: (error) => {
       toast.error('Erro ao salvar: ' + error.message);
     }
   });
 
+  // Handler para salvar
+  const handleSalvar = () => {
+    // Se vai ativar e tem fase ativa, pedir confirmação
+    if (status === 'em_andamento' && faseAtivaAtual && !showConfirmDialog) {
+      setShowConfirmDialog(true);
+      return;
+    }
+    salvarMutation.mutate();
+  };
+
   // Detectar mudanças
   useEffect(() => {
     if (fase) {
-      const statusOriginal = fase.ativo ? 'em_andamento' : 'bloqueada';
       const mudou = 
         dataInicio !== (fase.data_inicio || '') ||
         dataFim !== (fase.data_fim || '') ||
@@ -175,6 +252,9 @@ const FaseDetalhesPage = () => {
     { value: 'em_andamento', label: 'Em andamento' },
     { value: 'concluida', label: 'Concluída' },
   ];
+
+  // Nome da inteligência da fase ativa atual (para exibir no aviso)
+  const nomeInteligenciaAtiva = faseAtivaAtual?.inteligencias?.nome || 'anterior';
 
   if (isLoading) {
     return (
@@ -294,7 +374,7 @@ const FaseDetalhesPage = () => {
               
               <select
                 value={status}
-                onChange={(e) => setStatus(e.target.value as StatusType)}
+                onChange={(e) => handleStatusChange(e.target.value as StatusType)}
                 className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20 appearance-none cursor-pointer"
               >
                 {statusOptions.map((option) => (
@@ -303,6 +383,29 @@ const FaseDetalhesPage = () => {
                   </option>
                 ))}
               </select>
+
+              {/* Aviso de sincronização quando há conflito */}
+              {status === 'em_andamento' && faseAtivaAtual && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+                  <div className="flex gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-amber-500 font-medium text-sm">
+                        Atenção
+                      </p>
+                      <p className="text-amber-500/80 text-xs mt-1">
+                        A fase "{nomeInteligenciaAtiva}" está em andamento. 
+                        Ao ativar esta fase, a anterior será automaticamente concluída.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Info sobre sincronização */}
+              <p className="text-white/40 text-xs">
+                A fase "em andamento" define o que alunos e professores veem no app.
+              </p>
             </div>
 
             {/* Semanas */}
@@ -373,7 +476,7 @@ const FaseDetalhesPage = () => {
             {/* Botão Salvar */}
             {hasChanges && (
               <button
-                onClick={() => salvarMutation.mutate()}
+                onClick={handleSalvar}
                 disabled={salvarMutation.isPending}
                 className="w-full p-4 bg-white text-black font-medium rounded-xl hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
@@ -410,6 +513,44 @@ const FaseDetalhesPage = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de Confirmação */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1E293B] rounded-2xl p-6 max-w-sm w-full space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+              </div>
+              <h3 className="text-white font-semibold">Confirmar Ativação</h3>
+            </div>
+            
+            <p className="text-white/60 text-sm">
+              Ao ativar a fase "{inteligencia?.nome}", a fase "{nomeInteligenciaAtiva}" 
+              será automaticamente marcada como concluída. 
+            </p>
+            <p className="text-white/60 text-sm">
+              Alunos e professores passarão a ver o conteúdo da nova fase.
+            </p>
+            
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setShowConfirmDialog(false)}
+                className="flex-1 p-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => salvarMutation.mutate()}
+                disabled={salvarMutation.isPending}
+                className="flex-1 p-3 bg-white text-black font-medium rounded-xl hover:bg-white/90 transition-colors disabled:opacity-50"
+              >
+                {salvarMutation.isPending ? 'Salvando...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
