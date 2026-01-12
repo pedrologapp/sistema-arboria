@@ -61,10 +61,20 @@ const MissoesPage = () => {
 
       if (intError) throw intError;
 
+      // Buscar ano letivo atual da instituição
+      const { data: settings } = await supabase
+        .from('institution_settings')
+        .select('ano_letivo_atual')
+        .eq('institution_id', profile.institution_id)
+        .single();
+
+      const anoLetivoAtual = settings?.ano_letivo_atual || new Date().getFullYear();
+
       const { data: fases, error: fasesError } = await supabase
         .from('fases')
         .select('id, numero_fase, semana_atual, ativo, inteligencia_id')
-        .eq('institution_id', profile.institution_id);
+        .eq('institution_id', profile.institution_id)
+        .eq('ano_letivo', anoLetivoAtual);
 
       if (fasesError) throw fasesError;
 
