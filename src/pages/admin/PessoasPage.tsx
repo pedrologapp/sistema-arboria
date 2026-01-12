@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,6 +26,7 @@ interface Inteligencia {
 
 const PessoasPage = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [tabAtiva, setTabAtiva] = useState<TabType>('alunos');
   const [busca, setBusca] = useState('');
   const [filtroSerie, setFiltroSerie] = useState('');
@@ -307,7 +309,7 @@ const PessoasPage = () => {
                     nome={aluno.full_name || `${aluno.nome} ${aluno.sobrenome}`}
                     avatarUrl={aluno.avatar_url}
                     subtitulo={`${aluno.serie || ''} ${aluno.turma || ''} • ${getNomeCasa(aluno.casa_id) || 'Sem casa'}`}
-                    onClick={() => {/* navegar para perfil */}}
+                    onClick={() => navigate(`/admin/pessoas/aluno/${aluno.id}`)}
                   />
                 ))}
                 
@@ -366,7 +368,7 @@ const PessoasPage = () => {
                         ? `Mentor: ${getNomeCasa(casaVinculo.casa_id)}`
                         : 'Sem casa atribuída'
                       }
-                      onClick={() => {/* navegar para perfil */}}
+                      onClick={() => navigate(`/admin/pessoas/professor/${prof.id}`)}
                     />
                   );
                 })}
@@ -421,7 +423,7 @@ const PessoasPage = () => {
                     nome={admin.full_name || `${admin.nome} ${admin.sobrenome}`}
                     avatarUrl={admin.avatar_url}
                     subtitulo="Administrador"
-                    onClick={() => {/* navegar para perfil */}}
+                    onClick={() => {}}
                   />
                 ))}
                 
