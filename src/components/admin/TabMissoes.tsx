@@ -14,7 +14,9 @@ import {
   Loader2,
   Home,
   FileText,
-  Upload
+  Upload,
+  Calendar,
+  Clock
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseDataLocal } from '@/utils/timezone';
@@ -36,23 +38,35 @@ interface Missao {
   tipo_missao: string | null;
   casa_id: number | null;
   titulo: string;
-  contexto: string | null;
+  descricao: string | null;
   instrucoes: string | null;
+  dicas: string | null;
+  reflexao: string | null;
   pontos_base: number;
+  tipo: string | null;
   requer_texto: boolean | null;
   requer_arquivo: boolean | null;
   status: string | null;
   arquivo_pdf_url: string | null;
   arquivo_pdf_nome: string | null;
+  serie_filtro: number | null;
+  data_liberacao: string | null;
+  data_liberacao_6ano: string | null;
+  data_liberacao_9ano: string | null;
+  data_prazo: string | null;
 }
 
-const TIPOS_ENTREGA = [
-  { id: 'texto', label: 'Texto' },
-  { id: 'imagem', label: 'Imagem/Foto' },
-  { id: 'arquivo', label: 'Arquivo (PDF, DOC)' },
-  { id: 'link', label: 'Link externo' },
-  { id: 'audio', label: 'Áudio' },
-  { id: 'video', label: 'Vídeo' },
+// Constantes
+const CATEGORIAS = [
+  { id: 'principal', label: 'Principal', pontos: 100 },
+  { id: 'secundaria', label: 'Secundária', pontos: 50 },
+  { id: 'bonus', label: 'Bônus', pontos: 75 },
+  { id: 'personalizado', label: 'Personalizado', pontos: null },
+];
+
+const SERIES = [
+  { id: 6, label: '6º Ano' },
+  { id: 9, label: '9º Ano' },
 ];
 
 const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesProps) => {
@@ -63,16 +77,44 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
   const [missaoEditando, setMissaoEditando] = useState<Missao | null>(null);
   const [semanaMissoesCasa, setSemanaMissoesCasa] = useState<number | null>(null);
   
-  // Form state
+  // Form state - Conteúdo
   const [titulo, setTitulo] = useState('');
-  const [contexto, setContexto] = useState('');
+  const [descricao, setDescricao] = useState('');
   const [instrucoes, setInstrucoes] = useState('');
-  const [pontos, setPontos] = useState(10);
-  const [tiposEntrega, setTiposEntrega] = useState<string[]>(['texto']);
+  const [dicas, setDicas] = useState('');
+  const [reflexao, setReflexao] = useState('');
+  
+  // Form state - Configurações
+  const [categoria, setCategoria] = useState<'principal' | 'secundaria' | 'bonus' | 'personalizado'>('secundaria');
+  const [pontosCustom, setPontosCustom] = useState(50);
+  const [seriesSelecionadas, setSeriesSelecionadas] = useState<number[]>([6, 9]);
+  
+  // Form state - Liberação
+  const [liberacao, setLiberacao] = useState<'agora' | 'agendado'>('agora');
+  const [dataLiberacao6ano, setDataLiberacao6ano] = useState('');
+  const [horaLiberacao6ano, setHoraLiberacao6ano] = useState('08:00');
+  const [dataLiberacao9ano, setDataLiberacao9ano] = useState('');
+  const [horaLiberacao9ano, setHoraLiberacao9ano] = useState('08:00');
+  
+  // Form state - Prazo
+  const [dataPrazo, setDataPrazo] = useState('');
+  const [horaPrazo, setHoraPrazo] = useState('23:59');
+  
+  // Form state - Entrega
+  const [requerTexto, setRequerTexto] = useState(true);
+  const [requerArquivo, setRequerArquivo] = useState(false);
+  
+  // PDF
   const [arquivoPdfUrl, setArquivoPdfUrl] = useState<string | null>(null);
   const [arquivoPdfNome, setArquivoPdfNome] = useState<string | null>(null);
   const [uploadando, setUploadando] = useState(false);
   const [salvando, setSalvando] = useState(false);
+
+  // Calcular pontos baseado na categoria
+  const pontosFinais = useMemo(() => {
+    if (categoria === 'personalizado') return pontosCustom;
+    return CATEGORIAS.find(c => c.id === categoria)?.pontos || 50;
+  }, [categoria, pontosCustom]);
 
   // Calcular semanas
   const semanas = useMemo(() => {
@@ -102,7 +144,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
     queryFn: async () => {
       const { data, error } = await supabase
         .from('missoes')
-        .select('id, fase_id, semana, tipo_missao, casa_id, titulo, contexto, instrucoes, pontos_base, requer_texto, requer_arquivo, status, arquivo_pdf_url, arquivo_pdf_nome')
+        .select('id, fase_id, semana, tipo_missao, casa_id, titulo, descricao, instrucoes, dicas, reflexao, pontos_base, tipo, requer_texto, requer_arquivo, status, arquivo_pdf_url, arquivo_pdf_nome, serie_filtro, data_liberacao, data_liberacao_6ano, data_liberacao_9ano, data_prazo')
         .eq('fase_id', faseId)
         .order('semana')
         .order('tipo_missao');
@@ -139,12 +181,10 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
     return missoes?.filter(m => m.semana === semana && m.tipo_missao === 'individual').length || 0;
   };
 
-  // Formatar tipos de entrega para exibição
-  const formatarTiposEntrega = (missao: Missao) => {
-    const tipos: string[] = [];
-    if (missao.requer_texto) tipos.push('Texto');
-    if (missao.requer_arquivo) tipos.push('Arquivo');
-    return tipos.length > 0 ? tipos.join(', ') : 'Texto';
+  // Formatar categoria para exibição
+  const formatarCategoria = (missao: Missao) => {
+    const cat = CATEGORIAS.find(c => c.id === missao.tipo);
+    return cat ? `${cat.label} (${missao.pontos_base} pts)` : `${missao.pontos_base} pts`;
   };
 
   // Upload de PDF
@@ -184,57 +224,114 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
     setArquivoPdfNome(null);
   };
 
+  // Toggle série
+  const toggleSerie = (serieId: number) => {
+    if (seriesSelecionadas.includes(serieId)) {
+      if (seriesSelecionadas.length > 1) {
+        setSeriesSelecionadas(seriesSelecionadas.filter(s => s !== serieId));
+      }
+    } else {
+      setSeriesSelecionadas([...seriesSelecionadas, serieId]);
+    }
+  };
+
   // Abrir modal para criar/editar
   const abrirModal = (semana: number, missao?: Missao) => {
     setSemanaAtual(semana);
     if (missao) {
       setMissaoEditando(missao);
       setTitulo(missao.titulo);
-      setContexto(missao.contexto || '');
+      setDescricao(missao.descricao || '');
       setInstrucoes(missao.instrucoes || '');
-      setPontos(missao.pontos_base);
+      setDicas(missao.dicas || '');
+      setReflexao(missao.reflexao || '');
       setArquivoPdfUrl(missao.arquivo_pdf_url);
       setArquivoPdfNome(missao.arquivo_pdf_nome);
       
-      const tipos: string[] = [];
-      if (missao.requer_texto) tipos.push('texto');
-      if (missao.requer_arquivo) tipos.push('arquivo');
-      setTiposEntrega(tipos.length > 0 ? tipos : ['texto']);
+      // Categoria
+      const cat = CATEGORIAS.find(c => c.id === missao.tipo);
+      if (cat) {
+        setCategoria(missao.tipo as any);
+      } else {
+        setCategoria('personalizado');
+        setPontosCustom(missao.pontos_base);
+      }
+      
+      // Séries
+      if (missao.serie_filtro) {
+        setSeriesSelecionadas([missao.serie_filtro]);
+      } else {
+        setSeriesSelecionadas([6, 9]);
+      }
+      
+      // Liberação
+      if (missao.data_liberacao_6ano || missao.data_liberacao_9ano) {
+        setLiberacao('agendado');
+        if (missao.data_liberacao_6ano) {
+          const dt6 = new Date(missao.data_liberacao_6ano);
+          setDataLiberacao6ano(format(dt6, 'yyyy-MM-dd'));
+          setHoraLiberacao6ano(format(dt6, 'HH:mm'));
+        }
+        if (missao.data_liberacao_9ano) {
+          const dt9 = new Date(missao.data_liberacao_9ano);
+          setDataLiberacao9ano(format(dt9, 'yyyy-MM-dd'));
+          setHoraLiberacao9ano(format(dt9, 'HH:mm'));
+        }
+      } else {
+        setLiberacao('agora');
+        setDataLiberacao6ano('');
+        setHoraLiberacao6ano('08:00');
+        setDataLiberacao9ano('');
+        setHoraLiberacao9ano('08:00');
+      }
+      
+      // Prazo
+      if (missao.data_prazo) {
+        const dtPrazo = new Date(missao.data_prazo);
+        setDataPrazo(format(dtPrazo, 'yyyy-MM-dd'));
+        setHoraPrazo(format(dtPrazo, 'HH:mm'));
+      } else {
+        setDataPrazo('');
+        setHoraPrazo('23:59');
+      }
+      
+      // Entrega
+      setRequerTexto(missao.requer_texto ?? true);
+      setRequerArquivo(missao.requer_arquivo ?? false);
     } else {
-      setMissaoEditando(null);
-      setTitulo('');
-      setContexto('');
-      setInstrucoes('');
-      setPontos(10);
-      setTiposEntrega(['texto']);
-      setArquivoPdfUrl(null);
-      setArquivoPdfNome(null);
+      resetarFormulario();
     }
     setModalAberto(true);
+  };
+
+  // Resetar formulário
+  const resetarFormulario = () => {
+    setMissaoEditando(null);
+    setTitulo('');
+    setDescricao('');
+    setInstrucoes('');
+    setDicas('');
+    setReflexao('');
+    setCategoria('secundaria');
+    setPontosCustom(50);
+    setSeriesSelecionadas([6, 9]);
+    setLiberacao('agora');
+    setDataLiberacao6ano('');
+    setHoraLiberacao6ano('08:00');
+    setDataLiberacao9ano('');
+    setHoraLiberacao9ano('08:00');
+    setDataPrazo('');
+    setHoraPrazo('23:59');
+    setRequerTexto(true);
+    setRequerArquivo(false);
+    setArquivoPdfUrl(null);
+    setArquivoPdfNome(null);
   };
 
   // Fechar modal
   const fecharModal = () => {
     setModalAberto(false);
-    setMissaoEditando(null);
-    setTitulo('');
-    setContexto('');
-    setInstrucoes('');
-    setPontos(10);
-    setTiposEntrega(['texto']);
-    setArquivoPdfUrl(null);
-    setArquivoPdfNome(null);
-  };
-
-  // Toggle tipo de entrega
-  const toggleTipoEntrega = (tipo: string) => {
-    if (tiposEntrega.includes(tipo)) {
-      if (tiposEntrega.length > 1) {
-        setTiposEntrega(tiposEntrega.filter(t => t !== tipo));
-      }
-    } else {
-      setTiposEntrega([...tiposEntrega, tipo]);
-    }
+    resetarFormulario();
   };
 
   // Salvar missão
@@ -242,44 +339,106 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
     mutationFn: async () => {
       setSalvando(true);
       
-      const requerTexto = tiposEntrega.includes('texto');
-      const requerArquivo = tiposEntrega.some(t => ['imagem', 'arquivo', 'audio', 'video'].includes(t));
+      // Validações
+      if (!titulo.trim()) throw new Error('Título é obrigatório');
+      if (!descricao.trim()) throw new Error('Descrição é obrigatória');
+      if (!dataPrazo) throw new Error('Prazo de entrega é obrigatório');
+      if (seriesSelecionadas.length === 0) throw new Error('Selecione pelo menos uma série');
+      if (!requerTexto && !requerArquivo) throw new Error('Selecione pelo menos um tipo de entrega');
+      
+      if (liberacao === 'agendado') {
+        if (seriesSelecionadas.includes(6) && !dataLiberacao6ano) {
+          throw new Error('Data de liberação do 6º ano é obrigatória');
+        }
+        if (seriesSelecionadas.includes(9) && !dataLiberacao9ano) {
+          throw new Error('Data de liberação do 9º ano é obrigatória');
+        }
+      }
+      
+      // Calcular data de liberação principal (mais cedo entre 6º e 9º)
+      const agora = new Date();
+      let dataLiberacaoFinal = agora.toISOString();
+      let status = 'liberada';
+      
+      if (liberacao === 'agendado') {
+        const datas: Date[] = [];
+        if (seriesSelecionadas.includes(6) && dataLiberacao6ano) {
+          datas.push(new Date(`${dataLiberacao6ano}T${horaLiberacao6ano}`));
+        }
+        if (seriesSelecionadas.includes(9) && dataLiberacao9ano) {
+          datas.push(new Date(`${dataLiberacao9ano}T${horaLiberacao9ano}`));
+        }
+        if (datas.length > 0) {
+          const maisProxima = new Date(Math.min(...datas.map(d => d.getTime())));
+          dataLiberacaoFinal = maisProxima.toISOString();
+          status = maisProxima > agora ? 'agendada' : 'liberada';
+        }
+      }
       
       const dadosMissao = {
         fase_id: faseId,
         institution_id: institutionId,
+        criado_por: user?.id,
         semana: semanaAtual,
         tipo_missao: 'geral',
-        tipo: 'principal',
         casa_id: null,
+        
+        // Conteúdo
         titulo,
-        contexto: contexto || null,
+        descricao: descricao || null,
         instrucoes: instrucoes || null,
-        descricao: null,
-        pontos_base: pontos,
+        dicas: dicas || null,
+        reflexao: reflexao || null,
+        
+        // Configurações
+        tipo: categoria === 'personalizado' ? 'secundaria' : categoria,
+        pontos_base: pontosFinais,
+        
+        // Séries
+        serie_filtro: seriesSelecionadas.length === 1 ? seriesSelecionadas[0] : null,
+        
+        // Datas
+        data_liberacao: dataLiberacaoFinal,
+        data_prazo: new Date(`${dataPrazo}T${horaPrazo}`).toISOString(),
+        data_liberacao_6ano: liberacao === 'agendado' && seriesSelecionadas.includes(6) && dataLiberacao6ano 
+          ? new Date(`${dataLiberacao6ano}T${horaLiberacao6ano}`).toISOString() 
+          : null,
+        data_liberacao_9ano: liberacao === 'agendado' && seriesSelecionadas.includes(9) && dataLiberacao9ano 
+          ? new Date(`${dataLiberacao9ano}T${horaLiberacao9ano}`).toISOString() 
+          : null,
+        
+        // Entrega
         requer_texto: requerTexto,
         requer_arquivo: requerArquivo,
+        
+        // PDF
         arquivo_pdf_url: arquivoPdfUrl,
         arquivo_pdf_nome: arquivoPdfNome,
-        status: 'liberada',
-        criado_por: user?.id,
-        data_liberacao: new Date().toISOString(),
-        data_prazo: new Date().toISOString(),
+        
+        status,
       };
 
       if (missaoEditando) {
         const { error } = await supabase
           .from('missoes')
           .update({
-            titulo,
-            contexto: contexto || null,
-            instrucoes: instrucoes || null,
-            descricao: null,
-            pontos_base: pontos,
-            requer_texto: requerTexto,
-            requer_arquivo: requerArquivo,
-            arquivo_pdf_url: arquivoPdfUrl,
-            arquivo_pdf_nome: arquivoPdfNome,
+            titulo: dadosMissao.titulo,
+            descricao: dadosMissao.descricao,
+            instrucoes: dadosMissao.instrucoes,
+            dicas: dadosMissao.dicas,
+            reflexao: dadosMissao.reflexao,
+            tipo: dadosMissao.tipo,
+            pontos_base: dadosMissao.pontos_base,
+            serie_filtro: dadosMissao.serie_filtro,
+            data_liberacao: dadosMissao.data_liberacao,
+            data_prazo: dadosMissao.data_prazo,
+            data_liberacao_6ano: dadosMissao.data_liberacao_6ano,
+            data_liberacao_9ano: dadosMissao.data_liberacao_9ano,
+            requer_texto: dadosMissao.requer_texto,
+            requer_arquivo: dadosMissao.requer_arquivo,
+            arquivo_pdf_url: dadosMissao.arquivo_pdf_url,
+            arquivo_pdf_nome: dadosMissao.arquivo_pdf_nome,
+            status: dadosMissao.status,
             updated_at: new Date().toISOString()
           })
           .eq('id', missaoEditando.id);
@@ -443,7 +602,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                             {missaoGeral.titulo}
                           </p>
                           <p className="text-white/40 text-xs mt-0.5">
-                            {missaoGeral.pontos_base} pts • {formatarTiposEntrega(missaoGeral)}
+                            {formatarCategoria(missaoGeral)}
                           </p>
                         </div>
                       </div>
@@ -503,19 +662,61 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
       {/* Modal Missão Geral */}
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-lg bg-slate-800 rounded-xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
+          <div className="w-full max-w-lg bg-slate-800 rounded-xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <h3 className="text-white font-medium">
-                Missão Geral — Semana {semanaAtual}
-              </h3>
-              <button onClick={fecharModal} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                <X className="w-5 h-5 text-white/60" />
-              </button>
+            <div className="p-4 border-b border-white/10">
+              <div className="flex items-center justify-between">
+                <h3 className="text-white font-medium">
+                  {missaoEditando ? 'Editar Missão' : 'Nova Missão'} — Semana {semanaAtual}
+                </h3>
+                <button onClick={fecharModal} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                  <X className="w-5 h-5 text-white/60" />
+                </button>
+              </div>
+              <p className="text-white/40 text-sm mt-1">
+                Geral • {seriesSelecionadas.map(s => `${s}º Ano`).join(' e ')}
+              </p>
             </div>
 
             {/* Conteúdo */}
-            <div className="p-4 space-y-4 overflow-y-auto flex-1">
+            <div className="p-4 space-y-5 overflow-y-auto flex-1">
+              
+              {/* Séries */}
+              <div>
+                <label className="text-white/60 text-sm mb-2 block font-medium">
+                  Série(s) *
+                </label>
+                <div className="flex gap-2">
+                  {SERIES.map((serie) => (
+                    <button
+                      key={serie.id}
+                      onClick={() => toggleSerie(serie.id)}
+                      className={`flex-1 p-3 rounded-xl border transition-colors flex items-center justify-center gap-2 ${
+                        seriesSelecionadas.includes(serie.id)
+                          ? 'bg-white/10 border-white/30 text-white'
+                          : 'bg-white/5 border-white/10 text-white/40'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                        seriesSelecionadas.includes(serie.id)
+                          ? 'bg-white border-white'
+                          : 'border-white/20'
+                      }`}>
+                        {seriesSelecionadas.includes(serie.id) && (
+                          <Check className="w-3 h-3 text-black" />
+                        )}
+                      </div>
+                      <span className="text-sm">{serie.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Divisor - Conteúdo */}
+              <div className="border-t border-white/10 pt-4">
+                <h4 className="text-white/60 text-xs font-medium uppercase tracking-wider mb-4">Conteúdo</h4>
+              </div>
+
               {/* Título */}
               <div>
                 <label className="text-white/60 text-sm mb-1.5 block">
@@ -530,30 +731,58 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                 />
               </div>
 
-              {/* Contexto */}
+              {/* Descrição */}
               <div>
                 <label className="text-white/60 text-sm mb-1.5 block">
-                  Contexto
+                  Descrição *
                 </label>
                 <textarea
-                  value={contexto}
-                  onChange={(e) => setContexto(e.target.value)}
-                  placeholder="Por que essa missão é importante para o aluno..."
-                  rows={3}
+                  value={descricao}
+                  onChange={(e) => setDescricao(e.target.value)}
+                  placeholder="Breve descrição da missão..."
+                  rows={2}
                   className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none"
                 />
               </div>
 
-              {/* Missão */}
+              {/* Instruções */}
               <div>
                 <label className="text-white/60 text-sm mb-1.5 block">
-                  Missão
+                  Instruções <span className="text-white/30">(Markdown)</span>
                 </label>
                 <textarea
                   value={instrucoes}
                   onChange={(e) => setInstrucoes(e.target.value)}
-                  placeholder="O que o aluno deve fazer..."
+                  placeholder="Passo a passo do que o aluno deve fazer..."
                   rows={4}
+                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none font-mono"
+                />
+              </div>
+
+              {/* Dicas */}
+              <div>
+                <label className="text-white/60 text-sm mb-1.5 block">
+                  Dicas <span className="text-white/30">(opcional, Markdown)</span>
+                </label>
+                <textarea
+                  value={dicas}
+                  onChange={(e) => setDicas(e.target.value)}
+                  placeholder="Dicas para ajudar o aluno..."
+                  rows={2}
+                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none font-mono"
+                />
+              </div>
+
+              {/* Reflexão */}
+              <div>
+                <label className="text-white/60 text-sm mb-1.5 block">
+                  Reflexão <span className="text-white/30">(opcional)</span>
+                </label>
+                <textarea
+                  value={reflexao}
+                  onChange={(e) => setReflexao(e.target.value)}
+                  placeholder="Pergunta para reflexão..."
+                  rows={2}
                   className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none"
                 />
               </div>
@@ -561,7 +790,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
               {/* PDF da Missão */}
               <div>
                 <label className="text-white/60 text-sm mb-1.5 block">
-                  PDF da Missão (opcional)
+                  PDF <span className="text-white/30">(opcional)</span>
                 </label>
                 {arquivoPdfUrl ? (
                   <div className="p-3 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between gap-3">
@@ -605,55 +834,252 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                 )}
               </div>
 
-              {/* Pontuação */}
-              <div>
-                <label className="text-white/60 text-sm mb-1.5 block">
-                  Pontuação
-                </label>
-                <input
-                  type="number"
-                  value={pontos}
-                  onChange={(e) => setPontos(Number(e.target.value))}
-                  min={1}
-                  max={100}
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
-                />
+              {/* Divisor - Configurações */}
+              <div className="border-t border-white/10 pt-4">
+                <h4 className="text-white/60 text-xs font-medium uppercase tracking-wider mb-4">Configurações</h4>
               </div>
 
-              {/* Tipos de Entrega */}
+              {/* Categoria */}
               <div>
-                <label className="text-white/60 text-sm mb-3 block">
-                  Tipos de entrega aceitos
+                <label className="text-white/60 text-sm mb-2 block">
+                  Categoria *
                 </label>
                 <div className="space-y-2">
-                  {TIPOS_ENTREGA.map((tipo) => (
+                  {CATEGORIAS.map((cat) => (
                     <button
-                      key={tipo.id}
-                      onClick={() => toggleTipoEntrega(tipo.id)}
-                      className={`w-full p-3 rounded-xl border text-left transition-colors flex items-center gap-3 ${
-                        tiposEntrega.includes(tipo.id)
-                          ? 'bg-white/10 border-white/20 text-white'
+                      key={cat.id}
+                      onClick={() => setCategoria(cat.id as any)}
+                      className={`w-full p-3 rounded-xl border text-left transition-colors flex items-center justify-between ${
+                        categoria === cat.id
+                          ? 'bg-white/10 border-white/30 text-white'
                           : 'bg-white/5 border-white/10 text-white/40'
                       }`}
                     >
-                      <div className={`w-5 h-5 rounded border flex items-center justify-center ${
-                        tiposEntrega.includes(tipo.id)
-                          ? 'bg-white border-white'
-                          : 'border-white/20'
-                      }`}>
-                        {tiposEntrega.includes(tipo.id) && (
-                          <Check className="w-3 h-3 text-black" />
-                        )}
+                      <div className="flex items-center gap-3">
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          categoria === cat.id
+                            ? 'border-white bg-white'
+                            : 'border-white/30'
+                        }`}>
+                          {categoria === cat.id && (
+                            <div className="w-2 h-2 rounded-full bg-black" />
+                          )}
+                        </div>
+                        <span className="text-sm">{cat.label}</span>
                       </div>
-                      <span className="text-sm">{tipo.label}</span>
+                      {cat.pontos !== null && (
+                        <span className="text-sm text-white/40">{cat.pontos} pts</span>
+                      )}
                     </button>
                   ))}
+                  
+                  {/* Input de pontos personalizados */}
+                  {categoria === 'personalizado' && (
+                    <div className="pl-7 mt-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={pontosCustom}
+                          onChange={(e) => setPontosCustom(Number(e.target.value))}
+                          min={1}
+                          max={200}
+                          className="w-24 p-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-white/20 text-center"
+                        />
+                        <span className="text-white/40 text-sm">pts</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Quando liberar */}
+              <div>
+                <label className="text-white/60 text-sm mb-2 block">
+                  Quando liberar *
+                </label>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setLiberacao('agora')}
+                    className={`w-full p-3 rounded-xl border text-left transition-colors flex items-center gap-3 ${
+                      liberacao === 'agora'
+                        ? 'bg-white/10 border-white/30 text-white'
+                        : 'bg-white/5 border-white/10 text-white/40'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                      liberacao === 'agora'
+                        ? 'border-white bg-white'
+                        : 'border-white/30'
+                    }`}>
+                      {liberacao === 'agora' && (
+                        <div className="w-2 h-2 rounded-full bg-black" />
+                      )}
+                    </div>
+                    <span className="text-sm">Agora (publicar imediatamente)</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => setLiberacao('agendado')}
+                    className={`w-full p-3 rounded-xl border text-left transition-colors flex items-center gap-3 ${
+                      liberacao === 'agendado'
+                        ? 'bg-white/10 border-white/30 text-white'
+                        : 'bg-white/5 border-white/10 text-white/40'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                      liberacao === 'agendado'
+                        ? 'border-white bg-white'
+                        : 'border-white/30'
+                    }`}>
+                      {liberacao === 'agendado' && (
+                        <div className="w-2 h-2 rounded-full bg-black" />
+                      )}
+                    </div>
+                    <span className="text-sm">Agendado</span>
+                  </button>
+                  
+                  {/* Campos de data se agendado */}
+                  {liberacao === 'agendado' && (
+                    <div className="pl-7 pt-2 space-y-3">
+                      {seriesSelecionadas.includes(6) && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-white/60 text-sm w-16">6º Ano:</span>
+                          <div className="flex gap-2 flex-1">
+                            <div className="relative flex-1">
+                              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                              <input
+                                type="date"
+                                value={dataLiberacao6ano}
+                                onChange={(e) => setDataLiberacao6ano(e.target.value)}
+                                className="w-full p-2 pl-9 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-white/20"
+                              />
+                            </div>
+                            <div className="relative w-24">
+                              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                              <input
+                                type="time"
+                                value={horaLiberacao6ano}
+                                onChange={(e) => setHoraLiberacao6ano(e.target.value)}
+                                className="w-full p-2 pl-9 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-white/20"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {seriesSelecionadas.includes(9) && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-white/60 text-sm w-16">9º Ano:</span>
+                          <div className="flex gap-2 flex-1">
+                            <div className="relative flex-1">
+                              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                              <input
+                                type="date"
+                                value={dataLiberacao9ano}
+                                onChange={(e) => setDataLiberacao9ano(e.target.value)}
+                                className="w-full p-2 pl-9 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-white/20"
+                              />
+                            </div>
+                            <div className="relative w-24">
+                              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                              <input
+                                type="time"
+                                value={horaLiberacao9ano}
+                                onChange={(e) => setHoraLiberacao9ano(e.target.value)}
+                                className="w-full p-2 pl-9 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-white/20"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Prazo de entrega */}
+              <div>
+                <label className="text-white/60 text-sm mb-2 block">
+                  Prazo de entrega *
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                    <input
+                      type="date"
+                      value={dataPrazo}
+                      onChange={(e) => setDataPrazo(e.target.value)}
+                      className="w-full p-3 pl-10 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
+                    />
+                  </div>
+                  <div className="relative w-28">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                    <input
+                      type="time"
+                      value={horaPrazo}
+                      onChange={(e) => setHoraPrazo(e.target.value)}
+                      className="w-full p-3 pl-10 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Tipo de entrega */}
+              <div>
+                <label className="text-white/60 text-sm mb-2 block">
+                  Tipo de entrega *
+                </label>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setRequerTexto(!requerTexto)}
+                    className={`w-full p-3 rounded-xl border text-left transition-colors flex items-center gap-3 ${
+                      requerTexto
+                        ? 'bg-white/10 border-white/30 text-white'
+                        : 'bg-white/5 border-white/10 text-white/40'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded border flex items-center justify-center ${
+                      requerTexto
+                        ? 'bg-white border-white'
+                        : 'border-white/20'
+                    }`}>
+                      {requerTexto && (
+                        <Check className="w-3 h-3 text-black" />
+                      )}
+                    </div>
+                    <span className="text-sm">Requer resposta em texto</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => setRequerArquivo(!requerArquivo)}
+                    className={`w-full p-3 rounded-xl border text-left transition-colors flex items-center gap-3 ${
+                      requerArquivo
+                        ? 'bg-white/10 border-white/30 text-white'
+                        : 'bg-white/5 border-white/10 text-white/40'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded border flex items-center justify-center ${
+                      requerArquivo
+                        ? 'bg-white border-white'
+                        : 'border-white/20'
+                    }`}>
+                      {requerArquivo && (
+                        <Check className="w-3 h-3 text-black" />
+                      )}
+                    </div>
+                    <span className="text-sm">Requer envio de arquivo</span>
+                  </button>
                 </div>
               </div>
             </div>
 
             {/* Footer */}
             <div className="flex gap-3 p-4 border-t border-white/10 bg-[#1a1a1a] flex-shrink-0">
+              <button
+                onClick={fecharModal}
+                className="flex-1 p-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors"
+              >
+                Cancelar
+              </button>
               {missaoEditando && (
                 <button
                   onClick={() => excluirMutation.mutate(missaoEditando.id)}
@@ -663,14 +1089,8 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                 </button>
               )}
               <button
-                onClick={fecharModal}
-                className="flex-1 p-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
                 onClick={() => salvarMutation.mutate()}
-                disabled={!titulo.trim() || salvando}
+                disabled={!titulo.trim() || !descricao.trim() || !dataPrazo || salvando}
                 className="flex-1 p-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {salvando ? (

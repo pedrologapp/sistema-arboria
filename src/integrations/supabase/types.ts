@@ -1850,6 +1850,8 @@ export type Database = {
           criado_por: string
           data_criacao: string | null
           data_liberacao: string
+          data_liberacao_6ano: string | null
+          data_liberacao_9ano: string | null
           data_prazo: string
           descricao: string | null
           dicas: string | null
@@ -1881,6 +1883,8 @@ export type Database = {
           criado_por: string
           data_criacao?: string | null
           data_liberacao: string
+          data_liberacao_6ano?: string | null
+          data_liberacao_9ano?: string | null
           data_prazo: string
           descricao?: string | null
           dicas?: string | null
@@ -1912,6 +1916,8 @@ export type Database = {
           criado_por?: string
           data_criacao?: string | null
           data_liberacao?: string
+          data_liberacao_6ano?: string | null
+          data_liberacao_9ano?: string | null
           data_prazo?: string
           descricao?: string | null
           dicas?: string | null
