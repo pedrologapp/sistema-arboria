@@ -131,14 +131,13 @@ const MissoesPage = () => {
   };
 
   const itensOrdenados = useMemo(() => {
-    const atual = itens.filter(i => i.status === 'atual');
-    const passadas = itens.filter(i => i.status === 'passada').sort((a, b) => 
-      (b.fase?.numero_fase || 0) - (a.fase?.numero_fase || 0)
-    );
-    const futuras = itens.filter(i => i.status === 'futura').sort((a, b) => 
-      a.inteligencia.id - b.inteligencia.id
-    );
-    return [...atual, ...passadas, ...futuras];
+    // Ordenar TODAS as fases por numero_fase, igual ao admin
+    // Inteligências sem fase configurada ficam no final
+    return [...itens].sort((a, b) => {
+      const numA = a.fase?.numero_fase ?? 999;
+      const numB = b.fase?.numero_fase ?? 999;
+      return numA - numB;
+    });
   }, [itens]);
 
   if (contextLoading || isLoading) {
