@@ -712,23 +712,43 @@ const MissaoDetalhePage = () => {
             <h3 className="text-sm font-medium text-white">📎 Material de Apoio</h3>
           </div>
           
-          <a
-            href={missao.arquivo_pdf_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 transition-all group"
-          >
+          {/* Card do arquivo com duas ações */}
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
             <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
               <FileText className="w-5 h-5 text-blue-400" />
             </div>
+            
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">
                 {missao.arquivo_pdf_nome || 'Material da Missão.pdf'}
               </p>
-              <p className="text-xs text-white/50">Clique para visualizar</p>
+              <p className="text-xs text-white/50">PDF anexado pelo professor</p>
             </div>
-            <ExternalLink className="w-4 h-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-          </a>
+            
+            {/* Botões de ação */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Visualizar */}
+              <a
+                href={missao.arquivo_pdf_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-all"
+                title="Visualizar"
+              >
+                <ExternalLink className="w-4 h-4 text-blue-400" />
+              </a>
+              
+              {/* Baixar */}
+              <a
+                href={missao.arquivo_pdf_url}
+                download={missao.arquivo_pdf_nome || 'material.pdf'}
+                className="p-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 transition-all"
+                title="Baixar"
+              >
+                <Download className="w-4 h-4 text-emerald-400" />
+              </a>
+            </div>
+          </div>
         </motion.div>
       )}
 
