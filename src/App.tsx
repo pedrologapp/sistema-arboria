@@ -27,6 +27,7 @@ import NotFound from "./pages/NotFound";
 import HomePage from "./pages/aluno/HomePage";
 import MissoesPage from "./pages/aluno/MissoesPage";
 import MissoesFasePage from "./pages/aluno/MissoesFasePage";
+import MissoesSemanaPageAluno from "./pages/aluno/MissoesSemanaPage";
 import MissaoDetalhePage from "./pages/aluno/MissaoDetalhePage";
 import CasaPage from "./pages/aluno/CasaPage";
 import ChatPage from "./pages/aluno/ChatPage";
@@ -356,6 +357,13 @@ const App = () => (
               <StudentProtectedRoute>
                 <StudentLayout>
                   <MissoesFasePage />
+                </StudentLayout>
+              </StudentProtectedRoute>
+            } />
+            <Route path="/aluno/missoes/fase/:faseId/semana/:semana" element={
+              <StudentProtectedRoute>
+                <StudentLayout>
+                  <MissoesSemanaPageAluno />
                 </StudentLayout>
               </StudentProtectedRoute>
             } />
