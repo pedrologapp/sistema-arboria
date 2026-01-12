@@ -61,15 +61,27 @@ const MissoesPage = () => {
 
       if (intError) throw intError;
 
-      // Buscar ano letivo atual da instituição
-      const { data: settings } = await supabase
-        .from('institution_settings')
-        .select('ano_letivo_atual')
+      // PRIMEIRO: Buscar a fase ativa para descobrir o ano letivo correto
+      const { data: faseAtiva } = await supabase
+        .from('fases')
+        .select('ano_letivo')
         .eq('institution_id', profile.institution_id)
+        .eq('ativo', true)
         .single();
 
-      const anoLetivoAtual = settings?.ano_letivo_atual || new Date().getFullYear();
+      // Usar o ano da fase ativa, ou fallback para settings/ano atual
+      let anoLetivoAtual = faseAtiva?.ano_letivo;
 
+      if (!anoLetivoAtual) {
+        const { data: settings } = await supabase
+          .from('institution_settings')
+          .select('ano_letivo_atual')
+          .eq('institution_id', profile.institution_id)
+          .single();
+        anoLetivoAtual = settings?.ano_letivo_atual || new Date().getFullYear();
+      }
+
+      // Agora buscar TODAS as fases do ano correto
       const { data: fases, error: fasesError } = await supabase
         .from('fases')
         .select('id, numero_fase, semana_atual, ativo, inteligencia_id')
@@ -78,31 +90,33 @@ const MissoesPage = () => {
 
       if (fasesError) throw fasesError;
 
-      const faseAtual = fases?.find(f => f.ativo) || null;
-
-      const itensLista: ItemFase[] = (inteligencias || []).map(intel => {
-        const fase = fases?.find(f => f.inteligencia_id === intel.id) || null;
+      // Mapear FASES (não inteligências) para garantir ordem correta por numero_fase
+      const faseAtivaEncontrada = fases?.find(f => f.ativo);
+      
+      const itensLista: ItemFase[] = (fases || []).map(fase => {
+        const inteligencia = inteligencias?.find(i => i.id === fase.inteligencia_id);
+        
+        if (!inteligencia) return null;
         
         let status: 'futura' | 'atual' | 'passada' = 'futura';
         
-        if (fase) {
-          if (fase.ativo) {
-            status = 'atual';
-          } else if (faseAtual && fase.numero_fase < faseAtual.numero_fase) {
-            status = 'passada';
-          } else {
-            status = 'futura';
-          }
+        if (fase.ativo) {
+          status = 'atual';
+        } else if (faseAtivaEncontrada && fase.numero_fase < faseAtivaEncontrada.numero_fase) {
+          status = 'passada';
         }
-
+        
         return {
-          inteligencia: intel,
+          inteligencia,
           fase,
           status
         };
-      });
+      }).filter(Boolean) as ItemFase[];
 
-      setItens(itensLista);
+      // Ordenar por numero_fase
+      setItens(itensLista.sort((a, b) => 
+        (a.fase?.numero_fase ?? 999) - (b.fase?.numero_fase ?? 999)
+      ));
     } catch (err) {
       console.error('Error fetching data:', err);
       setError('Não foi possível carregar as fases. Tente novamente.');
