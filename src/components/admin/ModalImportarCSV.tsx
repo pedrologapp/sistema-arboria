@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { X, Upload, Download, FileText, Loader2, Check, AlertCircle, HelpCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import ModalInstrucoesImportacao from './ModalInstrucoesImportacao';
 
 interface ModalImportarCSVProps {
@@ -77,20 +78,139 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
     });
   });
 
-  const baixarModelo = () => {
-    const header = colunas.join(',');
-    const exemplo = tipo === 'alunos'
-      ? 'João,Silva,joao@escola.com,6º ano,A,1,60,70,40,85,75,50,55,30\nMaria,Santos,maria@escola.com,7º ano,B,2,75,80,60,50,90,45,40,65'
-      : 'Ana,Paula,ana@escola.com,1\nCarlos,Santos,carlos@escola.com,2';
+  const baixarModeloExcel = () => {
+    const wb = XLSX.utils.book_new();
     
-    const csv = `${header}\n${exemplo}`;
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `modelo_${tipo}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    if (tipo === 'alunos') {
+      // === ABA 1: DADOS ===
+      const dadosHeader = [
+        'nome', 'sobrenome', 'email', 'serie', 'turma', 'casa_id',
+        'int_intrapessoal', 'int_interpessoal', 'int_naturalista',
+        'int_logico', 'int_linguistica', 'int_espacial', 
+        'int_corporal', 'int_musical'
+      ];
+      
+      const dadosExemplo = [
+        ['João', 'Silva', 'joao@escola.com', '6º ano', 'A', 1, 60, 70, 40, 85, 75, 50, 55, 30],
+        ['Maria', 'Santos', 'maria@escola.com', '6º ano', 'A', 2, 75, 80, 60, 50, 90, 45, 40, 65],
+      ];
+      
+      const wsDados = XLSX.utils.aoa_to_sheet([dadosHeader, ...dadosExemplo]);
+      wsDados['!cols'] = [
+        { wch: 12 }, { wch: 12 }, { wch: 25 }, { wch: 10 }, { wch: 8 }, { wch: 10 },
+        { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }
+      ];
+      XLSX.utils.book_append_sheet(wb, wsDados, 'Dados');
+      
+      // === ABA 2: INSTRUÇÕES ===
+      const instrucoes = [
+        ['INSTRUÇÕES DE IMPORTAÇÃO - PROJETO ARBORIA'],
+        [''],
+        ['PASSO A PASSO'],
+        ['1. Vá para a aba "Dados"'],
+        ['2. Preencha os dados dos alunos a partir da linha 2'],
+        ['3. NÃO altere a linha 1 (cabeçalho)'],
+        ['4. Salve como CSV: Arquivo > Salvar como > CSV UTF-8'],
+        ['5. Faça upload do arquivo no sistema'],
+        [''],
+        ['═══════════════════════════════════════════════════'],
+        [''],
+        ['⭐ TABELA DE IDs DAS CASAS (IMPORTANTE!)'],
+        [''],
+        ['ID', 'NOME DA CASA'],
+        ['1', 'Linguística'],
+        ['2', 'Lógico-Matemática'],
+        ['3', 'Espacial'],
+        ['4', 'Musical'],
+        ['5', 'Corporal-Cinestésica'],
+        ['6', 'Naturalista'],
+        ['7', 'Interpessoal'],
+        ['8', 'Intrapessoal'],
+        [''],
+        ['Exemplo: Se o aluno pertence à casa Linguística, coloque 1 na coluna casa_id'],
+        [''],
+        ['═══════════════════════════════════════════════════'],
+        [''],
+        ['COLUNAS OBRIGATÓRIAS'],
+        [''],
+        ['Coluna', 'Descrição', 'Exemplo'],
+        ['nome', 'Primeiro nome do aluno', 'João'],
+        ['sobrenome', 'Sobrenome do aluno', 'Silva'],
+        ['email', 'Email único do aluno', 'joao@escola.com'],
+        ['serie', 'Série (6º ano ou 9º ano)', '6º ano'],
+        ['turma', 'Turma (A, B ou C)', 'A'],
+        ['casa_id', 'ID da casa (1 a 8)', '1'],
+        [''],
+        ['═══════════════════════════════════════════════════'],
+        [''],
+        ['COLUNAS OPCIONAIS (% das Inteligências - valores de 0 a 100)'],
+        [''],
+        ['Coluna', 'Inteligência'],
+        ['int_intrapessoal', 'Intrapessoal'],
+        ['int_interpessoal', 'Interpessoal'],
+        ['int_naturalista', 'Naturalista'],
+        ['int_logico', 'Lógico-Matemática'],
+        ['int_linguistica', 'Linguística'],
+        ['int_espacial', 'Espacial'],
+        ['int_corporal', 'Corporal-Cinestésica'],
+        ['int_musical', 'Musical'],
+        [''],
+        ['Deixe vazio ou 0 se não souber os valores'],
+        [''],
+        ['═══════════════════════════════════════════════════'],
+        [''],
+        ['⚠️ DICAS IMPORTANTES'],
+        [''],
+        ['• NÃO altere a ordem das colunas'],
+        ['• NÃO adicione colunas extras'],
+        ['• NÃO altere os nomes das colunas'],
+        ['• Cada email deve ser único'],
+        ['• Apague as linhas de exemplo antes de importar'],
+        ['• Senha padrão será: arboria123'],
+      ];
+      
+      const wsInstrucoes = XLSX.utils.aoa_to_sheet(instrucoes);
+      wsInstrucoes['!cols'] = [{ wch: 20 }, { wch: 25 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(wb, wsInstrucoes, 'Instruções');
+      
+      XLSX.writeFile(wb, 'modelo_alunos.xlsx');
+    } else {
+      // === PROFESSORES ===
+      const dadosHeader = ['nome', 'sobrenome', 'email', 'casa_id'];
+      const dadosExemplo = [
+        ['Ana', 'Paula', 'ana@escola.com', 1],
+        ['Carlos', 'Santos', 'carlos@escola.com', 2],
+      ];
+      
+      const wsDados = XLSX.utils.aoa_to_sheet([dadosHeader, ...dadosExemplo]);
+      wsDados['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 10 }];
+      XLSX.utils.book_append_sheet(wb, wsDados, 'Dados');
+      
+      const instrucoes = [
+        ['INSTRUÇÕES DE IMPORTAÇÃO - PROFESSORES'],
+        [''],
+        ['⭐ TABELA DE IDs DAS CASAS'],
+        [''],
+        ['ID', 'NOME DA CASA'],
+        ['1', 'Linguística'],
+        ['2', 'Lógico-Matemática'],
+        ['3', 'Espacial'],
+        ['4', 'Musical'],
+        ['5', 'Corporal-Cinestésica'],
+        ['6', 'Naturalista'],
+        ['7', 'Interpessoal'],
+        ['8', 'Intrapessoal'],
+        [''],
+        ['A coluna casa_id é opcional (pode deixar vazio)'],
+        ['Senha padrão será: arboria123'],
+      ];
+      
+      const wsInstrucoes = XLSX.utils.aoa_to_sheet(instrucoes);
+      wsInstrucoes['!cols'] = [{ wch: 20 }, { wch: 25 }];
+      XLSX.utils.book_append_sheet(wb, wsInstrucoes, 'Instruções');
+      
+      XLSX.writeFile(wb, 'modelo_professores.xlsx');
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -255,18 +375,18 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
 
           {/* Baixar modelo */}
           <button
-            onClick={baixarModelo}
+            onClick={baixarModeloExcel}
             className="w-full p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-2 text-white"
           >
             <Download className="w-4 h-4" />
-            Baixar modelo CSV
+            Baixar modelo Excel
           </button>
 
           {/* Upload */}
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv"
+            accept=".csv,.xlsx,.xls"
             onChange={handleFileChange}
             className="hidden"
           />
