@@ -220,12 +220,36 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
     return conteudos?.find(c => c.semana === semana);
   };
 
-  // Copiar link para clipboard
-
   // Copiar link
   const copiarLink = async (url: string) => {
     await navigator.clipboard.writeText(url);
     toast.success('Link copiado!');
+  };
+
+  // Download via fetch/blob (funciona cross-origin)
+  const baixarPDF = async (url: string, nomeArquivo: string) => {
+    try {
+      toast.info('Iniciando download...');
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = nomeArquivo;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+      
+      toast.success('Download concluído!');
+    } catch {
+      // Fallback: copiar link
+      await navigator.clipboard.writeText(url);
+      toast.error('Erro no download. Link copiado.', {
+        description: 'Cole o link no navegador para baixar.'
+      });
+    }
   };
 
   if (isLoading) {
@@ -308,14 +332,13 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
                         <Eye className="w-4 h-4" />
                         Visualizar
                       </a>
-                      <a
-                        href={conteudo.arquivo_url}
-                        download={conteudo.arquivo_nome}
+                      <button
+                        onClick={() => baixarPDF(conteudo.arquivo_url, conteudo.arquivo_nome)}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
                       >
                         <Download className="w-4 h-4" />
                         Baixar
-                      </a>
+                      </button>
                       <button
                         onClick={() => copiarLink(conteudo.arquivo_url)}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
