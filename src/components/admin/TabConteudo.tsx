@@ -296,44 +296,52 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
                   </div>
 
                   {/* Ações */}
-                  <div className="flex gap-2">
-                    <a
-                      href={conteudo.arquivo_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
-                    >
-                      <Eye className="w-4 h-4" />
-                      Visualizar
-                    </a>
-                    <a
-                      href={conteudo.arquivo_url}
-                      download={conteudo.arquivo_nome}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
-                    >
-                      <Download className="w-4 h-4" />
-                      Baixar
-                    </a>
-                    <button
-                      onClick={() => copiarLink(conteudo.arquivo_url)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
-                    >
-                      <Copy className="w-4 h-4" />
-                      Copiar Link
-                    </button>
-                    <button
-                      onClick={() => abrirModal(semana.numero, conteudo)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      Substituir
-                    </button>
-                    <button
-                      onClick={() => removerMutation.mutate(conteudo.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 rounded-lg text-red-400 text-sm hover:bg-red-500/20 transition-colors ml-auto"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                  <div className="space-y-2">
+                    {/* Linha 1: Ações do PDF */}
+                    <div className="flex flex-wrap gap-2">
+                      <a
+                        href={conteudo.arquivo_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
+                        Visualizar
+                      </a>
+                      <a
+                        href={conteudo.arquivo_url}
+                        download={conteudo.arquivo_nome}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        Baixar
+                      </a>
+                      <button
+                        onClick={() => copiarLink(conteudo.arquivo_url)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
+                      >
+                        <Copy className="w-4 h-4" />
+                        Copiar Link
+                      </button>
+                    </div>
+                    
+                    {/* Linha 2: Ações administrativas */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => abrirModal(semana.numero, conteudo)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Substituir
+                      </button>
+                      <button
+                        onClick={() => removerMutation.mutate(conteudo.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 rounded-lg text-red-400 text-sm hover:bg-red-500/20 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                        Remover
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
