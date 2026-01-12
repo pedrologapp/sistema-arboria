@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { AdminHeader } from '@/components/AdminHeader';
-import { AdminMobileNav } from '@/components/AdminMobileNav';
+import AdminBottomNav from '@/components/AdminBottomNav';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -28,7 +28,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <AdminMobileNav />
+      <AdminBottomNav />
     </div>
   );
 }

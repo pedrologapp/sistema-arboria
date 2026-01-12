@@ -7,17 +7,23 @@ import { MenuToggleIcon } from '@/components/ui/menu-toggle-icon';
 import { createPortal } from 'react-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  LayoutDashboard,
+  Activity,
   Users,
+  Shield,
+  Calendar,
+  FileText,
   Settings,
   LogOut,
   TreeDeciduous,
 } from 'lucide-react';
 
 const navItems = [
-  { title: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-  { title: 'Usuários', href: '/admin/usuarios', icon: Users },
-  { title: 'Configurações', href: '/admin/configuracoes', icon: Settings },
+  { title: 'Monitor', href: '/admin/monitor', icon: Activity },
+  { title: 'Pessoas', href: '/admin/pessoas', icon: Users },
+  { title: 'Casas', href: '/admin/casas', icon: Shield },
+  { title: 'Fases', href: '/admin/fases', icon: Calendar },
+  { title: 'Relatórios', href: '/admin/relatorios', icon: FileText },
+  { title: 'Config', href: '/admin/config', icon: Settings },
 ];
 
 export function AdminHeader() {
@@ -44,9 +50,6 @@ export function AdminHeader() {
   }, [open]);
 
   const isActive = (href: string) => {
-    if (href === '/admin') {
-      return location.pathname === '/admin';
-    }
     return location.pathname.startsWith(href);
   };
 

@@ -36,7 +36,7 @@ const Login = () => {
         setIsRedirecting(true);
         
         if (isAdmin) {
-          navigate('/admin');
+          navigate('/admin/monitor');
           return;
         }
         

@@ -16,12 +16,17 @@ import Login from "./pages/Login";
 import Setup from "./pages/Setup";
 import Dashboard from "./pages/Dashboard";
 import AlterarSenha from "./pages/AlterarSenha";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminUsers from "./pages/AdminUsers";
-import AdminSettings from "./pages/AdminSettings";
 import RecoverAdmin from "./pages/RecoverAdmin";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+
+// Admin pages
+import MonitorPage from "./pages/admin/MonitorPage";
+import PessoasPage from "./pages/admin/PessoasPage";
+import CasasPage from "./pages/admin/CasasPage";
+import FasesPage from "./pages/admin/FasesPage";
+import RelatoriosPage from "./pages/admin/RelatoriosPage";
+import ConfigPage from "./pages/admin/ConfigPage";
 
 // Aluno pages
 import HomePage from "./pages/aluno/HomePage";
@@ -96,24 +101,46 @@ const App = () => (
             } />
             
             {/* Admin Routes with Layout */}
-            <Route path="/admin" element={
+            <Route path="/admin" element={<Navigate to="/admin/monitor" replace />} />
+            <Route path="/admin/monitor" element={
               <ProtectedRoute requireAdmin>
                 <AdminLayout>
-                  <AdminDashboard />
+                  <MonitorPage />
                 </AdminLayout>
               </ProtectedRoute>
             } />
-            <Route path="/admin/usuarios" element={
+            <Route path="/admin/pessoas" element={
               <ProtectedRoute requireAdmin>
                 <AdminLayout>
-                  <AdminUsers />
+                  <PessoasPage />
                 </AdminLayout>
               </ProtectedRoute>
             } />
-            <Route path="/admin/configuracoes" element={
+            <Route path="/admin/casas" element={
               <ProtectedRoute requireAdmin>
                 <AdminLayout>
-                  <AdminSettings />
+                  <CasasPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/fases" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <FasesPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/relatorios" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <RelatoriosPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/config" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <ConfigPage />
                 </AdminLayout>
               </ProtectedRoute>
             } />
