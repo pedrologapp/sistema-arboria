@@ -488,8 +488,8 @@ const MissoesPorCasa = ({
 
       {/* Modal de Missão */}
       {modalAberto && casaAtual && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-[#1a1a1a] rounded-t-2xl sm:rounded-2xl max-h-[70vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <div className="w-full max-w-lg bg-slate-800 rounded-xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-white/10">
               <div className="flex items-center gap-3">
