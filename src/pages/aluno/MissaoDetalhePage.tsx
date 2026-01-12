@@ -133,6 +133,39 @@ const MissaoDetalhePage = () => {
   // Chave do rascunho
   const DRAFT_KEY = `missao_draft_${id}`;
 
+  // Download via fetch/blob (funciona cross-origin)
+  const baixarPDF = async (url: string, nomeArquivo: string) => {
+    try {
+      toast({
+        title: "Iniciando download...",
+        description: "Aguarde um momento"
+      });
+      
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = nomeArquivo;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+      
+      toast({
+        title: "Download concluído!",
+        description: nomeArquivo
+      });
+    } catch {
+      toast({
+        title: "Erro no download",
+        description: "Tente visualizar o PDF e salvar manualmente",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Buscar dados da missão
   const fetchMissao = useCallback(async () => {
     if (!id || !user) return;
@@ -739,14 +772,16 @@ const MissaoDetalhePage = () => {
               </a>
               
               {/* Baixar */}
-              <a
-                href={missao.arquivo_pdf_url}
-                download={missao.arquivo_pdf_nome || 'material.pdf'}
+              <button
+                onClick={() => baixarPDF(
+                  missao.arquivo_pdf_url!, 
+                  missao.arquivo_pdf_nome || 'material.pdf'
+                )}
                 className="p-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 transition-all"
                 title="Baixar"
               >
                 <Download className="w-4 h-4 text-emerald-400" />
-              </a>
+              </button>
             </div>
           </div>
         </motion.div>
