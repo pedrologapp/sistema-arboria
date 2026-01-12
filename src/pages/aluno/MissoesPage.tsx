@@ -220,9 +220,9 @@ const MissoesPage = () => {
               onClick={() => handleFaseClick(item)}
               disabled={isFutura}
               className={cn(
-                'w-full py-5 px-4 rounded-xl text-left transition-all relative',
+                'w-full py-5 px-4 rounded-xl text-left transition-all relative overflow-hidden',
                 isFutura && 'cursor-not-allowed bg-[#1E293B]/50 opacity-50',
-                isAtual && 'bg-[#1E293B] border-l-2 border-[#3B82F6] hover:bg-[#283548]',
+                isAtual && 'bg-gradient-to-r from-[#22C55E]/15 to-[#1E293B] border border-[#22C55E]/40 hover:from-[#22C55E]/20',
                 isPassada && 'bg-[#1E293B] hover:bg-[#283548]'
               )}
             >
@@ -245,8 +245,9 @@ const MissoesPage = () => {
               <div className="flex items-center gap-4">
                 {/* Brasão */}
                 <div className={cn(
-                  'transition-opacity',
-                  isFutura && 'opacity-40 grayscale'
+                  'transition-all',
+                  isFutura && 'opacity-40 grayscale',
+                  isAtual && 'ring-2 ring-[#22C55E]/50 ring-offset-2 ring-offset-[#0A0A0A] rounded-full'
                 )}>
                   <CasaBrasao
                     brasaoUrl={item.inteligencia.brasao_url}
@@ -267,7 +268,9 @@ const MissoesPage = () => {
                       {item.inteligencia.nome}
                     </span>
                     {isAtual && (
-                      <span className="text-sm text-[#3B82F6]">· atual</span>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#22C55E]/20 text-[#22C55E]">
+                        Fase Atual
+                      </span>
                     )}
                   </div>
                   
@@ -287,7 +290,7 @@ const MissoesPage = () => {
                 {/* Status icons */}
                 <div className="flex-shrink-0">
                   {isFutura && <Lock className="w-4 h-4 text-[#475569]" />}
-                  {isAtual && <ChevronRight className="w-4 h-4 text-[#3B82F6]" />}
+                  {isAtual && <ChevronRight className="w-5 h-5 text-[#22C55E]" />}
                   {isPassada && (
                     <div className="flex items-center gap-1">
                       <CheckCircle className="w-4 h-4 text-[#22C55E]" />
