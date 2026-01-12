@@ -18,91 +18,88 @@ import { CasaBrasao } from '@/components/CasaBrasao';
 import { toast } from 'sonner';
 import { clearAppBadge } from '@/hooks/useAppBadge';
 
+interface Inteligencia {
+  id: number;
+  nome: string;
+  cor_hex: string | null;
+  brasao_url: string | null;
+  emoji: string | null;
+}
+
 interface Fase {
   id: string;
   numero_fase: number;
   semana_atual: number | null;
   ativo: boolean;
-  data_inicio: string;
-  data_fim: string;
-  inteligencia: {
-    id: number;
-    nome: string;
-    cor_hex: string | null;
-    brasao_url: string | null;
-    emoji: string | null;
-  } | null;
+  inteligencia_id: number;
+}
+
+interface ItemFase {
+  inteligencia: Inteligencia;
+  fase: Fase | null;
   status: 'futura' | 'atual' | 'passada';
 }
 
 const MissoesPage = () => {
   const navigate = useNavigate();
   const { profile, casaColor, isLoading: contextLoading } = useStudent();
-  const [fases, setFases] = useState<Fase[]>([]);
+  const [itens, setItens] = useState<ItemFase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchFases = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     if (!profile?.institution_id) return;
 
     try {
       setError(null);
       
-      // Buscar todas as fases da instituição com dados da inteligência
-      const { data, error: fetchError } = await supabase
-        .from('fases')
-        .select(`
-          id,
-          numero_fase,
-          semana_atual,
-          ativo,
-          data_inicio,
-          data_fim,
-          inteligencias:inteligencia_id (
-            id,
-            nome,
-            cor_hex,
-            brasao_url,
-            emoji
-          )
-        `)
-        .eq('institution_id', profile.institution_id)
-        .order('numero_fase', { ascending: false });
+      // Buscar todas as inteligências
+      const { data: inteligencias, error: intError } = await supabase
+        .from('inteligencias')
+        .select('id, nome, cor_hex, brasao_url, emoji')
+        .order('id');
 
-      if (fetchError) throw fetchError;
+      if (intError) throw intError;
+
+      // Buscar fases da instituição
+      const { data: fases, error: fasesError } = await supabase
+        .from('fases')
+        .select('id, numero_fase, semana_atual, ativo, inteligencia_id')
+        .eq('institution_id', profile.institution_id);
+
+      if (fasesError) throw fasesError;
 
       // Encontrar a fase atual (ativo = true)
-      const faseAtual = data?.find(f => f.ativo);
-      const numeroFaseAtual = faseAtual?.numero_fase || 0;
+      const faseAtual = fases?.find(f => f.ativo) || null;
 
-      // Mapear e determinar status de cada fase
-      const fasesComStatus: Fase[] = (data || []).map(fase => {
-        let status: 'futura' | 'atual' | 'passada';
+      // Combinar inteligências com suas fases
+      const itensLista: ItemFase[] = (inteligencias || []).map(intel => {
+        const fase = fases?.find(f => f.inteligencia_id === intel.id) || null;
         
-        if (fase.ativo) {
-          status = 'atual';
-        } else if (fase.numero_fase > numeroFaseAtual) {
-          status = 'futura';
-        } else {
-          status = 'passada';
+        let status: 'futura' | 'atual' | 'passada' = 'futura';
+        
+        if (fase) {
+          if (fase.ativo) {
+            status = 'atual';
+          } else if (faseAtual && fase.numero_fase < faseAtual.numero_fase) {
+            status = 'passada';
+          } else {
+            status = 'futura';
+          }
         }
+        // Se não tem fase, status permanece 'futura'
 
         return {
-          id: fase.id,
-          numero_fase: fase.numero_fase,
-          semana_atual: fase.semana_atual,
-          ativo: fase.ativo,
-          data_inicio: fase.data_inicio,
-          data_fim: fase.data_fim,
-          inteligencia: fase.inteligencias as Fase['inteligencia'],
+          inteligencia: intel,
+          fase,
           status
         };
       });
 
-      setFases(fasesComStatus);
+      setItens(itensLista);
     } catch (err) {
-      console.error('Error fetching fases:', err);
+      console.error('Error fetching data:', err);
       setError('Não foi possível carregar as fases. Tente novamente.');
     } finally {
       setIsLoading(false);
@@ -110,31 +107,35 @@ const MissoesPage = () => {
   }, [profile?.institution_id]);
 
   useEffect(() => {
-    fetchFases();
+    fetchData();
     clearAppBadge();
-  }, [fetchFases]);
+  }, [fetchData]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchFases();
+    await fetchData();
     setRefreshing(false);
   };
 
-  const handleFaseClick = (fase: Fase) => {
-    if (fase.status === 'futura') {
+  const handleFaseClick = (item: ItemFase) => {
+    if (item.status === 'futura' || !item.fase) {
       toast.error('Esta fase ainda não começou');
       return;
     }
-    navigate(`/aluno/missoes/fase/${fase.id}`);
+    navigate(`/aluno/missoes/fase/${item.fase.id}`);
   };
 
-  // Ordenar: atual primeiro, depois passadas (mais recentes primeiro), depois futuras
-  const fasesOrdenadas = useMemo(() => {
-    const atual = fases.filter(f => f.status === 'atual');
-    const passadas = fases.filter(f => f.status === 'passada').sort((a, b) => b.numero_fase - a.numero_fase);
-    const futuras = fases.filter(f => f.status === 'futura').sort((a, b) => a.numero_fase - b.numero_fase);
+  // Ordenar: atual primeiro, depois passadas, depois futuras (por ordem de inteligência)
+  const itensOrdenados = useMemo(() => {
+    const atual = itens.filter(i => i.status === 'atual');
+    const passadas = itens.filter(i => i.status === 'passada').sort((a, b) => 
+      (b.fase?.numero_fase || 0) - (a.fase?.numero_fase || 0)
+    );
+    const futuras = itens.filter(i => i.status === 'futura').sort((a, b) => 
+      a.inteligencia.id - b.inteligencia.id
+    );
     return [...atual, ...passadas, ...futuras];
-  }, [fases]);
+  }, [itens]);
 
   if (contextLoading || isLoading) {
     return (
@@ -144,8 +145,8 @@ const MissoesPage = () => {
           <div className="h-10 w-10 bg-white/10 rounded-full animate-pulse" />
         </div>
         <div className="space-y-3">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-24 bg-white/10 rounded-xl animate-pulse" />
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+            <div key={i} className="h-20 bg-white/10 rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -160,7 +161,7 @@ const MissoesPage = () => {
           <p className="text-white/80 mb-4">{error}</p>
           <Button 
             variant="outline" 
-            onClick={fetchFases}
+            onClick={fetchData}
             className="border-red-500/50 text-red-400 hover:bg-red-500/10"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
@@ -198,21 +199,21 @@ const MissoesPage = () => {
         </h2>
       </div>
 
-      {/* Lista de Fases */}
+      {/* Lista de Inteligências/Fases */}
       <div className="space-y-3">
-        {fasesOrdenadas.map((fase, index) => {
-          const corFase = fase.inteligencia?.cor_hex || casaColor;
-          const isFutura = fase.status === 'futura';
-          const isAtual = fase.status === 'atual';
-          const isPassada = fase.status === 'passada';
+        {itensOrdenados.map((item, index) => {
+          const corFase = item.inteligencia.cor_hex || casaColor;
+          const isFutura = item.status === 'futura';
+          const isAtual = item.status === 'atual';
+          const isPassada = item.status === 'passada';
 
           return (
             <motion.button
-              key={fase.id}
+              key={item.inteligencia.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              onClick={() => handleFaseClick(fase)}
+              onClick={() => handleFaseClick(item)}
               disabled={isFutura}
               className={cn(
                 'w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden',
@@ -229,9 +230,9 @@ const MissoesPage = () => {
                 {/* Brasão */}
                 <div className={cn(isFutura && 'opacity-50')}>
                   <CasaBrasao
-                    brasaoUrl={fase.inteligencia?.brasao_url}
-                    emoji={fase.inteligencia?.emoji}
-                    nome={fase.inteligencia?.nome}
+                    brasaoUrl={item.inteligencia.brasao_url}
+                    emoji={item.inteligencia.emoji}
+                    nome={item.inteligencia.nome}
                     size="medium"
                   />
                 </div>
@@ -246,7 +247,7 @@ const MissoesPage = () => {
                       )}
                       style={isAtual ? { color: corFase } : undefined}
                     >
-                      {fase.inteligencia?.nome || `Fase ${fase.numero_fase}`}
+                      {item.inteligencia.nome}
                     </span>
                     {isAtual && (
                       <Badge 
@@ -264,7 +265,7 @@ const MissoesPage = () => {
                     isFutura ? 'text-gray-500' : 'text-white/50'
                   )}>
                     {isFutura && 'Fase futura'}
-                    {isAtual && `Semana ${fase.semana_atual || 1} de 4`}
+                    {isAtual && item.fase && `Semana ${item.fase.semana_atual || 1} de 4`}
                     {isPassada && 'Concluída'}
                   </p>
                 </div>
@@ -288,7 +289,7 @@ const MissoesPage = () => {
       </div>
 
       {/* Empty state */}
-      {fasesOrdenadas.length === 0 && (
+      {itensOrdenados.length === 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
