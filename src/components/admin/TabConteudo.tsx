@@ -7,7 +7,8 @@ import {
   X, 
   Eye, 
   RefreshCw,
-  Loader2
+  Loader2,
+  Copy
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatarData, parseDataLocal } from '@/utils/timezone';
@@ -218,6 +219,31 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
     return conteudos?.find(c => c.semana === semana);
   };
 
+  // Visualizar PDF com fallback
+  const visualizarPDF = async (url: string) => {
+    try {
+      const newWindow = window.open(url, '_blank');
+      
+      if (!newWindow || newWindow.closed) {
+        await navigator.clipboard.writeText(url);
+        toast.info('Link copiado! Cole em uma nova aba para visualizar.', {
+          description: 'O popup pode ter sido bloqueado pelo navegador.'
+        });
+      }
+    } catch {
+      await navigator.clipboard.writeText(url);
+      toast.info('Link copiado para a área de transferência', {
+        description: 'Cole o link em uma nova aba para visualizar o PDF.'
+      });
+    }
+  };
+
+  // Copiar link
+  const copiarLink = async (url: string) => {
+    await navigator.clipboard.writeText(url);
+    toast.success('Link copiado!');
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -287,15 +313,20 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
 
                   {/* Ações */}
                   <div className="flex gap-2">
-                    <a
-                      href={conteudo.arquivo_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => visualizarPDF(conteudo.arquivo_url)}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
                     >
                       <Eye className="w-4 h-4" />
                       Visualizar
-                    </a>
+                    </button>
+                    <button
+                      onClick={() => copiarLink(conteudo.arquivo_url)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
+                    >
+                      <Copy className="w-4 h-4" />
+                      Copiar Link
+                    </button>
                     <button
                       onClick={() => abrirModal(semana.numero, conteudo)}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-white/60 text-sm hover:bg-white/20 transition-colors"
