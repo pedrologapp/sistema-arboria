@@ -257,7 +257,7 @@ const FasesPage = () => {
         configurada: false,
       };
     }
-  });
+  }).sort((a, b) => a.numero_fase - b.numero_fase);
 
   // Encontrar fase atual (em andamento e configurada)
   const faseAtual = fasesCompletas.find(f => f.status === 'em_andamento' && f.configurada);
