@@ -5,9 +5,8 @@ import { useStudent } from '@/contexts/StudentContext';
 import { ArrowLeft, CheckCircle, Circle, Clock, RefreshCw, Eye, Info, ClipboardList } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { CasaBrasao } from '@/components/CasaBrasao';
-import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 
 interface Missao {
@@ -41,20 +40,6 @@ interface Entrega {
   status: string;
 }
 
-const statusLabels: Record<string, string> = {
-  disponivel: 'Disponível',
-  enviada: 'Aguardando avaliação',
-  aprovada: 'Aprovada',
-  refazer: 'Refazer',
-};
-
-const statusColors: Record<string, string> = {
-  disponivel: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  enviada: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-  aprovada: 'bg-green-500/20 text-green-300 border-green-500/30',
-  refazer: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
-};
-
 const MissoesCasaPage = () => {
   const { faseId, semana, casaId } = useParams<{ faseId: string; semana: string; casaId: string }>();
   const navigate = useNavigate();
@@ -79,7 +64,6 @@ const MissoesCasaPage = () => {
       setError(null);
 
       try {
-        // Fetch phase data
         const { data: faseData, error: faseError } = await supabase
           .from('fases')
           .select(`
@@ -99,7 +83,6 @@ const MissoesCasaPage = () => {
         const faseTyped = faseData as unknown as Fase;
         setFase(faseTyped);
 
-        // Fetch selected house data
         const { data: casaData, error: casaError } = await supabase
           .from('inteligencias')
           .select('id, nome, cor_hex, brasao_url, emoji')
@@ -109,7 +92,6 @@ const MissoesCasaPage = () => {
         if (casaError) throw casaError;
         setCasa(casaData);
 
-        // Fetch student's house name if viewing another house
         if (!ehMinhaCasa && profile.casa_id) {
           const { data: minhaCasaData } = await supabase
             .from('inteligencias')
@@ -122,7 +104,6 @@ const MissoesCasaPage = () => {
           }
         }
 
-        // Fetch individual missions for this house in this week
         const { data: missoesData, error: missoesError } = await supabase
           .from('missoes')
           .select('id, titulo, descricao, pontos_base')
@@ -135,7 +116,6 @@ const MissoesCasaPage = () => {
 
         if (missoesError) throw missoesError;
 
-        // If it's the student's house, fetch their submissions
         let entregasMap: Record<string, Entrega> = {};
         if (ehMinhaCasa && missoesData && missoesData.length > 0) {
           const missaoIds = missoesData.map(m => m.id);
@@ -148,7 +128,6 @@ const MissoesCasaPage = () => {
             .order('created_at', { ascending: false });
 
           if (entregasData) {
-            // Get the most recent submission for each mission
             entregasData.forEach(e => {
               if (!entregasMap[e.missao_id]) {
                 entregasMap[e.missao_id] = e;
@@ -157,7 +136,6 @@ const MissoesCasaPage = () => {
           }
         }
 
-        // Map missions with status
         const missoesComStatus: Missao[] = (missoesData || []).map(m => {
           let status: Missao['status'] = 'disponivel';
           
@@ -200,49 +178,58 @@ const MissoesCasaPage = () => {
   const renderStatusIcon = (status: string) => {
     switch (status) {
       case 'aprovada':
-        return <CheckCircle className="w-5 h-5 text-green-400" />;
+        return <CheckCircle className="w-4 h-4 text-[#22C55E]" />;
       case 'enviada':
-        return <Clock className="w-5 h-5 text-amber-400" />;
+        return <Clock className="w-4 h-4 text-[#F59E0B]" />;
       case 'refazer':
-        return <RefreshCw className="w-5 h-5 text-orange-400" />;
+        return <RefreshCw className="w-4 h-4 text-[#F97316]" />;
       default:
-        return <Circle className="w-5 h-5 text-blue-400" />;
+        return <Circle className="w-4 h-4 text-[#3B82F6]" />;
     }
   };
 
-  const corCasa = casa?.cor_hex || '#6366F1';
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'aprovada': return 'Aprovada';
+      case 'enviada': return 'Aguardando';
+      case 'refazer': return 'Refazer';
+      default: return 'Disponível';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'aprovada': return 'text-[#22C55E]';
+      case 'enviada': return 'text-[#F59E0B]';
+      case 'refazer': return 'text-[#F97316]';
+      default: return 'text-[#3B82F6]';
+    }
+  };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0D1117] text-white pb-24">
-        <div className="sticky top-0 z-10 bg-[#0D1117]/95 backdrop-blur-sm border-b border-white/10">
-          <div className="px-4 py-3 flex items-center gap-3">
-            <Skeleton className="w-8 h-8 rounded-full" />
-            <Skeleton className="h-5 w-40" />
+      <div className="min-h-screen bg-[#0F172A] px-5 py-6">
+        <div className="h-5 w-40 bg-[#1E293B] rounded animate-pulse mb-8" />
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-10 h-10 bg-[#1E293B] rounded-full animate-pulse" />
+          <div className="space-y-2">
+            <div className="h-4 w-32 bg-[#1E293B] rounded animate-pulse" />
+            <div className="h-3 w-40 bg-[#1E293B] rounded animate-pulse" />
           </div>
         </div>
-        <div className="p-4 space-y-4">
-          <div className="flex items-center gap-4 mb-6">
-            <Skeleton className="w-16 h-16 rounded-full" />
-            <div className="space-y-2">
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-4 w-48" />
-            </div>
-          </div>
-          {[1, 2, 3].map(i => (
-            <Skeleton key={i} className="h-32 w-full rounded-xl" />
-          ))}
-        </div>
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-24 bg-[#1E293B] rounded-xl animate-pulse mb-3" />
+        ))}
       </div>
     );
   }
 
   if (error || !fase || !casa) {
     return (
-      <div className="min-h-screen bg-[#0D1117] text-white pb-24 flex items-center justify-center">
-        <div className="text-center p-6">
-          <p className="text-white/60 mb-4">{error || 'Dados não encontrados'}</p>
-          <Button variant="outline" onClick={handleVoltar}>
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-5">
+        <div className="text-center">
+          <p className="text-[#64748B] text-sm mb-4">{error || 'Dados não encontrados'}</p>
+          <Button variant="outline" onClick={handleVoltar} className="border-[#334155]">
             Voltar
           </Button>
         </div>
@@ -251,184 +238,148 @@ const MissoesCasaPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0D1117] text-white pb-24">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#0D1117]/95 backdrop-blur-sm border-b border-white/10">
-        <div className="px-4 py-3 flex items-center gap-3">
-          <button
-            onClick={handleVoltar}
-            className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2">
-            <span className="text-white/60">Individual -</span>
-            <span className="font-medium" style={{ color: corCasa }}>
-              {casa.nome}
-            </span>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#0F172A] px-5 py-6 pb-24">
+      {/* Back button */}
+      <button
+        onClick={handleVoltar}
+        className="flex items-center gap-2 text-[#94A3B8] hover:text-white transition-colors mb-6"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span className="text-sm">Individual - {casa.nome}</span>
+      </button>
 
-      <div className="p-4">
-        {/* Banner for other house */}
-        {!ehMinhaCasa && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 mb-6"
-          >
-            <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-medium text-blue-300">
-                  Você é da Casa {minhaCasaNome}
-                </p>
-                <p className="text-sm text-blue-300/70 mt-1">
-                  Você pode visualizar as missões da Casa {casa.nome}, mas não pode realizá-las.
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* House header with shield */}
+      {/* Banner for other house */}
+      {!ehMinhaCasa && (
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-4 mb-6"
+          className="p-4 rounded-xl bg-[#1E293B] border border-[#3B82F6]/20 mb-6"
         >
-          <div
-            className="relative"
-            style={{
-              opacity: ehMinhaCasa ? 1 : 0.5,
-            }}
-          >
-            <CasaBrasao
-              brasaoUrl={casa.brasao_url}
-              emoji={casa.emoji}
-              nome={casa.nome}
-              size="large"
-              className={ehMinhaCasa ? 'drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]' : ''}
-            />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-white">
-              MISSÕES INDIVIDUAIS
-            </h1>
-            <p className="text-sm text-white/60">
-              Casa {casa.nome} - Semana {semanaNum}
+          <div className="flex items-start gap-3">
+            <Info className="w-4 h-4 text-[#3B82F6] mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-[#94A3B8]">
+              <span className="text-[#3B82F6]">Você é da Casa {minhaCasaNome}.</span>{' '}
+              Estas missões são apenas para visualização.
             </p>
-            {!ehMinhaCasa && (
-              <p className="text-xs text-white/40 mt-1">(modo visualização)</p>
-            )}
           </div>
         </motion.div>
+      )}
 
-        {/* Missions list */}
-        {missoes.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-12"
-          >
-            <ClipboardList className="w-12 h-12 text-white/20 mx-auto mb-3" />
-            <p className="text-white/40">Nenhuma missão desta casa nesta semana</p>
-          </motion.div>
-        ) : (
-          <div className="space-y-3">
-            {missoes.map((missao, index) => (
-              <motion.div
-                key={missao.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                onClick={() => handleMissaoClick(missao.id)}
-                className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                  ehMinhaCasa
-                    ? missao.status === 'aprovada'
-                      ? 'bg-green-500/5 border-green-500/20 hover:border-green-500/40'
-                      : missao.status === 'refazer'
-                      ? 'bg-orange-500/5 border-orange-500/20 hover:border-orange-500/40'
-                      : 'bg-white/[0.03] border-white/10 hover:border-white/20 hover:bg-white/[0.05]'
-                    : 'bg-white/[0.02] border-white/5'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  {/* Icon */}
-                  <div className="mt-0.5">
-                    {ehMinhaCasa ? (
-                      renderStatusIcon(missao.status)
-                    ) : (
-                      <Eye className="w-5 h-5 text-white/30" />
-                    )}
-                  </div>
+      {/* House header */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center gap-4 mb-6"
+      >
+        <div className={ehMinhaCasa ? '' : 'opacity-50'}>
+          <CasaBrasao
+            brasaoUrl={casa.brasao_url}
+            emoji={casa.emoji}
+            nome={casa.nome}
+            size="medium"
+          />
+        </div>
+        <div>
+          <h1 className="text-[15px] font-semibold text-white uppercase tracking-wide">
+            Missões Individuais
+          </h1>
+          <p className="text-[13px] text-[#94A3B8]">
+            Casa {casa.nome} - Semana {semanaNum}
+          </p>
+          {!ehMinhaCasa && (
+            <p className="text-xs text-[#64748B] mt-0.5">(modo visualização)</p>
+          )}
+        </div>
+      </motion.div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <h3
-                      className={`font-medium mb-1 ${
-                        ehMinhaCasa ? 'text-white' : 'text-white/50'
-                      }`}
-                    >
-                      {missao.titulo}
-                    </h3>
-                    {missao.descricao && (
-                      <p
-                        className={`text-sm line-clamp-2 mb-2 ${
-                          ehMinhaCasa ? 'text-white/60' : 'text-white/30'
-                        }`}
-                      >
-                        {missao.descricao}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span
-                        className={`text-sm font-medium ${
-                          ehMinhaCasa ? '' : 'text-white/40'
-                        }`}
-                        style={{ color: ehMinhaCasa ? corCasa : undefined }}
-                      >
-                        +{missao.pontos_base} pts
-                      </span>
-                      {ehMinhaCasa && (
-                        <Badge
-                          variant="outline"
-                          className={`text-xs ${statusColors[missao.status]}`}
-                        >
-                          {statusLabels[missao.status]}
-                        </Badge>
-                      )}
-                      {!ehMinhaCasa && (
-                        <span className="text-xs text-white/30">
-                          (somente visualização)
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Action button for own house */}
-                    {ehMinhaCasa && (missao.status === 'disponivel' || missao.status === 'refazer') && (
-                      <Button
-                        size="sm"
-                        className="mt-3 w-full"
-                        style={{
-                          background: `linear-gradient(135deg, ${corCasa}, ${corCasa}dd)`,
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMissaoClick(missao.id);
-                        }}
-                      >
-                        {missao.status === 'refazer' ? '🔄 Refazer missão' : '📝 Fazer missão'}
-                      </Button>
-                    )}
-                  </div>
+      {/* Missions list */}
+      {missoes.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-12"
+        >
+          <ClipboardList className="w-10 h-10 text-[#334155] mx-auto mb-3" />
+          <p className="text-[#64748B] text-sm">Nenhuma missão desta casa nesta semana</p>
+        </motion.div>
+      ) : (
+        <div className="space-y-3">
+          {missoes.map((missao, index) => (
+            <motion.div
+              key={missao.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.03 }}
+              onClick={() => handleMissaoClick(missao.id)}
+              className={cn(
+                'p-4 rounded-xl transition-all cursor-pointer',
+                ehMinhaCasa
+                  ? 'bg-[#1E293B] hover:bg-[#283548]'
+                  : 'bg-[#1E293B]/50'
+              )}
+            >
+              <div className="flex items-start gap-3">
+                {/* Icon */}
+                <div className="mt-0.5">
+                  {ehMinhaCasa ? (
+                    renderStatusIcon(missao.status)
+                  ) : (
+                    <Eye className="w-4 h-4 text-[#475569]" />
+                  )}
                 </div>
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <h3 className={cn(
+                    'text-[15px] font-medium',
+                    ehMinhaCasa ? 'text-white' : 'text-[#64748B]'
+                  )}>
+                    {missao.titulo}
+                  </h3>
+                  {missao.descricao && (
+                    <p className={cn(
+                      'text-[13px] line-clamp-2 mt-1',
+                      ehMinhaCasa ? 'text-[#94A3B8]' : 'text-[#475569]'
+                    )}>
+                      {missao.descricao}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-3 mt-2">
+                    <span className={cn(
+                      'text-xs',
+                      ehMinhaCasa ? 'text-[#3B82F6]' : 'text-[#475569]'
+                    )}>
+                      +{missao.pontos_base} pts
+                    </span>
+                    {ehMinhaCasa && (
+                      <span className={cn('text-xs', getStatusColor(missao.status))}>
+                        {getStatusLabel(missao.status)}
+                      </span>
+                    )}
+                    {!ehMinhaCasa && (
+                      <span className="text-xs text-[#475569]">(somente visualização)</span>
+                    )}
+                  </div>
+
+                  {/* Action button */}
+                  {ehMinhaCasa && (missao.status === 'disponivel' || missao.status === 'refazer') && (
+                    <button
+                      className="mt-3 w-full py-2.5 rounded-lg bg-[#3B82F6] text-white text-sm font-medium 
+                                 hover:bg-[#2563EB] transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMissaoClick(missao.id);
+                      }}
+                    >
+                      {missao.status === 'refazer' ? 'Refazer missão' : 'Fazer missão'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
