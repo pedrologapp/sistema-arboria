@@ -50,24 +50,30 @@ interface Missao {
   arquivo_pdf_url: string | null;
   arquivo_pdf_nome: string | null;
   serie_filtro: number | null;
+  turma_filtro: string | null;
   data_liberacao: string | null;
   data_liberacao_6ano: string | null;
+  data_liberacao_7ano: string | null;
+  data_liberacao_8ano: string | null;
   data_liberacao_9ano: string | null;
   data_prazo: string | null;
 }
 
 // Constantes
 const CATEGORIAS = [
-  { id: 'principal', label: 'Principal', pontos: 100 },
-  { id: 'secundaria', label: 'Secundária', pontos: 50 },
-  { id: 'bonus', label: 'Bônus', pontos: 75 },
-  { id: 'personalizado', label: 'Personalizado', pontos: null },
+  { id: 'principal', label: 'Principal', pontos: 100, desc: 'Missão central' },
+  { id: 'secundaria', label: 'Secundária', pontos: 50, desc: 'Complementar' },
+  { id: 'bonus', label: 'Bônus', pontos: 75, desc: 'Desafio extra' },
 ];
 
 const SERIES = [
-  { id: 6, label: '6º Ano' },
-  { id: 9, label: '9º Ano' },
+  { id: 6, label: '6º' },
+  { id: 7, label: '7º' },
+  { id: 8, label: '8º' },
+  { id: 9, label: '9º' },
 ];
+
+const TURMAS = ['A', 'B', 'C', 'D'];
 
 const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesProps) => {
   const { user } = useAuth();
@@ -85,14 +91,19 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
   const [reflexao, setReflexao] = useState('');
   
   // Form state - Configurações
-  const [categoria, setCategoria] = useState<'principal' | 'secundaria' | 'bonus' | 'personalizado'>('secundaria');
+  const [categoria, setCategoria] = useState<'principal' | 'secundaria' | 'bonus'>('secundaria');
   const [pontosCustom, setPontosCustom] = useState(50);
-  const [seriesSelecionadas, setSeriesSelecionadas] = useState<number[]>([6, 9]);
+  const [seriesSelecionadas, setSeriesSelecionadas] = useState<number[]>([6, 7, 8, 9]);
+  const [turmasFiltro, setTurmasFiltro] = useState<string[]>([]);
   
   // Form state - Liberação
   const [liberacao, setLiberacao] = useState<'agora' | 'agendado'>('agora');
   const [dataLiberacao6ano, setDataLiberacao6ano] = useState('');
   const [horaLiberacao6ano, setHoraLiberacao6ano] = useState('08:00');
+  const [dataLiberacao7ano, setDataLiberacao7ano] = useState('');
+  const [horaLiberacao7ano, setHoraLiberacao7ano] = useState('08:00');
+  const [dataLiberacao8ano, setDataLiberacao8ano] = useState('');
+  const [horaLiberacao8ano, setHoraLiberacao8ano] = useState('08:00');
   const [dataLiberacao9ano, setDataLiberacao9ano] = useState('');
   const [horaLiberacao9ano, setHoraLiberacao9ano] = useState('08:00');
   
@@ -112,9 +123,17 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
 
   // Calcular pontos baseado na categoria
   const pontosFinais = useMemo(() => {
-    if (categoria === 'personalizado') return pontosCustom;
     return CATEGORIAS.find(c => c.id === categoria)?.pontos || 50;
-  }, [categoria, pontosCustom]);
+  }, [categoria]);
+
+  // Toggle turma
+  const toggleTurma = (turma: string) => {
+    if (turmasFiltro.includes(turma)) {
+      setTurmasFiltro(turmasFiltro.filter(t => t !== turma));
+    } else {
+      setTurmasFiltro([...turmasFiltro, turma]);
+    }
+  };
 
   // Calcular semanas
   const semanas = useMemo(() => {
@@ -144,7 +163,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
     queryFn: async () => {
       const { data, error } = await supabase
         .from('missoes')
-        .select('id, fase_id, semana, tipo_missao, casa_id, titulo, descricao, instrucoes, dicas, reflexao, pontos_base, tipo, requer_texto, requer_arquivo, status, arquivo_pdf_url, arquivo_pdf_nome, serie_filtro, data_liberacao, data_liberacao_6ano, data_liberacao_9ano, data_prazo')
+        .select('id, fase_id, semana, tipo_missao, casa_id, titulo, descricao, instrucoes, dicas, reflexao, pontos_base, tipo, requer_texto, requer_arquivo, status, arquivo_pdf_url, arquivo_pdf_nome, serie_filtro, turma_filtro, data_liberacao, data_liberacao_6ano, data_liberacao_7ano, data_liberacao_8ano, data_liberacao_9ano, data_prazo')
         .eq('fase_id', faseId)
         .order('semana')
         .order('tipo_missao');
@@ -253,24 +272,40 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
       if (cat) {
         setCategoria(missao.tipo as any);
       } else {
-        setCategoria('personalizado');
-        setPontosCustom(missao.pontos_base);
+        setCategoria('secundaria');
       }
       
       // Séries
       if (missao.serie_filtro) {
         setSeriesSelecionadas([missao.serie_filtro]);
       } else {
-        setSeriesSelecionadas([6, 9]);
+        setSeriesSelecionadas([6, 7, 8, 9]);
+      }
+      
+      // Turmas
+      if (missao.turma_filtro) {
+        setTurmasFiltro(missao.turma_filtro.split(',').map(t => t.trim()));
+      } else {
+        setTurmasFiltro([]);
       }
       
       // Liberação
-      if (missao.data_liberacao_6ano || missao.data_liberacao_9ano) {
+      if (missao.data_liberacao_6ano || missao.data_liberacao_7ano || missao.data_liberacao_8ano || missao.data_liberacao_9ano) {
         setLiberacao('agendado');
         if (missao.data_liberacao_6ano) {
           const dt6 = new Date(missao.data_liberacao_6ano);
           setDataLiberacao6ano(format(dt6, 'yyyy-MM-dd'));
           setHoraLiberacao6ano(format(dt6, 'HH:mm'));
+        }
+        if (missao.data_liberacao_7ano) {
+          const dt7 = new Date(missao.data_liberacao_7ano);
+          setDataLiberacao7ano(format(dt7, 'yyyy-MM-dd'));
+          setHoraLiberacao7ano(format(dt7, 'HH:mm'));
+        }
+        if (missao.data_liberacao_8ano) {
+          const dt8 = new Date(missao.data_liberacao_8ano);
+          setDataLiberacao8ano(format(dt8, 'yyyy-MM-dd'));
+          setHoraLiberacao8ano(format(dt8, 'HH:mm'));
         }
         if (missao.data_liberacao_9ano) {
           const dt9 = new Date(missao.data_liberacao_9ano);
@@ -281,6 +316,10 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
         setLiberacao('agora');
         setDataLiberacao6ano('');
         setHoraLiberacao6ano('08:00');
+        setDataLiberacao7ano('');
+        setHoraLiberacao7ano('08:00');
+        setDataLiberacao8ano('');
+        setHoraLiberacao8ano('08:00');
         setDataLiberacao9ano('');
         setHoraLiberacao9ano('08:00');
       }
@@ -314,10 +353,15 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
     setReflexao('');
     setCategoria('secundaria');
     setPontosCustom(50);
-    setSeriesSelecionadas([6, 9]);
+    setSeriesSelecionadas([6, 7, 8, 9]);
+    setTurmasFiltro([]);
     setLiberacao('agora');
     setDataLiberacao6ano('');
     setHoraLiberacao6ano('08:00');
+    setDataLiberacao7ano('');
+    setHoraLiberacao7ano('08:00');
+    setDataLiberacao8ano('');
+    setHoraLiberacao8ano('08:00');
     setDataLiberacao9ano('');
     setHoraLiberacao9ano('08:00');
     setDataPrazo('');
@@ -346,16 +390,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
       if (seriesSelecionadas.length === 0) throw new Error('Selecione pelo menos uma série');
       if (!requerTexto && !requerArquivo) throw new Error('Selecione pelo menos um tipo de entrega');
       
-      if (liberacao === 'agendado') {
-        if (seriesSelecionadas.includes(6) && !dataLiberacao6ano) {
-          throw new Error('Data de liberação do 6º ano é obrigatória');
-        }
-        if (seriesSelecionadas.includes(9) && !dataLiberacao9ano) {
-          throw new Error('Data de liberação do 9º ano é obrigatória');
-        }
-      }
-      
-      // Calcular data de liberação principal (mais cedo entre 6º e 9º)
+      // Calcular data de liberação principal (mais cedo entre as séries)
       const agora = new Date();
       let dataLiberacaoFinal = agora.toISOString();
       let status = 'liberada';
@@ -364,6 +399,12 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
         const datas: Date[] = [];
         if (seriesSelecionadas.includes(6) && dataLiberacao6ano) {
           datas.push(new Date(`${dataLiberacao6ano}T${horaLiberacao6ano}`));
+        }
+        if (seriesSelecionadas.includes(7) && dataLiberacao7ano) {
+          datas.push(new Date(`${dataLiberacao7ano}T${horaLiberacao7ano}`));
+        }
+        if (seriesSelecionadas.includes(8) && dataLiberacao8ano) {
+          datas.push(new Date(`${dataLiberacao8ano}T${horaLiberacao8ano}`));
         }
         if (seriesSelecionadas.includes(9) && dataLiberacao9ano) {
           datas.push(new Date(`${dataLiberacao9ano}T${horaLiberacao9ano}`));
@@ -391,17 +432,26 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
         reflexao: reflexao || null,
         
         // Configurações
-        tipo: categoria === 'personalizado' ? 'secundaria' : categoria,
+        tipo: categoria,
         pontos_base: pontosFinais,
         
-        // Séries
-        serie_filtro: seriesSelecionadas.length === 1 ? seriesSelecionadas[0] : null,
+        // Séries (se todas selecionadas, null = todas)
+        serie_filtro: seriesSelecionadas.length === 4 ? null : seriesSelecionadas[0],
+        
+        // Turmas
+        turma_filtro: turmasFiltro.length > 0 ? turmasFiltro.join(', ') : null,
         
         // Datas
         data_liberacao: dataLiberacaoFinal,
         data_prazo: new Date(`${dataPrazo}T${horaPrazo}`).toISOString(),
         data_liberacao_6ano: liberacao === 'agendado' && seriesSelecionadas.includes(6) && dataLiberacao6ano 
           ? new Date(`${dataLiberacao6ano}T${horaLiberacao6ano}`).toISOString() 
+          : null,
+        data_liberacao_7ano: liberacao === 'agendado' && seriesSelecionadas.includes(7) && dataLiberacao7ano 
+          ? new Date(`${dataLiberacao7ano}T${horaLiberacao7ano}`).toISOString() 
+          : null,
+        data_liberacao_8ano: liberacao === 'agendado' && seriesSelecionadas.includes(8) && dataLiberacao8ano 
+          ? new Date(`${dataLiberacao8ano}T${horaLiberacao8ano}`).toISOString() 
           : null,
         data_liberacao_9ano: liberacao === 'agendado' && seriesSelecionadas.includes(9) && dataLiberacao9ano 
           ? new Date(`${dataLiberacao9ano}T${horaLiberacao9ano}`).toISOString() 
@@ -430,9 +480,12 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
             tipo: dadosMissao.tipo,
             pontos_base: dadosMissao.pontos_base,
             serie_filtro: dadosMissao.serie_filtro,
+            turma_filtro: dadosMissao.turma_filtro,
             data_liberacao: dadosMissao.data_liberacao,
             data_prazo: dadosMissao.data_prazo,
             data_liberacao_6ano: dadosMissao.data_liberacao_6ano,
+            data_liberacao_7ano: dadosMissao.data_liberacao_7ano,
+            data_liberacao_8ano: dadosMissao.data_liberacao_8ano,
             data_liberacao_9ano: dadosMissao.data_liberacao_9ano,
             requer_texto: dadosMissao.requer_texto,
             requer_arquivo: dadosMissao.requer_arquivo,
@@ -662,11 +715,11 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
       {/* Modal Missão Geral */}
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-lg bg-slate-800 rounded-xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+          <div className="w-full max-w-lg bg-slate-900 rounded-t-2xl sm:rounded-2xl max-h-[75vh] overflow-hidden flex flex-col shadow-2xl">
             {/* Header */}
-            <div className="p-4 border-b border-white/10">
+            <div className="p-4 border-b border-white/10 shrink-0">
               <div className="flex items-center justify-between">
-                <h3 className="text-white font-medium">
+                <h3 className="text-white font-semibold">
                   {missaoEditando ? 'Editar Missão' : 'Nova Missão'} — Semana {semanaAtual}
                 </h3>
                 <button onClick={fecharModal} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
@@ -674,19 +727,60 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                 </button>
               </div>
               <p className="text-white/40 text-sm mt-1">
-                Geral • {seriesSelecionadas.map(s => `${s}º Ano`).join(' e ')}
+                Geral • {seriesSelecionadas.length === 4 ? 'Todas as séries' : seriesSelecionadas.map(s => `${s}º`).join(', ')}
+                {turmasFiltro.length > 0 && ` • Turmas ${turmasFiltro.join(', ')}`}
               </p>
             </div>
 
             {/* Conteúdo */}
-            <div className="p-4 space-y-5 overflow-y-auto flex-1">
+            <div className="p-4 space-y-5 overflow-y-auto flex-1 pb-6">
               
               {/* Séries */}
               <div>
                 <label className="text-white/60 text-sm mb-2 block font-medium">
                   Série(s) *
                 </label>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-4 gap-2">
+                  {SERIES.map((serie) => (
+                    <button
+                      key={serie.id}
+                      onClick={() => toggleSerie(serie.id)}
+                      className={`py-2.5 rounded-xl border text-sm font-medium transition-colors ${
+                        seriesSelecionadas.includes(serie.id)
+                          ? 'bg-white/15 border-white/30 text-white'
+                          : 'bg-white/5 border-white/10 text-white/40'
+                      }`}
+                    >
+                      {serie.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Turmas */}
+              <div>
+                <label className="text-white/60 text-sm mb-2 block font-medium">
+                  Turma(s) <span className="text-white/30">(opcional)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {TURMAS.map((turma) => (
+                    <button
+                      key={turma}
+                      onClick={() => toggleTurma(turma)}
+                      className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${
+                        turmasFiltro.includes(turma)
+                          ? 'bg-white/15 border-white/30 text-white'
+                          : 'bg-white/5 border-white/10 text-white/40'
+                      }`}
+                    >
+                      {turma}
+                    </button>
+                  ))}
+                </div>
+                {turmasFiltro.length === 0 && (
+                  <p className="text-xs text-white/30 mt-1.5">Deixe vazio para todas as turmas</p>
+                )}
+              </div>
                   {SERIES.map((serie) => (
                     <button
                       key={serie.id}
@@ -872,23 +966,6 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                       )}
                     </button>
                   ))}
-                  
-                  {/* Input de pontos personalizados */}
-                  {categoria === 'personalizado' && (
-                    <div className="pl-7 mt-2">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          value={pontosCustom}
-                          onChange={(e) => setPontosCustom(Number(e.target.value))}
-                          min={1}
-                          max={200}
-                          className="w-24 p-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-white/20 text-center"
-                        />
-                        <span className="text-white/40 text-sm">pts</span>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
 

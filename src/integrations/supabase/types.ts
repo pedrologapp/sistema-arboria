@@ -1851,6 +1851,8 @@ export type Database = {
           data_criacao: string | null
           data_liberacao: string
           data_liberacao_6ano: string | null
+          data_liberacao_7ano: string | null
+          data_liberacao_8ano: string | null
           data_liberacao_9ano: string | null
           data_prazo: string
           descricao: string | null
@@ -1884,6 +1886,8 @@ export type Database = {
           data_criacao?: string | null
           data_liberacao: string
           data_liberacao_6ano?: string | null
+          data_liberacao_7ano?: string | null
+          data_liberacao_8ano?: string | null
           data_liberacao_9ano?: string | null
           data_prazo: string
           descricao?: string | null
@@ -1917,6 +1921,8 @@ export type Database = {
           data_criacao?: string | null
           data_liberacao?: string
           data_liberacao_6ano?: string | null
+          data_liberacao_7ano?: string | null
+          data_liberacao_8ano?: string | null
           data_liberacao_9ano?: string | null
           data_prazo?: string
           descricao?: string | null
