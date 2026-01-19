@@ -85,6 +85,45 @@ Deno.serve(async (req: Request) => {
       },
     });
 
+    // Delete dependent records that don't have CASCADE
+    // score_ajustes_log references profiles.id without CASCADE
+    const { error: scoreLogError } = await supabaseAdmin
+      .from("score_ajustes_log")
+      .delete()
+      .eq("aluno_id", userId);
+    
+    if (scoreLogError) {
+      console.log("Note: Error deleting score_ajustes_log (may not exist):", scoreLogError.message);
+    }
+
+    // Also clean up inteligencia_scores and inteligencia_historico just in case
+    await supabaseAdmin.from("inteligencia_evidencias").delete().eq("aluno_id", userId);
+    await supabaseAdmin.from("inteligencia_historico").delete().eq("aluno_id", userId);
+    await supabaseAdmin.from("inteligencia_scores").delete().eq("aluno_id", userId);
+    
+    // Clean up other potential dependencies
+    await supabaseAdmin.from("entregas").delete().eq("aluno_id", userId);
+    await supabaseAdmin.from("observacoes").delete().eq("aluno_id", userId);
+    await supabaseAdmin.from("alertas_alunos").delete().eq("aluno_id", userId);
+    await supabaseAdmin.from("acoes_professor").delete().eq("aluno_id", userId);
+    await supabaseAdmin.from("acoes_celebracao").delete().eq("aluno_id", userId);
+    await supabaseAdmin.from("aluno_turma").delete().eq("aluno_id", userId);
+    await supabaseAdmin.from("cargos_casa").delete().eq("aluno_id", userId);
+    await supabaseAdmin.from("missao_destinatarios").delete().eq("aluno_id", userId);
+    await supabaseAdmin.from("bonus_solicitacoes").delete().eq("aluno_id", userId);
+    await supabaseAdmin.from("pontos_gerais").delete().eq("aluno_id", userId);
+    
+    // For professor: clean up professor_casa
+    await supabaseAdmin.from("professor_casa").delete().eq("professor_id", userId);
+    
+    // Clean up chat related
+    await supabaseAdmin.from("mensagens_canal").delete().eq("autor_id", userId);
+    await supabaseAdmin.from("mensagens_privadas").delete().eq("autor_id", userId);
+    await supabaseAdmin.from("conversa_participantes").delete().eq("usuario_id", userId);
+    await supabaseAdmin.from("canal_leituras").delete().eq("usuario_id", userId);
+
+    console.log("Cleaned up dependent records");
+
     // Delete user from Auth (CASCADE will handle profiles, user_roles, etc.)
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
