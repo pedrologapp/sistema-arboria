@@ -20,6 +20,8 @@ import {
   FileText,
   Upload,
   Eye,
+  Calendar,
+  Clock,
   type LucideIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -109,6 +111,10 @@ const MissoesPorCasa = ({
   const [pdfExistente, setPdfExistente] = useState<{ url: string; nome: string } | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [uploadando, setUploadando] = useState(false);
+  
+  // Form state - Prazo
+  const [dataPrazo, setDataPrazo] = useState('');
+  const [horaPrazo, setHoraPrazo] = useState('23:59');
 
   // Calcular período da semana
   const periodoSemana = useMemo(() => {
@@ -185,6 +191,17 @@ const MissoesPorCasa = ({
       if (missao.requer_texto) tipos.push('texto');
       if (missao.requer_arquivo) tipos.push('arquivo');
       setTiposEntrega(tipos.length > 0 ? tipos : ['texto']);
+      
+      // Carregar prazo existente
+      if ((missao as any).data_prazo) {
+        const dtPrazo = new Date((missao as any).data_prazo);
+        setDataPrazo(format(dtPrazo, 'yyyy-MM-dd'));
+        setHoraPrazo(format(dtPrazo, 'HH:mm'));
+      } else {
+        // Padrão: fim da semana
+        setDataPrazo(periodoSemana.fim ? format(periodoSemana.fim, 'yyyy-MM-dd') : '');
+        setHoraPrazo('23:59');
+      }
     } else {
       setMissaoEditando(null);
       setTitulo('');
@@ -193,6 +210,9 @@ const MissoesPorCasa = ({
       setPontos(15);
       setTiposEntrega(['texto']);
       setPdfExistente(null);
+      // Padrão para nova missão: fim da semana
+      setDataPrazo(periodoSemana.fim ? format(periodoSemana.fim, 'yyyy-MM-dd') : '');
+      setHoraPrazo('23:59');
     }
     setPdfFile(null);
     setModalAberto(true);
@@ -210,6 +230,8 @@ const MissoesPorCasa = ({
     setTiposEntrega(['texto']);
     setPdfFile(null);
     setPdfExistente(null);
+    setDataPrazo('');
+    setHoraPrazo('23:59');
   };
 
   // Toggle tipo de entrega
@@ -305,7 +327,7 @@ const MissoesPorCasa = ({
         status: 'liberada',
         criado_por: user?.id,
         data_liberacao: new Date().toISOString(),
-        data_prazo: new Date().toISOString(),
+        data_prazo: dataPrazo ? new Date(`${dataPrazo}T${horaPrazo}`).toISOString() : new Date().toISOString(),
       };
 
       if (missaoEditando) {
@@ -321,6 +343,7 @@ const MissoesPorCasa = ({
             requer_arquivo: requerArquivo,
             arquivo_pdf_url: pdfUrl,
             arquivo_pdf_nome: pdfNome,
+            data_prazo: dataPrazo ? new Date(`${dataPrazo}T${horaPrazo}`).toISOString() : undefined,
             updated_at: new Date().toISOString()
           })
           .eq('id', missaoEditando.id);
@@ -650,6 +673,31 @@ const MissoesPorCasa = ({
                 />
               </div>
 
+              {/* Prazo de Entrega */}
+              <div>
+                <label className="text-white/60 text-sm mb-1.5 flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4" />
+                  Prazo de entrega *
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={dataPrazo}
+                    onChange={(e) => setDataPrazo(e.target.value)}
+                    className="flex-1 p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
+                  />
+                  <div className="flex items-center gap-1.5 p-3 bg-white/5 border border-white/10 rounded-xl">
+                    <Clock className="w-4 h-4 text-white/40" />
+                    <input
+                      type="time"
+                      value={horaPrazo}
+                      onChange={(e) => setHoraPrazo(e.target.value)}
+                      className="bg-transparent text-white text-sm focus:outline-none w-20"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Tipos de Entrega */}
               <div>
                 <label className="text-white/60 text-sm mb-3 block">
@@ -700,7 +748,7 @@ const MissoesPorCasa = ({
               </button>
               <button
                 onClick={() => salvarMutation.mutate()}
-                disabled={!titulo.trim() || !instrucoes.trim() || salvando}
+                disabled={!titulo.trim() || !instrucoes.trim() || !dataPrazo || salvando}
                 className="flex-1 p-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {salvando ? (
