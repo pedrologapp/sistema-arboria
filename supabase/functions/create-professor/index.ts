@@ -53,16 +53,43 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const { email, nome, sobrenome, password, institution_id, casa_id, ano_letivo = 2025 } = await req.json()
+    const { 
+      email, 
+      nome, 
+      sobrenome, 
+      password, 
+      institution_id, 
+      segmento,
+      casa_id, // Opcional - só obrigatório para fundamental2
+      ano_letivo = 2025 
+    } = await req.json()
 
-    if (!email || !nome || !sobrenome || !password || !institution_id || !casa_id) {
+    // Validações básicas
+    if (!email || !nome || !sobrenome || !password || !institution_id || !segmento) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: email, nome, sobrenome, password, institution_id, casa_id' }),
+        JSON.stringify({ error: 'Missing required fields: email, nome, sobrenome, password, institution_id, segmento' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log(`[create-professor] Creating professor: ${nome} ${sobrenome} (${email})`)
+    // Validar segmento
+    const segmentosValidos = ['infantil', 'fundamental1', 'fundamental2']
+    if (!segmentosValidos.includes(segmento)) {
+      return new Response(
+        JSON.stringify({ error: `Segmento inválido. Valores aceitos: ${segmentosValidos.join(', ')}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Para fundamental2, casa_id é obrigatório
+    if (segmento === 'fundamental2' && !casa_id) {
+      return new Response(
+        JSON.stringify({ error: 'Casa é obrigatória para professores do Fundamental 2' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    console.log(`[create-professor] Creating professor: ${nome} ${sobrenome} (${email}) - Segmento: ${segmento}`)
 
     // 1. Create user in Auth
     const { data: authData, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -88,7 +115,7 @@ Deno.serve(async (req) => {
     const userId = authData.user.id
     console.log(`[create-professor] User created with ID: ${userId}`)
 
-    // 2. Update profile
+    // 2. Update profile with segmento
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .update({
@@ -96,6 +123,7 @@ Deno.serve(async (req) => {
         sobrenome,
         full_name: `${nome} ${sobrenome}`,
         institution_id,
+        segmento,
         must_change_password: true
       })
       .eq('id', userId)
@@ -117,24 +145,29 @@ Deno.serve(async (req) => {
       )
     }
 
-    // 4. Link to casa via professor_casa
-    const { error: casaError } = await supabaseAdmin
-      .from('professor_casa')
-      .insert({
-        professor_id: userId,
-        casa_id,
-        institution_id,
-        ano_letivo,
-        eh_mentor_principal: true,
-        ativo: true
-      })
+    // 4. Link to casa via professor_casa (APENAS para fundamental2)
+    if (segmento === 'fundamental2' && casa_id) {
+      const { error: casaError } = await supabaseAdmin
+        .from('professor_casa')
+        .insert({
+          professor_id: userId,
+          casa_id,
+          institution_id,
+          ano_letivo,
+          eh_mentor_principal: true,
+          ativo: true
+        })
 
-    if (casaError) {
-      console.error('[create-professor] Casa link error:', casaError)
-      return new Response(
-        JSON.stringify({ error: `Failed to link professor to casa: ${casaError.message}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      if (casaError) {
+        console.error('[create-professor] Casa link error:', casaError)
+        return new Response(
+          JSON.stringify({ error: `Failed to link professor to casa: ${casaError.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      console.log(`[create-professor] Professor linked to casa ${casa_id}`)
+    } else {
+      console.log(`[create-professor] Professor de ${segmento} não precisa de casa`)
     }
 
     console.log(`[create-professor] Professor ${nome} ${sobrenome} created successfully!`)
@@ -148,7 +181,8 @@ Deno.serve(async (req) => {
           nome,
           sobrenome,
           full_name: `${nome} ${sobrenome}`,
-          casa_id,
+          segmento,
+          casa_id: segmento === 'fundamental2' ? casa_id : null,
           institution_id
         }
       }),

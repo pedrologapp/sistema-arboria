@@ -10,6 +10,14 @@ interface ModalAdicionarUsuarioProps {
   onClose: () => void;
 }
 
+type Segmento = 'infantil' | 'fundamental1' | 'fundamental2';
+
+const segmentoLabels: Record<Segmento, string> = {
+  infantil: 'Infantil',
+  fundamental1: 'Fundamental 1',
+  fundamental2: 'Fundamental 2',
+};
+
 const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarUsuarioProps) => {
   const queryClient = useQueryClient();
   const [nome, setNome] = useState('');
@@ -18,6 +26,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
   const [serie, setSerie] = useState('');
   const [turma, setTurma] = useState('');
   const [casaId, setCasaId] = useState('');
+  const [segmento, setSegmento] = useState<Segmento>('fundamental2');
   const [senhaGerada, setSenhaGerada] = useState<string | null>(null);
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [criando, setCriando] = useState(false);
@@ -28,7 +37,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
     queryFn: async () => {
       const { data } = await supabase
         .from('inteligencias')
-        .select('id, nome, codigo')
+        .select('id, nome, codigo, emoji')
         .order('id');
       return data || [];
     }
@@ -57,7 +66,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
       // Determinar qual edge function usar
       const functionName = tipo === 'professor' ? 'create-professor' : 'create-user';
       
-      const body: any = {
+      const body: Record<string, unknown> = {
         email,
         nome,
         sobrenome,
@@ -71,7 +80,11 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
         body.casa_id = parseInt(casaId);
         body.role = 'user';
       } else if (tipo === 'professor') {
-        body.casa_id = casaId ? parseInt(casaId) : null;
+        body.segmento = segmento;
+        // Só incluir casa_id se for fundamental2
+        if (segmento === 'fundamental2' && casaId) {
+          body.casa_id = parseInt(casaId);
+        }
       } else if (tipo === 'admin') {
         body.role = 'admin';
       }
@@ -81,6 +94,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       
       return { ...data, senha };
     },
@@ -108,6 +122,11 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
   const isFormValid = () => {
     if (!nome.trim() || !sobrenome.trim() || !email.trim()) return false;
     if (tipo === 'aluno' && (!serie || !turma || !casaId)) return false;
+    if (tipo === 'professor') {
+      if (!segmento) return false;
+      // Para fundamental2, casa é obrigatória
+      if (segmento === 'fundamental2' && !casaId) return false;
+    }
     return true;
   };
 
@@ -266,7 +285,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
                 >
                   <option value="">Selecione a casa</option>
                   {casas?.map(c => (
-                    <option key={c.id} value={c.id}>{c.nome}</option>
+                    <option key={c.id} value={c.id}>{c.emoji} {c.nome}</option>
                   ))}
                 </select>
               </div>
@@ -274,19 +293,59 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
           )}
 
           {tipo === 'professor' && (
-            <div>
-              <label className="block text-sm text-white/60 mb-1.5">Casa (opcional)</label>
-              <select
-                value={casaId}
-                onChange={(e) => setCasaId(e.target.value)}
-                className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white"
-              >
-                <option value="">Sem casa atribuída</option>
-                {casas?.map(c => (
-                  <option key={c.id} value={c.id}>{c.nome}</option>
-                ))}
-              </select>
-            </div>
+            <>
+              {/* Campo Segmento */}
+              <div>
+                <label className="block text-sm text-white/60 mb-1.5">Segmento</label>
+                <select
+                  value={segmento}
+                  onChange={(e) => {
+                    setSegmento(e.target.value as Segmento);
+                    // Limpar casa se mudar de fundamental2 para outro
+                    if (e.target.value !== 'fundamental2') {
+                      setCasaId('');
+                    }
+                  }}
+                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white"
+                >
+                  {Object.entries(segmentoLabels).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Campo Casa - só aparece para fundamental2 */}
+              {segmento === 'fundamental2' && (
+                <div>
+                  <label className="block text-sm text-white/60 mb-1.5">
+                    Casa (mentor principal)
+                  </label>
+                  <select
+                    value={casaId}
+                    onChange={(e) => setCasaId(e.target.value)}
+                    className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white"
+                  >
+                    <option value="">Selecione a casa</option>
+                    {casas?.map(c => (
+                      <option key={c.id} value={c.id}>{c.emoji} {c.nome}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-white/40 mt-1">
+                    Professores do Fundamental 2 são mentores de uma casa específica
+                  </p>
+                </div>
+              )}
+
+              {/* Info para professores sem casa */}
+              {segmento !== 'fundamental2' && (
+                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+                  <p className="text-blue-400 text-sm">
+                    Professores do {segmentoLabels[segmento]} participam de todas as fases 
+                    do segmento e não são vinculados a uma casa específica.
+                  </p>
+                </div>
+              )}
+            </>
           )}
 
           {sobrenome && (

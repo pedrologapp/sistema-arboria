@@ -28,6 +28,7 @@ import PerfilProfessorAdminPage from "./pages/admin/PerfilProfessorAdminPage";
 import CasasPage from "./pages/admin/CasasPage";
 import FasesPage from "./pages/admin/FasesPage";
 import FaseDetalhesPage from "./pages/admin/FaseDetalhesPage";
+import FaseNovaPage from "./pages/admin/FaseNovaPage";
 import RelatoriosPage from "./pages/admin/RelatoriosPage";
 import ConfigPage from "./pages/admin/ConfigPage";
 
@@ -144,6 +145,13 @@ const App = () => (
               <ProtectedRoute requireAdmin>
                 <AdminLayout>
                   <FasesPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/fases/nova" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <FaseNovaPage />
                 </AdminLayout>
               </ProtectedRoute>
             } />
