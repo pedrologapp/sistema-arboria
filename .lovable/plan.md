@@ -1,121 +1,66 @@
 
-# Plano: Melhorias na Importacao e Listagem de Alunos
+# Plano: Corrigir Carregamento de Alunos
 
-## Resumo das Alteracoes
+## Problema Identificado
+A query de alunos falha porque usa `.in('id', userIds)` com 375 UUIDs, gerando uma URL muito longa que excede o limite do navegador/API.
 
-1. **Novo formato de email**: `nome.sobrenome@aluno.arboria.com`
-2. **Exibir segmento** na listagem de alunos
-3. **Ordenar por**: Serie, Turma, Nome
+## Solucao: Inverter a Logica da Query
 
----
+Em vez de:
+1. Buscar todos os user_ids com role = 'user' (375 IDs)
+2. Fazer `.in('id', userIds)` no profiles
 
-## 1. Alterar Formato do Email na Sincronizacao
+Fazer:
+1. Buscar profiles da instituicao
+2. Para cada profile, verificar se tem role = 'user' em batches pequenos
 
-### Arquivo: `supabase/functions/sync-alunos-externos/index.ts`
+### Implementacao
 
-**Antes:**
-```typescript
-function gerarEmailTemporario(matricula: string): string {
-  const matriculaSemPontos = matricula.replace(/\./g, '');
-  return `${matriculaSemPontos}@aluno.arboria.app`;
-}
-```
-
-**Depois:**
-```typescript
-function gerarEmail(nome: string, sobrenome: string): string {
-  // Pega primeiro nome e primeiro sobrenome
-  const primeiroNome = nome.trim().split(' ')[0];
-  const primeiroSobrenome = sobrenome.trim().split(' ')[0];
-  
-  // Normaliza: remove acentos, lowercase, remove caracteres especiais
-  const normalizar = (str: string) => str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z]/g, '')
-    .toLowerCase();
-  
-  return `${normalizar(primeiroNome)}.${normalizar(primeiroSobrenome)}@aluno.arboria.com`;
-}
-```
-
-Usar na criacao:
-```typescript
-const email = gerarEmail(aluno.nome, aluno.sobrenome);
-```
-
----
-
-## 2. Incluir Segmento na Listagem de Alunos
-
-### Arquivo: `src/pages/admin/PessoasPage.tsx`
-
-Alterar a query de alunos para incluir `segmento`:
+Modificar a query de alunos em `src/pages/admin/PessoasPage.tsx`:
 
 ```typescript
-.select('id, nome, sobrenome, full_name, serie, turma, casa_id, avatar_url, created_at, segmento')
+// Buscar alunos (role = 'user')
+const { data: alunos, isLoading: loadingAlunos } = useQuery({
+  queryKey: ['admin-alunos', institutionId],
+  queryFn: async () => {
+    // 1. Buscar TODOS os profiles da instituicao
+    const { data: allProfiles, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, nome, sobrenome, full_name, serie, turma, casa_id, avatar_url, created_at, segmento')
+      .eq('institution_id', institutionId)
+      .order('serie')
+      .order('turma')
+      .order('full_name');
+    
+    if (profileError) throw profileError;
+    if (!allProfiles || allProfiles.length === 0) return [];
+    
+    // 2. Buscar todos os user_roles com role = 'user' (sem filtro de ID)
+    const { data: roleUsers, error: roleError } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'user');
+    
+    if (roleError) throw roleError;
+    
+    // 3. Criar Set para lookup rapido O(1)
+    const studentIds = new Set(roleUsers?.map(r => r.user_id) || []);
+    
+    // 4. Filtrar profiles que sao alunos
+    return allProfiles.filter(p => studentIds.has(p.id));
+  },
+  enabled: !!institutionId
+});
 ```
 
-Exibir na lista compacta junto com Serie/Turma:
+## Vantagens da Nova Abordagem
 
-```typescript
-<span className="text-white/40 text-xs ml-2 flex-shrink-0">
-  {aluno.segmento && `${aluno.segmento} - `}{aluno.serie?.replace(' ano', '')} {aluno.turma}
-</span>
-```
+| Aspecto | Antes | Depois |
+|---------|-------|--------|
+| Query profiles | `.in(375 IDs)` - URL enorme | `.eq(institution_id)` - URL curta |
+| Query user_roles | Funciona | Continua funcionando |
+| Filtro | No banco | No cliente (Set - O(1)) |
+| Performance | Falha | Funciona com qualquer quantidade |
 
----
-
-## 3. Ordenar por Serie, Turma, Nome
-
-### Arquivo: `src/pages/admin/PessoasPage.tsx`
-
-**Antes:**
-```typescript
-.order('full_name')
-```
-
-**Depois:**
-```typescript
-.order('serie')
-.order('turma')
-.order('full_name')
-```
-
-E para os alunos filtrados no frontend (manter consistencia):
-```typescript
-const alunosFiltrados = alunos
-  ?.filter(aluno => { ... })
-  ?.sort((a, b) => {
-    // Primeiro por serie
-    if (a.serie !== b.serie) return (a.serie || '').localeCompare(b.serie || '');
-    // Depois por turma
-    if (a.turma !== b.turma) return (a.turma || '').localeCompare(b.turma || '');
-    // Por fim por nome
-    return (a.full_name || '').localeCompare(b.full_name || '');
-  });
-```
-
----
-
-## Arquivos a Modificar
-
-| Arquivo | Alteracao |
-|---------|-----------|
-| `supabase/functions/sync-alunos-externos/index.ts` | Mudar funcao de email para usar nome.sobrenome |
-| `src/pages/admin/PessoasPage.tsx` | Incluir segmento, ordenar por serie/turma/nome |
-
----
-
-## Exemplo de Como Ficara na Lista
-
-```
-6º ano A
-  Ana Silva - Fundamental 2 - Casa Linguistica
-  Bruno Santos - Fundamental 2 - Casa Musical
-
-6º ano B
-  Carlos Oliveira - Fundamental 2 - Casa Logica
-  Diana Costa - Fundamental 2 - Casa Espacial
-```
-
+## Arquivo a Modificar
+- `src/pages/admin/PessoasPage.tsx` - Query de alunos (linhas 73-103)
