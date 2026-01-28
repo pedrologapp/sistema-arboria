@@ -1,206 +1,250 @@
 
-# Plano: Estrutura de 3 Segmentos (Infantil, Fundamental1, Fundamental2)
+# Plano: Edge Function `delete-alunos-por-segmento`
 
-## Resumo Executivo
+## Objetivo
 
-Vamos adaptar o sistema para suportar **3 painéis de professores separados por segmento** e **3 conjuntos de fases independentes** gerenciáveis pelo Admin. Cada segmento terá seu próprio ciclo de fases, e os professores só verão as fases do seu segmento.
-
----
-
-## Estrutura Atual vs Nova
-
-### Hoje
-- Professores têm `casa_id` (via `professor_casa`) mas **não têm segmento** definido
-- Fases são globais por instituição (não separadas por segmento)
-- Só existe 1 painel de professor (fundamental2)
-
-### Depois
-- Professores terão campo `segmento` no `profiles` (infantil, fundamental1, fundamental2)
-- Fases terão campo `segmento` para separar os ciclos
-- Professores do **fundamental2** → têm casa associada (como já funciona)
-- Professores do **infantil e fundamental1** → NÃO têm casa, participam de todas as fases do seu segmento
-- Admin verá **3 colunas de fases** (uma por segmento)
+Criar uma Edge Function segura que permite ao administrador deletar todos os alunos de um segmento específico (infantil, fundamental1, fundamental2) de uma instituição, facilitando reimportações limpas.
 
 ---
 
-## Mudanças no Banco de Dados
+## Especificações da Função
 
-### 1. Adicionar coluna `segmento` na tabela `fases`
-
-```sql
-ALTER TABLE public.fases 
-ADD COLUMN segmento text NOT NULL DEFAULT 'fundamental2';
-
--- Criar índice para performance
-CREATE INDEX idx_fases_segmento ON public.fases(segmento);
-
--- Constraint para valores válidos
-ALTER TABLE public.fases 
-ADD CONSTRAINT fases_segmento_check 
-CHECK (segmento IN ('infantil', 'fundamental1', 'fundamental2'));
+### Endpoint
+```
+POST /functions/v1/delete-alunos-por-segmento
 ```
 
-### 2. Atualizar professores existentes com segmento
-
-```sql
--- Julianeide e Oceni são do fundamental2
-UPDATE public.profiles 
-SET segmento = 'fundamental2'
-WHERE id IN (
-  SELECT user_id FROM user_roles WHERE role = 'professor'
-);
+### Parâmetros (Body JSON)
+```json
+{
+  "institutionId": "uuid",
+  "segmento": "infantil" | "fundamental1" | "fundamental2"
+}
 ```
 
-### 3. Adicionar coluna `segmento` opcionalmente na `professor_casa`
+### Headers Obrigatórios
+```
+Authorization: Bearer <token>
+X-Confirm-Delete: true
+```
 
-Não é estritamente necessário pois o segmento fica no `profiles`, mas pode ajudar para queries futuras.
-
----
-
-## Arquivos a Modificar
-
-### Backend (Edge Functions)
-
-#### `supabase/functions/create-professor/index.ts`
-- Adicionar campo `segmento` (obrigatório) no body
-- Salvar `segmento` no profile
-- Tornar `casa_id` **opcional** (só obrigatório para fundamental2)
-- Se `segmento != 'fundamental2'`, não criar registro em `professor_casa`
-
-### Frontend - Admin
-
-#### `src/pages/admin/FasesPage.tsx`
-- Redesenhar layout para **3 colunas** (ou tabs/accordion em mobile)
-- Cada coluna mostra as 8 fases do respectivo segmento
-- Seletor de ano permanece global
-- Ao criar fase nova, incluir o segmento
-
-#### `src/pages/admin/FaseDetalhesPage.tsx`
-- Garantir que ao editar/criar fase, o campo `segmento` seja salvo
-
-#### `src/components/admin/ModalAdicionarUsuario.tsx`
-- Adicionar campo **Segmento** (obrigatório para professor)
-- Mostrar campo **Casa** somente se segmento = 'fundamental2'
-- Atualizar validação do formulário
-
-### Frontend - Professor
-
-#### `src/contexts/ProfessorContext.tsx`
-- Adicionar `segmento` no Profile interface
-- Buscar `segmento` do profile
-- Filtrar `faseAtual` também por `segmento` do professor
-- Para professores sem casa (infantil/fundamental1):
-  - Não buscar `casaMentor` 
-  - Buscar todas as fases do segmento como "suas fases"
-
-#### `src/layouts/ProfessorLayout.tsx`
-- Ajustar para funcionar sem `casaMentor` (quando professor é de infantil/fundamental1)
-
-#### `src/components/professor/ProfessorHeader.tsx`
-- Mostrar segmento no header (opcional, para clareza)
-- Remover referência a casa se não existir
-
-#### `src/hooks/useAlunosCasa.ts`
-- Renomear ou adaptar para `useAlunosSegmento.ts`
-- Para professores de infantil/fundamental1: buscar alunos por segmento (não por casa)
+### Resposta de Sucesso
+```json
+{
+  "success": true,
+  "segmento": "infantil",
+  "total_deletados": 60,
+  "message": "60 alunos do segmento infantil foram excluídos com sucesso"
+}
+```
 
 ---
 
-## Fluxo de Criação de Professor (Novo)
+## Fluxo de Execução
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Adicionar Professor                          │
+│                    DELETE ALUNOS POR SEGMENTO                   │
 ├─────────────────────────────────────────────────────────────────┤
-│  Nome: [________]    Sobrenome: [________]                      │
-│  Email: [__________________________]                            │
 │                                                                 │
-│  Segmento: [ Infantil ▼ ]                                       │
-│            [ Fundamental 1 ]                                    │
-│            [ Fundamental 2 ]                                    │
+│  1. VALIDAÇÕES                                                  │
+│     ├─ Verificar Authorization header                           │
+│     ├─ Verificar X-Confirm-Delete: true                         │
+│     ├─ Verificar se usuário é admin                             │
+│     ├─ Validar institutionId (UUID válido)                      │
+│     └─ Validar segmento (infantil|fundamental1|fundamental2)    │
 │                                                                 │
-│  ┌─────────────────────────────────────────┐                    │
-│  │ Casa: [ Linguística ▼ ]                 │  ← Só aparece      │
-│  │       (obrigatório para Fundamental 2)  │    se Fundamental2 │
-│  └─────────────────────────────────────────┘                    │
+│  2. BUSCAR ALUNOS DO SEGMENTO                                   │
+│     ├─ SELECT id FROM profiles                                  │
+│     │   WHERE institution_id = ? AND segmento = ?               │
+│     │   AND id IN (SELECT user_id FROM user_roles               │
+│     │              WHERE role = 'user')                         │
+│     └─ Guardar lista de IDs                                     │
 │                                                                 │
-│  [ Cancelar ]                    [ Criar ]                      │
+│  3. DELETAR DEPENDÊNCIAS (em lote)                              │
+│     ├─ score_ajustes_log                                        │
+│     ├─ inteligencia_evidencias                                  │
+│     ├─ inteligencia_historico                                   │
+│     ├─ inteligencia_scores                                      │
+│     ├─ entregas                                                 │
+│     ├─ observacoes                                              │
+│     ├─ alertas_alunos                                           │
+│     ├─ acoes_professor                                          │
+│     ├─ acoes_celebracao                                         │
+│     ├─ aluno_turma                                              │
+│     ├─ cargos_casa                                              │
+│     ├─ missao_destinatarios                                     │
+│     ├─ bonus_solicitacoes                                       │
+│     ├─ pontos_gerais                                            │
+│     ├─ mensagens_canal                                          │
+│     ├─ mensagens_privadas                                       │
+│     ├─ conversa_participantes                                   │
+│     └─ canal_leituras                                           │
+│                                                                 │
+│  4. DELETAR AUTH USERS (em paralelo, batches de 10)             │
+│     └─ supabaseAdmin.auth.admin.deleteUser(userId)              │
+│        (CASCADE deleta profiles e user_roles automaticamente)   │
+│                                                                 │
+│  5. RETORNAR RESUMO                                             │
+│     └─ { success, segmento, total_deletados, message }          │
+│                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Layout da Página de Fases (Admin)
+## Arquivo a Criar
 
-### Desktop (3 colunas)
+### `supabase/functions/delete-alunos-por-segmento/index.ts`
 
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Fases                                                     [ 2026 ▼ ]       │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌───────────────────┐  ┌───────────────────┐  ┌───────────────────┐       │
-│  │    INFANTIL       │  │   FUNDAMENTAL 1   │  │   FUNDAMENTAL 2   │       │
-│  ├───────────────────┤  ├───────────────────┤  ├───────────────────┤       │
-│  │ 1. Linguística    │  │ 1. Linguística    │  │ 1. Linguística ●  │       │
-│  │    Não config.    │  │    01 fev - 28 fev│  │    01 fev - 28 fev│       │
-│  ├───────────────────┤  ├───────────────────┤  ├───────────────────┤       │
-│  │ 2. Lógico-mat.    │  │ 2. Lógico-mat.    │  │ 2. Lógico-mat.    │       │
-│  │    Não config.    │  │    Não config.    │  │    01 mar - 28 mar│       │
-│  ├───────────────────┤  ├───────────────────┤  ├───────────────────┤       │
-│  │ ...               │  │ ...               │  │ ...               │       │
-│  └───────────────────┘  └───────────────────┘  └───────────────────┘       │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+```typescript
+// Estrutura principal
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-confirm-delete",
+};
+
+Deno.serve(async (req: Request) => {
+  // CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    // 1. Validar headers
+    const authHeader = req.headers.get("Authorization");
+    const confirmHeader = req.headers.get("X-Confirm-Delete");
+    
+    if (!authHeader) return error(401, "Não autorizado");
+    if (confirmHeader !== "true") return error(400, "Header X-Confirm-Delete: true é obrigatório");
+
+    // 2. Verificar admin
+    // ... (verificar role via supabaseClient)
+
+    // 3. Validar body
+    const { institutionId, segmento } = await req.json();
+    if (!institutionId || !segmento) return error(400, "institutionId e segmento são obrigatórios");
+    if (!["infantil", "fundamental1", "fundamental2"].includes(segmento)) {
+      return error(400, "Segmento inválido");
+    }
+
+    // 4. Buscar alunos do segmento
+    // ... (query com join em user_roles para pegar só role='user')
+
+    // 5. Deletar dependências em batch
+    // ... (Promise.all com deletes em cada tabela)
+
+    // 6. Deletar auth users em paralelo
+    // ... (batches de 10 para evitar timeout)
+
+    // 7. Retornar resumo
+    return success({ segmento, total_deletados, message: "..." });
+  } catch (error) {
+    return error(500, "Erro interno");
+  }
+});
 ```
 
-### Mobile (Tabs ou Accordion)
+---
 
-```text
-┌─────────────────────────────────────────┐
-│  Fases                     [ 2026 ▼ ]   │
-├─────────────────────────────────────────┤
-│  ┌─────────┬─────────┬─────────┐        │
-│  │Infantil │ Fund. 1 │ Fund. 2 │        │
-│  └─────────┴─────────┴─────────┘        │
-│                                         │
-│  1. 🎭 Linguística                      │
-│     01 fev - 28 fev          Em andamento│
-│  ─────────────────────────────────────  │
-│  2. 🔢 Lógico-matemática                │
-│     01 mar - 28 mar          Próxima    │
-│  ─────────────────────────────────────  │
-│  ...                                    │
-└─────────────────────────────────────────┘
+## Configuração
+
+### `supabase/config.toml`
+```toml
+[functions.delete-alunos-por-segmento]
+verify_jwt = false
 ```
 
 ---
 
-## Regras de Negócio
+## Segurança Implementada
 
-| Segmento | Tem Casa? | Vê Alunos de... | Fases |
-|----------|-----------|-----------------|-------|
-| infantil | ❌ Não | Todos do segmento infantil | Fases com `segmento='infantil'` |
-| fundamental1 | ❌ Não | Todos do segmento fundamental1 | Fases com `segmento='fundamental1'` |
-| fundamental2 | ✅ Sim (obrigatório) | Apenas da sua Casa | Fases com `segmento='fundamental2'` |
-
----
-
-## Ordem de Implementação
-
-1. **Migração do banco** - Adicionar coluna `segmento` em `fases` e atualizar professores existentes
-2. **Edge Function `create-professor`** - Aceitar segmento, tornar casa opcional
-3. **Modal de criação de professor** - Campo segmento + lógica condicional de casa
-4. **Página de Fases (Admin)** - Layout com 3 colunas/tabs por segmento
-5. **ProfessorContext** - Buscar segmento e filtrar fases corretamente
-6. **Adaptar hooks de alunos** - Suportar busca por segmento (sem casa)
+| Camada | Proteção |
+|--------|----------|
+| Autenticação | Requer Bearer token válido |
+| Autorização | Verifica role = 'admin' na tabela user_roles |
+| Confirmação | Requer header X-Confirm-Delete: true |
+| Validação | Verifica segmento contra lista permitida |
+| Escopo | Só deleta usuários com role = 'user' (nunca admin/professor) |
 
 ---
 
-## Observações Importantes
+## Tabelas de Dependência (Ordem de Deleção)
 
-- Os **painéis de professor para infantil e fundamental1** serão implementados posteriormente (você mencionou que só o fundamental2 está pronto)
-- Esta implementação foca na **infraestrutura base**: banco de dados, criação de professor com segmento, e visualização de fases separadas no Admin
-- A lógica de casas permanece **exclusiva do fundamental2**
-- Professores sem segmento definido serão tratados como `fundamental2` (compatibilidade com dados existentes)
+Baseado na função `delete-users-bulk` existente:
 
+```text
+1. score_ajustes_log      (aluno_id)
+2. inteligencia_evidencias (aluno_id)
+3. inteligencia_historico  (aluno_id)
+4. inteligencia_scores     (aluno_id)
+5. entregas               (aluno_id)
+6. observacoes            (aluno_id)
+7. alertas_alunos         (aluno_id)
+8. acoes_professor        (aluno_id)
+9. acoes_celebracao       (aluno_id)
+10. aluno_turma           (aluno_id)
+11. cargos_casa           (aluno_id)
+12. missao_destinatarios  (aluno_id)
+13. bonus_solicitacoes    (aluno_id)
+14. pontos_gerais         (aluno_id)
+15. mensagens_canal       (autor_id)
+16. mensagens_privadas    (autor_id)
+17. conversa_participantes (usuario_id)
+18. canal_leituras        (usuario_id)
+```
+
+Após deletar dependências, `deleteUser()` do Auth faz CASCADE em:
+- `profiles` (ON DELETE CASCADE)
+- `user_roles` (ON DELETE CASCADE)
+
+---
+
+## Exemplo de Uso (Frontend)
+
+```typescript
+const response = await fetch(
+  `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-alunos-por-segmento`,
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'X-Confirm-Delete': 'true',
+    },
+    body: JSON.stringify({
+      institutionId: '902876e9-b263-4c01-9013-aeef7b6d24e1',
+      segmento: 'infantil',
+    }),
+  }
+);
+
+const result = await response.json();
+// { success: true, segmento: 'infantil', total_deletados: 60, ... }
+```
+
+---
+
+## Diferença da `delete-users-bulk`
+
+| Aspecto | delete-users-bulk | delete-alunos-por-segmento |
+|---------|-------------------|---------------------------|
+| Escopo | Todos os alunos da instituição | Apenas alunos de 1 segmento |
+| Parâmetro | institutionId | institutionId + segmento |
+| Uso | Reset total | Reimportação parcial |
+| Segurança extra | deleteAllStudents: true | X-Confirm-Delete header |
+
+---
+
+## Resumo de Implementação
+
+1. **Criar arquivo**: `supabase/functions/delete-alunos-por-segmento/index.ts`
+2. **Atualizar config**: Adicionar entrada em `supabase/config.toml`
+3. **Deploy automático**: Lovable faz deploy ao salvar
+
+A função será útil para:
+- Reimportar alunos do infantil sem afetar fundamental
+- Limpar dados de teste por segmento
+- Migração gradual entre sistemas
