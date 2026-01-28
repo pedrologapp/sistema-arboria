@@ -142,6 +142,7 @@ Deno.serve(async (req: Request) => {
               full_name: fullName,
               serie: aluno.serie?.trim() || null,
               turma: aluno.turma?.trim() || null,
+              segmento: aluno.segmento?.trim() || null,
             })
             .eq('id', existingProfile.id);
 
@@ -201,6 +202,7 @@ Deno.serve(async (req: Request) => {
               institution_id: aluno.institution_id,
               serie: aluno.serie?.trim() || null,
               turma: aluno.turma?.trim() || null,
+              segmento: aluno.segmento?.trim() || null,
               matricula_externa: aluno.matricula,
               must_change_password: true
             })
