@@ -1,66 +1,131 @@
 
-# Plano: Corrigir Carregamento de Alunos
+# Plano: Corrigir Sincronizacao de Alunos com Emails Duplicados
 
 ## Problema Identificado
-A query de alunos falha porque usa `.in('id', userIds)` com 375 UUIDs, gerando uma URL muito longa que excede o limite do navegador/API.
 
-## Solucao: Inverter a Logica da Query
+Quando a função tenta criar um novo aluno e o email `nome.sobrenome@aluno.arboria.com` já existe no auth.users, ela falha. Isso acontece porque:
+- Alunos com mesmo primeiro nome e sobrenome geram emails iguais
+- Ex: "João Silva Costa" e "João Silva Neto" → ambos geram `joao.silva@aluno.arboria.com`
 
-Em vez de:
-1. Buscar todos os user_ids com role = 'user' (375 IDs)
-2. Fazer `.in('id', userIds)` no profiles
+## Solução: Verificar Email Existente + Vincular ao Profile
 
-Fazer:
-1. Buscar profiles da instituicao
-2. Para cada profile, verificar se tem role = 'user' em batches pequenos
+### Lógica Proposta:
 
-### Implementacao
-
-Modificar a query de alunos em `src/pages/admin/PessoasPage.tsx`:
-
-```typescript
-// Buscar alunos (role = 'user')
-const { data: alunos, isLoading: loadingAlunos } = useQuery({
-  queryKey: ['admin-alunos', institutionId],
-  queryFn: async () => {
-    // 1. Buscar TODOS os profiles da instituicao
-    const { data: allProfiles, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, nome, sobrenome, full_name, serie, turma, casa_id, avatar_url, created_at, segmento')
-      .eq('institution_id', institutionId)
-      .order('serie')
-      .order('turma')
-      .order('full_name');
-    
-    if (profileError) throw profileError;
-    if (!allProfiles || allProfiles.length === 0) return [];
-    
-    // 2. Buscar todos os user_roles com role = 'user' (sem filtro de ID)
-    const { data: roleUsers, error: roleError } = await supabase
-      .from('user_roles')
-      .select('user_id')
-      .eq('role', 'user');
-    
-    if (roleError) throw roleError;
-    
-    // 3. Criar Set para lookup rapido O(1)
-    const studentIds = new Set(roleUsers?.map(r => r.user_id) || []);
-    
-    // 4. Filtrar profiles que sao alunos
-    return allProfiles.filter(p => studentIds.has(p.id));
-  },
-  enabled: !!institutionId
-});
+```text
+1. Verificar se aluno existe por matricula_externa
+   ├─ SIM → ATUALIZAR dados no profile
+   └─ NÃO → Tentar criar novo usuário
+              ├─ SUCESSO → Atualizar profile com matricula_externa
+              └─ ERRO (email existe) → 
+                   ├─ Buscar user existente pelo email
+                   ├─ Verificar se profile já tem matricula_externa
+                   │   ├─ NÃO tem → Vincular matricula_externa a esse profile
+                   │   └─ JÁ tem outra → Gerar email alternativo (nome.sobrenome2@...)
+                   └─ Contar como "atualizado"
 ```
 
-## Vantagens da Nova Abordagem
+### Estratégia para Emails Duplicados:
 
-| Aspecto | Antes | Depois |
+Quando o email base já existe e está vinculado a outra matrícula, adicionar sufixo numérico:
+
+```typescript
+// Tentar: joao.silva@aluno.arboria.com
+// Se existe: joao.silva2@aluno.arboria.com
+// Se existe: joao.silva3@aluno.arboria.com
+```
+
+## Alterações na Edge Function
+
+### 1. Adicionar função para buscar usuário por email
+
+```typescript
+async function buscarUserPorEmail(supabaseAdmin, email: string) {
+  const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+  if (error) return null;
+  return data.users.find(u => u.email === email);
+}
+```
+
+### 2. Adicionar lógica de email alternativo
+
+```typescript
+async function gerarEmailUnico(supabaseAdmin, nome: string, sobrenome: string): Promise<string> {
+  const baseEmail = gerarEmail(nome, sobrenome);
+  let email = baseEmail;
+  let suffix = 1;
+  
+  while (suffix <= 10) {
+    const existingUser = await buscarUserPorEmail(supabaseAdmin, email);
+    if (!existingUser) return email;
+    
+    // Gerar próximo email
+    suffix++;
+    const [local, domain] = baseEmail.split('@');
+    email = `${local}${suffix}@${domain}`;
+  }
+  
+  throw new Error('Muitos usuários com mesmo nome');
+}
+```
+
+### 3. Modificar fluxo de criação
+
+Quando `createUser` falhar com email duplicado:
+
+```typescript
+if (createError?.message?.includes('email address has already been registered')) {
+  // Buscar usuário existente
+  const existingUser = await buscarUserPorEmail(supabaseAdmin, email);
+  
+  if (existingUser) {
+    // Verificar se profile desse user já tem matricula_externa
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('matricula_externa')
+      .eq('id', existingUser.id)
+      .single();
+    
+    if (!profile?.matricula_externa) {
+      // Profile sem matrícula → vincular esta matrícula
+      await supabaseAdmin
+        .from('profiles')
+        .update({ 
+          matricula_externa: aluno.matricula,
+          nome, sobrenome, serie, turma, segmento 
+        })
+        .eq('id', existingUser.id);
+      
+      result.atualizados++;
+      continue;
+    } else {
+      // Profile já tem outra matrícula → criar com email alternativo
+      const novoEmail = await gerarEmailUnico(supabaseAdmin, nome, sobrenome);
+      // Tentar createUser com novoEmail...
+    }
+  }
+}
+```
+
+## Resultado Esperado
+
+| Cenário | Antes | Depois |
 |---------|-------|--------|
-| Query profiles | `.in(375 IDs)` - URL enorme | `.eq(institution_id)` - URL curta |
-| Query user_roles | Funciona | Continua funcionando |
-| Filtro | No banco | No cliente (Set - O(1)) |
-| Performance | Falha | Funciona com qualquer quantidade |
+| Matrícula existe | ✅ Atualiza | ✅ Atualiza |
+| Matrícula nova, email livre | ✅ Cria | ✅ Cria |
+| Matrícula nova, email existe sem matrícula | ❌ Erro | ✅ Vincula |
+| Matrícula nova, email existe com outra matrícula | ❌ Erro | ✅ Cria com sufixo |
+
+## Resposta da API
+
+```json
+{
+  "success": true,
+  "total": 100,
+  "criados": 45,
+  "atualizados": 55,
+  "erros": []
+}
+```
 
 ## Arquivo a Modificar
-- `src/pages/admin/PessoasPage.tsx` - Query de alunos (linhas 73-103)
+- `supabase/functions/sync-alunos-externos/index.ts`
