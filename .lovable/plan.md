@@ -1,131 +1,79 @@
 
-# Plano: Corrigir Sincronizacao de Alunos com Emails Duplicados
+Objetivo
+- Garantir que, após você excluir os alunos e reimportar 92 alunos do infantil, a sincronização crie todos os 92 (e não marque a maior parte como “atualizado”) quando de fato não existe ninguém naquela instituição.
+- Corrigir a causa mais provável do “32 criados / 60 atualizados” mesmo depois de excluir: hoje a função considera “existe” apenas por matricula_externa globalmente (sem filtrar institution_id), então ela pode estar encontrando matrícula igual em outro contexto e marcando como “atualizado”.
 
-## Problema Identificado
+Por que isso acontece (explicação simples)
+- A função sync-alunos-externos hoje faz:
+  - “Se existe algum profile com matricula_externa = X → atualiza”
+  - Ela NÃO confere se esse profile é da mesma instituição (institution_id) que você está importando.
+- Resultado possível: mesmo você tendo apagado os alunos da sua instituição, a função encontra a mesma matrícula em outro lugar (ou um cadastro antigo/orfão) e “atualiza” aquele registro, em vez de criar um novo.
 
-Quando a função tenta criar um novo aluno e o email `nome.sobrenome@aluno.arboria.com` já existe no auth.users, ela falha. Isso acontece porque:
-- Alunos com mesmo primeiro nome e sobrenome geram emails iguais
-- Ex: "João Silva Costa" e "João Silva Neto" → ambos geram `joao.silva@aluno.arboria.com`
+O que vamos ajustar
+1) UPSERT por (institution_id + matricula_externa)
+- Mudar a busca do “aluno já existe?” para:
+  - where matricula_externa = aluno.matricula AND institution_id = aluno.institution_id
+- Isso torna o upsert realmente “por instituição”, que é o comportamento esperado no seu caso.
 
-## Solução: Verificar Email Existente + Vincular ao Profile
+2) UPDATE deve atualizar também institution_id e matricula_externa (consistência)
+- No caminho de UPDATE (quando existe), além de nome/sobrenome/série/turma/segmento, vamos garantir que:
+  - institution_id = aluno.institution_id (mantém consistente)
+  - matricula_externa = aluno.matricula (garante o vínculo)
+- Assim não fica “meio cadastrado” em casos antigos.
 
-### Lógica Proposta:
+3) “Email já registrado” não pode virar “atualizado” indevido
+- Hoje, quando o email já existe, a função tenta “vincular” ao profile do email se ele não tiver matricula_externa.
+- Vamos tornar isso seguro por instituição:
+  - Buscar profile do usuário existente e ler institution_id e matricula_externa.
+  - Só fazer o vínculo (setar matricula_externa) se:
+    - matricula_externa estiver vazia E
+    - (institution_id for igual ao aluno.institution_id OU institution_id estiver nulo)
+  - Se institution_id for diferente, não vamos “roubar” o usuário de outra instituição: vamos tratar como colisão de email e criar com email alternativo (sufixo 2, 3, 4…).
 
-```text
-1. Verificar se aluno existe por matricula_externa
-   ├─ SIM → ATUALIZAR dados no profile
-   └─ NÃO → Tentar criar novo usuário
-              ├─ SUCESSO → Atualizar profile com matricula_externa
-              └─ ERRO (email existe) → 
-                   ├─ Buscar user existente pelo email
-                   ├─ Verificar se profile já tem matricula_externa
-                   │   ├─ NÃO tem → Vincular matricula_externa a esse profile
-                   │   └─ JÁ tem outra → Gerar email alternativo (nome.sobrenome2@...)
-                   └─ Contar como "atualizado"
-```
+4) Garantir que “atualizado” continue sendo aluno (role e dados mínimos)
+- Em alguns cenários antigos, pode existir profile com matricula_externa mas sem role ‘user’.
+- No caminho de UPDATE e no caminho de VÍNCULO, vamos:
+  - upsert em user_roles (user_id, role='user') com proteção de duplicidade
+  - garantir inteligencia_scores para o ano letivo atual sem sobrescrever valores existentes:
+    - usar upsert com onConflict (aluno_id,inteligencia_id,ano_letivo) e ignoreDuplicates=true (ou equivalente) para só criar faltantes
 
-### Estratégia para Emails Duplicados:
+5) Melhorar o relatório do retorno (para você entender rápido)
+- Manter os contadores:
+  - criados, atualizados, vinculados, erros
+- Adicionar (opcional, sem expor dados sensíveis):
+  - “atualizados_por_matricula_mesma_instituicao” vs “vinculados_por_email”
+  - isso ajuda a diferenciar “já existia mesmo” de “email já existia”.
 
-Quando o email base já existe e está vinculado a outra matrícula, adicionar sufixo numérico:
+Arquivos que serão alterados
+- supabase/functions/sync-alunos-externos/index.ts
+  - Ajustar query de busca de existingProfile para incluir institution_id
+  - Ajustar payload do update para incluir institution_id + matricula_externa
+  - Ajustar regra de vínculo por email para respeitar institution_id
+  - Garantir role ‘user’ e scores no caminho de update/vínculo (sem sobrescrever)
 
-```typescript
-// Tentar: joao.silva@aluno.arboria.com
-// Se existe: joao.silva2@aluno.arboria.com
-// Se existe: joao.silva3@aluno.arboria.com
-```
+Validação (como vamos confirmar que resolveu)
+1) Antes de importar:
+- Conferir no backend (ambiente de teste) que a sua instituição está “zerada”:
+  - count profiles com institution_id = sua instituição e matricula_externa não nula deve ser 0
 
-## Alterações na Edge Function
+2) Rodar a importação de 92 alunos novamente
+- Esperado:
+  - criados ≈ 92
+  - atualizados ≈ 0
+  - vinculados ≈ 0 (a menos que exista ainda algum usuário com email igual sobrando)
+  - erros ≈ 0
 
-### 1. Adicionar função para buscar usuário por email
+3) Se ainda aparecer “atualizados”
+- A função vai estar correta; então o motivo normalmente será um destes:
+  - o arquivo/payload tem matrículas repetidas dentro dos 92 (duplicadas)
+  - ainda existem contas antigas na mesma instituição (não deletadas), agora corretamente detectadas
+- Se acontecer, vamos usar 1 ou 2 matrículas de exemplo para localizar exatamente o que foi encontrado e por quê (sem precisar apagar “no escuro”).
 
-```typescript
-async function buscarUserPorEmail(supabaseAdmin, email: string) {
-  const { data, error } = await supabaseAdmin.auth.admin.listUsers();
-  if (error) return null;
-  return data.users.find(u => u.email === email);
-}
-```
+Risco/impacto
+- A mudança evita atualizar registros “de outra instituição” por engano (isso é uma correção de segurança/consistência de dados).
+- Mantém o comportamento de UPSERT esperado: só atualiza quando o aluno já existe naquela instituição.
 
-### 2. Adicionar lógica de email alternativo
-
-```typescript
-async function gerarEmailUnico(supabaseAdmin, nome: string, sobrenome: string): Promise<string> {
-  const baseEmail = gerarEmail(nome, sobrenome);
-  let email = baseEmail;
-  let suffix = 1;
-  
-  while (suffix <= 10) {
-    const existingUser = await buscarUserPorEmail(supabaseAdmin, email);
-    if (!existingUser) return email;
-    
-    // Gerar próximo email
-    suffix++;
-    const [local, domain] = baseEmail.split('@');
-    email = `${local}${suffix}@${domain}`;
-  }
-  
-  throw new Error('Muitos usuários com mesmo nome');
-}
-```
-
-### 3. Modificar fluxo de criação
-
-Quando `createUser` falhar com email duplicado:
-
-```typescript
-if (createError?.message?.includes('email address has already been registered')) {
-  // Buscar usuário existente
-  const existingUser = await buscarUserPorEmail(supabaseAdmin, email);
-  
-  if (existingUser) {
-    // Verificar se profile desse user já tem matricula_externa
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('matricula_externa')
-      .eq('id', existingUser.id)
-      .single();
-    
-    if (!profile?.matricula_externa) {
-      // Profile sem matrícula → vincular esta matrícula
-      await supabaseAdmin
-        .from('profiles')
-        .update({ 
-          matricula_externa: aluno.matricula,
-          nome, sobrenome, serie, turma, segmento 
-        })
-        .eq('id', existingUser.id);
-      
-      result.atualizados++;
-      continue;
-    } else {
-      // Profile já tem outra matrícula → criar com email alternativo
-      const novoEmail = await gerarEmailUnico(supabaseAdmin, nome, sobrenome);
-      // Tentar createUser com novoEmail...
-    }
-  }
-}
-```
-
-## Resultado Esperado
-
-| Cenário | Antes | Depois |
-|---------|-------|--------|
-| Matrícula existe | ✅ Atualiza | ✅ Atualiza |
-| Matrícula nova, email livre | ✅ Cria | ✅ Cria |
-| Matrícula nova, email existe sem matrícula | ❌ Erro | ✅ Vincula |
-| Matrícula nova, email existe com outra matrícula | ❌ Erro | ✅ Cria com sufixo |
-
-## Resposta da API
-
-```json
-{
-  "success": true,
-  "total": 100,
-  "criados": 45,
-  "atualizados": 55,
-  "erros": []
-}
-```
-
-## Arquivo a Modificar
-- `supabase/functions/sync-alunos-externos/index.ts`
+Entrega
+- Implementar as mudanças na função
+- Re-deploy automático do backend
+- Teste rápido com uma chamada de exemplo (1–2 alunos) e depois com o lote completo (92)
