@@ -74,7 +74,19 @@ const PessoasPage = () => {
   const { data: alunos, isLoading: loadingAlunos } = useQuery({
     queryKey: ['admin-alunos', institutionId],
     queryFn: async () => {
-      // Primeiro buscar user_ids com role = 'user'
+      // 1. Buscar TODOS os profiles da instituição
+      const { data: allProfiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, nome, sobrenome, full_name, serie, turma, casa_id, avatar_url, created_at, segmento')
+        .eq('institution_id', institutionId)
+        .order('serie')
+        .order('turma')
+        .order('full_name');
+      
+      if (profileError) throw profileError;
+      if (!allProfiles || allProfiles.length === 0) return [];
+      
+      // 2. Buscar todos os user_roles com role = 'user' (sem filtro de ID)
       const { data: roleUsers, error: roleError } = await supabase
         .from('user_roles')
         .select('user_id')
@@ -82,22 +94,11 @@ const PessoasPage = () => {
       
       if (roleError) throw roleError;
       
-      const userIds = roleUsers?.map(r => r.user_id) || [];
+      // 3. Criar Set para lookup rápido O(1)
+      const studentIds = new Set(roleUsers?.map(r => r.user_id) || []);
       
-      if (userIds.length === 0) return [];
-      
-      // Buscar profiles desses users na instituição
-      const { data: profiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, nome, sobrenome, full_name, serie, turma, casa_id, avatar_url, created_at, segmento')
-        .eq('institution_id', institutionId)
-        .in('id', userIds)
-        .order('serie')
-        .order('turma')
-        .order('full_name');
-      
-      if (profileError) throw profileError;
-      return profiles || [];
+      // 4. Filtrar profiles que são alunos
+      return allProfiles.filter(p => studentIds.has(p.id));
     },
     enabled: !!institutionId
   });
