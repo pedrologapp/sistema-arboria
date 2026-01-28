@@ -18,7 +18,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       {/* Mobile Header (simplified) */}
       <div className="md:hidden sticky top-0 z-50 bg-black/80 backdrop-blur-lg border-b border-white/10">
         <div className="flex items-center justify-center h-14">
-          <span className="text-lg font-bold text-white">Arbória</span>
+          <span className="text-lg font-bold text-white">Arboria</span>
         </div>
       </div>
 

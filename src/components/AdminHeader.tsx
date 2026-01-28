@@ -66,7 +66,7 @@ export function AdminHeader() {
         {/* Logo */}
         <Link to="/admin" className="flex items-center gap-2">
           <TreeDeciduous className="h-8 w-8 text-indigo-400" />
-          <span className="text-xl font-bold text-white">Arbória</span>
+          <span className="text-xl font-bold text-white">Arboria</span>
         </Link>
 
         {/* Desktop Navigation */}
