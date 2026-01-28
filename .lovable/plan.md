@@ -1,55 +1,85 @@
 
-# Plano: Adicionar Campo "segmento" na Tabela Profiles
+# Plano: Adicionar Exclusao em Massa de Alunos no Painel Admin
 
 ## Objetivo
-Adicionar uma nova coluna `segmento` na tabela `profiles` para categorizar os alunos por nível educacional (infantil, fundamental1, fundamental2).
+Permitir que administradores excluam todos os alunos da instituicao de uma vez, com confirmacao de seguranca para evitar exclusoes acidentais.
 
-## Alteracao no Banco de Dados
+## Interface do Usuario
 
-### Nova Coluna
-| Campo | Tipo | Obrigatorio | Descricao |
-|-------|------|-------------|-----------|
-| `segmento` | text | Nao | Nivel educacional do aluno |
+### Novo Botao na Aba Alunos
+- Adicionar botao vermelho "Excluir Todos" na area de acoes
+- Botao so aparece quando ha alunos cadastrados
+- Icone de lixeira para indicar acao destrutiva
 
-### Valores Esperados
-- `infantil` - Educacao Infantil
-- `fundamental1` - Ensino Fundamental I (1 ao 5 ano)
-- `fundamental2` - Ensino Fundamental II (6 ao 9 ano)
+### Modal de Confirmacao (2 etapas)
+1. **Primeira tela**: Mostra quantidade de alunos que serao excluidos e pede confirmacao
+2. **Segunda tela**: Exige digitar "EXCLUIR" para confirmar (previne cliques acidentais)
 
-## SQL da Migracao
+### Feedback Visual
+- Loading spinner durante exclusao
+- Toast de sucesso/erro apos conclusao
+- Atualiza lista automaticamente
 
-```sql
-ALTER TABLE profiles 
-ADD COLUMN segmento text;
+## Implementacao Tecnica
 
-COMMENT ON COLUMN profiles.segmento IS 'Segmento educacional: infantil, fundamental1, fundamental2';
-```
+### 1. Nova Edge Function: `delete-users-bulk`
+Cria uma nova edge function otimizada para exclusao em massa:
+- Recebe array de IDs ou parametro `deleteAllStudents: true`
+- Usa mesma logica de limpeza de dependencias do `delete-user`
+- Processa em lote para melhor performance
+- Retorna contagem de sucessos/falhas
 
-## Atualizacao na Edge Function sync-alunos-externos
-
-A Edge Function ja recebe `segmento` no payload (conforme interface `AlunoExterno`), mas nao esta salvando no profile. Sera atualizada para incluir o campo nas operacoes de INSERT e UPDATE.
-
-## Resultado Final
-
-### Estrutura do Payload N8N (atualizada)
-```json
+```typescript
+// Payload esperado
 {
-  "alunos": [
-    {
-      "matricula": "12345",
-      "nome": "Joao",
-      "sobrenome": "Silva",
-      "serie": "6º ano",
-      "turma": "A",
-      "segmento": "fundamental2",
-      "institution_id": "902876e9-b263-4c01-9013-aeef7b6d24e1"
-    }
-  ]
+  "institutionId": "uuid",
+  "deleteAllStudents": true
 }
 ```
 
-## Secao Tecnica
+### 2. Novo Componente: `ModalExcluirAlunosMassa`
+- Modal com design escuro consistente com o restante da UI
+- Estado de confirmacao em 2 etapas
+- Campo de texto para digitar "EXCLUIR"
+- Botoes Cancelar e Confirmar
 
-1. **Migracao SQL**: Adicionar coluna `segmento` tipo text na tabela `profiles`
-2. **Edge Function**: Atualizar `sync-alunos-externos` para salvar o campo `segmento` tanto na criacao quanto na atualizacao de alunos
-3. **Sem necessidade de RLS**: A coluna segue as mesmas politicas ja existentes na tabela `profiles`
+### 3. Atualizacao do PessoasPage
+- Importar novo modal
+- Adicionar estado para controlar modal
+- Adicionar botao de exclusao em massa
+- Invalidar query apos exclusao bem-sucedida
+
+## Fluxo de Seguranca
+
+```text
+[Clique em "Excluir Todos"]
+        |
+        v
+[Modal - Etapa 1: Confirmacao]
+"Tem certeza? X alunos serao excluidos permanentemente"
+        |
+        v
+[Modal - Etapa 2: Digite EXCLUIR]
+Campo de texto + validacao
+        |
+        v
+[Chamada Edge Function]
+        |
+        v
+[Feedback: Sucesso/Erro]
+```
+
+## Arquivos a Criar/Modificar
+
+| Arquivo | Acao |
+|---------|------|
+| `supabase/functions/delete-users-bulk/index.ts` | Criar |
+| `src/components/admin/ModalExcluirAlunosMassa.tsx` | Criar |
+| `src/pages/admin/PessoasPage.tsx` | Modificar |
+
+## Consideracoes de Seguranca
+
+- Apenas admins autenticados podem executar
+- Verificacao de institution_id para nao afetar outras instituicoes
+- Log de operacao para auditoria
+- Timeout adequado para operacoes grandes (ate 300 alunos)
