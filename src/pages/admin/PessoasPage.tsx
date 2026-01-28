@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
@@ -10,11 +10,13 @@ import {
   Search,
   Plus,
   Upload,
-  Loader2
+  Loader2,
+  Trash2
 } from 'lucide-react';
 import PessoaCard from '@/components/admin/PessoaCard';
 import ModalImportarCSV from '@/components/admin/ModalImportarCSV';
 import ModalAdicionarUsuario from '@/components/admin/ModalAdicionarUsuario';
+import ModalExcluirAlunosMassa from '@/components/admin/ModalExcluirAlunosMassa';
 
 type TabType = 'alunos' | 'professores' | 'admins';
 
@@ -27,6 +29,7 @@ interface Inteligencia {
 const PessoasPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [tabAtiva, setTabAtiva] = useState<TabType>('alunos');
   const [busca, setBusca] = useState('');
   const [filtroSerie, setFiltroSerie] = useState('');
@@ -34,6 +37,7 @@ const PessoasPage = () => {
   const [filtroCasa, setFiltroCasa] = useState('');
   const [modalImportarAberto, setModalImportarAberto] = useState(false);
   const [modalAdicionarAberto, setModalAdicionarAberto] = useState(false);
+  const [modalExcluirMassaAberto, setModalExcluirMassaAberto] = useState(false);
   const [tipoAdicionar, setTipoAdicionar] = useState<'aluno' | 'professor' | 'admin'>('aluno');
 
   // Buscar institution_id do admin logado
@@ -358,21 +362,34 @@ const PessoasPage = () => {
             )}
 
             {/* Botões de Ação */}
-            <div className="flex gap-3 pt-4">
-              <button
-                onClick={() => handleAdicionar('aluno')}
-                className="flex-1 p-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
-              >
-                <Plus className="w-5 h-5" />
-                Adicionar
-              </button>
-              <button
-                onClick={() => setModalImportarAberto(true)}
-                className="flex-1 p-3 bg-white text-black font-medium rounded-xl hover:bg-white/90 transition-colors flex items-center justify-center gap-2"
-              >
-                <Upload className="w-5 h-5" />
-                Importar CSV
-              </button>
+            <div className="flex flex-col gap-3 pt-4">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleAdicionar('aluno')}
+                  className="flex-1 p-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-5 h-5" />
+                  Adicionar
+                </button>
+                <button
+                  onClick={() => setModalImportarAberto(true)}
+                  className="flex-1 p-3 bg-white text-black font-medium rounded-xl hover:bg-white/90 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Upload className="w-5 h-5" />
+                  Importar CSV
+                </button>
+              </div>
+              
+              {/* Botão Excluir Todos */}
+              {(alunos?.length || 0) > 0 && (
+                <button
+                  onClick={() => setModalExcluirMassaAberto(true)}
+                  className="w-full p-3 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-5 h-5" />
+                  Excluir Todos os Alunos
+                </button>
+              )}
             </div>
           </>
         )}
@@ -500,6 +517,19 @@ const PessoasPage = () => {
           tipo={tipoAdicionar}
           institutionId={institutionId}
           onClose={() => setModalAdicionarAberto(false)}
+        />
+      )}
+
+      {/* Modal Excluir em Massa */}
+      {institutionId && (
+        <ModalExcluirAlunosMassa
+          open={modalExcluirMassaAberto}
+          onOpenChange={setModalExcluirMassaAberto}
+          totalAlunos={alunos?.length || 0}
+          institutionId={institutionId}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['admin-alunos'] });
+          }}
         />
       )}
     </div>
