@@ -22,6 +22,7 @@ interface SyncResult {
   total: number;
   criados: number;
   atualizados: number;
+  vinculados: number;
   erros: string[];
 }
 
@@ -37,23 +38,124 @@ function normalizeSobrenome(sobrenome: string): string {
 }
 
 // Generate email from nome.sobrenome
-function gerarEmail(nome: string, sobrenome: string): string {
-  // Get first name and first surname
+function gerarEmail(nome: string, sobrenome: string, suffix?: number): string {
   const primeiroNome = nome.trim().split(' ')[0];
   const primeiroSobrenome = sobrenome.trim().split(' ')[0];
   
-  // Normalize: remove accents, lowercase, remove special characters
   const normalizar = (str: string) => str
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-zA-Z]/g, '')
     .toLowerCase();
   
-  return `${normalizar(primeiroNome)}.${normalizar(primeiroSobrenome)}@aluno.arboria.com`;
+  const local = `${normalizar(primeiroNome)}.${normalizar(primeiroSobrenome)}`;
+  const suffixStr = suffix && suffix > 1 ? suffix.toString() : '';
+  
+  return `${local}${suffixStr}@aluno.arboria.com`;
+}
+
+// Search for user by email using admin API
+async function buscarUserPorEmail(supabaseAdmin: any, email: string) {
+  try {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      filter: `email.eq.${email}`
+    });
+    
+    if (error) {
+      console.error('Error searching user by email:', error);
+      return null;
+    }
+    
+    return data?.users?.find((u: any) => u.email === email) || null;
+  } catch (err) {
+    console.error('Exception searching user:', err);
+    return null;
+  }
+}
+
+// Find available email with suffix
+async function gerarEmailUnico(supabaseAdmin: any, nome: string, sobrenome: string): Promise<string> {
+  for (let suffix = 2; suffix <= 20; suffix++) {
+    const email = gerarEmail(nome, sobrenome, suffix);
+    const existingUser = await buscarUserPorEmail(supabaseAdmin, email);
+    if (!existingUser) {
+      return email;
+    }
+  }
+  throw new Error('Muitos usuários com mesmo nome - limite de sufixos atingido');
+}
+
+// Create new user with given email
+async function criarNovoUsuario(
+  supabaseAdmin: any, 
+  aluno: AlunoExterno, 
+  email: string,
+  anoLetivo: number
+): Promise<{ success: boolean; userId?: string; error?: string }> {
+  const normalizedSobrenome = normalizeSobrenome(aluno.sobrenome);
+  const password = normalizedSobrenome + '123';
+  const fullName = `${aluno.nome.trim()} ${aluno.sobrenome.trim()}`;
+
+  if (password.length < 6) {
+    return { success: false, error: 'Sobrenome muito curto para gerar senha válida' };
+  }
+
+  const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: {
+      nome: aluno.nome.trim(),
+      sobrenome: aluno.sobrenome.trim(),
+      full_name: fullName,
+      institution_id: aluno.institution_id,
+      serie: aluno.serie?.trim() || null,
+      turma: aluno.turma?.trim() || null,
+      must_change_password: true
+    }
+  });
+
+  if (createError) {
+    return { success: false, error: createError.message };
+  }
+
+  // Update profile with matricula_externa
+  await supabaseAdmin
+    .from('profiles')
+    .update({
+      nome: aluno.nome.trim(),
+      sobrenome: aluno.sobrenome.trim(),
+      full_name: fullName,
+      institution_id: aluno.institution_id,
+      serie: aluno.serie?.trim() || null,
+      turma: aluno.turma?.trim() || null,
+      segmento: aluno.segmento?.trim() || null,
+      matricula_externa: aluno.matricula,
+      must_change_password: true
+    })
+    .eq('id', newUser.user.id);
+
+  // Add user role
+  await supabaseAdmin
+    .from('user_roles')
+    .insert({ user_id: newUser.user.id, role: 'user' });
+
+  // Initialize intelligence scores
+  for (let imId = 1; imId <= 8; imId++) {
+    await supabaseAdmin
+      .from('inteligencia_scores')
+      .upsert({
+        aluno_id: newUser.user.id,
+        inteligencia_id: imId,
+        score_atual: 35.00,
+        ano_letivo: anoLetivo
+      }, { onConflict: 'aluno_id,inteligencia_id,ano_letivo' });
+  }
+
+  return { success: true, userId: newUser.user.id };
 }
 
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -63,7 +165,6 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const syncToken = Deno.env.get('SYNC_ALUNOS_TOKEN');
 
-    // Validate sync token
     const providedToken = req.headers.get('X-Sync-Token');
     if (!syncToken || providedToken !== syncToken) {
       console.error('Invalid or missing sync token');
@@ -73,15 +174,10 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Create admin client with service role key
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
+      auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    // Parse request body
     const { alunos } = await req.json() as { alunos: AlunoExterno[] };
 
     if (!alunos || !Array.isArray(alunos) || alunos.length === 0) {
@@ -92,8 +188,6 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log(`Starting sync of ${alunos.length} alunos`);
-
-    // Get current year for ano_letivo
     const anoLetivo = new Date().getFullYear();
 
     const result: SyncResult = {
@@ -101,6 +195,7 @@ Deno.serve(async (req: Request) => {
       total: alunos.length,
       criados: 0,
       atualizados: 0,
+      vinculados: 0,
       erros: []
     };
 
@@ -110,15 +205,15 @@ Deno.serve(async (req: Request) => {
 
       try {
         // Validate required fields
-        if (!aluno.matricula || !aluno.matricula.trim()) {
+        if (!aluno.matricula?.trim()) {
           result.erros.push(`Linha ${lineNumber}: Matrícula é obrigatória`);
           continue;
         }
-        if (!aluno.nome || !aluno.nome.trim()) {
+        if (!aluno.nome?.trim()) {
           result.erros.push(`Linha ${lineNumber}: ${aluno.matricula} - Nome é obrigatório`);
           continue;
         }
-        if (!aluno.sobrenome || !aluno.sobrenome.trim()) {
+        if (!aluno.sobrenome?.trim()) {
           result.erros.push(`Linha ${lineNumber}: ${aluno.matricula} - Sobrenome é obrigatório`);
           continue;
         }
@@ -127,10 +222,12 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        // Check if student already exists by matricula_externa
+        const fullName = `${aluno.nome.trim()} ${aluno.sobrenome.trim()}`;
+
+        // STEP 1: Check if student exists by matricula_externa
         const { data: existingProfile, error: searchError } = await supabaseAdmin
           .from('profiles')
-          .select('id')
+          .select('id, matricula_externa')
           .eq('matricula_externa', aluno.matricula)
           .maybeSingle();
 
@@ -140,10 +237,8 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        const fullName = `${aluno.nome.trim()} ${aluno.sobrenome.trim()}`;
-
         if (existingProfile) {
-          // UPDATE existing student
+          // CASE 1: Student exists by matricula_externa → UPDATE
           const { error: updateError } = await supabaseAdmin
             .from('profiles')
             .update({
@@ -157,118 +252,104 @@ Deno.serve(async (req: Request) => {
             .eq('id', existingProfile.id);
 
           if (updateError) {
-            console.error(`Error updating ${aluno.matricula}:`, updateError);
             result.erros.push(`Linha ${lineNumber}: ${aluno.matricula} - Erro ao atualizar: ${updateError.message}`);
             continue;
           }
 
-          console.log(`Updated: ${aluno.matricula} (${existingProfile.id})`);
+          console.log(`Updated by matricula: ${aluno.matricula}`);
           result.atualizados++;
-
-        } else {
-          // CREATE new student
-          const normalizedSobrenome = normalizeSobrenome(aluno.sobrenome);
-          const password = normalizedSobrenome + '123';
-
-          // Validate password length
-          if (password.length < 6) {
-            result.erros.push(`Linha ${lineNumber}: ${aluno.matricula} - Sobrenome muito curto para gerar senha válida`);
-            continue;
-          }
-
-          const email = gerarEmail(aluno.nome, aluno.sobrenome);
-
-          // Create user in auth.users
-          const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-            email,
-            password,
-            email_confirm: true,
-            user_metadata: {
-              nome: aluno.nome.trim(),
-              sobrenome: aluno.sobrenome.trim(),
-              full_name: fullName,
-              institution_id: aluno.institution_id,
-              serie: aluno.serie?.trim() || null,
-              turma: aluno.turma?.trim() || null,
-              must_change_password: true
-            }
-          });
-
-          if (createError) {
-            console.error(`Error creating user ${aluno.matricula}:`, createError);
-            result.erros.push(`Linha ${lineNumber}: ${aluno.matricula} - ${createError.message}`);
-            continue;
-          }
-
-          console.log(`User created: ${aluno.matricula} (${newUser.user.id})`);
-
-          // Update profile with all fields including matricula_externa
-          const { error: profileError } = await supabaseAdmin
-            .from('profiles')
-            .update({
-              nome: aluno.nome.trim(),
-              sobrenome: aluno.sobrenome.trim(),
-              full_name: fullName,
-              institution_id: aluno.institution_id,
-              serie: aluno.serie?.trim() || null,
-              turma: aluno.turma?.trim() || null,
-              segmento: aluno.segmento?.trim() || null,
-              matricula_externa: aluno.matricula,
-              must_change_password: true
-            })
-            .eq('id', newUser.user.id);
-
-          if (profileError) {
-            console.error(`Error updating profile for ${aluno.matricula}:`, profileError);
-            // Don't fail completely, user was created
-          }
-
-          // Add user role
-          const { error: roleError } = await supabaseAdmin
-            .from('user_roles')
-            .insert({
-              user_id: newUser.user.id,
-              role: 'user'
-            });
-
-          if (roleError) {
-            console.error(`Error adding role for ${aluno.matricula}:`, roleError);
-            // Don't fail completely
-          }
-
-          // Initialize intelligence scores (8 IMs)
-          for (let imId = 1; imId <= 8; imId++) {
-            await supabaseAdmin
-              .from('inteligencia_scores')
-              .upsert({
-                aluno_id: newUser.user.id,
-                inteligencia_id: imId,
-                score_atual: 35.00,
-                ano_letivo: anoLetivo
-              }, {
-                onConflict: 'aluno_id,inteligencia_id,ano_letivo'
-              });
-          }
-
-          result.criados++;
+          continue;
         }
 
-      } catch (error) {
+        // STEP 2: Student doesn't exist by matricula → try to create
+        const baseEmail = gerarEmail(aluno.nome, aluno.sobrenome);
+        const createResult = await criarNovoUsuario(supabaseAdmin, aluno, baseEmail, anoLetivo);
+
+        if (createResult.success) {
+          console.log(`Created: ${aluno.matricula} (${createResult.userId})`);
+          result.criados++;
+          continue;
+        }
+
+        // STEP 3: Creation failed - check if email already exists
+        if (createResult.error?.includes('email address has already been registered')) {
+          console.log(`Email ${baseEmail} already exists, checking profile...`);
+          
+          const existingUser = await buscarUserPorEmail(supabaseAdmin, baseEmail);
+          
+          if (existingUser) {
+            // Check if this profile already has a matricula_externa
+            const { data: profileCheck } = await supabaseAdmin
+              .from('profiles')
+              .select('matricula_externa')
+              .eq('id', existingUser.id)
+              .single();
+
+            if (!profileCheck?.matricula_externa) {
+              // CASE 2: Profile exists without matricula → LINK this matricula
+              const { error: linkError } = await supabaseAdmin
+                .from('profiles')
+                .update({
+                  nome: aluno.nome.trim(),
+                  sobrenome: aluno.sobrenome.trim(),
+                  full_name: fullName,
+                  serie: aluno.serie?.trim() || null,
+                  turma: aluno.turma?.trim() || null,
+                  segmento: aluno.segmento?.trim() || null,
+                  matricula_externa: aluno.matricula,
+                })
+                .eq('id', existingUser.id);
+
+              if (linkError) {
+                result.erros.push(`Linha ${lineNumber}: ${aluno.matricula} - Erro ao vincular: ${linkError.message}`);
+                continue;
+              }
+
+              console.log(`Linked: ${aluno.matricula} to existing user ${existingUser.id}`);
+              result.vinculados++;
+              continue;
+            }
+
+            // CASE 3: Profile has different matricula → create with unique email
+            console.log(`Profile ${existingUser.id} already has matricula ${profileCheck.matricula_externa}, generating unique email...`);
+            
+            try {
+              const uniqueEmail = await gerarEmailUnico(supabaseAdmin, aluno.nome, aluno.sobrenome);
+              const retryResult = await criarNovoUsuario(supabaseAdmin, aluno, uniqueEmail, anoLetivo);
+              
+              if (retryResult.success) {
+                console.log(`Created with unique email: ${aluno.matricula} → ${uniqueEmail}`);
+                result.criados++;
+                continue;
+              }
+              
+              result.erros.push(`Linha ${lineNumber}: ${aluno.matricula} - ${retryResult.error}`);
+            } catch (emailError: any) {
+              result.erros.push(`Linha ${lineNumber}: ${aluno.matricula} - ${emailError.message}`);
+            }
+            continue;
+          }
+        }
+
+        // Other creation error
+        result.erros.push(`Linha ${lineNumber}: ${aluno.matricula} - ${createResult.error}`);
+
+      } catch (error: any) {
         console.error(`Unexpected error for ${aluno.matricula}:`, error);
-        result.erros.push(`Linha ${lineNumber}: ${aluno.matricula} - Erro inesperado`);
+        result.erros.push(`Linha ${lineNumber}: ${aluno.matricula} - Erro inesperado: ${error.message}`);
       }
     }
 
-    console.log(`Sync completed: ${result.criados} created, ${result.atualizados} updated, ${result.erros.length} errors`);
+    console.log(`Sync completed: ${result.criados} created, ${result.atualizados} updated, ${result.vinculados} linked, ${result.erros.length} errors`);
 
     return new Response(JSON.stringify(result), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unexpected error:', error);
-    return new Response(JSON.stringify({ error: 'Erro interno do servidor' }), {
+    return new Response(JSON.stringify({ error: 'Erro interno do servidor', details: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
