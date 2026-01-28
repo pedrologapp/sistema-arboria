@@ -1,79 +1,206 @@
 
-Objetivo
-- Garantir que, após você excluir os alunos e reimportar 92 alunos do infantil, a sincronização crie todos os 92 (e não marque a maior parte como “atualizado”) quando de fato não existe ninguém naquela instituição.
-- Corrigir a causa mais provável do “32 criados / 60 atualizados” mesmo depois de excluir: hoje a função considera “existe” apenas por matricula_externa globalmente (sem filtrar institution_id), então ela pode estar encontrando matrícula igual em outro contexto e marcando como “atualizado”.
+# Plano: Estrutura de 3 Segmentos (Infantil, Fundamental1, Fundamental2)
 
-Por que isso acontece (explicação simples)
-- A função sync-alunos-externos hoje faz:
-  - “Se existe algum profile com matricula_externa = X → atualiza”
-  - Ela NÃO confere se esse profile é da mesma instituição (institution_id) que você está importando.
-- Resultado possível: mesmo você tendo apagado os alunos da sua instituição, a função encontra a mesma matrícula em outro lugar (ou um cadastro antigo/orfão) e “atualiza” aquele registro, em vez de criar um novo.
+## Resumo Executivo
 
-O que vamos ajustar
-1) UPSERT por (institution_id + matricula_externa)
-- Mudar a busca do “aluno já existe?” para:
-  - where matricula_externa = aluno.matricula AND institution_id = aluno.institution_id
-- Isso torna o upsert realmente “por instituição”, que é o comportamento esperado no seu caso.
+Vamos adaptar o sistema para suportar **3 painéis de professores separados por segmento** e **3 conjuntos de fases independentes** gerenciáveis pelo Admin. Cada segmento terá seu próprio ciclo de fases, e os professores só verão as fases do seu segmento.
 
-2) UPDATE deve atualizar também institution_id e matricula_externa (consistência)
-- No caminho de UPDATE (quando existe), além de nome/sobrenome/série/turma/segmento, vamos garantir que:
-  - institution_id = aluno.institution_id (mantém consistente)
-  - matricula_externa = aluno.matricula (garante o vínculo)
-- Assim não fica “meio cadastrado” em casos antigos.
+---
 
-3) “Email já registrado” não pode virar “atualizado” indevido
-- Hoje, quando o email já existe, a função tenta “vincular” ao profile do email se ele não tiver matricula_externa.
-- Vamos tornar isso seguro por instituição:
-  - Buscar profile do usuário existente e ler institution_id e matricula_externa.
-  - Só fazer o vínculo (setar matricula_externa) se:
-    - matricula_externa estiver vazia E
-    - (institution_id for igual ao aluno.institution_id OU institution_id estiver nulo)
-  - Se institution_id for diferente, não vamos “roubar” o usuário de outra instituição: vamos tratar como colisão de email e criar com email alternativo (sufixo 2, 3, 4…).
+## Estrutura Atual vs Nova
 
-4) Garantir que “atualizado” continue sendo aluno (role e dados mínimos)
-- Em alguns cenários antigos, pode existir profile com matricula_externa mas sem role ‘user’.
-- No caminho de UPDATE e no caminho de VÍNCULO, vamos:
-  - upsert em user_roles (user_id, role='user') com proteção de duplicidade
-  - garantir inteligencia_scores para o ano letivo atual sem sobrescrever valores existentes:
-    - usar upsert com onConflict (aluno_id,inteligencia_id,ano_letivo) e ignoreDuplicates=true (ou equivalente) para só criar faltantes
+### Hoje
+- Professores têm `casa_id` (via `professor_casa`) mas **não têm segmento** definido
+- Fases são globais por instituição (não separadas por segmento)
+- Só existe 1 painel de professor (fundamental2)
 
-5) Melhorar o relatório do retorno (para você entender rápido)
-- Manter os contadores:
-  - criados, atualizados, vinculados, erros
-- Adicionar (opcional, sem expor dados sensíveis):
-  - “atualizados_por_matricula_mesma_instituicao” vs “vinculados_por_email”
-  - isso ajuda a diferenciar “já existia mesmo” de “email já existia”.
+### Depois
+- Professores terão campo `segmento` no `profiles` (infantil, fundamental1, fundamental2)
+- Fases terão campo `segmento` para separar os ciclos
+- Professores do **fundamental2** → têm casa associada (como já funciona)
+- Professores do **infantil e fundamental1** → NÃO têm casa, participam de todas as fases do seu segmento
+- Admin verá **3 colunas de fases** (uma por segmento)
 
-Arquivos que serão alterados
-- supabase/functions/sync-alunos-externos/index.ts
-  - Ajustar query de busca de existingProfile para incluir institution_id
-  - Ajustar payload do update para incluir institution_id + matricula_externa
-  - Ajustar regra de vínculo por email para respeitar institution_id
-  - Garantir role ‘user’ e scores no caminho de update/vínculo (sem sobrescrever)
+---
 
-Validação (como vamos confirmar que resolveu)
-1) Antes de importar:
-- Conferir no backend (ambiente de teste) que a sua instituição está “zerada”:
-  - count profiles com institution_id = sua instituição e matricula_externa não nula deve ser 0
+## Mudanças no Banco de Dados
 
-2) Rodar a importação de 92 alunos novamente
-- Esperado:
-  - criados ≈ 92
-  - atualizados ≈ 0
-  - vinculados ≈ 0 (a menos que exista ainda algum usuário com email igual sobrando)
-  - erros ≈ 0
+### 1. Adicionar coluna `segmento` na tabela `fases`
 
-3) Se ainda aparecer “atualizados”
-- A função vai estar correta; então o motivo normalmente será um destes:
-  - o arquivo/payload tem matrículas repetidas dentro dos 92 (duplicadas)
-  - ainda existem contas antigas na mesma instituição (não deletadas), agora corretamente detectadas
-- Se acontecer, vamos usar 1 ou 2 matrículas de exemplo para localizar exatamente o que foi encontrado e por quê (sem precisar apagar “no escuro”).
+```sql
+ALTER TABLE public.fases 
+ADD COLUMN segmento text NOT NULL DEFAULT 'fundamental2';
 
-Risco/impacto
-- A mudança evita atualizar registros “de outra instituição” por engano (isso é uma correção de segurança/consistência de dados).
-- Mantém o comportamento de UPSERT esperado: só atualiza quando o aluno já existe naquela instituição.
+-- Criar índice para performance
+CREATE INDEX idx_fases_segmento ON public.fases(segmento);
 
-Entrega
-- Implementar as mudanças na função
-- Re-deploy automático do backend
-- Teste rápido com uma chamada de exemplo (1–2 alunos) e depois com o lote completo (92)
+-- Constraint para valores válidos
+ALTER TABLE public.fases 
+ADD CONSTRAINT fases_segmento_check 
+CHECK (segmento IN ('infantil', 'fundamental1', 'fundamental2'));
+```
+
+### 2. Atualizar professores existentes com segmento
+
+```sql
+-- Julianeide e Oceni são do fundamental2
+UPDATE public.profiles 
+SET segmento = 'fundamental2'
+WHERE id IN (
+  SELECT user_id FROM user_roles WHERE role = 'professor'
+);
+```
+
+### 3. Adicionar coluna `segmento` opcionalmente na `professor_casa`
+
+Não é estritamente necessário pois o segmento fica no `profiles`, mas pode ajudar para queries futuras.
+
+---
+
+## Arquivos a Modificar
+
+### Backend (Edge Functions)
+
+#### `supabase/functions/create-professor/index.ts`
+- Adicionar campo `segmento` (obrigatório) no body
+- Salvar `segmento` no profile
+- Tornar `casa_id` **opcional** (só obrigatório para fundamental2)
+- Se `segmento != 'fundamental2'`, não criar registro em `professor_casa`
+
+### Frontend - Admin
+
+#### `src/pages/admin/FasesPage.tsx`
+- Redesenhar layout para **3 colunas** (ou tabs/accordion em mobile)
+- Cada coluna mostra as 8 fases do respectivo segmento
+- Seletor de ano permanece global
+- Ao criar fase nova, incluir o segmento
+
+#### `src/pages/admin/FaseDetalhesPage.tsx`
+- Garantir que ao editar/criar fase, o campo `segmento` seja salvo
+
+#### `src/components/admin/ModalAdicionarUsuario.tsx`
+- Adicionar campo **Segmento** (obrigatório para professor)
+- Mostrar campo **Casa** somente se segmento = 'fundamental2'
+- Atualizar validação do formulário
+
+### Frontend - Professor
+
+#### `src/contexts/ProfessorContext.tsx`
+- Adicionar `segmento` no Profile interface
+- Buscar `segmento` do profile
+- Filtrar `faseAtual` também por `segmento` do professor
+- Para professores sem casa (infantil/fundamental1):
+  - Não buscar `casaMentor` 
+  - Buscar todas as fases do segmento como "suas fases"
+
+#### `src/layouts/ProfessorLayout.tsx`
+- Ajustar para funcionar sem `casaMentor` (quando professor é de infantil/fundamental1)
+
+#### `src/components/professor/ProfessorHeader.tsx`
+- Mostrar segmento no header (opcional, para clareza)
+- Remover referência a casa se não existir
+
+#### `src/hooks/useAlunosCasa.ts`
+- Renomear ou adaptar para `useAlunosSegmento.ts`
+- Para professores de infantil/fundamental1: buscar alunos por segmento (não por casa)
+
+---
+
+## Fluxo de Criação de Professor (Novo)
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                    Adicionar Professor                          │
+├─────────────────────────────────────────────────────────────────┤
+│  Nome: [________]    Sobrenome: [________]                      │
+│  Email: [__________________________]                            │
+│                                                                 │
+│  Segmento: [ Infantil ▼ ]                                       │
+│            [ Fundamental 1 ]                                    │
+│            [ Fundamental 2 ]                                    │
+│                                                                 │
+│  ┌─────────────────────────────────────────┐                    │
+│  │ Casa: [ Linguística ▼ ]                 │  ← Só aparece      │
+│  │       (obrigatório para Fundamental 2)  │    se Fundamental2 │
+│  └─────────────────────────────────────────┘                    │
+│                                                                 │
+│  [ Cancelar ]                    [ Criar ]                      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Layout da Página de Fases (Admin)
+
+### Desktop (3 colunas)
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Fases                                                     [ 2026 ▼ ]       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌───────────────────┐  ┌───────────────────┐  ┌───────────────────┐       │
+│  │    INFANTIL       │  │   FUNDAMENTAL 1   │  │   FUNDAMENTAL 2   │       │
+│  ├───────────────────┤  ├───────────────────┤  ├───────────────────┤       │
+│  │ 1. Linguística    │  │ 1. Linguística    │  │ 1. Linguística ●  │       │
+│  │    Não config.    │  │    01 fev - 28 fev│  │    01 fev - 28 fev│       │
+│  ├───────────────────┤  ├───────────────────┤  ├───────────────────┤       │
+│  │ 2. Lógico-mat.    │  │ 2. Lógico-mat.    │  │ 2. Lógico-mat.    │       │
+│  │    Não config.    │  │    Não config.    │  │    01 mar - 28 mar│       │
+│  ├───────────────────┤  ├───────────────────┤  ├───────────────────┤       │
+│  │ ...               │  │ ...               │  │ ...               │       │
+│  └───────────────────┘  └───────────────────┘  └───────────────────┘       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Mobile (Tabs ou Accordion)
+
+```text
+┌─────────────────────────────────────────┐
+│  Fases                     [ 2026 ▼ ]   │
+├─────────────────────────────────────────┤
+│  ┌─────────┬─────────┬─────────┐        │
+│  │Infantil │ Fund. 1 │ Fund. 2 │        │
+│  └─────────┴─────────┴─────────┘        │
+│                                         │
+│  1. 🎭 Linguística                      │
+│     01 fev - 28 fev          Em andamento│
+│  ─────────────────────────────────────  │
+│  2. 🔢 Lógico-matemática                │
+│     01 mar - 28 mar          Próxima    │
+│  ─────────────────────────────────────  │
+│  ...                                    │
+└─────────────────────────────────────────┘
+```
+
+---
+
+## Regras de Negócio
+
+| Segmento | Tem Casa? | Vê Alunos de... | Fases |
+|----------|-----------|-----------------|-------|
+| infantil | ❌ Não | Todos do segmento infantil | Fases com `segmento='infantil'` |
+| fundamental1 | ❌ Não | Todos do segmento fundamental1 | Fases com `segmento='fundamental1'` |
+| fundamental2 | ✅ Sim (obrigatório) | Apenas da sua Casa | Fases com `segmento='fundamental2'` |
+
+---
+
+## Ordem de Implementação
+
+1. **Migração do banco** - Adicionar coluna `segmento` em `fases` e atualizar professores existentes
+2. **Edge Function `create-professor`** - Aceitar segmento, tornar casa opcional
+3. **Modal de criação de professor** - Campo segmento + lógica condicional de casa
+4. **Página de Fases (Admin)** - Layout com 3 colunas/tabs por segmento
+5. **ProfessorContext** - Buscar segmento e filtrar fases corretamente
+6. **Adaptar hooks de alunos** - Suportar busca por segmento (sem casa)
+
+---
+
+## Observações Importantes
+
+- Os **painéis de professor para infantil e fundamental1** serão implementados posteriormente (você mencionou que só o fundamental2 está pronto)
+- Esta implementação foca na **infraestrutura base**: banco de dados, criação de professor com segmento, e visualização de fases separadas no Admin
+- A lógica de casas permanece **exclusiva do fundamental2**
+- Professores sem segmento definido serão tratados como `fundamental2` (compatibilidade com dados existentes)
+
