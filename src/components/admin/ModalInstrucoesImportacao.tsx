@@ -1,4 +1,4 @@
-import { X, HelpCircle, Check, Star } from 'lucide-react';
+import { X, HelpCircle, Check, Star, Sparkles } from 'lucide-react';
 
 interface ModalInstrucoesImportacaoProps {
   tipo: 'alunos' | 'professores';
@@ -7,20 +7,21 @@ interface ModalInstrucoesImportacaoProps {
 
 const ModalInstrucoesImportacao = ({ tipo, onClose }: ModalInstrucoesImportacaoProps) => {
   const colunasAlunos = [
-    { num: 1, nome: 'nome', obrig: true, desc: 'Primeiro nome' },
-    { num: 2, nome: 'sobrenome', obrig: true, desc: 'Sobrenome' },
-    { num: 3, nome: 'email', obrig: true, desc: 'Email único' },
-    { num: 4, nome: 'serie', obrig: true, desc: '"6º ano" ou "9º ano"' },
+    { num: 1, nome: 'matricula', obrig: true, desc: 'Matrícula do aluno (ID externo)' },
+    { num: 2, nome: 'nome', obrig: true, desc: 'Primeiro nome' },
+    { num: 3, nome: 'sobrenome', obrig: true, desc: 'Sobrenome' },
+    { num: 4, nome: 'serie', obrig: true, desc: '"Maternalzinho(2)" ou "6º ano"' },
     { num: 5, nome: 'turma', obrig: true, desc: '"A", "B" ou "C"' },
-    { num: 6, nome: 'casa_id', obrig: true, desc: 'Número de 1 a 8' },
-    { num: 7, nome: 'int_intrapessoal', obrig: false, desc: '0-100' },
-    { num: 8, nome: 'int_interpessoal', obrig: false, desc: '0-100' },
-    { num: 9, nome: 'int_naturalista', obrig: false, desc: '0-100' },
-    { num: 10, nome: 'int_logico', obrig: false, desc: '0-100' },
-    { num: 11, nome: 'int_linguistica', obrig: false, desc: '0-100' },
-    { num: 12, nome: 'int_espacial', obrig: false, desc: '0-100' },
-    { num: 13, nome: 'int_corporal', obrig: false, desc: '0-100' },
-    { num: 14, nome: 'int_musical', obrig: false, desc: '0-100' },
+    { num: 6, nome: 'segmento', obrig: true, desc: 'infantil, fundamental1, fundamental2' },
+    { num: 7, nome: 'casa_id', obrig: false, desc: 'Número de 1 a 8 (opcional)' },
+    { num: 8, nome: 'int_intrapessoal', obrig: false, desc: '0-100' },
+    { num: 9, nome: 'int_interpessoal', obrig: false, desc: '0-100' },
+    { num: 10, nome: 'int_naturalista', obrig: false, desc: '0-100' },
+    { num: 11, nome: 'int_logico', obrig: false, desc: '0-100' },
+    { num: 12, nome: 'int_linguistica', obrig: false, desc: '0-100' },
+    { num: 13, nome: 'int_espacial', obrig: false, desc: '0-100' },
+    { num: 14, nome: 'int_corporal', obrig: false, desc: '0-100' },
+    { num: 15, nome: 'int_musical', obrig: false, desc: '0-100' },
   ];
 
   const colunasProfessores = [
@@ -66,6 +67,28 @@ const ModalInstrucoesImportacao = ({ tipo, onClose }: ModalInstrucoesImportacaoP
 
         {/* Conteúdo */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          {/* Banner: Geração automática (apenas para alunos) */}
+          {tipo === 'alunos' && (
+            <div className="p-4 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border-2 border-emerald-500/30 rounded-xl">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-wide">
+                  Email e Senha Gerados Automaticamente!
+                </h3>
+              </div>
+              <div className="space-y-2 text-sm text-emerald-300/90">
+                <p>• <strong>Email:</strong> nome.sobrenome@aluno.arboria.com</p>
+                <p>• <strong>Senha:</strong> sobrenome + 123 (sem acentos)</p>
+              </div>
+              <div className="mt-3 p-2 bg-black/30 rounded-lg">
+                <p className="text-xs text-emerald-400/80 font-medium">Exemplo:</p>
+                <p className="text-xs text-white/70">Alice Barros Gomes</p>
+                <p className="text-xs text-emerald-300">→ alice.barros@aluno.arboria.com</p>
+                <p className="text-xs text-emerald-300">→ barrosgomes123</p>
+              </div>
+            </div>
+          )}
+
           {/* Passo a Passo */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-white/80 uppercase tracking-wide">
@@ -73,7 +96,7 @@ const ModalInstrucoesImportacao = ({ tipo, onClose }: ModalInstrucoesImportacaoP
             </h3>
             <div className="space-y-2">
               {[
-                'Baixe o modelo CSV clicando em "Baixar modelo CSV"',
+                'Baixe o modelo Excel clicando em "Baixar modelo Excel"',
                 'Abra o arquivo no Excel ou Google Sheets',
                 'Preencha os dados seguindo a ordem das colunas',
                 'Salve como CSV (separado por vírgulas)',
@@ -130,7 +153,7 @@ const ModalInstrucoesImportacao = ({ tipo, onClose }: ModalInstrucoesImportacaoP
             <div className="flex items-center gap-2 mb-3">
               <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
               <h3 className="text-sm font-bold text-amber-400 uppercase tracking-wide">
-                Tabela de IDs das Casas (IMPORTANTE!)
+                Tabela de IDs das Casas (Referência)
               </h3>
             </div>
             
@@ -146,7 +169,10 @@ const ModalInstrucoesImportacao = ({ tipo, onClose }: ModalInstrucoesImportacaoP
             </div>
             
             <p className="text-xs text-amber-400/70 text-center">
-              Use estes números na coluna "casa_id" do arquivo
+              {tipo === 'alunos' 
+                ? 'A coluna casa_id é opcional - deixe vazio se ainda não definiu'
+                : 'Use estes números na coluna "casa_id" do arquivo'
+              }
             </p>
           </div>
 
@@ -168,35 +194,58 @@ const ModalInstrucoesImportacao = ({ tipo, onClose }: ModalInstrucoesImportacaoP
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td className="p-1.5 text-white/60 border border-white/10 font-medium">nome</td>
-                    <td className="p-1.5 text-white/60 border border-white/10 font-medium">sobrenome</td>
-                    <td className="p-1.5 text-white/60 border border-white/10 font-medium">email</td>
-                    <td className="p-1.5 text-white/60 border border-white/10 font-medium">serie</td>
-                    <td className="p-1.5 text-white/60 border border-white/10 font-medium">turma</td>
-                    <td className="p-1.5 text-white/60 border border-white/10 font-medium">casa_id</td>
-                  </tr>
-                  <tr>
-                    <td className="p-1.5 text-white border border-white/10">João</td>
-                    <td className="p-1.5 text-white border border-white/10">Silva</td>
-                    <td className="p-1.5 text-white border border-white/10">joao@...</td>
-                    <td className="p-1.5 text-white border border-white/10">6º ano</td>
-                    <td className="p-1.5 text-white border border-white/10">A</td>
-                    <td className="p-1.5 text-white border border-white/10">1</td>
-                  </tr>
-                  <tr>
-                    <td className="p-1.5 text-white border border-white/10">Maria</td>
-                    <td className="p-1.5 text-white border border-white/10">Santos</td>
-                    <td className="p-1.5 text-white border border-white/10">maria@...</td>
-                    <td className="p-1.5 text-white border border-white/10">6º ano</td>
-                    <td className="p-1.5 text-white border border-white/10">A</td>
-                    <td className="p-1.5 text-white border border-white/10">2</td>
-                  </tr>
+                  {tipo === 'alunos' ? (
+                    <>
+                      <tr>
+                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">matricula</td>
+                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">nome</td>
+                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">sobrenome</td>
+                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">serie</td>
+                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">turma</td>
+                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">segmento</td>
+                      </tr>
+                      <tr>
+                        <td className="p-1.5 text-white border border-white/10">2267.2026</td>
+                        <td className="p-1.5 text-white border border-white/10">Alice</td>
+                        <td className="p-1.5 text-white border border-white/10">Barros</td>
+                        <td className="p-1.5 text-white border border-white/10">Maternal</td>
+                        <td className="p-1.5 text-white border border-white/10">B</td>
+                        <td className="p-1.5 text-white border border-white/10">infantil</td>
+                      </tr>
+                      <tr>
+                        <td className="p-1.5 text-white border border-white/10">2268.2026</td>
+                        <td className="p-1.5 text-white border border-white/10">João</td>
+                        <td className="p-1.5 text-white border border-white/10">Silva</td>
+                        <td className="p-1.5 text-white border border-white/10">1º ano</td>
+                        <td className="p-1.5 text-white border border-white/10">A</td>
+                        <td className="p-1.5 text-white border border-white/10">fund1</td>
+                      </tr>
+                    </>
+                  ) : (
+                    <>
+                      <tr>
+                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">nome</td>
+                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">sobrenome</td>
+                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">email</td>
+                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">casa_id</td>
+                        <td className="p-1.5 text-white/10 border border-white/10">-</td>
+                        <td className="p-1.5 text-white/10 border border-white/10">-</td>
+                      </tr>
+                      <tr>
+                        <td className="p-1.5 text-white border border-white/10">Ana</td>
+                        <td className="p-1.5 text-white border border-white/10">Paula</td>
+                        <td className="p-1.5 text-white border border-white/10">ana@...</td>
+                        <td className="p-1.5 text-white border border-white/10">1</td>
+                        <td className="p-1.5 text-white/10 border border-white/10">-</td>
+                        <td className="p-1.5 text-white/10 border border-white/10">-</td>
+                      </tr>
+                    </>
+                  )}
                 </tbody>
               </table>
               {tipo === 'alunos' && (
                 <p className="text-xs text-white/40 mt-2">
-                  (continua com colunas G-N para as inteligências...)
+                  (continua com colunas G-O para casa_id e inteligências - opcionais)
                 </p>
               )}
             </div>
@@ -210,9 +259,14 @@ const ModalInstrucoesImportacao = ({ tipo, onClose }: ModalInstrucoesImportacaoP
               <p className="text-xs text-amber-400/80">• Não adicione colunas extras</p>
               <p className="text-xs text-amber-400/80">• Mantenha os nomes exatamente como no modelo</p>
               {tipo === 'alunos' && (
-                <p className="text-xs text-amber-400/80">• As colunas de inteligências são opcionais</p>
+                <>
+                  <p className="text-xs text-amber-400/80">• A matrícula deve ser única para cada aluno</p>
+                  <p className="text-xs text-amber-400/80">• As colunas de casa e inteligências são opcionais</p>
+                </>
               )}
-              <p className="text-xs text-amber-400/80">• Verifique se os emails são únicos</p>
+              {tipo === 'professores' && (
+                <p className="text-xs text-amber-400/80">• Verifique se os emails são únicos</p>
+              )}
             </div>
           </div>
         </div>

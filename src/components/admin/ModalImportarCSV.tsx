@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { X, Upload, Download, FileText, Loader2, Check, AlertCircle, HelpCircle } from 'lucide-react';
+import { X, Upload, Download, FileText, Loader2, Check, AlertCircle, HelpCircle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
@@ -14,12 +14,13 @@ interface ModalImportarCSVProps {
 }
 
 interface AlunoCSV {
+  matricula: string;
   nome: string;
   sobrenome: string;
-  email: string;
   serie: string;
   turma: string;
-  casa_id: string;
+  segmento: string;
+  casa_id?: string;
   // Colunas opcionais de inteligências
   int_intrapessoal?: string;
   int_interpessoal?: string;
@@ -35,20 +36,8 @@ interface ProfessorCSV {
   nome: string;
   sobrenome: string;
   email: string;
-  casa_id: string;
+  casa_id?: string;
 }
-
-// Mapeamento de colunas CSV para IDs de inteligência
-const INTELIGENCIAS_MAP = [
-  { coluna: 'int_linguistica', id: 1 },
-  { coluna: 'int_logico', id: 2 },
-  { coluna: 'int_espacial', id: 3 },
-  { coluna: 'int_musical', id: 4 },
-  { coluna: 'int_corporal', id: 5 },
-  { coluna: 'int_naturalista', id: 6 },
-  { coluna: 'int_interpessoal', id: 7 },
-  { coluna: 'int_intrapessoal', id: 8 },
-];
 
 const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProps) => {
   const queryClient = useQueryClient();
@@ -60,9 +49,9 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
   const [resultado, setResultado] = useState<{ sucesso: number; erros: string[] } | null>(null);
   const [mostrarInstrucoes, setMostrarInstrucoes] = useState(false);
 
-  // Colunas obrigatórias (inteligências são opcionais)
-  const colunasObrigatoriasAlunos = ['nome', 'sobrenome', 'email', 'serie', 'turma', 'casa_id'];
-  const colunasOpcionaisAlunos = ['int_intrapessoal', 'int_interpessoal', 'int_naturalista', 'int_logico', 'int_linguistica', 'int_espacial', 'int_corporal', 'int_musical'];
+  // Colunas obrigatórias (email/senha são gerados automaticamente para alunos)
+  const colunasObrigatoriasAlunos = ['matricula', 'nome', 'sobrenome', 'serie', 'turma', 'segmento'];
+  const colunasOpcionaisAlunos = ['casa_id', 'int_intrapessoal', 'int_interpessoal', 'int_naturalista', 'int_logico', 'int_linguistica', 'int_espacial', 'int_corporal', 'int_musical'];
   const colunasAlunos = [...colunasObrigatoriasAlunos, ...colunasOpcionaisAlunos];
   const colunasProfessores = ['nome', 'sobrenome', 'email', 'casa_id'];
   
@@ -72,7 +61,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
   // Verificar se tem inteligências nos dados
   const temInteligencias = tipo === 'alunos' && dados.length > 0 && dados.some((item) => {
     const aluno = item as AlunoCSV;
-    return colunasOpcionaisAlunos.some(col => {
+    return ['int_intrapessoal', 'int_interpessoal', 'int_naturalista', 'int_logico', 'int_linguistica', 'int_espacial', 'int_corporal', 'int_musical'].some(col => {
       const valor = parseInt((aluno as any)[col]) || 0;
       return valor > 0;
     });
@@ -84,20 +73,20 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
     if (tipo === 'alunos') {
       // === ABA 1: DADOS ===
       const dadosHeader = [
-        'nome', 'sobrenome', 'email', 'serie', 'turma', 'casa_id',
+        'matricula', 'nome', 'sobrenome', 'serie', 'turma', 'segmento', 'casa_id',
         'int_intrapessoal', 'int_interpessoal', 'int_naturalista',
         'int_logico', 'int_linguistica', 'int_espacial', 
         'int_corporal', 'int_musical'
       ];
       
       const dadosExemplo = [
-        ['João', 'Silva', 'joao@escola.com', '6º ano', 'A', 1, 60, 70, 40, 85, 75, 50, 55, 30],
-        ['Maria', 'Santos', 'maria@escola.com', '6º ano', 'A', 2, 75, 80, 60, 50, 90, 45, 40, 65],
+        ['2267.2026', 'Alice', 'Barros Gomes', 'Maternalzinho(2)', 'B', 'infantil', '', '', '', '', '', '', '', '', ''],
+        ['2268.2026', 'João', 'Silva Santos', '1º ano', 'A', 'fundamental1', 1, 60, 70, 40, 85, 75, 50, 55, 30],
       ];
       
       const wsDados = XLSX.utils.aoa_to_sheet([dadosHeader, ...dadosExemplo]);
       wsDados['!cols'] = [
-        { wch: 12 }, { wch: 12 }, { wch: 25 }, { wch: 10 }, { wch: 8 }, { wch: 10 },
+        { wch: 14 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 8 }, { wch: 14 }, { wch: 10 },
         { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }
       ];
       XLSX.utils.book_append_sheet(wb, wsDados, 'Dados');
@@ -105,6 +94,18 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
       // === ABA 2: INSTRUÇÕES ===
       const instrucoes = [
         ['INSTRUÇÕES DE IMPORTAÇÃO - PROJETO ARBORIA'],
+        [''],
+        ['⚡ EMAIL E SENHA SÃO GERADOS AUTOMATICAMENTE!'],
+        [''],
+        ['O sistema gera automaticamente:'],
+        ['• Email: nome.sobrenome@aluno.arboria.com'],
+        ['• Senha: sobrenome + 123 (sem acentos, minúsculas)'],
+        [''],
+        ['Exemplo: Alice Barros Gomes'],
+        ['→ Email: alice.barros@aluno.arboria.com'],
+        ['→ Senha: barrosgomes123'],
+        [''],
+        ['═══════════════════════════════════════════════════'],
         [''],
         ['PASSO A PASSO'],
         ['1. Vá para a aba "Dados"'],
@@ -115,7 +116,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
         [''],
         ['═══════════════════════════════════════════════════'],
         [''],
-        ['⭐ TABELA DE IDs DAS CASAS (IMPORTANTE!)'],
+        ['⭐ TABELA DE IDs DAS CASAS (OPCIONAL)'],
         [''],
         ['ID', 'NOME DA CASA'],
         ['1', 'Linguística'],
@@ -127,33 +128,32 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
         ['7', 'Interpessoal'],
         ['8', 'Intrapessoal'],
         [''],
-        ['Exemplo: Se o aluno pertence à casa Linguística, coloque 1 na coluna casa_id'],
+        ['Deixe vazio se o aluno ainda não tem casa atribuída'],
         [''],
         ['═══════════════════════════════════════════════════'],
         [''],
         ['COLUNAS OBRIGATÓRIAS'],
         [''],
         ['Coluna', 'Descrição', 'Exemplo'],
-        ['nome', 'Primeiro nome do aluno', 'João'],
-        ['sobrenome', 'Sobrenome do aluno', 'Silva'],
-        ['email', 'Email único do aluno', 'joao@escola.com'],
-        ['serie', 'Série (6º ano ou 9º ano)', '6º ano'],
-        ['turma', 'Turma (A, B ou C)', 'A'],
-        ['casa_id', 'ID da casa (1 a 8)', '1'],
+        ['matricula', 'Matrícula do aluno (ID externo)', '2267.2026'],
+        ['nome', 'Primeiro nome do aluno', 'Alice'],
+        ['sobrenome', 'Sobrenome do aluno', 'Barros Gomes'],
+        ['serie', 'Série do aluno', 'Maternalzinho(2)'],
+        ['turma', 'Turma (A, B, C...)', 'B'],
+        ['segmento', 'Segmento educacional', 'infantil'],
+        [''],
+        ['Segmentos aceitos: infantil, fundamental1, fundamental2'],
         [''],
         ['═══════════════════════════════════════════════════'],
         [''],
-        ['COLUNAS OPCIONAIS (% das Inteligências - valores de 0 a 100)'],
+        ['COLUNAS OPCIONAIS'],
         [''],
-        ['Coluna', 'Inteligência'],
-        ['int_intrapessoal', 'Intrapessoal'],
-        ['int_interpessoal', 'Interpessoal'],
-        ['int_naturalista', 'Naturalista'],
-        ['int_logico', 'Lógico-Matemática'],
-        ['int_linguistica', 'Linguística'],
-        ['int_espacial', 'Espacial'],
-        ['int_corporal', 'Corporal-Cinestésica'],
-        ['int_musical', 'Musical'],
+        ['casa_id: ID da casa (1 a 8) - deixe vazio se não souber'],
+        [''],
+        ['Inteligências (% de 0 a 100):'],
+        ['int_intrapessoal, int_interpessoal, int_naturalista'],
+        ['int_logico, int_linguistica, int_espacial'],
+        ['int_corporal, int_musical'],
         [''],
         ['Deixe vazio ou 0 se não souber os valores'],
         [''],
@@ -164,18 +164,17 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
         ['• NÃO altere a ordem das colunas'],
         ['• NÃO adicione colunas extras'],
         ['• NÃO altere os nomes das colunas'],
-        ['• Cada email deve ser único'],
+        ['• Cada matrícula deve ser única'],
         ['• Apague as linhas de exemplo antes de importar'],
-        ['• Senha padrão será: arboria123'],
       ];
       
       const wsInstrucoes = XLSX.utils.aoa_to_sheet(instrucoes);
-      wsInstrucoes['!cols'] = [{ wch: 20 }, { wch: 25 }, { wch: 20 }];
+      wsInstrucoes['!cols'] = [{ wch: 20 }, { wch: 30 }, { wch: 25 }];
       XLSX.utils.book_append_sheet(wb, wsInstrucoes, 'Instruções');
       
       XLSX.writeFile(wb, 'modelo_alunos.xlsx');
     } else {
-      // === PROFESSORES ===
+      // === PROFESSORES (mantém email obrigatório) ===
       const dadosHeader = ['nome', 'sobrenome', 'email', 'casa_id'];
       const dadosExemplo = [
         ['Ana', 'Paula', 'ana@escola.com', 1],
@@ -202,7 +201,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
         ['8', 'Intrapessoal'],
         [''],
         ['A coluna casa_id é opcional (pode deixar vazio)'],
-        ['Senha padrão será: arboria123'],
+        ['Senha padrão será: sobrenome + 123'],
       ];
       
       const wsInstrucoes = XLSX.utils.aoa_to_sheet(instrucoes);
@@ -264,12 +263,13 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
         if (tipo === 'alunos') {
           const aluno = item as AlunoCSV;
           return {
-            email: aluno.email,
+            matricula: aluno.matricula,
             nome: aluno.nome,
             sobrenome: aluno.sobrenome,
             serie: aluno.serie,
             turma: aluno.turma,
-            casa_id: parseInt(aluno.casa_id),
+            segmento: aluno.segmento,
+            casa_id: aluno.casa_id ? parseInt(aluno.casa_id) : null,
             instituicao: institutionId,
             // Incluir inteligências se existirem
             int_intrapessoal: parseInt(aluno.int_intrapessoal || '0') || 0,
@@ -287,7 +287,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
             email: prof.email,
             nome: prof.nome,
             sobrenome: prof.sobrenome,
-            casa_id: parseInt(prof.casa_id) || null,
+            casa_id: prof.casa_id ? parseInt(prof.casa_id) : null,
             instituicao: institutionId
           };
         }
@@ -361,13 +361,26 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
 
         {/* Conteúdo */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Banner: Email/senha gerados automaticamente */}
+          {tipo === 'alunos' && (
+            <div className="p-3 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 rounded-xl">
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles className="w-4 h-4 text-emerald-400" />
+                <p className="text-sm font-medium text-emerald-400">Geração Automática</p>
+              </div>
+              <p className="text-xs text-emerald-300/80">
+                Email e senha são gerados automaticamente a partir do nome/sobrenome
+              </p>
+            </div>
+          )}
+
           {/* Formato */}
           <div className="p-3 bg-white/5 rounded-lg">
             <p className="text-sm text-white/80 font-medium mb-1">Colunas obrigatórias:</p>
             <p className="text-sm text-white/50">{colunasObrigatorias.join(', ')}</p>
             {tipo === 'alunos' && (
               <>
-                <p className="text-sm text-white/80 font-medium mt-2 mb-1">Colunas opcionais (inteligências):</p>
+                <p className="text-sm text-white/80 font-medium mt-2 mb-1">Colunas opcionais:</p>
                 <p className="text-sm text-white/50">{colunasOpcionaisAlunos.join(', ')}</p>
               </>
             )}
@@ -420,7 +433,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
               className="w-full p-8 border border-dashed border-white/20 rounded-xl hover:border-white/40 transition-colors flex flex-col items-center gap-2"
             >
               <Upload className="w-8 h-8 text-white/40" />
-              <p className="text-sm text-white/60">Selecionar arquivo CSV</p>
+              <p className="text-sm text-white/60">Selecionar arquivo CSV ou Excel</p>
             </button>
           )}
 
