@@ -2,6 +2,8 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
+type Segmento = 'infantil' | 'fundamental1' | 'fundamental2';
+
 interface Profile {
   id: string;
   full_name: string | null;
@@ -9,6 +11,7 @@ interface Profile {
   sobrenome: string | null;
   avatar_url: string | null;
   institution_id: string | null;
+  segmento: Segmento | null;
 }
 
 interface Inteligencia {
@@ -45,6 +48,7 @@ interface ProfessorContextType {
   institutionName: string | null;
   faseAtual: FaseAtual | null;
   faseCasaMentor: FaseCasaMentor | null;
+  segmento: Segmento | null;
   isLoading: boolean;
   error: string | null;
   refreshData: () => Promise<void>;
@@ -87,12 +91,12 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
       // 1. Fetch profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('id, full_name, nome, sobrenome, avatar_url, institution_id')
+        .select('id, full_name, nome, sobrenome, avatar_url, institution_id, segmento')
         .eq('id', user.id)
         .single();
 
       if (profileError) throw profileError;
-      setProfile(profileData);
+      setProfile(profileData as Profile);
 
       // 2. Fetch casa mentor (via professor_casa)
       const { data: professorCasaData, error: professorCasaError } = await supabase
@@ -213,6 +217,7 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
     institutionName,
     faseAtual,
     faseCasaMentor,
+    segmento: profile?.segmento || null,
     isLoading,
     error,
     refreshData: fetchProfessorData

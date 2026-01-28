@@ -1166,6 +1166,7 @@ export type Database = {
           institution_id: string
           inteligencia_id: number
           numero_fase: number
+          segmento: string
           semana_atual: number | null
           updated_at: string | null
         }
@@ -1179,6 +1180,7 @@ export type Database = {
           institution_id: string
           inteligencia_id: number
           numero_fase: number
+          segmento?: string
           semana_atual?: number | null
           updated_at?: string | null
         }
@@ -1192,6 +1194,7 @@ export type Database = {
           institution_id?: string
           inteligencia_id?: number
           numero_fase?: number
+          segmento?: string
           semana_atual?: number | null
           updated_at?: string | null
         }
