@@ -133,47 +133,71 @@ Deno.serve(async (req: Request) => {
 
     console.log(`Deleting ${studentIds.length} students from institution ${institutionId}`);
 
+    // ============================================
+    // BATCH DELETE: Delete all dependent records at once
+    // ============================================
+    
+    console.log("Starting batch deletion of dependent records...");
+    
+    // Delete all dependent records in batch (one query per table)
+    const deletionPromises = [
+      supabaseAdmin.from("score_ajustes_log").delete().in("aluno_id", studentIds),
+      supabaseAdmin.from("inteligencia_evidencias").delete().in("aluno_id", studentIds),
+      supabaseAdmin.from("inteligencia_historico").delete().in("aluno_id", studentIds),
+      supabaseAdmin.from("inteligencia_scores").delete().in("aluno_id", studentIds),
+      supabaseAdmin.from("entregas").delete().in("aluno_id", studentIds),
+      supabaseAdmin.from("observacoes").delete().in("aluno_id", studentIds),
+      supabaseAdmin.from("alertas_alunos").delete().in("aluno_id", studentIds),
+      supabaseAdmin.from("acoes_professor").delete().in("aluno_id", studentIds),
+      supabaseAdmin.from("acoes_celebracao").delete().in("aluno_id", studentIds),
+      supabaseAdmin.from("aluno_turma").delete().in("aluno_id", studentIds),
+      supabaseAdmin.from("cargos_casa").delete().in("aluno_id", studentIds),
+      supabaseAdmin.from("missao_destinatarios").delete().in("aluno_id", studentIds),
+      supabaseAdmin.from("bonus_solicitacoes").delete().in("aluno_id", studentIds),
+      supabaseAdmin.from("pontos_gerais").delete().in("aluno_id", studentIds),
+      supabaseAdmin.from("mensagens_canal").delete().in("autor_id", studentIds),
+      supabaseAdmin.from("mensagens_privadas").delete().in("autor_id", studentIds),
+      supabaseAdmin.from("conversa_participantes").delete().in("usuario_id", studentIds),
+      supabaseAdmin.from("canal_leituras").delete().in("usuario_id", studentIds),
+    ];
+
+    // Execute all batch deletes in parallel
+    await Promise.all(deletionPromises);
+    
+    console.log("Dependent records deleted. Starting auth user deletion...");
+
+    // ============================================
+    // DELETE AUTH USERS IN PARALLEL BATCHES
+    // ============================================
+    
     let successCount = 0;
     let errorCount = 0;
     const errors: string[] = [];
+    const AUTH_BATCH_SIZE = 10;
 
-    // Delete each student
-    for (const userId of studentIds) {
-      try {
-        // Delete dependent records (same logic as delete-user)
-        await supabaseAdmin.from("score_ajustes_log").delete().eq("aluno_id", userId);
-        await supabaseAdmin.from("inteligencia_evidencias").delete().eq("aluno_id", userId);
-        await supabaseAdmin.from("inteligencia_historico").delete().eq("aluno_id", userId);
-        await supabaseAdmin.from("inteligencia_scores").delete().eq("aluno_id", userId);
-        await supabaseAdmin.from("entregas").delete().eq("aluno_id", userId);
-        await supabaseAdmin.from("observacoes").delete().eq("aluno_id", userId);
-        await supabaseAdmin.from("alertas_alunos").delete().eq("aluno_id", userId);
-        await supabaseAdmin.from("acoes_professor").delete().eq("aluno_id", userId);
-        await supabaseAdmin.from("acoes_celebracao").delete().eq("aluno_id", userId);
-        await supabaseAdmin.from("aluno_turma").delete().eq("aluno_id", userId);
-        await supabaseAdmin.from("cargos_casa").delete().eq("aluno_id", userId);
-        await supabaseAdmin.from("missao_destinatarios").delete().eq("aluno_id", userId);
-        await supabaseAdmin.from("bonus_solicitacoes").delete().eq("aluno_id", userId);
-        await supabaseAdmin.from("pontos_gerais").delete().eq("aluno_id", userId);
-        await supabaseAdmin.from("mensagens_canal").delete().eq("autor_id", userId);
-        await supabaseAdmin.from("mensagens_privadas").delete().eq("autor_id", userId);
-        await supabaseAdmin.from("conversa_participantes").delete().eq("usuario_id", userId);
-        await supabaseAdmin.from("canal_leituras").delete().eq("usuario_id", userId);
+    for (let i = 0; i < studentIds.length; i += AUTH_BATCH_SIZE) {
+      const batch = studentIds.slice(i, i + AUTH_BATCH_SIZE);
+      
+      const results = await Promise.allSettled(
+        batch.map(userId => supabaseAdmin.auth.admin.deleteUser(userId))
+      );
 
-        // Delete user from Auth
-        const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
-
-        if (deleteError) {
-          console.error(`Error deleting user ${userId}:`, deleteError);
-          errorCount++;
-          errors.push(`${userId}: ${deleteError.message}`);
-        } else {
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled' && !result.value.error) {
           successCount++;
+        } else {
+          errorCount++;
+          const userId = batch[index];
+          const errorMsg = result.status === 'rejected' 
+            ? result.reason?.message 
+            : result.value?.error?.message;
+          errors.push(`${userId}: ${errorMsg || 'Unknown error'}`);
         }
-      } catch (err) {
-        console.error(`Error processing user ${userId}:`, err);
-        errorCount++;
-        errors.push(`${userId}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      });
+
+      // Log progress every 50 users
+      if ((i + AUTH_BATCH_SIZE) % 50 === 0 || i + AUTH_BATCH_SIZE >= studentIds.length) {
+        console.log(`Progress: ${Math.min(i + AUTH_BATCH_SIZE, studentIds.length)}/${studentIds.length} users processed`);
       }
     }
 
