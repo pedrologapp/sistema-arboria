@@ -2423,6 +2423,7 @@ export type Database = {
           matricula_externa: string | null
           must_change_password: boolean | null
           nome: string | null
+          segmento: string | null
           serie: string | null
           sobrenome: string | null
           turma: string | null
@@ -2441,6 +2442,7 @@ export type Database = {
           matricula_externa?: string | null
           must_change_password?: boolean | null
           nome?: string | null
+          segmento?: string | null
           serie?: string | null
           sobrenome?: string | null
           turma?: string | null
@@ -2459,6 +2461,7 @@ export type Database = {
           matricula_externa?: string | null
           must_change_password?: boolean | null
           nome?: string | null
+          segmento?: string | null
           serie?: string | null
           sobrenome?: string | null
           turma?: string | null
