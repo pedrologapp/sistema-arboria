@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.delete-users-bulk]
 verify_jwt = false
+
+[functions.delete-alunos-por-segmento]
+verify_jwt = false
