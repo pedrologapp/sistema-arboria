@@ -1,24 +1,32 @@
 
-# Plano: Adicionar Secret SYNC_ALUNOS_TOKEN
+
+# Plano: Remover Alunos de Teste
 
 ## Objetivo
-Criar o secret de autenticação para a Edge Function `sync-alunos-externos`.
+Excluir os 3 alunos de teste existentes para preparar o sistema para importação dos alunos reais via N8N.
 
-## Ação
-Adicionar secret no Lovable Cloud:
-- **Nome:** `SYNC_ALUNOS_TOKEN`
-- **Valor:** `arboria-sync-2026-X7k9Lm2pQr`
+## Alunos a serem removidos
 
-## Resultado
-Após criação, a Edge Function estará pronta para receber requisições do N8N com autenticação via header `X-Sync-Token`.
+| Nome | ID | Série/Turma |
+|------|----|-------------|
+| Lucas Freire | `8f6cf7bd-0847-430f-9cb2-ba31023eba8c` | 6º ano A |
+| Lucas Silva | `88de4658-3bc1-4457-afc1-fbf7aac6e2ad` | 6º ano A |
+| Pedro Luciano | `b5607cb6-94e2-48b7-89af-104ddaa447f7` | 6º ano A |
 
-## URL para N8N
-```
-https://uoxcnkqjxthivsvxqonj.supabase.co/functions/v1/sync-alunos-externos
-```
+## Método de Exclusão
+Utilizarei a Edge Function `delete-user` existente, que já realiza a limpeza completa de todos os registros relacionados:
+- `score_ajustes_log`
+- `inteligencia_evidencias`, `inteligencia_historico`, `inteligencia_scores`
+- `entregas`, `observacoes`, `alertas_alunos`
+- `acoes_professor`, `acoes_celebracao`
+- `aluno_turma`, `cargos_casa`, `missao_destinatarios`
+- `bonus_solicitacoes`, `pontos_gerais`
+- `mensagens_canal`, `mensagens_privadas`, `conversa_participantes`, `canal_leituras`
+- E finalmente o usuário do Auth (que cascateia para `profiles` e `user_roles`)
 
-## Headers necessários
-| Header | Valor |
-|--------|-------|
-| Content-Type | application/json |
-| X-Sync-Token | arboria-sync-2026-X7k9Lm2pQr |
+## Implementação
+Farei 3 chamadas à Edge Function `delete-user` com os IDs dos alunos.
+
+## Resultado Esperado
+Sistema limpo e pronto para receber os ~400 alunos reais do ActiveSoft via sincronização N8N.
+
