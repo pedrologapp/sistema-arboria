@@ -15,46 +15,59 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const syncToken = Deno.env.get("SYNC_ALUNOS_TOKEN");
 
-    // Get the authorization header from the request
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      console.error("No authorization header provided");
-      return new Response(
-        JSON.stringify({ error: "Não autorizado" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Check for service token (for automated operations)
+    const serviceToken = req.headers.get("X-Service-Token");
+    const isServiceCall = serviceToken && syncToken && serviceToken === syncToken;
 
-    // Create a client with the user's JWT to verify they are admin
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    let currentUserId: string | null = null;
 
-    // Get the current user
-    const { data: { user: currentUser }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !currentUser) {
-      console.error("Error getting user:", userError);
-      return new Response(
-        JSON.stringify({ error: "Não autorizado" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    if (!isServiceCall) {
+      // Get the authorization header from the request
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) {
+        console.error("No authorization header provided");
+        return new Response(
+          JSON.stringify({ error: "Não autorizado" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
-    // Check if the user is an admin
-    const { data: roleData, error: roleError } = await supabaseClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", currentUser.id)
-      .eq("role", "admin")
-      .single();
+      // Create a client with the user's JWT to verify they are admin
+      const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
 
-    if (roleError || !roleData) {
-      console.error("User is not an admin:", roleError);
-      return new Response(
-        JSON.stringify({ error: "Apenas administradores podem excluir usuários" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // Get the current user
+      const { data: { user: currentUser }, error: userError } = await supabaseClient.auth.getUser();
+      if (userError || !currentUser) {
+        console.error("Error getting user:", userError);
+        return new Response(
+          JSON.stringify({ error: "Não autorizado" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      currentUserId = currentUser.id;
+
+      // Check if the user is an admin
+      const { data: roleData, error: roleError } = await supabaseClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", currentUser.id)
+        .eq("role", "admin")
+        .single();
+
+      if (roleError || !roleData) {
+        console.error("User is not an admin:", roleError);
+        return new Response(
+          JSON.stringify({ error: "Apenas administradores podem excluir usuários" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      console.log("Service token authenticated - bypassing admin check");
     }
 
     // Get the request body
@@ -67,8 +80,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Prevent admin from deleting themselves
-    if (userId === currentUser.id) {
+    // Prevent admin from deleting themselves (only for authenticated calls)
+    if (currentUserId && userId === currentUserId) {
       return new Response(
         JSON.stringify({ error: "Você não pode excluir sua própria conta" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
