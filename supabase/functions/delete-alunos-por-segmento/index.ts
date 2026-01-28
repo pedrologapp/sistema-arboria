@@ -128,25 +128,29 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 8. Filtrar apenas os que são alunos (role = 'user')
+    // 8. Excluir admins e professores (que NÃO devem ser deletados)
+    // Esta lógica captura tanto profiles com role='user' quanto profiles "órfãos" sem role
     const batchSize = 50;
-    const studentIds: string[] = [];
+    const protectedIds = new Set<string>();
 
     for (let i = 0; i < profileIds.length; i += batchSize) {
       const batch = profileIds.slice(i, i + batchSize);
-      const { data: rolesBatch, error: rolesError } = await supabaseAdmin
+      const { data: protectedRoles, error: rolesError } = await supabaseAdmin
         .from("user_roles")
         .select("user_id")
-        .eq("role", "user")
+        .in("role", ["admin", "professor"])
         .in("user_id", batch);
 
       if (rolesError) {
-        console.error("Error fetching roles batch:", rolesError);
+        console.error("Error fetching protected roles batch:", rolesError);
         continue;
       }
 
-      studentIds.push(...(rolesBatch?.map(r => r.user_id) || []));
+      protectedRoles?.forEach(r => protectedIds.add(r.user_id));
     }
+
+    // Todos os profiles do segmento EXCETO admins/professores
+    const studentIds = profileIds.filter(id => !protectedIds.has(id));
 
     if (studentIds.length === 0) {
       return new Response(
@@ -154,11 +158,13 @@ Deno.serve(async (req: Request) => {
           success: true, 
           segmento,
           total_deletados: 0,
-          message: `Nenhum aluno com role 'user' encontrado no segmento ${segmento}` 
+          message: `Nenhum aluno encontrado no segmento ${segmento} (${protectedIds.size} usuários protegidos ignorados)` 
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log(`Found ${studentIds.length} students to delete (${protectedIds.size} protected users excluded)`);
 
     console.log(`Deleting ${studentIds.length} students from segmento ${segmento} in institution ${institutionId}`);
 
