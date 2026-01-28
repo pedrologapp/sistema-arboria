@@ -1,62 +1,121 @@
 
-# Plano: Otimizar Exclusão em Massa de Alunos
+# Plano: Melhorias na Importacao e Listagem de Alunos
 
-## Problema Atual
-A função está deletando 419 alunos **sequencialmente**, fazendo ~15 queries por aluno = ~6.000+ operações. Isso causa timeout e demora excessiva.
+## Resumo das Alteracoes
 
-## Solução: Deletar por Lotes com SQL Direto
+1. **Novo formato de email**: `nome.sobrenome@aluno.arboria.com`
+2. **Exibir segmento** na listagem de alunos
+3. **Ordenar por**: Serie, Turma, Nome
 
-### Estratégia
-Em vez de deletar aluno por aluno, vamos deletar **todos os registros dependentes de uma vez** usando queries com `IN (array de IDs)`.
+---
 
-### Antes (lento)
-```text
-Para cada aluno (419x):
-  - DELETE score_ajustes_log WHERE aluno_id = X
-  - DELETE entregas WHERE aluno_id = X
-  - ... (15 tabelas)
-  - DELETE auth user
-Total: ~6.000+ queries
-```
+## 1. Alterar Formato do Email na Sincronizacao
 
-### Depois (rápido)
-```text
-1x DELETE score_ajustes_log WHERE aluno_id IN (todos os 419 IDs)
-1x DELETE entregas WHERE aluno_id IN (todos os 419 IDs)
-... (15 tabelas)
-Depois: deletar auth users em paralelo (batches de 10)
-Total: ~15 queries + auth deletes em paralelo
-```
+### Arquivo: `supabase/functions/sync-alunos-externos/index.ts`
 
-## Alterações na Edge Function
-
-### 1. Limpar todas as tabelas dependentes de uma vez
+**Antes:**
 ```typescript
-// Deletar em batch - uma query por tabela
-await supabaseAdmin.from("score_ajustes_log").delete().in("aluno_id", studentIds);
-await supabaseAdmin.from("entregas").delete().in("aluno_id", studentIds);
-// ... demais tabelas
-```
-
-### 2. Deletar usuários do Auth em paralelo
-```typescript
-// Processar em lotes de 10 em paralelo
-const BATCH_SIZE = 10;
-for (let i = 0; i < studentIds.length; i += BATCH_SIZE) {
-  const batch = studentIds.slice(i, i + BATCH_SIZE);
-  await Promise.all(batch.map(id => 
-    supabaseAdmin.auth.admin.deleteUser(id)
-  ));
+function gerarEmailTemporario(matricula: string): string {
+  const matriculaSemPontos = matricula.replace(/\./g, '');
+  return `${matriculaSemPontos}@aluno.arboria.app`;
 }
 ```
 
-## Resultado Esperado
+**Depois:**
+```typescript
+function gerarEmail(nome: string, sobrenome: string): string {
+  // Pega primeiro nome e primeiro sobrenome
+  const primeiroNome = nome.trim().split(' ')[0];
+  const primeiroSobrenome = sobrenome.trim().split(' ')[0];
+  
+  // Normaliza: remove acentos, lowercase, remove caracteres especiais
+  const normalizar = (str: string) => str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z]/g, '')
+    .toLowerCase();
+  
+  return `${normalizar(primeiroNome)}.${normalizar(primeiroSobrenome)}@aluno.arboria.com`;
+}
+```
 
-| Métrica | Antes | Depois |
-|---------|-------|--------|
-| Queries de limpeza | ~6.000 | ~15 |
-| Auth deletes | Sequencial | 10 em paralelo |
-| Tempo estimado (419 alunos) | 5-10 min | 30-60 seg |
+Usar na criacao:
+```typescript
+const email = gerarEmail(aluno.nome, aluno.sobrenome);
+```
 
-## Arquivo a Modificar
-- `supabase/functions/delete-users-bulk/index.ts`
+---
+
+## 2. Incluir Segmento na Listagem de Alunos
+
+### Arquivo: `src/pages/admin/PessoasPage.tsx`
+
+Alterar a query de alunos para incluir `segmento`:
+
+```typescript
+.select('id, nome, sobrenome, full_name, serie, turma, casa_id, avatar_url, created_at, segmento')
+```
+
+Exibir na lista compacta junto com Serie/Turma:
+
+```typescript
+<span className="text-white/40 text-xs ml-2 flex-shrink-0">
+  {aluno.segmento && `${aluno.segmento} - `}{aluno.serie?.replace(' ano', '')} {aluno.turma}
+</span>
+```
+
+---
+
+## 3. Ordenar por Serie, Turma, Nome
+
+### Arquivo: `src/pages/admin/PessoasPage.tsx`
+
+**Antes:**
+```typescript
+.order('full_name')
+```
+
+**Depois:**
+```typescript
+.order('serie')
+.order('turma')
+.order('full_name')
+```
+
+E para os alunos filtrados no frontend (manter consistencia):
+```typescript
+const alunosFiltrados = alunos
+  ?.filter(aluno => { ... })
+  ?.sort((a, b) => {
+    // Primeiro por serie
+    if (a.serie !== b.serie) return (a.serie || '').localeCompare(b.serie || '');
+    // Depois por turma
+    if (a.turma !== b.turma) return (a.turma || '').localeCompare(b.turma || '');
+    // Por fim por nome
+    return (a.full_name || '').localeCompare(b.full_name || '');
+  });
+```
+
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Alteracao |
+|---------|-----------|
+| `supabase/functions/sync-alunos-externos/index.ts` | Mudar funcao de email para usar nome.sobrenome |
+| `src/pages/admin/PessoasPage.tsx` | Incluir segmento, ordenar por serie/turma/nome |
+
+---
+
+## Exemplo de Como Ficara na Lista
+
+```
+6º ano A
+  Ana Silva - Fundamental 2 - Casa Linguistica
+  Bruno Santos - Fundamental 2 - Casa Musical
+
+6º ano B
+  Carlos Oliveira - Fundamental 2 - Casa Logica
+  Diana Costa - Fundamental 2 - Casa Espacial
+```
+
