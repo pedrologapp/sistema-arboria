@@ -80,45 +80,49 @@ Deno.serve(async (req: Request) => {
       },
     });
 
-    // Get all students (users with role 'user') from the institution
-    const { data: userRoles, error: rolesError } = await supabaseAdmin
-      .from("user_roles")
-      .select("user_id")
-      .eq("role", "user");
+    // Get all profiles from this institution first
+    const { data: institutionProfiles, error: profilesError } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("institution_id", institutionId);
 
-    if (rolesError) {
-      console.error("Error fetching user roles:", rolesError);
+    if (profilesError) {
+      console.error("Error fetching institution profiles:", profilesError);
       return new Response(
-        JSON.stringify({ error: "Erro ao buscar alunos" }),
+        JSON.stringify({ error: "Erro ao buscar perfis da instituição" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const studentUserIds = userRoles?.map(r => r.user_id) || [];
+    const profileIds = institutionProfiles?.map(p => p.id) || [];
 
-    if (studentUserIds.length === 0) {
+    if (profileIds.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, message: "Nenhum aluno para excluir", deleted: 0 }),
+        JSON.stringify({ success: true, message: "Nenhum perfil na instituição", deleted: 0 }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Get students that belong to this institution
-    const { data: studentsInInstitution, error: studentsError } = await supabaseAdmin
-      .from("profiles")
-      .select("id")
-      .eq("institution_id", institutionId)
-      .in("id", studentUserIds);
+    // Now get which of these profiles are students (role = 'user')
+    // Process in batches to avoid URL length issues
+    const batchSize = 50;
+    const studentIds: string[] = [];
 
-    if (studentsError) {
-      console.error("Error fetching students:", studentsError);
-      return new Response(
-        JSON.stringify({ error: "Erro ao buscar alunos da instituição" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    for (let i = 0; i < profileIds.length; i += batchSize) {
+      const batch = profileIds.slice(i, i + batchSize);
+      const { data: rolesBatch, error: rolesError } = await supabaseAdmin
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "user")
+        .in("user_id", batch);
+
+      if (rolesError) {
+        console.error("Error fetching roles batch:", rolesError);
+        continue;
+      }
+
+      studentIds.push(...(rolesBatch?.map(r => r.user_id) || []));
     }
-
-    const studentIds = studentsInInstitution?.map(s => s.id) || [];
 
     if (studentIds.length === 0) {
       return new Response(
