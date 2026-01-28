@@ -85,6 +85,30 @@ async function gerarEmailUnico(supabaseAdmin: any, nome: string, sobrenome: stri
   throw new Error('Muitos usuários com mesmo nome - limite de sufixos atingido');
 }
 
+// Ensure user has 'user' role
+async function garantirRoleUser(supabaseAdmin: any, userId: string): Promise<void> {
+  await supabaseAdmin
+    .from('user_roles')
+    .upsert(
+      { user_id: userId, role: 'user' },
+      { onConflict: 'user_id,role', ignoreDuplicates: true }
+    );
+}
+
+// Ensure inteligencia_scores exist for all 8 IMs
+async function garantirScores(supabaseAdmin: any, userId: string, anoLetivo: number): Promise<void> {
+  for (let imId = 1; imId <= 8; imId++) {
+    await supabaseAdmin
+      .from('inteligencia_scores')
+      .upsert({
+        aluno_id: userId,
+        inteligencia_id: imId,
+        score_atual: 35.00,
+        ano_letivo: anoLetivo
+      }, { onConflict: 'aluno_id,inteligencia_id,ano_letivo', ignoreDuplicates: true });
+  }
+}
+
 // Create new user with given email
 async function criarNovoUsuario(
   supabaseAdmin: any, 
@@ -136,21 +160,10 @@ async function criarNovoUsuario(
     .eq('id', newUser.user.id);
 
   // Add user role
-  await supabaseAdmin
-    .from('user_roles')
-    .insert({ user_id: newUser.user.id, role: 'user' });
+  await garantirRoleUser(supabaseAdmin, newUser.user.id);
 
   // Initialize intelligence scores
-  for (let imId = 1; imId <= 8; imId++) {
-    await supabaseAdmin
-      .from('inteligencia_scores')
-      .upsert({
-        aluno_id: newUser.user.id,
-        inteligencia_id: imId,
-        score_atual: 35.00,
-        ano_letivo: anoLetivo
-      }, { onConflict: 'aluno_id,inteligencia_id,ano_letivo' });
-  }
+  await garantirScores(supabaseAdmin, newUser.user.id, anoLetivo);
 
   return { success: true, userId: newUser.user.id };
 }
@@ -224,11 +237,14 @@ Deno.serve(async (req: Request) => {
 
         const fullName = `${aluno.nome.trim()} ${aluno.sobrenome.trim()}`;
 
-        // STEP 1: Check if student exists by matricula_externa
+        // ═══════════════════════════════════════════════════════════
+        // STEP 1: Check if student exists by matricula_externa AND institution_id
+        // ═══════════════════════════════════════════════════════════
         const { data: existingProfile, error: searchError } = await supabaseAdmin
           .from('profiles')
-          .select('id, matricula_externa')
+          .select('id, matricula_externa, institution_id')
           .eq('matricula_externa', aluno.matricula)
+          .eq('institution_id', aluno.institution_id)  // ← KEY FIX: filter by institution
           .maybeSingle();
 
         if (searchError) {
@@ -238,7 +254,7 @@ Deno.serve(async (req: Request) => {
         }
 
         if (existingProfile) {
-          // CASE 1: Student exists by matricula_externa → UPDATE
+          // CASE 1: Student exists in THIS institution by matricula_externa → UPDATE
           const { error: updateError } = await supabaseAdmin
             .from('profiles')
             .update({
@@ -248,6 +264,8 @@ Deno.serve(async (req: Request) => {
               serie: aluno.serie?.trim() || null,
               turma: aluno.turma?.trim() || null,
               segmento: aluno.segmento?.trim() || null,
+              institution_id: aluno.institution_id,  // ensure consistency
+              matricula_externa: aluno.matricula,    // ensure consistency
             })
             .eq('id', existingProfile.id);
 
@@ -256,12 +274,18 @@ Deno.serve(async (req: Request) => {
             continue;
           }
 
-          console.log(`Updated by matricula: ${aluno.matricula}`);
+          // Ensure role and scores
+          await garantirRoleUser(supabaseAdmin, existingProfile.id);
+          await garantirScores(supabaseAdmin, existingProfile.id, anoLetivo);
+
+          console.log(`Updated by matricula (same institution): ${aluno.matricula}`);
           result.atualizados++;
           continue;
         }
 
-        // STEP 2: Student doesn't exist by matricula → try to create
+        // ═══════════════════════════════════════════════════════════
+        // STEP 2: Student doesn't exist in this institution → try to create
+        // ═══════════════════════════════════════════════════════════
         const baseEmail = gerarEmail(aluno.nome, aluno.sobrenome);
         const createResult = await criarNovoUsuario(supabaseAdmin, aluno, baseEmail, anoLetivo);
 
@@ -271,22 +295,33 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
+        // ═══════════════════════════════════════════════════════════
         // STEP 3: Creation failed - check if email already exists
+        // ═══════════════════════════════════════════════════════════
         if (createResult.error?.includes('email address has already been registered')) {
           console.log(`Email ${baseEmail} already exists, checking profile...`);
           
           const existingUser = await buscarUserPorEmail(supabaseAdmin, baseEmail);
           
           if (existingUser) {
-            // Check if this profile already has a matricula_externa
+            // Check profile's institution_id and matricula_externa
             const { data: profileCheck } = await supabaseAdmin
               .from('profiles')
-              .select('matricula_externa')
+              .select('matricula_externa, institution_id')
               .eq('id', existingUser.id)
               .single();
 
-            if (!profileCheck?.matricula_externa) {
-              // CASE 2: Profile exists without matricula → LINK this matricula
+            const profileInstitutionId = profileCheck?.institution_id;
+            const profileMatricula = profileCheck?.matricula_externa;
+
+            // Can only link if:
+            // - matricula_externa is empty AND
+            // - (institution_id matches OR institution_id is null)
+            const canLink = !profileMatricula && 
+              (profileInstitutionId === aluno.institution_id || !profileInstitutionId);
+
+            if (canLink) {
+              // CASE 2: Profile exists without matricula, same/null institution → LINK
               const { error: linkError } = await supabaseAdmin
                 .from('profiles')
                 .update({
@@ -296,6 +331,7 @@ Deno.serve(async (req: Request) => {
                   serie: aluno.serie?.trim() || null,
                   turma: aluno.turma?.trim() || null,
                   segmento: aluno.segmento?.trim() || null,
+                  institution_id: aluno.institution_id,
                   matricula_externa: aluno.matricula,
                 })
                 .eq('id', existingUser.id);
@@ -305,13 +341,17 @@ Deno.serve(async (req: Request) => {
                 continue;
               }
 
+              // Ensure role and scores
+              await garantirRoleUser(supabaseAdmin, existingUser.id);
+              await garantirScores(supabaseAdmin, existingUser.id, anoLetivo);
+
               console.log(`Linked: ${aluno.matricula} to existing user ${existingUser.id}`);
               result.vinculados++;
               continue;
             }
 
-            // CASE 3: Profile has different matricula → create with unique email
-            console.log(`Profile ${existingUser.id} already has matricula ${profileCheck.matricula_externa}, generating unique email...`);
+            // CASE 3: Cannot link (different institution or already has matricula) → create with unique email
+            console.log(`Cannot link to ${existingUser.id} (institution: ${profileInstitutionId}, matricula: ${profileMatricula}), generating unique email...`);
             
             try {
               const uniqueEmail = await gerarEmailUnico(supabaseAdmin, aluno.nome, aluno.sobrenome);
