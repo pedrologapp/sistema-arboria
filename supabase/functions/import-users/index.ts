@@ -6,13 +6,17 @@ const corsHeaders = {
 };
 
 interface ImportUser {
-  email: string;
+  // Campos para alunos (email gerado automaticamente)
+  matricula?: string;
   nome: string;
   sobrenome: string;
   instituicao: string;
   serie?: string;
   turma?: string;
-  casa_id?: number;
+  segmento?: string;
+  casa_id?: number | null;
+  // Email é obrigatório apenas para professores
+  email?: string;
   // Inteligências opcionais (0-100)
   int_intrapessoal?: number;
   int_interpessoal?: number;
@@ -42,15 +46,50 @@ const INTELIGENCIAS_MAP = [
   { campo: 'int_intrapessoal', id: 8 },
 ];
 
-// Normalize surname to create password: remove accents, apostrophes, spaces, lowercase
-function normalizeSobrenome(sobrenome: string): string {
-  return sobrenome
+// Normaliza texto: remove acentos, apóstrofos, espaços, converte para minúsculas
+function normalizeText(text: string): string {
+  return text
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .replace(/[''`]/g, '') // Remove apostrophes
-    .replace(/\s+/g, '') // Remove spaces
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[''`]/g, '') // Remove apóstrofos
+    .replace(/\s+/g, '') // Remove espaços
     .toLowerCase()
     .trim();
+}
+
+// Gera email no padrão nome.sobrenome@aluno.arboria.com
+function generateEmail(nome: string, sobrenome: string): string {
+  const primeiroNome = normalizeText(nome.split(' ')[0]);
+  const primeiroSobrenome = normalizeText(sobrenome.split(' ')[0]);
+  return `${primeiroNome}.${primeiroSobrenome}@aluno.arboria.com`;
+}
+
+// Gera senha: sobrenome normalizado + 123
+function generatePassword(sobrenome: string): string {
+  return normalizeText(sobrenome) + '123';
+}
+
+// Verifica se email já existe e gera alternativo se necessário
+async function getUniqueEmail(supabaseAdmin: any, baseEmail: string): Promise<string> {
+  let email = baseEmail;
+  let suffix = 1;
+  
+  while (true) {
+    // Verificar se o email já existe no Auth
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers({
+      filter: `email.eq.${email}`,
+      perPage: 1
+    });
+    
+    if (!existingUsers?.users?.length) {
+      return email;
+    }
+    
+    // Se existe, adicionar sufixo numérico
+    suffix++;
+    const [localPart, domain] = baseEmail.split('@');
+    email = `${localPart}${suffix}@${domain}`;
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -133,43 +172,58 @@ Deno.serve(async (req: Request) => {
 
       try {
         // Validate required fields
-        if (!user.email || !user.email.trim()) {
-          errors.push({ line: lineNumber, email: user.email || '', error: 'Email é obrigatório' });
-          continue;
-        }
         if (!user.nome || !user.nome.trim()) {
-          errors.push({ line: lineNumber, email: user.email, error: 'Nome é obrigatório' });
+          errors.push({ line: lineNumber, email: user.email || user.matricula || '', error: 'Nome é obrigatório' });
           continue;
         }
         if (!user.sobrenome || !user.sobrenome.trim()) {
-          errors.push({ line: lineNumber, email: user.email, error: 'Sobrenome é obrigatório' });
+          errors.push({ line: lineNumber, email: user.email || user.matricula || '', error: 'Sobrenome é obrigatório' });
           continue;
         }
         if (!user.instituicao || !user.instituicao.trim()) {
-          errors.push({ line: lineNumber, email: user.email, error: 'Instituição é obrigatória' });
+          errors.push({ line: lineNumber, email: user.email || user.matricula || '', error: 'Instituição é obrigatória' });
           continue;
         }
 
-        // Institution ID is passed directly now
+        // Institution ID is passed directly
         const institutionId = user.instituicao;
-
-        // Generate password from surname
-        const normalizedSobrenome = normalizeSobrenome(user.sobrenome);
-        const password = normalizedSobrenome + '123';
         const fullName = `${user.nome.trim()} ${user.sobrenome.trim()}`;
-
-        // Validate password length
-        if (password.length < 6) {
-          errors.push({ line: lineNumber, email: user.email, error: 'Sobrenome muito curto para gerar senha válida (mínimo 3 letras)' });
-          continue;
-        }
 
         // Determine role based on tipo
         const userRole = tipo === 'professores' ? 'professor' : 'user';
+        const isAluno = userRole === 'user';
+
+        // Generate or use provided email
+        let email: string;
+        if (isAluno) {
+          // For students, validate matricula and generate email
+          if (!user.matricula || !user.matricula.trim()) {
+            errors.push({ line: lineNumber, email: '', error: 'Matrícula é obrigatória para alunos' });
+            continue;
+          }
+          const baseEmail = generateEmail(user.nome, user.sobrenome);
+          email = await getUniqueEmail(supabaseAdmin, baseEmail);
+        } else {
+          // For professors, email is required
+          if (!user.email || !user.email.trim()) {
+            errors.push({ line: lineNumber, email: '', error: 'Email é obrigatório para professores' });
+            continue;
+          }
+          email = user.email.trim();
+        }
+
+        // Generate password from surname
+        const password = generatePassword(user.sobrenome);
+
+        // Validate password length
+        if (password.length < 6) {
+          errors.push({ line: lineNumber, email, error: 'Sobrenome muito curto para gerar senha válida (mínimo 3 letras)' });
+          continue;
+        }
 
         // Create the user using admin API
         const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-          email: user.email.trim(),
+          email,
           password,
           email_confirm: true,
           user_metadata: {
@@ -179,18 +233,20 @@ Deno.serve(async (req: Request) => {
             institution_id: institutionId,
             serie: user.serie?.trim() || null,
             turma: user.turma?.trim() || null,
+            segmento: user.segmento?.trim() || null,
             casa_id: user.casa_id || null,
+            matricula_externa: user.matricula?.trim() || null,
             must_change_password: true
           }
         });
 
         if (createError) {
-          console.error(`Error creating user ${user.email}:`, createError);
-          errors.push({ line: lineNumber, email: user.email, error: createError.message });
+          console.error(`Error creating user ${email}:`, createError);
+          errors.push({ line: lineNumber, email, error: createError.message });
           continue;
         }
 
-        console.log(`User created: ${user.email} (${newUser.user.id})`);
+        console.log(`User created: ${email} (${newUser.user.id})`);
 
         // Update the profile with all fields
         await supabaseAdmin
@@ -202,7 +258,9 @@ Deno.serve(async (req: Request) => {
             institution_id: institutionId,
             serie: user.serie?.trim() || null,
             turma: user.turma?.trim() || null,
+            segmento: user.segmento?.trim() || null,
             casa_id: user.casa_id || null,
+            matricula_externa: user.matricula?.trim() || null,
             must_change_password: true
           })
           .eq('id', newUser.user.id);
@@ -230,7 +288,7 @@ Deno.serve(async (req: Request) => {
         }
 
         // Insert intelligence scores if provided (for alunos only)
-        if (userRole === 'user') {
+        if (isAluno) {
           for (const int of INTELIGENCIAS_MAP) {
             const valor = (user as any)[int.campo] || 0;
             if (valor > 0) {
@@ -252,8 +310,8 @@ Deno.serve(async (req: Request) => {
 
         successCount++;
       } catch (error) {
-        console.error(`Unexpected error for user ${user.email}:`, error);
-        errors.push({ line: lineNumber, email: user.email, error: 'Erro inesperado' });
+        console.error(`Unexpected error for user ${user.email || user.matricula}:`, error);
+        errors.push({ line: lineNumber, email: user.email || user.matricula || '', error: 'Erro inesperado' });
       }
     }
 
