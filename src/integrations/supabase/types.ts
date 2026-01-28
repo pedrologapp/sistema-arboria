@@ -2420,6 +2420,7 @@ export type Database = {
           id: string
           institution: string | null
           institution_id: string | null
+          matricula_externa: string | null
           must_change_password: boolean | null
           nome: string | null
           serie: string | null
@@ -2437,6 +2438,7 @@ export type Database = {
           id: string
           institution?: string | null
           institution_id?: string | null
+          matricula_externa?: string | null
           must_change_password?: boolean | null
           nome?: string | null
           serie?: string | null
@@ -2454,6 +2456,7 @@ export type Database = {
           id?: string
           institution?: string | null
           institution_id?: string | null
+          matricula_externa?: string | null
           must_change_password?: boolean | null
           nome?: string | null
           serie?: string | null
