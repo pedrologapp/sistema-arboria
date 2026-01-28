@@ -188,7 +188,7 @@ const ConfiguracoesPage = () => {
         className="text-center pt-8"
       >
         <p className="text-xs text-white/30">
-          v1.0.0 • Arbória
+          v1.0.0 • Arboria
         </p>
       </motion.div>
     </div>
