@@ -1,85 +1,62 @@
 
-# Plano: Adicionar Exclusao em Massa de Alunos no Painel Admin
+# Plano: Otimizar Exclusão em Massa de Alunos
 
-## Objetivo
-Permitir que administradores excluam todos os alunos da instituicao de uma vez, com confirmacao de seguranca para evitar exclusoes acidentais.
+## Problema Atual
+A função está deletando 419 alunos **sequencialmente**, fazendo ~15 queries por aluno = ~6.000+ operações. Isso causa timeout e demora excessiva.
 
-## Interface do Usuario
+## Solução: Deletar por Lotes com SQL Direto
 
-### Novo Botao na Aba Alunos
-- Adicionar botao vermelho "Excluir Todos" na area de acoes
-- Botao so aparece quando ha alunos cadastrados
-- Icone de lixeira para indicar acao destrutiva
+### Estratégia
+Em vez de deletar aluno por aluno, vamos deletar **todos os registros dependentes de uma vez** usando queries com `IN (array de IDs)`.
 
-### Modal de Confirmacao (2 etapas)
-1. **Primeira tela**: Mostra quantidade de alunos que serao excluidos e pede confirmacao
-2. **Segunda tela**: Exige digitar "EXCLUIR" para confirmar (previne cliques acidentais)
+### Antes (lento)
+```text
+Para cada aluno (419x):
+  - DELETE score_ajustes_log WHERE aluno_id = X
+  - DELETE entregas WHERE aluno_id = X
+  - ... (15 tabelas)
+  - DELETE auth user
+Total: ~6.000+ queries
+```
 
-### Feedback Visual
-- Loading spinner durante exclusao
-- Toast de sucesso/erro apos conclusao
-- Atualiza lista automaticamente
+### Depois (rápido)
+```text
+1x DELETE score_ajustes_log WHERE aluno_id IN (todos os 419 IDs)
+1x DELETE entregas WHERE aluno_id IN (todos os 419 IDs)
+... (15 tabelas)
+Depois: deletar auth users em paralelo (batches de 10)
+Total: ~15 queries + auth deletes em paralelo
+```
 
-## Implementacao Tecnica
+## Alterações na Edge Function
 
-### 1. Nova Edge Function: `delete-users-bulk`
-Cria uma nova edge function otimizada para exclusao em massa:
-- Recebe array de IDs ou parametro `deleteAllStudents: true`
-- Usa mesma logica de limpeza de dependencias do `delete-user`
-- Processa em lote para melhor performance
-- Retorna contagem de sucessos/falhas
-
+### 1. Limpar todas as tabelas dependentes de uma vez
 ```typescript
-// Payload esperado
-{
-  "institutionId": "uuid",
-  "deleteAllStudents": true
+// Deletar em batch - uma query por tabela
+await supabaseAdmin.from("score_ajustes_log").delete().in("aluno_id", studentIds);
+await supabaseAdmin.from("entregas").delete().in("aluno_id", studentIds);
+// ... demais tabelas
+```
+
+### 2. Deletar usuários do Auth em paralelo
+```typescript
+// Processar em lotes de 10 em paralelo
+const BATCH_SIZE = 10;
+for (let i = 0; i < studentIds.length; i += BATCH_SIZE) {
+  const batch = studentIds.slice(i, i + BATCH_SIZE);
+  await Promise.all(batch.map(id => 
+    supabaseAdmin.auth.admin.deleteUser(id)
+  ));
 }
 ```
 
-### 2. Novo Componente: `ModalExcluirAlunosMassa`
-- Modal com design escuro consistente com o restante da UI
-- Estado de confirmacao em 2 etapas
-- Campo de texto para digitar "EXCLUIR"
-- Botoes Cancelar e Confirmar
+## Resultado Esperado
 
-### 3. Atualizacao do PessoasPage
-- Importar novo modal
-- Adicionar estado para controlar modal
-- Adicionar botao de exclusao em massa
-- Invalidar query apos exclusao bem-sucedida
+| Métrica | Antes | Depois |
+|---------|-------|--------|
+| Queries de limpeza | ~6.000 | ~15 |
+| Auth deletes | Sequencial | 10 em paralelo |
+| Tempo estimado (419 alunos) | 5-10 min | 30-60 seg |
 
-## Fluxo de Seguranca
-
-```text
-[Clique em "Excluir Todos"]
-        |
-        v
-[Modal - Etapa 1: Confirmacao]
-"Tem certeza? X alunos serao excluidos permanentemente"
-        |
-        v
-[Modal - Etapa 2: Digite EXCLUIR]
-Campo de texto + validacao
-        |
-        v
-[Chamada Edge Function]
-        |
-        v
-[Feedback: Sucesso/Erro]
-```
-
-## Arquivos a Criar/Modificar
-
-| Arquivo | Acao |
-|---------|------|
-| `supabase/functions/delete-users-bulk/index.ts` | Criar |
-| `src/components/admin/ModalExcluirAlunosMassa.tsx` | Criar |
-| `src/pages/admin/PessoasPage.tsx` | Modificar |
-
-## Consideracoes de Seguranca
-
-- Apenas admins autenticados podem executar
-- Verificacao de institution_id para nao afetar outras instituicoes
-- Log de operacao para auditoria
-- Timeout adequado para operacoes grandes (ate 300 alunos)
+## Arquivo a Modificar
+- `supabase/functions/delete-users-bulk/index.ts`
