@@ -89,9 +89,11 @@ const PessoasPage = () => {
       // Buscar profiles desses users na instituição
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
-        .select('id, nome, sobrenome, full_name, serie, turma, casa_id, avatar_url, created_at')
+        .select('id, nome, sobrenome, full_name, serie, turma, casa_id, avatar_url, created_at, segmento')
         .eq('institution_id', institutionId)
         .in('id', userIds)
+        .order('serie')
+        .order('turma')
         .order('full_name');
       
       if (profileError) throw profileError;
@@ -176,18 +178,27 @@ const PessoasPage = () => {
     return casas?.find(c => c.id === casaId)?.nome || null;
   };
 
-  // Filtrar alunos
-  const alunosFiltrados = alunos?.filter(aluno => {
-    const matchBusca = !busca || 
-      aluno.full_name?.toLowerCase().includes(busca.toLowerCase()) ||
-      aluno.nome?.toLowerCase().includes(busca.toLowerCase()) ||
-      aluno.sobrenome?.toLowerCase().includes(busca.toLowerCase());
-    const matchSerie = !filtroSerie || aluno.serie === filtroSerie;
-    const matchTurma = !filtroTurma || aluno.turma === filtroTurma;
-    const matchCasa = !filtroCasa || aluno.casa_id === Number(filtroCasa);
-    
-    return matchBusca && matchSerie && matchTurma && matchCasa;
-  });
+  // Filtrar alunos e ordenar por serie, turma, nome
+  const alunosFiltrados = alunos
+    ?.filter(aluno => {
+      const matchBusca = !busca || 
+        aluno.full_name?.toLowerCase().includes(busca.toLowerCase()) ||
+        aluno.nome?.toLowerCase().includes(busca.toLowerCase()) ||
+        aluno.sobrenome?.toLowerCase().includes(busca.toLowerCase());
+      const matchSerie = !filtroSerie || aluno.serie === filtroSerie;
+      const matchTurma = !filtroTurma || aluno.turma === filtroTurma;
+      const matchCasa = !filtroCasa || aluno.casa_id === Number(filtroCasa);
+      
+      return matchBusca && matchSerie && matchTurma && matchCasa;
+    })
+    ?.sort((a, b) => {
+      // Primeiro por serie
+      if (a.serie !== b.serie) return (a.serie || '').localeCompare(b.serie || '');
+      // Depois por turma
+      if (a.turma !== b.turma) return (a.turma || '').localeCompare(b.turma || '');
+      // Por fim por nome
+      return (a.full_name || '').localeCompare(b.full_name || '');
+    });
 
   // Séries e turmas únicas
   const seriesUnicas = [...new Set(alunos?.map(a => a.serie).filter(Boolean))].sort();
@@ -334,13 +345,13 @@ const PessoasPage = () => {
                         </div>
                       )}
                       
-                      {/* Nome + Série/Turma inline */}
+                      {/* Nome + Segmento + Série/Turma inline */}
                       <div className="flex-1 min-w-0 flex items-center">
                         <span className="text-white text-sm font-medium truncate">
                           {aluno.full_name || `${aluno.nome} ${aluno.sobrenome}`}
                         </span>
                         <span className="text-white/40 text-xs ml-2 flex-shrink-0">
-                          {aluno.serie?.replace(' ano', '')} {aluno.turma}
+                          {aluno.segmento && `${aluno.segmento} · `}{aluno.serie?.replace(' ano', '')} {aluno.turma}
                         </span>
                       </div>
                       

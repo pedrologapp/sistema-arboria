@@ -36,10 +36,20 @@ function normalizeSobrenome(sobrenome: string): string {
     .trim();
 }
 
-// Generate temporary email from matricula
-function gerarEmailTemporario(matricula: string): string {
-  const matriculaSemPontos = matricula.replace(/\./g, '');
-  return `${matriculaSemPontos}@aluno.arboria.app`;
+// Generate email from nome.sobrenome
+function gerarEmail(nome: string, sobrenome: string): string {
+  // Get first name and first surname
+  const primeiroNome = nome.trim().split(' ')[0];
+  const primeiroSobrenome = sobrenome.trim().split(' ')[0];
+  
+  // Normalize: remove accents, lowercase, remove special characters
+  const normalizar = (str: string) => str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z]/g, '')
+    .toLowerCase();
+  
+  return `${normalizar(primeiroNome)}.${normalizar(primeiroSobrenome)}@aluno.arboria.com`;
 }
 
 Deno.serve(async (req: Request) => {
@@ -166,7 +176,7 @@ Deno.serve(async (req: Request) => {
             continue;
           }
 
-          const email = gerarEmailTemporario(aluno.matricula);
+          const email = gerarEmail(aluno.nome, aluno.sobrenome);
 
           // Create user in auth.users
           const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
