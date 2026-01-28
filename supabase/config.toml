@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.delete-alunos-por-segmento]
 verify_jwt = false
+
+[functions.sync-alunos-pull]
+verify_jwt = false
