@@ -1,107 +1,97 @@
 
-# Correção: Tabela de Visão Geral não Atualiza
+# Plano: Associar Alunos às Turmas para Professores de Infantil/Fundamental 1
 
 ## Problema Identificado
 
-A query no componente `TabelaVisaoGeralProfessores.tsx` está falhando com erro 400 porque tenta fazer um JOIN inválido:
+A política RLS atual de `aluno_turma` permite que professores vejam alunos apenas através do vínculo `professor_casa` (usado pelo Fundamental 2). Professores de Infantil e Fundamental 1 que usam `professor_turma` **não conseguem ver seus alunos** porque não existe uma política RLS para esse cenário.
 
-```typescript
-// ❌ Erro: não existe relação direta professor_turma → profiles
-.select(`
-  turma_id,
-  professor_id,
-  profiles:professor_id (full_name)  // <- FALHA AQUI
-`)
+### Política Atual (Fundamental 2 apenas)
+
+```sql
+-- Só funciona para F2 (via professor_casa)
+"Professores veem aluno_turma da sua casa" → verifica professor_casa.casa_id = aluno.casa_id
 ```
 
-O erro retornado:
-> "Could not find a relationship between 'professor_turma' and 'professor_id' in the schema cache"
+### Dados Atuais no Banco
 
-Isso acontece porque `professor_turma.professor_id` referencia `auth.users(id)`, não `profiles(id)`.
+| Tabela | Status |
+|--------|--------|
+| `aluno_turma` | Alunos vinculados às turmas (1º A = 18 alunos, 5º A = 21 alunos, etc.) |
+| `professor_turma` | Rita de Cássia vinculada ao 5º A e 5º B |
+
+O problema é que a **política RLS bloqueia** a visualização para professores de Infantil/F1.
 
 ## Solução
 
-Dividir a busca em duas queries separadas:
-1. Buscar os vínculos `professor_turma`
-2. Buscar os nomes dos professores da tabela `profiles` usando os IDs
+Criar uma nova política RLS que permita professores verem alunos das turmas às quais estão vinculados via `professor_turma`.
 
-## Arquivo Modificado
+### 1. Nova Política RLS
 
-**`src/components/admin/TabelaVisaoGeralProfessores.tsx`**
-
-### Mudança na Query de Turmas (linhas 31-65)
-
-```typescript
-// ANTES (falha):
-const { data: vinculos } = await supabase
-  .from('professor_turma')
-  .select(`turma_id, professor_id, profiles:professor_id (full_name)`)
-  ...
-
-// DEPOIS (funciona):
-// 1. Buscar vínculos
-const { data: vinculos } = await supabase
-  .from('professor_turma')
-  .select('professor_id, turma_id')
-  .eq('institution_id', institutionId)
-  .eq('ativo', true);
-
-// 2. Buscar nomes dos professores
-const professorIds = [...new Set(vinculos?.map(v => v.professor_id) || [])];
-const { data: professores } = await supabase
-  .from('profiles')
-  .select('id, full_name')
-  .in('id', professorIds);
-
-// 3. Mapear nomes
-const professorMap = new Map(professores?.map(p => [p.id, p.full_name]) || []);
-
-const turmasComProfessor = turmas?.map(turma => {
-  const vinculo = vinculos?.find(v => v.turma_id === turma.id);
-  return {
-    ...turma,
-    professor_id: vinculo?.professor_id || null,
-    professor_nome: vinculo ? professorMap.get(vinculo.professor_id) || null : null
-  };
-}) || [];
+```sql
+CREATE POLICY "Professores veem aluno_turma das suas turmas"
+ON aluno_turma
+FOR SELECT
+USING (
+  has_role(auth.uid(), 'professor') 
+  AND turma_id = ANY(get_professor_turma_ids())
+);
 ```
 
-### Mudança na Query de Casas (linhas 69-103)
+Esta política usa a função `get_professor_turma_ids()` que já existe e retorna um array com os IDs das turmas do professor logado.
 
-Aplicar a mesma correção para `professor_casa`:
+### 2. Verificação da Função Helper
 
-```typescript
-// 1. Buscar mentores
-const { data: mentores } = await supabase
-  .from('professor_casa')
-  .select('casa_id, professor_id, eh_mentor_principal')
-  .eq('institution_id', institutionId)
-  .eq('ativo', true);
+A função `get_professor_turma_ids()` já existe no banco:
 
-// 2. Buscar nomes
-const mentorIds = [...new Set(mentores?.map(m => m.professor_id) || [])];
-const { data: mentoresProfiles } = await supabase
-  .from('profiles')
-  .select('id, full_name')
-  .in('id', mentorIds);
-
-// 3. Mapear
-const mentorMap = new Map(mentoresProfiles?.map(p => [p.id, p.full_name]) || []);
+```sql
+-- Função existente (criada anteriormente)
+CREATE OR REPLACE FUNCTION get_professor_turma_ids()
+RETURNS UUID[] AS $$
+  SELECT COALESCE(ARRAY_AGG(turma_id), ARRAY[]::UUID[])
+  FROM professor_turma 
+  WHERE professor_id = auth.uid() AND ativo = true;
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
 ```
 
-## Resultado
+## Arquivo de Migração
 
-Após a correção:
-- A tabela de visão geral carregará corretamente os vínculos
-- Os nomes dos professores aparecerão nas turmas atribuídas
-- A atualização será refletida imediatamente após atribuir um professor
+Criar uma migração SQL com a nova política:
 
-## Fluxo Corrigido
+```sql
+-- Política para professores de Infantil/F1 verem alunos das suas turmas
+CREATE POLICY "Professores veem aluno_turma das suas turmas vinculadas"
+ON public.aluno_turma
+FOR SELECT
+USING (
+  has_role(auth.uid(), 'professor'::app_role) 
+  AND turma_id = ANY(public.get_professor_turma_ids())
+);
+```
+
+## Resultado Esperado
+
+Após a migração:
 
 ```text
-1. Admin atribui professora ao 5º Ano A e B
-2. Dados são salvos em professor_turma ✓
-3. Tabela busca vínculos (sem JOIN) ✓
-4. Busca nomes dos professores separadamente ✓
-5. Exibe: "5º Ano A - Professora X - ✓ Atribuído"
+1. Professora Rita de Cássia (Fundamental 1) faz login
+2. Sistema detecta segmento = 'fundamental1'
+3. Carrega turmas vinculadas: [5º A, 5º B]
+4. Ao acessar /professor/circulo:
+   └─> Vê cards: [5º A] [5º B]
+5. Clica em "5º A"
+   └─> Query busca aluno_turma WHERE turma_id = '...' AND ativo = true
+   └─> RLS permite (turma_id está em get_professor_turma_ids())
+   └─> Exibe 21 alunos do 5º A
 ```
+
+## Resumo Técnico
+
+| Item | Ação |
+|------|------|
+| **Migração SQL** | Criar política RLS para `aluno_turma` usando `professor_turma` |
+| **Função Helper** | Já existe: `get_professor_turma_ids()` |
+| **Código Frontend** | Nenhuma alteração necessária (hooks já estão corretos) |
+
+## Arquivos Modificados
+
+- **Nova migração SQL**: Política RLS para professores de Infantil/F1
