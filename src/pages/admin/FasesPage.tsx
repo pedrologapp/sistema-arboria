@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronRight, AlertCircle } from 'lucide-react';
+import { ChevronRight, AlertCircle, CalendarDays } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import CalendarioFasesModal, { FaseComDatas } from '@/components/professor/CalendarioFasesModal';
 import {
   Select,
   SelectContent,
@@ -117,6 +119,7 @@ const FasesPage = () => {
   const { user } = useAuth();
   const [anoLetivo, setAnoLetivo] = useState(new Date().getFullYear());
   const [segmentoAtivo, setSegmentoAtivo] = useState<Segmento>('fundamental2');
+  const [showCalendario, setShowCalendario] = useState(false);
 
   // Buscar institution_id do admin
   const { data: profile } = useQuery({
@@ -508,6 +511,17 @@ const FasesPage = () => {
                 ))}
               </SelectContent>
             </Select>
+
+            {/* Botão Ver Calendário */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCalendario(true)}
+              className="gap-2 border-white/10 text-white/70 hover:text-white hover:bg-white/10"
+            >
+              <CalendarDays className="w-4 h-4" />
+              Calendário
+            </Button>
           </div>
         </div>
 
@@ -546,6 +560,38 @@ const FasesPage = () => {
             {renderFasesList(fasesFundamental2, 'fundamental2')}
           </TabsContent>
         </Tabs>
+
+        {/* Modal Calendário */}
+        <CalendarioFasesModal
+          isOpen={showCalendario}
+          onClose={() => setShowCalendario(false)}
+          fases={(() => {
+            // Obter fases do segmento ativo no formato esperado
+            const fasesSegmento = segmentoAtivo === 'infantil' ? fasesInfantil :
+                                  segmentoAtivo === 'fundamental1' ? fasesFundamental1 :
+                                  fasesFundamental2;
+            return fasesSegmento
+              .filter(f => f.configurada)
+              .map(f => ({
+                id: f.id,
+                numero_fase: f.numero_fase,
+                data_inicio: f.data_inicio || '',
+                data_fim: f.data_fim || '',
+                ativo: f.ativo,
+                inteligencia: f.inteligencia ? {
+                  nome: f.inteligencia.nome,
+                  cor_hex: f.inteligencia.cor_hex,
+                  emoji: f.inteligencia.emoji
+                } : null
+              })) as FaseComDatas[];
+          })()}
+          anoLetivo={anoLetivo}
+          modoEdicao={true}
+          onFaseClick={(faseId) => {
+            setShowCalendario(false);
+            navigate(`/admin/fases/${faseId}`);
+          }}
+        />
       </div>
     </div>
   );
