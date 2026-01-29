@@ -31,6 +31,8 @@ import FaseDetalhesPage from "./pages/admin/FaseDetalhesPage";
 import FaseNovaPage from "./pages/admin/FaseNovaPage";
 import RelatoriosPage from "./pages/admin/RelatoriosPage";
 import ConfigPage from "./pages/admin/ConfigPage";
+import ConteudoAdminPage from "./pages/admin/ConteudoAdminPage";
+import ConteudoInteligenciaAdminPage from "./pages/admin/ConteudoInteligenciaAdminPage";
 
 // Aluno pages
 import HomePage from "./pages/aluno/HomePage";
@@ -177,6 +179,20 @@ const App = () => (
               <ProtectedRoute requireAdmin>
                 <AdminLayout>
                   <ConfigPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/conteudo" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <ConteudoAdminPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/conteudo/inteligencia/:id" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <ConteudoInteligenciaAdminPage />
                 </AdminLayout>
               </ProtectedRoute>
             } />
