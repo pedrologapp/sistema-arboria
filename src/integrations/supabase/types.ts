@@ -2865,6 +2865,36 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_n8n_logs: {
+        Row: {
+          created_at: string
+          endpoint_url: string
+          error_msg: string | null
+          id: number
+          observacao_id: string
+          payload: Json
+          request_id: number | null
+        }
+        Insert: {
+          created_at?: string
+          endpoint_url: string
+          error_msg?: string | null
+          id?: never
+          observacao_id: string
+          payload: Json
+          request_id?: number | null
+        }
+        Update: {
+          created_at?: string
+          endpoint_url?: string
+          error_msg?: string | null
+          id?: never
+          observacao_id?: string
+          payload?: Json
+          request_id?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       perfil_inteligencias_aluno: {
@@ -3133,6 +3163,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      limpar_webhook_logs_antigos: { Args: never; Returns: number }
       migrar_alertas_fase_anterior: {
         Args: { p_fase_anterior_id: string; p_fase_nova_id: string }
         Returns: number
