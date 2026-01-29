@@ -1,68 +1,75 @@
 
-# Plano: Corrigir Geração de Senha para Sobrenomes com Preposições
+# Plano: Corrigir Atualização da Lista Após Importação
 
-## Problema Identificado
+## Diagnóstico
 
-A função `generatePassword` usa o **primeiro fragmento** do sobrenome para criar a senha. Quando o sobrenome começa com preposições como "de", "do", "da", etc., a senha fica muito curta:
+Após analisar os logs e o código, identifiquei que:
 
-| Sobrenome | Fragmento usado | Senha gerada | Caracteres |
-|-----------|-----------------|--------------|------------|
-| de Lima Albino | "de" | de123 | 5 ❌ |
-| do Nascimento de Alexandria | "do" | do123 | 5 ❌ |
-| de França Oliveira | "de" | de123 | 5 ❌ |
+1. **A importação está funcionando corretamente** - os logs mostram:
+   ```
+   [import-alunos-rapido] Concluído: 0 criados, 92 atualizados, 0 erros
+   ```
 
-O Auth exige **mínimo 6 caracteres** para senhas.
+2. **O modal fecha automaticamente** após sucesso (linha 313)
+
+3. **O problema real**: a lista de alunos não é atualizada porque falta invalidar o cache do React Query após a importação
+
+## Causa Raiz
+
+O `ModalImportarCSV` não invalida a query `admin-alunos` após importar. Por isso:
+- A importação funciona
+- O modal fecha
+- O toast de sucesso aparece
+- **Mas a lista continua mostrando os dados antigos**
+
+Outros modais como `ModalExcluirAlunosMassa` e `ModalGerarContas` fazem isso corretamente via callback `onSuccess`.
 
 ## Solução
 
-Modificar a função `generatePassword` para **ignorar preposições comuns** e usar o primeiro fragmento significativo do sobrenome:
+Adicionar prop `onSuccess` ao `ModalImportarCSV` para invalidar o cache após importação.
 
 ### Mudanças no Código
 
-**Arquivo:** `supabase/functions/import-alunos-rapido/index.ts`
+**Arquivo: `src/components/admin/ModalImportarCSV.tsx`**
 
+1. Adicionar prop `onSuccess` opcional:
 ```typescript
-// Lista de preposições a ignorar
-const PREPOSICOES = ['de', 'da', 'do', 'dos', 'das', 'e', 'del', 'di'];
-
-function generatePassword(sobrenome: string): string {
-  const partes = sobrenome.split(' ');
-  
-  // Encontrar o primeiro fragmento que NÃO é preposição
-  let fragmentoSenha = partes[0];
-  for (const parte of partes) {
-    if (!PREPOSICOES.includes(parte.toLowerCase())) {
-      fragmentoSenha = parte;
-      break;
-    }
-  }
-  
-  return normalizeText(fragmentoSenha) + '123';
+interface ModalImportarCSVProps {
+  tipo: 'alunos' | 'professores';
+  institutionId: string;
+  onClose: () => void;
+  onSuccess?: () => void;  // NOVO
 }
 ```
 
-### Resultado Esperado
+2. Chamar `onSuccess` após importação bem-sucedida:
+```typescript
+if ((data?.errors?.length || 0) === 0) {
+  toast.success(`${total} alunos importados!...`);
+  onSuccess?.();  // NOVO - chamar antes de fechar
+  onClose();
+}
+```
 
-| Sobrenome | Fragmento usado | Senha gerada | Caracteres |
-|-----------|-----------------|--------------|------------|
-| de Lima Albino | "Lima" | lima123 | 7 ✅ |
-| do Nascimento de Alexandria | "Nascimento" | nascimento123 | 13 ✅ |
-| de França Oliveira | "Franca" | franca123 | 9 ✅ |
+**Arquivo: `src/pages/admin/PessoasPage.tsx`**
 
-## Aplicar Mesma Lógica no Email
+3. Passar callback para invalidar queries:
+```typescript
+<ModalImportarCSV
+  tipo={tabAtiva === 'professores' ? 'professores' : 'alunos'}
+  institutionId={institutionId}
+  onClose={() => setModalImportarAberto(false)}
+  onSuccess={() => {
+    queryClient.invalidateQueries({ queryKey: ['admin-alunos'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-professores'] });
+  }}
+/>
+```
 
-Para consistência, a geração de email também deve ignorar preposições:
+## Resultado Esperado
 
-**Antes:** `marina.de.22672026@aluno.arboria.com`
-**Depois:** `marina.lima.22672026@aluno.arboria.com`
-
-## Arquivos a Modificar
-
-1. **`supabase/functions/import-alunos-rapido/index.ts`**
-   - Adicionar constante `PREPOSICOES`
-   - Atualizar `generatePassword()` para pular preposições
-   - Atualizar `generateDeterministicEmail()` para pular preposições no sobrenome
-
-## Após a Correção
-
-Os 3 alunos que falharam poderão ser importados normalmente ao fazer um novo upload do arquivo.
+Após a correção:
+1. Importação executa (como já está funcionando)
+2. Modal fecha automaticamente 
+3. Toast de sucesso aparece
+4. **Lista de alunos atualiza imediatamente** mostrando os 92 alunos
