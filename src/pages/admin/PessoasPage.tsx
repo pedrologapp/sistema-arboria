@@ -550,6 +550,10 @@ const PessoasPage = () => {
           tipo={tabAtiva === 'professores' ? 'professores' : 'alunos'}
           institutionId={institutionId}
           onClose={() => setModalImportarAberto(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['admin-alunos'] });
+            queryClient.invalidateQueries({ queryKey: ['admin-professores'] });
+          }}
         />
       )}
 
