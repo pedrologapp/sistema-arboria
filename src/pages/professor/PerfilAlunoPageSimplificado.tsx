@@ -3,9 +3,6 @@ import {
   ArrowLeft, 
   MessageCircle, 
   Loader2, 
-  Star, 
-  BarChart3, 
-  AlertTriangle, 
   Brain, 
   Eye,
   PlusCircle
@@ -21,52 +18,6 @@ import RegistrarConversaModal from '@/components/professor/RegistrarConversaModa
 const ACCENT_COLOR = '#6366f1';
 
 // ============ COMPONENTES AUXILIARES ============
-
-interface StatusCardProps {
-  status: PerfilAlunoSimplificadoData['status'];
-  percentual: number;
-  media: number;
-}
-
-const StatusCard = ({ status, percentual, media }: StatusCardProps) => {
-  const config = {
-    destaque: {
-      bg: 'bg-green-500/10',
-      border: 'border-green-500/20',
-      texto: 'text-green-400',
-      Icon: Star,
-      label: 'DESTAQUE'
-    },
-    regular: {
-      bg: 'bg-yellow-500/10',
-      border: 'border-yellow-500/20',
-      texto: 'text-yellow-400',
-      Icon: BarChart3,
-      label: 'REGULAR'
-    },
-    risco: {
-      bg: 'bg-red-500/10',
-      border: 'border-red-500/20',
-      texto: 'text-red-400',
-      Icon: AlertTriangle,
-      label: 'EM RISCO'
-    }
-  }[status];
-
-  const IconComponent = config.Icon;
-
-  return (
-    <div className={`p-4 rounded-xl border ${config.bg} ${config.border}`}>
-      <p className={`font-semibold ${config.texto} flex items-center gap-2`}>
-        <IconComponent className="w-4 h-4" strokeWidth={2} />
-        <span>{config.label}</span>
-      </p>
-      <p className="text-white/60 text-sm mt-1">
-        {Math.round(percentual)}% entregas • Média {media.toFixed(1)}
-      </p>
-    </div>
-  );
-};
 
 interface InteligenciaProgressBarProps {
   emoji: string;
@@ -221,34 +172,7 @@ const PerfilAlunoPageSimplificado = () => {
           {aluno.serie} {aluno.turma}
         </p>
 
-        {/* Cards de Pontos e Ranking */}
-        <div className="flex justify-center gap-4 mt-6">
-          <div className="bg-white/5 border border-white/10 rounded-xl px-6 py-3 text-center min-w-[100px]">
-            <p className="text-green-400 text-2xl font-bold">{aluno.pontosTotais}</p>
-            <p className="text-white/40 text-xs mt-1">Pontos</p>
-          </div>
-          <div className="bg-white/5 border border-white/10 rounded-xl px-6 py-3 text-center min-w-[100px]">
-            <p className="text-2xl font-bold" style={{ color: ACCENT_COLOR }}>
-              #{aluno.ranking}
-            </p>
-            <p className="text-white/40 text-xs mt-1">
-              de {aluno.totalAlunosTurma}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Card de Status */}
-      <div className="px-0">
-        <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
-          <BarChart3 className="w-3.5 h-3.5" strokeWidth={1.5} />
-          Status
-        </p>
-        <StatusCard 
-          status={aluno.status} 
-          percentual={aluno.percentualEntregas} 
-          media={aluno.mediaNotas} 
-        />
+        {/* SEM CARDS DE PONTOS E RANKING */}
       </div>
 
       {/* Inteligências */}
@@ -283,7 +207,7 @@ const PerfilAlunoPageSimplificado = () => {
           nomeAluno={primeiroNome}
           textoAcontecendo={
             aluno.alertaAtivo?.textoAcontecendo || 
-            (aluno.temObsFaseAtual 
+            (aluno.temObservacoes 
               ? `Continue observando ${primeiroNome}.`
               : `${primeiroNome} ainda não foi observado nesta fase.`)
           }

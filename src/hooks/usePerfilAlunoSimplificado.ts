@@ -62,12 +62,8 @@ export interface PerfilAlunoSimplificadoData {
   turma: string;
   turmaId: string;
   avatarUrl?: string;
-  pontosTotais: number;
-  ranking: number;
-  totalAlunosTurma: number;
-  status: 'destaque' | 'regular' | 'risco';
-  percentualEntregas: number;
-  mediaNotas: number;
+  quantidadeObservacoes: number;
+  temObservacoes: boolean;
   inteligencias: {
     id: number;
     nome: string;
@@ -143,45 +139,7 @@ export const usePerfilAlunoSimplificado = (alunoId: string | undefined) => {
         }
       }
 
-      // 3. Pontos totais do aluno
-      const { data: pontosData } = await supabase
-        .from('pontos_gerais')
-        .select('pontos')
-        .eq('aluno_id', alunoId);
-
-      const pontosTotais = pontosData?.reduce((sum, p) => sum + (p.pontos || 0), 0) || 0;
-
-      // 4. Ranking na TURMA (não na casa)
-      let ranking = 1;
-      let totalAlunosTurma = 1;
-
-      if (turmaId && aluno.institution_id) {
-        // Buscar todos alunos da mesma turma
-        const { data: alunosDaTurma } = await supabase
-          .from('aluno_turma')
-          .select('aluno_id')
-          .eq('turma_id', turmaId)
-          .eq('ativo', true);
-
-        totalAlunosTurma = alunosDaTurma?.length || 1;
-
-        // Para cada aluno, calcular pontos e contar quantos têm mais que o atual
-        if (alunosDaTurma) {
-          for (const a of alunosDaTurma) {
-            if (a.aluno_id !== alunoId) {
-              const { data: pontosOutro } = await supabase
-                .from('pontos_gerais')
-                .select('pontos')
-                .eq('aluno_id', a.aluno_id);
-              
-              const totalOutro = pontosOutro?.reduce((sum, p) => sum + (p.pontos || 0), 0) || 0;
-              if (totalOutro > pontosTotais) ranking++;
-            }
-          }
-        }
-      }
-
-      // 5. Scores das 8 inteligências
+      // 3. Scores das 8 inteligências
       const { data: allInteligencias } = await supabase
         .from('inteligencias')
         .select('id, nome, emoji, cor_hex')
@@ -201,22 +159,6 @@ export const usePerfilAlunoSimplificado = (alunoId: string | undefined) => {
         cor: intel.cor_hex || '#6366f1',
         score: scoresMap.get(intel.id) || 35 // Score padrão inicial
       }));
-
-      // 6. Calcular status baseado em entregas (sem missões para Infantil/F1)
-      // Usar lógica simplificada: sem entregas = risco, com pontos = regular/destaque
-      let status: 'destaque' | 'regular' | 'risco' = 'risco';
-      let percentualEntregas = 0;
-      let mediaNotas = 0;
-
-      if (pontosTotais > 50) {
-        status = 'destaque';
-        percentualEntregas = 100;
-        mediaNotas = 8.0;
-      } else if (pontosTotais > 0) {
-        status = 'regular';
-        percentualEntregas = 50;
-        mediaNotas = 6.0;
-      }
 
       // 7. Observações recentes (últimas 20 para histórico)
       const { data: observacoesData } = await supabase
@@ -390,6 +332,10 @@ export const usePerfilAlunoSimplificado = (alunoId: string | undefined) => {
         `${aluno.nome || ''} ${aluno.sobrenome || ''}`.trim() || 
         'Aluno';
 
+      // Quantidade de observações para o novo sistema
+      const quantidadeObservacoes = observacoes.length;
+      const temObservacoes = quantidadeObservacoes > 0;
+
       return {
         id: aluno.id,
         nome: nomeCompleto,
@@ -397,12 +343,8 @@ export const usePerfilAlunoSimplificado = (alunoId: string | undefined) => {
         turma: aluno.turma || '',
         turmaId,
         avatarUrl: aluno.avatar_url || undefined,
-        pontosTotais,
-        ranking,
-        totalAlunosTurma,
-        status,
-        percentualEntregas,
-        mediaNotas,
+        quantidadeObservacoes,
+        temObservacoes,
         inteligencias,
         observacoes,
         alertaAtivo,
