@@ -1,11 +1,11 @@
 import { useState, useRef } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { X, Upload, Download, FileText, Loader2, Check, AlertCircle, HelpCircle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import ModalInstrucoesImportacao from './ModalInstrucoesImportacao';
+import { Progress } from '@/components/ui/progress';
 
 interface ModalImportarCSVProps {
   tipo: 'alunos' | 'professores';
@@ -21,7 +21,6 @@ interface AlunoCSV {
   turma: string;
   segmento: string;
   casa_id?: string;
-  // Colunas opcionais de inteligências
   int_intrapessoal?: string;
   int_interpessoal?: string;
   int_naturalista?: string;
@@ -39,17 +38,37 @@ interface ProfessorCSV {
   casa_id?: string;
 }
 
+interface ProgressoState {
+  ativo: boolean;
+  processados: number;
+  total: number;
+  loteAtual: number;
+  totalLotes: number;
+  criados: number;
+  atualizados: number;
+  erros: string[];
+}
+
+const TAMANHO_LOTE = 20;
+
 const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProps) => {
-  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [dados, setDados] = useState<(AlunoCSV | ProfessorCSV)[]>([]);
   const [erros, setErros] = useState<string[]>([]);
-  const [importando, setImportando] = useState(false);
-  const [resultado, setResultado] = useState<{ sucesso: number; erros: string[] } | null>(null);
   const [mostrarInstrucoes, setMostrarInstrucoes] = useState(false);
+  
+  const [progresso, setProgresso] = useState<ProgressoState>({
+    ativo: false,
+    processados: 0,
+    total: 0,
+    loteAtual: 0,
+    totalLotes: 0,
+    criados: 0,
+    atualizados: 0,
+    erros: []
+  });
 
-  // Colunas obrigatórias (email/senha são gerados automaticamente para alunos)
   const colunasObrigatoriasAlunos = ['matricula', 'nome', 'sobrenome', 'serie', 'turma', 'segmento'];
   const colunasOpcionaisAlunos = ['casa_id', 'int_intrapessoal', 'int_interpessoal', 'int_naturalista', 'int_logico', 'int_linguistica', 'int_espacial', 'int_corporal', 'int_musical'];
   const colunasAlunos = [...colunasObrigatoriasAlunos, ...colunasOpcionaisAlunos];
@@ -58,7 +77,6 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
   const colunas = tipo === 'alunos' ? colunasAlunos : colunasProfessores;
   const colunasObrigatorias = tipo === 'alunos' ? colunasObrigatoriasAlunos : ['nome', 'sobrenome', 'email'];
 
-  // Verificar se tem inteligências nos dados
   const temInteligencias = tipo === 'alunos' && dados.length > 0 && dados.some((item) => {
     const aluno = item as AlunoCSV;
     return ['int_intrapessoal', 'int_interpessoal', 'int_naturalista', 'int_logico', 'int_linguistica', 'int_espacial', 'int_corporal', 'int_musical'].some(col => {
@@ -71,7 +89,6 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
     const wb = XLSX.utils.book_new();
     
     if (tipo === 'alunos') {
-      // === ABA 1: DADOS ===
       const dadosHeader = [
         'matricula', 'nome', 'sobrenome', 'serie', 'turma', 'segmento', 'casa_id',
         'int_intrapessoal', 'int_interpessoal', 'int_naturalista',
@@ -91,7 +108,6 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
       ];
       XLSX.utils.book_append_sheet(wb, wsDados, 'Dados');
       
-      // === ABA 2: INSTRUÇÕES ===
       const instrucoes = [
         ['INSTRUÇÕES DE IMPORTAÇÃO - PROJETO ARBORIA'],
         [''],
@@ -174,7 +190,6 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
       
       XLSX.writeFile(wb, 'modelo_alunos.xlsx');
     } else {
-      // === PROFESSORES (mantém email obrigatório) ===
       const dadosHeader = ['nome', 'sobrenome', 'email', 'casa_id'];
       const dadosExemplo = [
         ['Ana', 'Paula', 'ana@escola.com', 1],
@@ -218,7 +233,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
 
     setArquivo(file);
     setErros([]);
-    setResultado(null);
+    setProgresso(prev => ({ ...prev, erros: [], criados: 0, atualizados: 0 }));
 
     Papa.parse(file, {
       header: true,
@@ -228,7 +243,6 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
         const errosEncontrados: string[] = [];
 
         results.data.forEach((row: any, index) => {
-          // Apenas validar colunas obrigatórias
           const camposFaltando = colunasObrigatorias.filter(col => !row[col]?.toString().trim());
           
           if (camposFaltando.length > 0) {
@@ -247,95 +261,149 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
     });
   };
 
-  const importarMutation = useMutation({
-    mutationFn: async () => {
-      setImportando(true);
-      
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      
-      if (!token) {
-        throw new Error('Sessão expirada. Faça login novamente.');
-      }
-
-      // Preparar dados para a edge function
-      const users = dados.map((item) => {
-        if (tipo === 'alunos') {
-          const aluno = item as AlunoCSV;
-          return {
-            matricula: aluno.matricula,
-            nome: aluno.nome,
-            sobrenome: aluno.sobrenome,
-            serie: aluno.serie,
-            turma: aluno.turma,
-            segmento: aluno.segmento,
-            casa_id: aluno.casa_id ? parseInt(aluno.casa_id) : null,
-            instituicao: institutionId,
-            // Incluir inteligências se existirem
-            int_intrapessoal: parseInt(aluno.int_intrapessoal || '0') || 0,
-            int_interpessoal: parseInt(aluno.int_interpessoal || '0') || 0,
-            int_naturalista: parseInt(aluno.int_naturalista || '0') || 0,
-            int_logico: parseInt(aluno.int_logico || '0') || 0,
-            int_linguistica: parseInt(aluno.int_linguistica || '0') || 0,
-            int_espacial: parseInt(aluno.int_espacial || '0') || 0,
-            int_corporal: parseInt(aluno.int_corporal || '0') || 0,
-            int_musical: parseInt(aluno.int_musical || '0') || 0,
-          };
-        } else {
-          const prof = item as ProfessorCSV;
-          return {
-            email: prof.email,
-            nome: prof.nome,
-            sobrenome: prof.sobrenome,
-            casa_id: prof.casa_id ? parseInt(prof.casa_id) : null,
-            instituicao: institutionId
-          };
-        }
-      });
-
-      // Chamar edge function import-users
-      const { data, error } = await supabase.functions.invoke('import-users', {
-        body: { users, tipo }
-      });
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      const sucessos = data?.success_count || dados.length;
-      const errosImport = data?.errors || [];
-      
-      setResultado({ sucesso: sucessos, erros: errosImport });
-      
-      if (errosImport.length === 0) {
-        toast.success(`${sucessos} ${tipo} importados com sucesso!`);
-        queryClient.invalidateQueries({ queryKey: ['admin-alunos'] });
-        queryClient.invalidateQueries({ queryKey: ['admin-professores'] });
-        onClose();
-      } else {
-        toast.warning(`${sucessos} importados, ${errosImport.length} erros`);
-      }
-    },
-    onError: (error: Error) => {
-      toast.error('Erro na importação: ' + error.message);
-    },
-    onSettled: () => {
-      setImportando(false);
+  // Divide array em lotes
+  const dividirEmLotes = <T,>(array: T[], tamanho: number): T[][] => {
+    const lotes: T[][] = [];
+    for (let i = 0; i < array.length; i += tamanho) {
+      lotes.push(array.slice(i, i + tamanho));
     }
-  });
+    return lotes;
+  };
+
+  // Processa importação em lotes
+  const processarImportacao = async () => {
+    const lotes = dividirEmLotes(dados, TAMANHO_LOTE);
+    
+    setProgresso({
+      ativo: true,
+      processados: 0,
+      total: dados.length,
+      loteAtual: 0,
+      totalLotes: lotes.length,
+      criados: 0,
+      atualizados: 0,
+      erros: []
+    });
+
+    let totalCriados = 0;
+    let totalAtualizados = 0;
+    const todosErros: string[] = [];
+
+    for (let i = 0; i < lotes.length; i++) {
+      const lote = lotes[i];
+      
+      setProgresso(prev => ({
+        ...prev,
+        loteAtual: i + 1,
+        processados: i * TAMANHO_LOTE
+      }));
+
+      try {
+        // Preparar dados do lote
+        const users = lote.map((item) => {
+          if (tipo === 'alunos') {
+            const aluno = item as AlunoCSV;
+            return {
+              matricula: aluno.matricula,
+              nome: aluno.nome,
+              sobrenome: aluno.sobrenome,
+              serie: aluno.serie,
+              turma: aluno.turma,
+              segmento: aluno.segmento,
+              casa_id: aluno.casa_id ? parseInt(aluno.casa_id) : null,
+              instituicao: institutionId,
+              int_intrapessoal: parseInt(aluno.int_intrapessoal || '0') || 0,
+              int_interpessoal: parseInt(aluno.int_interpessoal || '0') || 0,
+              int_naturalista: parseInt(aluno.int_naturalista || '0') || 0,
+              int_logico: parseInt(aluno.int_logico || '0') || 0,
+              int_linguistica: parseInt(aluno.int_linguistica || '0') || 0,
+              int_espacial: parseInt(aluno.int_espacial || '0') || 0,
+              int_corporal: parseInt(aluno.int_corporal || '0') || 0,
+              int_musical: parseInt(aluno.int_musical || '0') || 0,
+            };
+          } else {
+            const prof = item as ProfessorCSV;
+            return {
+              email: prof.email,
+              nome: prof.nome,
+              sobrenome: prof.sobrenome,
+              casa_id: prof.casa_id ? parseInt(prof.casa_id) : null,
+              instituicao: institutionId
+            };
+          }
+        });
+
+        // Chamar edge function para este lote
+        const { data, error } = await supabase.functions.invoke('import-users', {
+          body: { users, tipo }
+        });
+
+        if (error) {
+          console.error(`Erro no lote ${i + 1}:`, error);
+          todosErros.push(`Lote ${i + 1}: ${error.message}`);
+        } else {
+          totalCriados += data?.criados || 0;
+          totalAtualizados += data?.atualizados || 0;
+          if (data?.errors?.length) {
+            todosErros.push(...data.errors);
+          }
+        }
+      } catch (err: any) {
+        console.error(`Exceção no lote ${i + 1}:`, err);
+        todosErros.push(`Lote ${i + 1}: ${err.message || 'Erro desconhecido'}`);
+      }
+
+      // Atualizar progresso
+      setProgresso(prev => ({
+        ...prev,
+        processados: Math.min((i + 1) * TAMANHO_LOTE, dados.length),
+        criados: totalCriados,
+        atualizados: totalAtualizados,
+        erros: todosErros
+      }));
+
+      // Pequena pausa entre lotes para não sobrecarregar
+      if (i < lotes.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+
+    // Finalização
+    setProgresso(prev => ({
+      ...prev,
+      ativo: false,
+      processados: dados.length
+    }));
+
+    if (todosErros.length === 0) {
+      toast.success(`${totalCriados + totalAtualizados} ${tipo} importados com sucesso! (${totalCriados} novos, ${totalAtualizados} atualizados)`);
+      onClose();
+    } else {
+      toast.warning(`${totalCriados + totalAtualizados} importados, ${todosErros.length} erros`);
+    }
+  };
 
   const limparArquivo = () => {
     setArquivo(null);
     setDados([]);
     setErros([]);
-    setResultado(null);
+    setProgresso({
+      ativo: false,
+      processados: 0,
+      total: 0,
+      loteAtual: 0,
+      totalLotes: 0,
+      criados: 0,
+      atualizados: 0,
+      erros: []
+    });
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  // Colunas a mostrar na pré-visualização (apenas obrigatórias)
   const colunasPreview = colunasObrigatorias;
+  const porcentagem = progresso.total > 0 ? Math.round((progresso.processados / progresso.total) * 100) : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
@@ -353,7 +421,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
               <HelpCircle className="w-4 h-4" />
               Instruções
             </button>
-            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+            <button onClick={onClose} disabled={progresso.ativo} className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50">
               <X className="w-5 h-5 text-white/60" />
             </button>
           </div>
@@ -361,8 +429,30 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
 
         {/* Conteúdo */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Barra de Progresso (durante importação) */}
+          {progresso.ativo && (
+            <div className="p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                  <span className="text-sm font-medium text-indigo-400">
+                    Processando lote {progresso.loteAtual} de {progresso.totalLotes}...
+                  </span>
+                </div>
+                <span className="text-sm text-indigo-300">{porcentagem}%</span>
+              </div>
+              
+              <Progress value={porcentagem} className="h-2" />
+              
+              <div className="flex items-center justify-between text-xs text-indigo-300/80">
+                <span>{progresso.processados} de {progresso.total} processados</span>
+                <span>{progresso.criados} novos • {progresso.atualizados} atualizados</span>
+              </div>
+            </div>
+          )}
+
           {/* Banner: Email/senha gerados automaticamente */}
-          {tipo === 'alunos' && (
+          {tipo === 'alunos' && !progresso.ativo && (
             <div className="p-3 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 rounded-xl">
               <div className="flex items-center gap-2 mb-1">
                 <Sparkles className="w-4 h-4 text-emerald-400" />
@@ -375,25 +465,29 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
           )}
 
           {/* Formato */}
-          <div className="p-3 bg-white/5 rounded-lg">
-            <p className="text-sm text-white/80 font-medium mb-1">Colunas obrigatórias:</p>
-            <p className="text-sm text-white/50">{colunasObrigatorias.join(', ')}</p>
-            {tipo === 'alunos' && (
-              <>
-                <p className="text-sm text-white/80 font-medium mt-2 mb-1">Colunas opcionais:</p>
-                <p className="text-sm text-white/50">{colunasOpcionaisAlunos.join(', ')}</p>
-              </>
-            )}
-          </div>
+          {!progresso.ativo && (
+            <div className="p-3 bg-white/5 rounded-lg">
+              <p className="text-sm text-white/80 font-medium mb-1">Colunas obrigatórias:</p>
+              <p className="text-sm text-white/50">{colunasObrigatorias.join(', ')}</p>
+              {tipo === 'alunos' && (
+                <>
+                  <p className="text-sm text-white/80 font-medium mt-2 mb-1">Colunas opcionais:</p>
+                  <p className="text-sm text-white/50">{colunasOpcionaisAlunos.join(', ')}</p>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Baixar modelo */}
-          <button
-            onClick={baixarModeloExcel}
-            className="w-full p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-2 text-white"
-          >
-            <Download className="w-4 h-4" />
-            Baixar modelo Excel
-          </button>
+          {!progresso.ativo && (
+            <button
+              onClick={baixarModeloExcel}
+              className="w-full p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-2 text-white"
+            >
+              <Download className="w-4 h-4" />
+              Baixar modelo Excel
+            </button>
+          )}
 
           {/* Upload */}
           <input
@@ -402,48 +496,51 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
             accept=".csv,.xlsx,.xls"
             onChange={handleFileChange}
             className="hidden"
+            disabled={progresso.ativo}
           />
 
-          {arquivo ? (
-            <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-              <div className="flex items-center gap-3">
-                <FileText className="w-8 h-8 text-indigo-400" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-medium truncate">{arquivo.name}</p>
-                  <p className="text-sm text-white/50">
-                    {dados.length} registros válidos
-                    {temInteligencias && (
-                      <span className="ml-2 px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs rounded">
-                        Inclui estatísticas
-                      </span>
-                    )}
-                  </p>
+          {!progresso.ativo && (
+            arquivo ? (
+              <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-8 h-8 text-indigo-400" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-medium truncate">{arquivo.name}</p>
+                    <p className="text-sm text-white/50">
+                      {dados.length} registros válidos
+                      {temInteligencias && (
+                        <span className="ml-2 px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs rounded">
+                          Inclui estatísticas
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <button 
+                    onClick={limparArquivo}
+                    className="p-1 hover:bg-white/10 rounded"
+                  >
+                    <X className="w-4 h-4 text-white/40" />
+                  </button>
                 </div>
-                <button 
-                  onClick={limparArquivo}
-                  className="p-1 hover:bg-white/10 rounded"
-                >
-                  <X className="w-4 h-4 text-white/40" />
-                </button>
               </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full p-8 border border-dashed border-white/20 rounded-xl hover:border-white/40 transition-colors flex flex-col items-center gap-2"
-            >
-              <Upload className="w-8 h-8 text-white/40" />
-              <p className="text-sm text-white/60">Selecionar arquivo CSV ou Excel</p>
-            </button>
+            ) : (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full p-8 border border-dashed border-white/20 rounded-xl hover:border-white/40 transition-colors flex flex-col items-center gap-2"
+              >
+                <Upload className="w-8 h-8 text-white/40" />
+                <p className="text-sm text-white/60">Selecionar arquivo CSV ou Excel</p>
+              </button>
+            )
           )}
 
           {/* Erros de validação */}
-          {erros.length > 0 && (
+          {erros.length > 0 && !progresso.ativo && (
             <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <AlertCircle className="w-4 h-4 text-red-400" />
                 <p className="text-sm text-red-400 font-medium">
-                  {erros.length} erro(s) encontrado(s)
+                  {erros.length} erro(s) de validação
                 </p>
               </div>
               <div className="space-y-1 max-h-24 overflow-y-auto">
@@ -458,24 +555,42 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
           )}
 
           {/* Erros de importação */}
-          {resultado?.erros && resultado.erros.length > 0 && (
+          {progresso.erros.length > 0 && (
             <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <AlertCircle className="w-4 h-4 text-amber-400" />
                 <p className="text-sm text-amber-400 font-medium">
-                  Erros durante importação
+                  {progresso.erros.length} erro(s) durante importação
                 </p>
               </div>
-              <div className="space-y-1 max-h-24 overflow-y-auto">
-                {resultado.erros.slice(0, 5).map((e, i) => (
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {progresso.erros.slice(0, 10).map((e, i) => (
                   <p key={i} className="text-xs text-amber-400/80">{e}</p>
                 ))}
+                {progresso.erros.length > 10 && (
+                  <p className="text-xs text-amber-400/60">... e mais {progresso.erros.length - 10} erros</p>
+                )}
               </div>
             </div>
           )}
 
+          {/* Resultado final */}
+          {!progresso.ativo && (progresso.criados > 0 || progresso.atualizados > 0) && (
+            <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-400" />
+                <p className="text-sm text-emerald-400 font-medium">
+                  {progresso.criados + progresso.atualizados} {tipo} importados
+                </p>
+              </div>
+              <p className="text-xs text-emerald-300/80 mt-1">
+                {progresso.criados} novos • {progresso.atualizados} atualizados
+              </p>
+            </div>
+          )}
+
           {/* Pré-visualização */}
-          {dados.length > 0 && (
+          {dados.length > 0 && !progresso.ativo && (
             <div>
               <p className="text-sm text-white/60 mb-2">Pré-visualização:</p>
               <div className="overflow-x-auto">
@@ -515,16 +630,17 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
         <div className="p-4 border-t border-white/10 flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 p-3 bg-white/5 text-white rounded-xl hover:bg-white/10 transition-colors"
+            disabled={progresso.ativo}
+            className="flex-1 p-3 bg-white/5 text-white rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50"
           >
-            Cancelar
+            {progresso.ativo ? 'Aguarde...' : 'Cancelar'}
           </button>
           <button
-            onClick={() => importarMutation.mutate()}
-            disabled={dados.length === 0 || importando}
+            onClick={processarImportacao}
+            disabled={dados.length === 0 || progresso.ativo}
             className="flex-1 p-3 bg-white text-black font-medium rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {importando ? (
+            {progresso.ativo ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Importando...

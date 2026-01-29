@@ -6,7 +6,6 @@ const corsHeaders = {
 };
 
 interface ImportUser {
-  // Campos para alunos (email gerado automaticamente)
   matricula?: string;
   nome: string;
   sobrenome: string;
@@ -15,9 +14,7 @@ interface ImportUser {
   turma?: string;
   segmento?: string;
   casa_id?: number | null;
-  // Email é obrigatório apenas para professores
   email?: string;
-  // Inteligências opcionais (0-100)
   int_intrapessoal?: number;
   int_interpessoal?: number;
   int_naturalista?: number;
@@ -30,11 +27,10 @@ interface ImportUser {
 
 interface ImportError {
   line: number;
-  email: string;
+  identifier: string;
   error: string;
 }
 
-// Mapeamento de campos para IDs de inteligência
 const INTELIGENCIAS_MAP = [
   { campo: 'int_linguistica', id: 1 },
   { campo: 'int_logico', id: 2 },
@@ -46,36 +42,31 @@ const INTELIGENCIAS_MAP = [
   { campo: 'int_intrapessoal', id: 8 },
 ];
 
-// Normaliza texto: remove acentos, apóstrofos, espaços, converte para minúsculas
 function normalizeText(text: string): string {
   return text
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-    .replace(/[''`]/g, '') // Remove apóstrofos
-    .replace(/\s+/g, '') // Remove espaços
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[''`]/g, '')
+    .replace(/\s+/g, '')
     .toLowerCase()
     .trim();
 }
 
-// Gera email no padrão nome.sobrenome@aluno.arboria.com
 function generateEmail(nome: string, sobrenome: string): string {
   const primeiroNome = normalizeText(nome.split(' ')[0]);
   const primeiroSobrenome = normalizeText(sobrenome.split(' ')[0]);
   return `${primeiroNome}.${primeiroSobrenome}@aluno.arboria.com`;
 }
 
-// Gera senha: sobrenome normalizado + 123
 function generatePassword(sobrenome: string): string {
   return normalizeText(sobrenome) + '123';
 }
 
-// Verifica se email já existe e gera alternativo se necessário
 async function getUniqueEmail(supabaseAdmin: any, baseEmail: string): Promise<string> {
   let email = baseEmail;
   let suffix = 1;
   
   while (true) {
-    // Verificar se o email já existe no Auth
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers({
       filter: `email.eq.${email}`,
       perPage: 1
@@ -85,15 +76,48 @@ async function getUniqueEmail(supabaseAdmin: any, baseEmail: string): Promise<st
       return email;
     }
     
-    // Se existe, adicionar sufixo numérico
     suffix++;
     const [localPart, domain] = baseEmail.split('@');
     email = `${localPart}${suffix}@${domain}`;
   }
 }
 
+// Garante que o aluno tenha os 8 scores de inteligência inicializados
+async function garantirScores(supabaseAdmin: any, alunoId: string, anoLetivo: number, inteligenciasFromCSV?: ImportUser) {
+  for (const int of INTELIGENCIAS_MAP) {
+    const valorCSV = inteligenciasFromCSV ? (inteligenciasFromCSV as any)[int.campo] || 0 : 0;
+    const scoreNormalizado = Math.min(100, Math.max(0, valorCSV || 35)); // Default 35 se não vier do CSV
+    
+    await supabaseAdmin
+      .from('inteligencia_scores')
+      .upsert({
+        aluno_id: alunoId,
+        inteligencia_id: int.id,
+        score_atual: scoreNormalizado,
+        ano_letivo: anoLetivo
+      }, {
+        onConflict: 'aluno_id,inteligencia_id,ano_letivo'
+      });
+  }
+}
+
+// Garante que o usuário tenha a role 'user'
+async function garantirRoleUser(supabaseAdmin: any, userId: string, role: string = 'user') {
+  const { data: existingRole } = await supabaseAdmin
+    .from('user_roles')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('role', role)
+    .maybeSingle();
+  
+  if (!existingRole) {
+    await supabaseAdmin
+      .from('user_roles')
+      .insert({ user_id: userId, role });
+  }
+}
+
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -102,7 +126,6 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    // Create admin client with service role key
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
@@ -110,45 +133,38 @@ Deno.serve(async (req: Request) => {
       }
     });
 
-    // Get the authorization header to verify the caller is an admin
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('No authorization header provided');
       return new Response(JSON.stringify({ error: 'Não autorizado' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Verify the caller is an admin
     const token = authHeader.replace('Bearer ', '');
     const { data: { user: caller }, error: authError } = await supabaseAdmin.auth.getUser(token);
     
     if (authError || !caller) {
-      console.error('Auth error:', authError);
       return new Response(JSON.stringify({ error: 'Não autorizado' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Check if caller has admin role
-    const { data: callerRoles, error: rolesError } = await supabaseAdmin
+    const { data: callerRoles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', caller.id)
       .eq('role', 'admin')
       .single();
 
-    if (rolesError || !callerRoles) {
-      console.error('Caller is not an admin:', rolesError);
+    if (!callerRoles) {
       return new Response(JSON.stringify({ error: 'Apenas administradores podem importar usuários' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Parse request body
     const { users, tipo } = await req.json() as { users: ImportUser[], tipo?: string };
 
     if (!users || !Array.isArray(users) || users.length === 0) {
@@ -158,70 +174,88 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    console.log(`Starting import of ${users.length} users (tipo: ${tipo || 'alunos'})`);
+    console.log(`[import-users] Iniciando lote de ${users.length} usuários (tipo: ${tipo || 'alunos'})`);
 
-    // Get current year for ano_letivo
     const anoLetivo = new Date().getFullYear();
-
     const errors: ImportError[] = [];
-    let successCount = 0;
+    let createdCount = 0;
+    let updatedCount = 0;
 
     for (let i = 0; i < users.length; i++) {
       const user = users[i];
-      const lineNumber = i + 2; // +2 because of header row and 0-indexing
+      const lineNumber = i + 2;
 
       try {
-        // Validate required fields
-        if (!user.nome || !user.nome.trim()) {
-          errors.push({ line: lineNumber, email: user.email || user.matricula || '', error: 'Nome é obrigatório' });
-          continue;
-        }
-        if (!user.sobrenome || !user.sobrenome.trim()) {
-          errors.push({ line: lineNumber, email: user.email || user.matricula || '', error: 'Sobrenome é obrigatório' });
-          continue;
-        }
-        if (!user.instituicao || !user.instituicao.trim()) {
-          errors.push({ line: lineNumber, email: user.email || user.matricula || '', error: 'Instituição é obrigatória' });
+        // Validações básicas
+        if (!user.nome?.trim() || !user.sobrenome?.trim() || !user.instituicao?.trim()) {
+          errors.push({ line: lineNumber, identifier: user.matricula || user.email || '', error: 'Nome, sobrenome e instituição são obrigatórios' });
           continue;
         }
 
-        // Institution ID is passed directly
         const institutionId = user.instituicao;
         const fullName = `${user.nome.trim()} ${user.sobrenome.trim()}`;
-
-        // Determine role based on tipo
         const userRole = tipo === 'professores' ? 'professor' : 'user';
         const isAluno = userRole === 'user';
 
-        // Generate or use provided email
+        // ========== LÓGICA DE UPSERT ==========
+        if (isAluno && user.matricula?.trim()) {
+          // Verificar se já existe aluno com esta matrícula nesta instituição
+          const { data: existingProfile } = await supabaseAdmin
+            .from('profiles')
+            .select('id')
+            .eq('matricula_externa', user.matricula.trim())
+            .eq('institution_id', institutionId)
+            .maybeSingle();
+
+          if (existingProfile) {
+            // ATUALIZAR aluno existente
+            console.log(`[import-users] Atualizando aluno existente: ${user.matricula}`);
+            
+            await supabaseAdmin
+              .from('profiles')
+              .update({
+                nome: user.nome.trim(),
+                sobrenome: user.sobrenome.trim(),
+                full_name: fullName,
+                serie: user.serie?.trim() || null,
+                turma: user.turma?.trim() || null,
+                segmento: user.segmento?.trim() || null,
+                casa_id: user.casa_id || null,
+              })
+              .eq('id', existingProfile.id);
+
+            // Garantir scores e role
+            await garantirScores(supabaseAdmin, existingProfile.id, anoLetivo, user);
+            await garantirRoleUser(supabaseAdmin, existingProfile.id, userRole);
+
+            updatedCount++;
+            continue;
+          }
+        }
+
+        // ========== CRIAR NOVO USUÁRIO ==========
         let email: string;
         if (isAluno) {
-          // For students, validate matricula and generate email
-          if (!user.matricula || !user.matricula.trim()) {
-            errors.push({ line: lineNumber, email: '', error: 'Matrícula é obrigatória para alunos' });
+          if (!user.matricula?.trim()) {
+            errors.push({ line: lineNumber, identifier: '', error: 'Matrícula é obrigatória para alunos' });
             continue;
           }
           const baseEmail = generateEmail(user.nome, user.sobrenome);
           email = await getUniqueEmail(supabaseAdmin, baseEmail);
         } else {
-          // For professors, email is required
-          if (!user.email || !user.email.trim()) {
-            errors.push({ line: lineNumber, email: '', error: 'Email é obrigatório para professores' });
+          if (!user.email?.trim()) {
+            errors.push({ line: lineNumber, identifier: '', error: 'Email é obrigatório para professores' });
             continue;
           }
           email = user.email.trim();
         }
 
-        // Generate password from surname
         const password = generatePassword(user.sobrenome);
-
-        // Validate password length
         if (password.length < 6) {
-          errors.push({ line: lineNumber, email, error: 'Sobrenome muito curto para gerar senha válida (mínimo 3 letras)' });
+          errors.push({ line: lineNumber, identifier: user.matricula || email, error: 'Sobrenome muito curto para gerar senha' });
           continue;
         }
 
-        // Create the user using admin API
         const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
           email,
           password,
@@ -241,14 +275,14 @@ Deno.serve(async (req: Request) => {
         });
 
         if (createError) {
-          console.error(`Error creating user ${email}:`, createError);
-          errors.push({ line: lineNumber, email, error: createError.message });
+          console.error(`[import-users] Erro ao criar ${email}:`, createError.message);
+          errors.push({ line: lineNumber, identifier: user.matricula || email, error: createError.message });
           continue;
         }
 
-        console.log(`User created: ${email} (${newUser.user.id})`);
+        console.log(`[import-users] Usuário criado: ${email}`);
 
-        // Update the profile with all fields
+        // Atualizar profile
         await supabaseAdmin
           .from('profiles')
           .update({ 
@@ -265,15 +299,14 @@ Deno.serve(async (req: Request) => {
           })
           .eq('id', newUser.user.id);
 
-        // Add user role
-        await supabaseAdmin
-          .from('user_roles')
-          .insert({
-            user_id: newUser.user.id,
-            role: userRole
-          });
+        // Garantir role e scores
+        await garantirRoleUser(supabaseAdmin, newUser.user.id, userRole);
 
-        // If professor with casa_id, create professor_casa link
+        if (isAluno) {
+          await garantirScores(supabaseAdmin, newUser.user.id, anoLetivo, user);
+        }
+
+        // Link professor-casa se aplicável
         if (userRole === 'professor' && user.casa_id) {
           await supabaseAdmin
             .from('professor_casa')
@@ -287,48 +320,28 @@ Deno.serve(async (req: Request) => {
             });
         }
 
-        // Insert intelligence scores if provided (for alunos only)
-        if (isAluno) {
-          for (const int of INTELIGENCIAS_MAP) {
-            const valor = (user as any)[int.campo] || 0;
-            if (valor > 0) {
-              const scoreNormalizado = Math.min(100, Math.max(0, valor));
-              
-              await supabaseAdmin
-                .from('inteligencia_scores')
-                .upsert({
-                  aluno_id: newUser.user.id,
-                  inteligencia_id: int.id,
-                  score_atual: scoreNormalizado,
-                  ano_letivo: anoLetivo
-                }, {
-                  onConflict: 'aluno_id,inteligencia_id,ano_letivo'
-                });
-            }
-          }
-        }
-
-        successCount++;
+        createdCount++;
       } catch (error) {
-        console.error(`Unexpected error for user ${user.email || user.matricula}:`, error);
-        errors.push({ line: lineNumber, email: user.email || user.matricula || '', error: 'Erro inesperado' });
+        console.error(`[import-users] Erro inesperado para ${user.matricula || user.email}:`, error);
+        errors.push({ line: lineNumber, identifier: user.matricula || user.email || '', error: 'Erro inesperado' });
       }
     }
 
-    console.log(`Import completed: ${successCount} success, ${errors.length} errors`);
+    console.log(`[import-users] Lote concluído: ${createdCount} criados, ${updatedCount} atualizados, ${errors.length} erros`);
 
     return new Response(JSON.stringify({ 
       success: true, 
       total: users.length,
-      success_count: successCount,
-      errors: errors.map(e => `Linha ${e.line}: ${e.email} - ${e.error}`)
+      criados: createdCount,
+      atualizados: updatedCount,
+      errors: errors.map(e => `Linha ${e.line}: ${e.identifier} - ${e.error}`)
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('[import-users] Erro fatal:', error);
     return new Response(JSON.stringify({ error: 'Erro interno do servidor' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
