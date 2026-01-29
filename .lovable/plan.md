@@ -1,75 +1,100 @@
 
-# Plano: Corrigir Atualização da Lista Após Importação
+# Plano: Corrigir Inserção de Roles na Importação
 
-## Diagnóstico
+## Problema Identificado
 
-Após analisar os logs e o código, identifiquei que:
+Os logs mostram o erro:
+```
+Erro ao inserir roles: invalid input syntax for type smallint: ""
+```
 
-1. **A importação está funcionando corretamente** - os logs mostram:
-   ```
-   [import-alunos-rapido] Concluído: 0 criados, 92 atualizados, 0 erros
-   ```
+### Diagnóstico
 
-2. **O modal fecha automaticamente** após sucesso (linha 313)
+1. **95 profiles existem no banco** ✅
+2. **0 registros em `user_roles` com role='user'** ❌
+3. **A query da lista cruza profiles com user_roles** - sem roles, nenhum aluno aparece
 
-3. **O problema real**: a lista de alunos não é atualizada porque falta invalidar o cache do React Query após a importação
+### Causa Raiz
 
-## Causa Raiz
+O código de upsert está usando:
+```typescript
+.upsert(rolesData, { onConflict: 'user_id,role' })
+```
 
-O `ModalImportarCSV` não invalida a query `admin-alunos` após importar. Por isso:
-- A importação funciona
-- O modal fecha
-- O toast de sucesso aparece
-- **Mas a lista continua mostrando os dados antigos**
-
-Outros modais como `ModalExcluirAlunosMassa` e `ModalGerarContas` fazem isso corretamente via callback `onSuccess`.
+O Supabase SDK interpreta incorretamente o parâmetro `onConflict` com múltiplas colunas como string. Isso causa uma tentativa de cast inválido gerando o erro de `smallint`.
 
 ## Solução
 
-Adicionar prop `onSuccess` ao `ModalImportarCSV` para invalidar o cache após importação.
+Mudar para um insert simples em vez de upsert (já que são registros novos), e tratar conflitos via `ignoreDuplicates`:
 
-### Mudanças no Código
-
-**Arquivo: `src/components/admin/ModalImportarCSV.tsx`**
-
-1. Adicionar prop `onSuccess` opcional:
 ```typescript
-interface ModalImportarCSVProps {
-  tipo: 'alunos' | 'professores';
-  institutionId: string;
-  onClose: () => void;
-  onSuccess?: () => void;  // NOVO
+const { error: rolesError } = await supabaseAdmin
+  .from('user_roles')
+  .insert(rolesData)
+  .select();
+```
+
+## Mudanças Necessárias
+
+**Arquivo:** `supabase/functions/import-alunos-rapido/index.ts`
+
+### 1. Corrigir inserção de roles (linhas 256-268)
+
+**De:**
+```typescript
+const rolesData = successfulUsers.map(u => ({
+  user_id: u.authId,
+  role: 'user' as const
+}));
+
+const { error: rolesError } = await supabaseAdmin
+  .from('user_roles')
+  .upsert(rolesData, { onConflict: 'user_id,role' });
+```
+
+**Para:**
+```typescript
+// Inserir roles um por um para evitar problemas com enum
+for (const user of successfulUsers) {
+  const { error: roleError } = await supabaseAdmin
+    .from('user_roles')
+    .insert({ 
+      user_id: user.authId, 
+      role: 'user' 
+    });
+  
+  if (roleError) {
+    console.error(`[import-alunos-rapido] Erro role ${user.authId}:`, roleError);
+  }
 }
 ```
 
-2. Chamar `onSuccess` após importação bem-sucedida:
-```typescript
-if ((data?.errors?.length || 0) === 0) {
-  toast.success(`${total} alunos importados!...`);
-  onSuccess?.();  // NOVO - chamar antes de fechar
-  onClose();
-}
+### 2. Adicionar script para corrigir alunos já importados
+
+Depois da correção, rodar uma query para inserir os roles dos 95 alunos que já existem:
+
+```sql
+INSERT INTO user_roles (user_id, role)
+SELECT p.id, 'user'::app_role
+FROM profiles p
+WHERE p.institution_id = '902876e9-b263-4c01-9013-aeef7b6d24e1'
+  AND NOT EXISTS (
+    SELECT 1 FROM user_roles ur WHERE ur.user_id = p.id
+  );
 ```
 
-**Arquivo: `src/pages/admin/PessoasPage.tsx`**
+## Fluxo Após Correção
 
-3. Passar callback para invalidar queries:
-```typescript
-<ModalImportarCSV
-  tipo={tabAtiva === 'professores' ? 'professores' : 'alunos'}
-  institutionId={institutionId}
-  onClose={() => setModalImportarAberto(false)}
-  onSuccess={() => {
-    queryClient.invalidateQueries({ queryKey: ['admin-alunos'] });
-    queryClient.invalidateQueries({ queryKey: ['admin-professores'] });
-  }}
-/>
-```
+1. Atualizar a Edge Function com insert individual
+2. Executar migration para corrigir os 95 alunos existentes
+3. A lista mostrará os alunos imediatamente
+
+## Arquivos a Modificar
+
+1. **`supabase/functions/import-alunos-rapido/index.ts`** - Corrigir lógica de insert de roles
+2. **Migration SQL** - Inserir roles para alunos já importados
 
 ## Resultado Esperado
 
-Após a correção:
-1. Importação executa (como já está funcionando)
-2. Modal fecha automaticamente 
-3. Toast de sucesso aparece
-4. **Lista de alunos atualiza imediatamente** mostrando os 92 alunos
+- Os 95 alunos aparecerão na lista imediatamente após a migration
+- Novas importações criarão os roles corretamente
