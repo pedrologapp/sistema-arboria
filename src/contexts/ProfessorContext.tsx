@@ -41,6 +41,13 @@ interface FaseCasaMentor {
   inteligencia_id: number;
 }
 
+interface TurmaVinculada {
+  id: string;
+  nome: string;
+  serie: number;
+  turma_letra: string;
+}
+
 interface ProfessorContextType {
   profile: Profile | null;
   casaMentor: Inteligencia | null;
@@ -49,6 +56,7 @@ interface ProfessorContextType {
   faseAtual: FaseAtual | null;
   faseCasaMentor: FaseCasaMentor | null;
   segmento: Segmento | null;
+  turmasVinculadas: TurmaVinculada[] | null;
   isLoading: boolean;
   error: string | null;
   refreshData: () => Promise<void>;
@@ -75,6 +83,7 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
   const [institutionName, setInstitutionName] = useState<string | null>(null);
   const [faseAtual, setFaseAtual] = useState<FaseAtual | null>(null);
   const [faseCasaMentor, setFaseCasaMentor] = useState<FaseCasaMentor | null>(null);
+  const [turmasVinculadas, setTurmasVinculadas] = useState<TurmaVinculada[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -195,6 +204,38 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
             setFaseCasaMentor(faseProfData);
           }
         }
+
+        // 6. Fetch turmas vinculadas (para Infantil/F1)
+        if (profileData.segmento === 'infantil' || profileData.segmento === 'fundamental1') {
+          const { data: turmasData, error: turmasError } = await supabase
+            .from('professor_turma')
+            .select(`
+              turma_id,
+              turmas!inner (
+                id,
+                nome,
+                serie,
+                turma_letra
+              )
+            `)
+            .eq('professor_id', user.id)
+            .eq('ativo', true);
+
+          if (turmasError) {
+            console.error('Error fetching turmas vinculadas:', turmasError);
+          } else if (turmasData) {
+            const turmas = turmasData.map(t => {
+              const turma = t.turmas as unknown as TurmaVinculada;
+              return {
+                id: turma.id,
+                nome: turma.nome,
+                serie: turma.serie,
+                turma_letra: turma.turma_letra
+              };
+            });
+            setTurmasVinculadas(turmas);
+          }
+        }
       }
     } catch (err) {
       console.error('Error fetching professor data:', err);
@@ -218,6 +259,7 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
     faseAtual,
     faseCasaMentor,
     segmento: profile?.segmento || null,
+    turmasVinculadas,
     isLoading,
     error,
     refreshData: fetchProfessorData

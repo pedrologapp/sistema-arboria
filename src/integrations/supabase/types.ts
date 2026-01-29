@@ -2413,6 +2413,54 @@ export type Database = {
           },
         ]
       }
+      professor_turma: {
+        Row: {
+          ano_letivo: number
+          ativo: boolean | null
+          created_at: string | null
+          eh_regente: boolean | null
+          id: string
+          institution_id: string
+          professor_id: string
+          turma_id: string
+        }
+        Insert: {
+          ano_letivo?: number
+          ativo?: boolean | null
+          created_at?: string | null
+          eh_regente?: boolean | null
+          id?: string
+          institution_id: string
+          professor_id: string
+          turma_id: string
+        }
+        Update: {
+          ano_letivo?: number
+          ativo?: boolean | null
+          created_at?: string | null
+          eh_regente?: boolean | null
+          id?: string
+          institution_id?: string
+          professor_id?: string
+          turma_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professor_turma_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professor_turma_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -3002,6 +3050,7 @@ export type Database = {
           titulo: string
         }[]
       }
+      get_professor_turma_ids: { Args: never; Returns: string[] }
       get_user_institution_id: { Args: never; Returns: string }
       has_role: {
         Args: {
