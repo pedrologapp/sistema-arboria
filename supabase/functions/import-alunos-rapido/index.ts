@@ -23,6 +23,12 @@ interface AlunoImport {
   int_musical?: number;
 }
 
+interface SuccessfulUser {
+  authId: string;
+  aluno: AlunoImport;
+  email: string;
+}
+
 const INTELIGENCIAS_MAP = [
   { campo: 'int_linguistica', id: 1 },
   { campo: 'int_logico', id: 2 },
@@ -49,6 +55,10 @@ function generateDeterministicEmail(nome: string, sobrenome: string, matricula: 
   const primeiroSobrenome = normalizeText(sobrenome.split(' ')[0]);
   const matriculaNorm = matricula.replace(/[^a-zA-Z0-9]/g, '');
   return `${primeiroNome}.${primeiroSobrenome}.${matriculaNorm}@aluno.arboria.com`;
+}
+
+function generatePassword(sobrenome: string): string {
+  return normalizeText(sobrenome.split(' ')[0]) + '123';
 }
 
 Deno.serve(async (req: Request) => {
@@ -110,165 +120,209 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    console.log(`[import-alunos-rapido] Iniciando importação de ${alunos.length} alunos`);
+    console.log(`[import-alunos-rapido] Iniciando importação de ${alunos.length} alunos com Auth paralelo`);
 
     const anoLetivo = new Date().getFullYear();
-    let criados = 0;
-    let atualizados = 0;
     const errors: string[] = [];
+    const successfulUsers: SuccessfulUser[] = [];
+    const updatedUsers: { id: string; aluno: AlunoImport; email: string }[] = [];
 
     // Buscar matrículas existentes para upsert
     const matriculas = alunos.map(a => a.matricula.trim());
     const { data: existingProfiles } = await supabaseAdmin
       .from('profiles')
-      .select('id, matricula_externa')
+      .select('id, matricula_externa, email_gerado')
       .eq('institution_id', institutionId)
       .in('matricula_externa', matriculas);
 
-    const existingMap = new Map(existingProfiles?.map(p => [p.matricula_externa, p.id]) || []);
+    const existingMap = new Map(existingProfiles?.map(p => [p.matricula_externa, p]) || []);
 
-    // Preparar dados para inserção/atualização em batch
-    const profilesToInsert: any[] = [];
-    const profilesToUpdate: { id: string; data: any }[] = [];
-    const rolesData: { user_id: string; role: string }[] = [];
-    const scoresData: { aluno_id: string; inteligencia_id: number; score_atual: number; ano_letivo: number }[] = [];
+    // Separar alunos novos dos existentes
+    const alunosNovos: AlunoImport[] = [];
+    const alunosExistentes: { aluno: AlunoImport; profileId: string }[] = [];
 
-    for (let i = 0; i < alunos.length; i++) {
-      const aluno = alunos[i];
-      const lineNumber = i + 2;
-
-      // Validações básicas
+    for (const aluno of alunos) {
       if (!aluno.matricula?.trim() || !aluno.nome?.trim() || !aluno.sobrenome?.trim()) {
-        errors.push(`Linha ${lineNumber}: Matrícula, nome e sobrenome são obrigatórios`);
+        errors.push(`Matrícula ${aluno.matricula || 'vazia'}: dados incompletos`);
         continue;
       }
 
-      const matricula = aluno.matricula.trim();
-      const fullName = `${aluno.nome.trim()} ${aluno.sobrenome.trim()}`;
-      const emailGerado = generateDeterministicEmail(aluno.nome, aluno.sobrenome, matricula);
-
-      const existingId = existingMap.get(matricula);
-
-      if (existingId) {
-        // ATUALIZAR existente
-        profilesToUpdate.push({
-          id: existingId,
-          data: {
-            nome: aluno.nome.trim(),
-            sobrenome: aluno.sobrenome.trim(),
-            full_name: fullName,
-            serie: aluno.serie?.trim() || null,
-            turma: aluno.turma?.trim() || null,
-            segmento: aluno.segmento?.trim() || null,
-            casa_id: aluno.casa_id || null,
-            email_gerado: emailGerado,
-          }
-        });
-        atualizados++;
-
-        // Atualizar scores se fornecidos
-        for (const int of INTELIGENCIAS_MAP) {
-          const valor = (aluno as any)[int.campo] || 0;
-          if (valor > 0) {
-            scoresData.push({
-              aluno_id: existingId,
-              inteligencia_id: int.id,
-              score_atual: Math.min(100, Math.max(0, valor)),
-              ano_letivo: anoLetivo
-            });
-          }
-        }
+      const existing = existingMap.get(aluno.matricula.trim());
+      if (existing) {
+        alunosExistentes.push({ aluno, profileId: existing.id });
       } else {
-        // CRIAR novo - gerar UUID
-        const newId = crypto.randomUUID();
+        alunosNovos.push(aluno);
+      }
+    }
+
+    console.log(`[import-alunos-rapido] ${alunosNovos.length} novos, ${alunosExistentes.length} existentes`);
+
+    // FASE 1: Criar contas Auth para alunos NOVOS em paralelo (lotes de 10)
+    const BATCH_SIZE = 10;
+    
+    for (let i = 0; i < alunosNovos.length; i += BATCH_SIZE) {
+      const batch = alunosNovos.slice(i, i + BATCH_SIZE);
+      
+      const results = await Promise.allSettled(
+        batch.map(async (aluno) => {
+          const email = generateDeterministicEmail(aluno.nome, aluno.sobrenome, aluno.matricula);
+          const password = generatePassword(aluno.sobrenome);
+          
+          if (password.length < 6) {
+            throw new Error(`Sobrenome muito curto: ${aluno.sobrenome}`);
+          }
+
+          const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: {
+              nome: aluno.nome,
+              sobrenome: aluno.sobrenome,
+              full_name: `${aluno.nome} ${aluno.sobrenome}`,
+              institution_id: institutionId,
+              must_change_password: true
+            }
+          });
+
+          if (createError) {
+            throw new Error(createError.message);
+          }
+
+          return {
+            authId: newUser.user.id,
+            aluno,
+            email
+          };
+        })
+      );
+
+      // Processar resultados do lote
+      for (let j = 0; j < results.length; j++) {
+        const result = results[j];
+        const aluno = batch[j];
         
-        profilesToInsert.push({
-          id: newId,
-          nome: aluno.nome.trim(),
-          sobrenome: aluno.sobrenome.trim(),
-          full_name: fullName,
-          institution_id: institutionId,
-          serie: aluno.serie?.trim() || null,
-          turma: aluno.turma?.trim() || null,
-          segmento: aluno.segmento?.trim() || null,
-          casa_id: aluno.casa_id || null,
-          matricula_externa: matricula,
-          email_gerado: emailGerado,
-          conta_criada: false,
-          must_change_password: true,
-        });
+        if (result.status === 'fulfilled') {
+          successfulUsers.push(result.value);
+        } else {
+          errors.push(`${aluno.nome} ${aluno.sobrenome}: ${result.reason?.message || 'Erro desconhecido'}`);
+        }
+      }
 
-        // Preparar role
-        rolesData.push({ user_id: newId, role: 'user' });
+      console.log(`[import-alunos-rapido] Lote ${Math.floor(i / BATCH_SIZE) + 1}: ${successfulUsers.length} criados`);
+    }
 
-        // Preparar scores iniciais (35 ou valor do CSV)
+    // FASE 2: Atualizar profiles criados pelo trigger handle_new_user
+    if (successfulUsers.length > 0) {
+      for (const user of successfulUsers) {
+        const { error: updateError } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            nome: user.aluno.nome.trim(),
+            sobrenome: user.aluno.sobrenome.trim(),
+            full_name: `${user.aluno.nome.trim()} ${user.aluno.sobrenome.trim()}`,
+            institution_id: institutionId,
+            serie: user.aluno.serie?.trim() || null,
+            turma: user.aluno.turma?.trim() || null,
+            segmento: user.aluno.segmento?.trim() || null,
+            casa_id: user.aluno.casa_id || null,
+            matricula_externa: user.aluno.matricula.trim(),
+            email_gerado: user.email,
+            conta_criada: true,
+            must_change_password: true,
+          })
+          .eq('id', user.authId);
+
+        if (updateError) {
+          console.error(`[import-alunos-rapido] Erro ao atualizar profile ${user.authId}:`, updateError);
+        }
+      }
+
+      // FASE 3: Inserir roles em batch
+      const rolesData = successfulUsers.map(u => ({
+        user_id: u.authId,
+        role: 'user' as const
+      }));
+
+      const { error: rolesError } = await supabaseAdmin
+        .from('user_roles')
+        .upsert(rolesData, { onConflict: 'user_id,role' });
+
+      if (rolesError) {
+        console.error('[import-alunos-rapido] Erro ao inserir roles:', rolesError);
+      }
+
+      // FASE 4: Inserir scores em batch
+      const scoresData: { aluno_id: string; inteligencia_id: number; score_atual: number; ano_letivo: number }[] = [];
+      
+      for (const user of successfulUsers) {
         for (const int of INTELIGENCIAS_MAP) {
-          const valor = (aluno as any)[int.campo] || 35;
+          const valor = (user.aluno as any)[int.campo] || 35;
           scoresData.push({
-            aluno_id: newId,
+            aluno_id: user.authId,
             inteligencia_id: int.id,
             score_atual: Math.min(100, Math.max(0, valor)),
             ano_letivo: anoLetivo
           });
         }
-
-        criados++;
       }
-    }
 
-    // Executar inserções em batch
-    if (profilesToInsert.length > 0) {
-      const { error: insertError } = await supabaseAdmin
-        .from('profiles')
-        .insert(profilesToInsert);
-      
-      if (insertError) {
-        console.error('[import-alunos-rapido] Erro ao inserir profiles:', insertError);
-        errors.push(`Erro ao inserir profiles: ${insertError.message}`);
-      }
-    }
-
-    // Executar atualizações (uma por uma, pois Supabase não suporta batch update)
-    for (const update of profilesToUpdate) {
-      const { error: updateError } = await supabaseAdmin
-        .from('profiles')
-        .update(update.data)
-        .eq('id', update.id);
-      
-      if (updateError) {
-        console.error(`[import-alunos-rapido] Erro ao atualizar ${update.id}:`, updateError);
-      }
-    }
-
-    // Inserir roles em batch
-    if (rolesData.length > 0) {
-      const { error: rolesError } = await supabaseAdmin
-        .from('user_roles')
-        .upsert(rolesData, { onConflict: 'user_id,role' });
-      
-      if (rolesError) {
-        console.error('[import-alunos-rapido] Erro ao inserir roles:', rolesError);
-      }
-    }
-
-    // Inserir scores em batch
-    if (scoresData.length > 0) {
       const { error: scoresError } = await supabaseAdmin
         .from('inteligencia_scores')
         .upsert(scoresData, { onConflict: 'aluno_id,inteligencia_id,ano_letivo' });
-      
+
       if (scoresError) {
         console.error('[import-alunos-rapido] Erro ao inserir scores:', scoresError);
       }
     }
 
-    console.log(`[import-alunos-rapido] Concluído: ${criados} criados, ${atualizados} atualizados, ${errors.length} erros`);
+    // FASE 5: Atualizar alunos existentes
+    for (const { aluno, profileId } of alunosExistentes) {
+      const email = generateDeterministicEmail(aluno.nome, aluno.sobrenome, aluno.matricula);
+      
+      const { error: updateError } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          nome: aluno.nome.trim(),
+          sobrenome: aluno.sobrenome.trim(),
+          full_name: `${aluno.nome.trim()} ${aluno.sobrenome.trim()}`,
+          serie: aluno.serie?.trim() || null,
+          turma: aluno.turma?.trim() || null,
+          segmento: aluno.segmento?.trim() || null,
+          casa_id: aluno.casa_id || null,
+          email_gerado: email,
+        })
+        .eq('id', profileId);
+
+      if (updateError) {
+        errors.push(`Atualização ${aluno.nome}: ${updateError.message}`);
+      } else {
+        updatedUsers.push({ id: profileId, aluno, email });
+      }
+
+      // Atualizar scores se fornecidos
+      for (const int of INTELIGENCIAS_MAP) {
+        const valor = (aluno as any)[int.campo];
+        if (valor && valor > 0) {
+          await supabaseAdmin
+            .from('inteligencia_scores')
+            .upsert({
+              aluno_id: profileId,
+              inteligencia_id: int.id,
+              score_atual: Math.min(100, Math.max(0, valor)),
+              ano_letivo: anoLetivo
+            }, { onConflict: 'aluno_id,inteligencia_id,ano_letivo' });
+        }
+      }
+    }
+
+    console.log(`[import-alunos-rapido] Concluído: ${successfulUsers.length} criados, ${updatedUsers.length} atualizados, ${errors.length} erros`);
 
     return new Response(JSON.stringify({ 
       success: true, 
       total: alunos.length,
-      criados,
-      atualizados,
+      criados: successfulUsers.length,
+      atualizados: updatedUsers.length,
       errors
     }), {
       status: 200,
