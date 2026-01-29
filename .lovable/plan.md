@@ -1,201 +1,158 @@
 
-# Plano: Importação Robusta de Alunos em Lotes
+# Plano: Importação Rápida de Alunos (Sem Criação de Conta Auth)
 
-## Problema Identificado
+## Contexto do Problema
 
-A Edge Function `import-users` tem 3 problemas críticos:
+A Edge Function atual está lenta porque:
+1. **Cria conta Auth para cada aluno** - operação lenta (~2-3s cada)
+2. **Gera email único verificando colisões** - múltiplas queries
+3. **A função falha por timeout** antes de completar
 
-1. **Timeout**: Processa sequencialmente (~7 operações/aluno), causando timeout em ~60 alunos
-2. **Sem UPSERT**: Não verifica se aluno já existe pela matrícula antes de criar
-3. **Sem progresso**: Usuário não sabe quantos foram processados se der erro
+## Nova Estratégia: Importação em 2 Fases
 
----
+Com base nas suas respostas:
+- **Não precisa de login imediato** após importação
+- **Email usa matrícula** para ser determinístico e evitar colisões
 
-## Solução Proposta: Processamento em Lotes no Frontend
-
-Em vez de enviar todos os alunos de uma vez para a Edge Function, o frontend divide em lotes menores e processa sequencialmente com feedback visual.
+A solução é importar os dados cadastrais diretamente no banco (sem criar conta Auth), e ter um botão separado para "Gerar Contas" quando necessário.
 
 ```text
 ┌──────────────────────────────────────────────────────────────────┐
 │                    NOVA ARQUITETURA                              │
 ├──────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  FRONTEND (ModalImportarCSV.tsx)                                 │
-│  ├─ Divide 92 alunos em lotes de 20                              │
-│  ├─ Envia lote 1 (1-20) → aguarda resposta                       │
-│  ├─ Atualiza barra de progresso: 20/92                           │
-│  ├─ Envia lote 2 (21-40) → aguarda resposta                      │
-│  ├─ Atualiza barra de progresso: 40/92                           │
-│  ├─ ... continua até completar                                   │
-│  └─ Mostra resultado final consolidado                           │
+│  FASE 1: IMPORTAÇÃO RÁPIDA (segundos)                            │
+│  ├─ Insere dados diretamente na tabela profiles                  │
+│  ├─ Usa SQL batch (INSERT ... ON CONFLICT para upsert)           │
+│  ├─ NÃO cria conta Auth (sem email/senha)                        │
+│  ├─ Alunos aparecem na lista imediatamente                       │
+│  └─ Velocidade: ~500 alunos/segundo                              │
 │                                                                  │
-│  EDGE FUNCTION (import-users)                                    │
-│  ├─ Recebe lote de 20 alunos                                     │
-│  ├─ Para cada aluno:                                             │
-│  │   ├─ Verifica se existe pela matricula_externa                │
-│  │   ├─ SE EXISTE: atualiza dados (UPSERT)                       │
-│  │   └─ SE NÃO EXISTE: cria novo usuário                         │
-│  └─ Retorna resultado do lote                                    │
+│  FASE 2: GERAÇÃO DE CONTAS (separado, opcional)                  │
+│  ├─ Botão "Gerar Contas" na tela de Pessoas                      │
+│  ├─ Processa em background ou lotes pequenos                     │
+│  ├─ Cria Auth user para cada aluno sem conta                     │
+│  └─ Pode ser feito por segmento ou turma                         │
 │                                                                  │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
----
+## Mudanças Técnicas
 
-## Mudanças Necessárias
+### 1. Edge Function `import-alunos-rapido` (nova)
 
-### 1. Frontend: `ModalImportarCSV.tsx`
+Uma função simplificada que:
+- Recebe array de alunos
+- Usa SQL batch para inserir/atualizar profiles
+- Gera UUID para cada aluno (id do profile)
+- Adiciona role 'user' em user_roles
+- Inicializa inteligencia_scores
+- **Não toca no Auth** (sem email/senha)
 
-**Novo fluxo de importação em lotes:**
+**Formato do email (determinístico):**
+```
+nome.sobrenome.matricula@aluno.arboria.com
+```
+Exemplo: `joao.silva.22672026@aluno.arboria.com`
 
-- Adicionar estado para progresso (`processados`, `totalLotes`, `loteAtual`)
-- Dividir dados em lotes de 20 alunos
-- Processar lotes sequencialmente com `for await`
-- Mostrar barra de progresso visual durante importação
-- Acumular resultados de cada lote
-- Permitir continuar mesmo se um lote falhar
+### 2. Tabela profiles
 
-**Novo estado:**
-```typescript
-const [progresso, setProgresso] = useState({
-  processados: 0,
-  total: 0,
-  loteAtual: 0,
-  totalLotes: 0,
-  sucessos: 0,
-  erros: [] as string[]
-});
+Os alunos ficarão na tabela profiles com:
+- `id`: UUID gerado (não vinculado ao Auth ainda)
+- `matricula_externa`: matrícula do arquivo
+- `email_gerado`: email determinístico (para uso futuro)
+- `conta_criada`: boolean indicando se já tem Auth
+
+### 3. Edge Function `gerar-contas-alunos` (nova)
+
+Para quando quiser criar logins:
+- Recebe filtro (segmento, turma, ou IDs específicos)
+- Para cada aluno sem conta:
+  - Cria Auth user com email_gerado
+  - Atualiza id do profile para vincular ao Auth
+  - Marca conta_criada = true
+
+### 4. Frontend `ModalImportarCSV.tsx`
+
+Simplifica drasticamente:
+- Envia todos os dados de uma vez (sem lotes)
+- Função retorna em segundos
+- Mostra resultado imediato
+
+### 5. UI: Botão "Gerar Contas"
+
+Na tela de Pessoas, após importar:
+- Mostra quantos alunos não têm conta
+- Botão "Gerar Contas (92 alunos)" 
+- Processa em background com progresso
+
+## Esquema Visual do Fluxo
+
+```text
+ANTES (lento):
+Excel → Frontend → Edge Function → [Auth + Profile + Role + Scores] × N
+                                    ↑ 3 segundos cada = TIMEOUT
+
+DEPOIS (rápido):
+Excel → Frontend → Edge Function → SQL Batch [Profiles + Roles + Scores]
+                                    ↑ 0.5 segundos TOTAL para 500 alunos
+
+Depois (quando precisar):
+Botão "Gerar Contas" → Edge Function → [Auth × N em lotes]
 ```
 
-**Nova UI de progresso:**
-- Barra de progresso animada
-- Contador: "Processando lote 3 de 5..."
-- Contador: "45/92 alunos processados"
+## Arquivos a Criar/Modificar
 
-### 2. Edge Function: `import-users/index.ts`
+### Novos Arquivos
 
-**Adicionar lógica de UPSERT por matrícula:**
+1. `supabase/functions/import-alunos-rapido/index.ts`
+   - SQL batch insert/upsert
+   - Gera UUIDs e email determinístico
+   - Insere roles e scores em batch
 
-```typescript
-// ANTES de criar usuário:
-// 1. Verificar se já existe profile com esta matricula_externa + institution_id
-const { data: existingProfile } = await supabaseAdmin
-  .from('profiles')
-  .select('id')
-  .eq('matricula_externa', user.matricula)
-  .eq('institution_id', institutionId)
-  .maybeSingle();
+2. `supabase/functions/gerar-contas-alunos/index.ts`
+   - Cria Auth users para alunos existentes
+   - Processa em lotes pequenos
+   - Retorna progresso
 
-if (existingProfile) {
-  // ATUALIZAR dados do aluno existente
-  await supabaseAdmin
-    .from('profiles')
-    .update({ nome, sobrenome, serie, turma, segmento, ... })
-    .eq('id', existingProfile.id);
-  
-  // Garantir scores e role
-  await garantirScores(supabaseAdmin, existingProfile.id, anoLetivo);
-  await garantirRoleUser(supabaseAdmin, existingProfile.id);
-  
-  updatedCount++;
-} else {
-  // CRIAR novo usuário (fluxo atual)
-  createdCount++;
-}
-```
+### Modificar
 
-**Novo retorno com métricas detalhadas:**
-```typescript
-return {
-  success: true,
-  total: users.length,
-  criados: createdCount,
-  atualizados: updatedCount,
-  erros: errors
-}
-```
+1. `src/components/admin/ModalImportarCSV.tsx`
+   - Chama nova função `import-alunos-rapido`
+   - Remove lógica de lotes (não precisa mais)
+   - Resultado instantâneo
 
-### 3. Limpar Alunos Órfãos
+2. `src/pages/admin/PessoasPage.tsx`
+   - Adiciona contador de "alunos sem conta"
+   - Botão "Gerar Contas" que abre modal de progresso
 
-Antes de testar, precisamos limpar os 60 alunos que foram criados parcialmente:
+### Banco de Dados
 
-```sql
--- Deletar todos os profiles do infantil desta instituição
--- para começar do zero (via dashboard Lovable Cloud)
-```
+1. Adicionar coluna `email_gerado` na tabela profiles
+2. Adicionar coluna `conta_criada` (boolean, default false)
+3. Índice em `email_gerado` para lookup rápido
 
----
+## Benefícios
 
-## Benefícios da Solução
-
-| Métrica | Antes | Depois |
-|---------|-------|--------|
-| **Alunos por lote** | 92 (todos) | 20 |
-| **Timeout** | Frequente | Nunca |
-| **Feedback** | Nenhum | Barra de progresso |
-| **Duplicatas** | Erro | UPSERT automático |
-| **Recuperação** | Perdido | Continua do lote |
-| **Escala** | ~60 max | 2000+ |
-
----
-
-## Arquivos a Modificar
-
-### Arquivo 1: `src/components/admin/ModalImportarCSV.tsx`
-
-- Adicionar estados de progresso
-- Nova função `processarEmLotes()` que divide array e processa
-- Nova UI com barra de progresso durante importação
-- Acumular resultados de múltiplos lotes
-- Mostrar resultados finais consolidados
-
-### Arquivo 2: `supabase/functions/import-users/index.ts`
-
-- Importar lógica de UPSERT do `sync-alunos-pull`
-- Verificar matrícula antes de criar usuário
-- Atualizar dados se aluno já existir
-- Retornar contadores separados (criados vs atualizados)
-- Manter funções auxiliares `garantirScores` e `garantirRoleUser`
-
----
+| Métrica | Atual | Nova Solução |
+|---------|-------|--------------|
+| **92 alunos** | ~5 min + timeout | < 2 segundos |
+| **2000 alunos** | Impossível | < 10 segundos |
+| **Colisão de email** | Verificação lenta | Zero (matrícula única) |
+| **Feedback** | Lotes com falhas | Instantâneo |
+| **Contas Auth** | Criadas na hora | Sob demanda |
 
 ## Fluxo de Teste
 
-1. Limpar alunos existentes do teste (60 do infantil)
-2. Fazer upload do Excel com 92 alunos
-3. Observar barra de progresso: "Lote 1/5 - 20/92 processados"
-4. Verificar resultado: "92 alunos importados (92 criados, 0 atualizados)"
-5. Reimportar mesmo arquivo
-6. Verificar: "92 alunos importados (0 criados, 92 atualizados)"
+1. Upload do Excel com 92 alunos
+2. Clique em "Importar" → sucesso em 2 segundos
+3. Lista mostra 92 alunos imediatamente
+4. Badge: "92 alunos sem conta de acesso"
+5. Botão "Gerar Contas" → processa quando quiser
 
----
+## Considerações de Segurança
 
-## Considerações Técnicas
-
-### Tamanho do Lote
-
-- **20 alunos por lote**: Margem segura para o timeout de 60s
-- Cada aluno leva ~2-3s (Auth + Profile + Role + Scores)
-- 20 × 3s = 60s máximo, mas geralmente menos
-
-### Tratamento de Erros
-
-- Se um lote falhar, os anteriores já foram salvos
-- Usuário pode tentar novamente (UPSERT não duplica)
-- Erros são acumulados e mostrados no final
-
-### Paralelização Futura
-
-- Esta solução usa processamento sequencial por segurança
-- Pode ser otimizada no futuro com Promise.all dentro do lote
-- Mantém simplicidade e debugging fácil
-
----
-
-## Resumo da Implementação
-
-| Componente | Mudança |
-|------------|---------|
-| `ModalImportarCSV.tsx` | Processamento em lotes de 20 + barra de progresso |
-| `import-users/index.ts` | UPSERT por matrícula + métricas detalhadas |
-| Banco de dados | Limpar 60 alunos de teste antes de reimportar |
+- Alunos sem conta Auth não conseguem fazer login
+- Apenas admins podem gerar contas
+- Email determinístico evita conflitos
+- Senha continua sendo sobrenome + 123
