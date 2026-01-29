@@ -108,11 +108,11 @@ const CirculoTurmaDirectPage = () => {
 
       {/* Loading */}
       {isLoading && (
-        <div className="grid grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className="flex flex-col items-center gap-2">
-              <div className="w-20 h-20 rounded-full bg-white/5 animate-pulse" />
-              <div className="w-16 h-4 bg-white/5 rounded animate-pulse" />
+        <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+            <div key={i} className="flex flex-col items-center gap-1">
+              <div className="w-14 h-14 rounded-full bg-white/5 animate-pulse" />
+              <div className="w-12 h-3 bg-white/5 rounded animate-pulse" />
             </div>
           ))}
         </div>
@@ -120,24 +120,24 @@ const CirculoTurmaDirectPage = () => {
 
       {/* Grid de Alunos */}
       {!isLoading && alunos && alunos.length > 0 && (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
           {alunos.map((aluno) => (
             <button
               key={aluno.id}
               onClick={() => handleAlunoClick(aluno.id)}
-              className="flex flex-col items-center gap-2 p-2 rounded-xl
+              className="flex flex-col items-center gap-1 p-1.5 rounded-xl
                 hover:bg-white/5 transition-all duration-200 
                 active:scale-95 group"
             >
-              <Avatar className="h-20 w-20 ring-2 ring-transparent group-hover:ring-white/20 transition-all">
+              <Avatar className="h-14 w-14 ring-2 ring-transparent group-hover:ring-white/20 transition-all">
                 <AvatarImage src={aluno.avatarUrl} className="object-cover" />
                 <AvatarFallback 
-                  className="text-white text-xl font-semibold bg-[#1e3a5f]"
+                  className="text-white text-base font-semibold bg-[#1e3a5f]"
                 >
                   {aluno.iniciais}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-white/80 text-sm font-medium text-center leading-tight">
+              <span className="text-white/80 text-xs font-medium text-center leading-tight">
                 {aluno.nomeAbreviado}
               </span>
             </button>
