@@ -1,83 +1,106 @@
 
-# Plano: Otimizar Grid de Alunos na Aba Círculo
+# Plano: Aplicar Layout Grid Compacto na Aba de Alunos
 
 ## Objetivo
 
-Ajustar o layout da grade de alunos em `CirculoTurmaDirectPage.tsx` para caber 4-5 alunos por linha, reduzindo o tamanho dos avatares e espaçamentos para diminuir a necessidade de scroll.
+Transformar a lista de alunos (linhas) em um **grid de avatares compactos** igual ao da aba Círculo, com 4-5 alunos por linha.
 
-## Mudanças
+## Mudanças em `AlunosPageSimplificado.tsx`
 
-### Arquivo: `src/pages/professor/circulo/CirculoTurmaDirectPage.tsx`
+### De (Lista em linhas):
+```text
+(A)  Adryan Samuel da Silva   5ºA   >
+ 🔴
+(B)  Bruno Costa Santos       5ºA   >
+ 🟢
+```
+
+### Para (Grid 4-5 por linha):
+```text
+[AC] [BS] [CF] [DG]
+[EH] [FI] [GJ] [HK]
+```
+
+## Alterações
 
 | Elemento | Antes | Depois |
 |----------|-------|--------|
-| Grid | `grid-cols-3 sm:grid-cols-4 md:grid-cols-5` | `grid-cols-4 sm:grid-cols-5` |
-| Gap | `gap-4` | `gap-2` |
-| Avatar | `h-20 w-20` (80px) | `h-14 w-14` (56px) |
-| Fonte iniciais | `text-xl` | `text-base` |
-| Fonte nome | `text-sm` | `text-xs` |
-| Padding botão | `p-2` | `p-1.5` |
-| Skeleton | `w-20 h-20` | `w-14 h-14` |
+| Layout | Lista vertical (1 por linha) | Grid 4-5 colunas |
+| Container | `space-y-0.5` | `grid grid-cols-4 sm:grid-cols-5 gap-2` |
+| Avatar | `w-10 h-10` (40px) | `h-14 w-14` (56px) |
+| Nome | Em linha com série/turma | Abaixo do avatar, abreviado |
+| Série/Turma | Visível na linha | Removido (só nome) |
+| Seta | `ChevronRight` | Removida |
+| Bolinha status | No avatar | Mantida no avatar |
+| Skeletons | Linha horizontal | Círculos em grid |
 
-### Layout Final
+## Componente Simplificado
 
-**Em mobile (4 por linha):**
-```text
-[AC] [AC] [AC] [EF]
-[EH] [ET] [FF] [HC]
-[JN] [JG] [LF] [LV]
-[LM] [MV] [MA] [...]
-```
-
-**Em telas maiores (5 por linha):**
-```text
-[AC] [AC] [AC] [EF] [EH]
-[ET] [FF] [HC] [JN] [JG]
-[LF] [LV] [LM] [MV] [MA]
-```
-
-## Benefícios
-
-- 21 alunos cabem em 5-6 linhas (4/linha) ou 4-5 linhas (5/linha)
-- Menos scroll para o professor
-- Nome abreviado mantido legível ("Abraão C.")
-- Iniciais no círculo permanecem visíveis
-
-## Código Alterado
-
-**Grid e gaps (linha ~123):**
 ```typescript
-// De:
-<div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
+// Novo card de aluno (estilo círculo)
+<button
+  onClick={() => handleAlunoClick(aluno.id)}
+  className="flex flex-col items-center gap-1 p-1.5 rounded-xl
+    hover:bg-white/5 transition-all duration-200 
+    active:scale-95 group"
+>
+  <div className="relative">
+    <Avatar className="h-14 w-14 ring-2 ring-transparent group-hover:ring-white/20">
+      {/* Avatar ou iniciais */}
+    </Avatar>
+    {/* Bolinha de status */}
+    <div 
+      className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#0d0d0d]"
+      style={{ backgroundColor: statusColor }}
+    />
+  </div>
+  <span className="text-white/80 text-xs font-medium text-center leading-tight">
+    {nomeAbreviado}
+  </span>
+</button>
+```
 
-// Para:
+## Função para Abreviar Nome
+
+```typescript
+const getAbreviatedName = (nome: string) => {
+  const parts = nome.split(' ');
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[parts.length - 1][0]}.`;
+};
+
+// "Adryan Samuel da Silva" → "Adryan S."
+```
+
+## Skeletons Atualizados
+
+```typescript
+// De: linhas horizontais
+// Para: grid de círculos
 <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+  {[1,2,3,4,5,6,7,8].map(i => (
+    <div className="flex flex-col items-center gap-1">
+      <Skeleton className="w-14 h-14 rounded-full" />
+      <Skeleton className="w-12 h-3 rounded" />
+    </div>
+  ))}
+</div>
 ```
 
-**Botão/Card do aluno (linhas ~125-143):**
-```typescript
-// De:
-<button className="... p-2 ...">
-  <Avatar className="h-20 w-20 ...">
-    <AvatarFallback className="... text-xl ...">
-  </Avatar>
-  <span className="... text-sm ...">
+## Resumo Visual Final
 
-// Para:
-<button className="... p-1.5 ...">
-  <Avatar className="h-14 w-14 ...">
-    <AvatarFallback className="... text-base ...">
-  </Avatar>
-  <span className="... text-xs ...">
+**Mobile (4 por linha):**
+```text
+[AS] [BC] [CD] [DE]
+[EF] [FG] [GH] [HI]
 ```
 
-**Skeletons de loading (linhas ~111-118):**
-```typescript
-// De:
-<div className="grid grid-cols-3 gap-4">
-  <div className="w-20 h-20 ...">
-
-// Para:
-<div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-  <div className="w-14 h-14 ...">
+**Telas maiores (5 por linha):**
+```text
+[AS] [BC] [CD] [DE] [EF]
+[FG] [GH] [HI] [IJ] [JK]
 ```
+
+## Arquivo a Modificar
+
+- `src/pages/professor/AlunosPageSimplificado.tsx`
