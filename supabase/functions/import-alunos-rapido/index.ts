@@ -253,18 +253,18 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // FASE 3: Inserir roles em batch
-      const rolesData = successfulUsers.map(u => ({
-        user_id: u.authId,
-        role: 'user' as const
-      }));
-
-      const { error: rolesError } = await supabaseAdmin
-        .from('user_roles')
-        .upsert(rolesData, { onConflict: 'user_id,role' });
-
-      if (rolesError) {
-        console.error('[import-alunos-rapido] Erro ao inserir roles:', rolesError);
+      // FASE 3: Inserir roles individualmente para evitar problemas com enum
+      for (const user of successfulUsers) {
+        const { error: roleError } = await supabaseAdmin
+          .from('user_roles')
+          .insert({ 
+            user_id: user.authId, 
+            role: 'user' 
+          });
+        
+        if (roleError) {
+          console.error(`[import-alunos-rapido] Erro role ${user.authId}:`, roleError);
+        }
       }
 
       // FASE 4: Inserir scores em batch
