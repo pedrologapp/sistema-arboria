@@ -2,15 +2,15 @@ import { ArrowLeft, Lock, Bell, Palette, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { toast } from 'sonner';
+import AvatarUpload from '@/components/aluno/AvatarUpload';
 
 const ProfessorConfiguracoesPage = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
-  const { profile, casaMentor, casaColor } = useProfessor();
+  const { signOut, user } = useAuth();
+  const { profile, casaMentor, casaColor, refreshData } = useProfessor();
 
   const handleLogout = async () => {
     try {
@@ -51,24 +51,20 @@ const ProfessorConfiguracoesPage = () => {
             borderColor: casaColor ? `${casaColor}30` : 'rgba(255,255,255,0.1)'
           }}
         >
-          <div className="flex items-center gap-4">
-            <Avatar className="w-16 h-16 border-2" style={{ borderColor: casaColor || '#fff' }}>
-              <AvatarImage src={profile?.avatar_url || ''} />
-              <AvatarFallback 
-                className="text-lg font-bold"
-                style={{ 
-                  backgroundColor: casaColor ? `${casaColor}30` : 'rgba(255,255,255,0.1)',
-                  color: casaColor || '#fff'
-                }}
-              >
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+          <div className="flex flex-col items-center gap-4">
+            {user?.id && (
+              <AvatarUpload
+                userId={user.id}
+                currentAvatarUrl={profile?.avatar_url || null}
+                casaColor={casaColor}
+                onUploadSuccess={refreshData}
+              />
+            )}
             
-            <div className="flex-1">
+            <div className="text-center">
               <h3 className="text-lg font-semibold text-white">{fullName}</h3>
               {casaMentor && (
-                <p className="text-sm inline-flex items-center gap-1" style={{ color: casaColor }}>
+                <p className="text-sm inline-flex items-center justify-center gap-1" style={{ color: casaColor }}>
                   <CasaBrasao 
                     brasaoUrl={casaMentor.brasao_url} 
                     emoji={casaMentor.emoji} 
