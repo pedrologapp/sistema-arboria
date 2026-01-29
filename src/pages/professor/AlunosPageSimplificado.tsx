@@ -1,18 +1,14 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Search, ChevronRight } from 'lucide-react';
+import { Users, Search } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useAlunosTurmasComStatus, type AlunoComStatusTurma } from '@/hooks/useAlunosTurmasComStatus';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const accentColor = '#6366f1';
 
-// ============ COMPONENTE DE LINHA DO ALUNO ============
-
-interface AlunoStatusLinhaSimplificadoProps {
-  aluno: AlunoComStatusTurma;
-  onClick: () => void;
-}
+// ============ HELPERS ============
 
 const getStatusColor = (status: AlunoComStatusTurma['status']) => {
   switch (status) {
@@ -21,56 +17,21 @@ const getStatusColor = (status: AlunoComStatusTurma['status']) => {
     case 'sem_observacao':
       return '#6B7280'; // Cinza - sem observações
     default:
-      return '#6B7280'; // Cinza
+      return '#6B7280';
   }
 };
 
-const AlunoStatusLinhaSimplificado = ({ aluno, onClick }: AlunoStatusLinhaSimplificadoProps) => {
-  const statusColor = getStatusColor(aluno.status);
+const getAbreviatedName = (nome: string) => {
+  const parts = nome.split(' ');
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[parts.length - 1][0]}.`;
+};
 
-  return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-3 py-2.5 px-3 
-        hover:bg-white/5 rounded-lg transition-colors group"
-    >
-      {/* Avatar com bolinha de status */}
-      <div className="relative flex-shrink-0">
-        {aluno.avatarUrl ? (
-          <img 
-            src={aluno.avatarUrl} 
-            alt={aluno.nome}
-            className="w-10 h-10 rounded-full object-cover"
-          />
-        ) : (
-          <div 
-            className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold"
-            style={{ backgroundColor: `${accentColor}40` }}
-          >
-            {aluno.nome.charAt(0).toUpperCase()}
-          </div>
-        )}
-        {/* Bolinha de status */}
-        <div 
-          className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#0d0d0d]"
-          style={{ backgroundColor: statusColor }}
-        />
-      </div>
-      
-      {/* Nome + Série/Turma (em linha) */}
-      <div className="flex-1 flex items-center gap-2 min-w-0">
-        <span className="text-white text-sm font-medium truncate">
-          {aluno.nome}
-        </span>
-        <span className="text-white/40 text-xs flex-shrink-0">
-          {aluno.serie} {aluno.turma}
-        </span>
-      </div>
-      
-      {/* Seta */}
-      <ChevronRight className="w-4 h-4 text-white/20 flex-shrink-0 group-hover:text-white/40 transition-colors" />
-    </button>
-  );
+const getIniciais = (nome: string) => {
+  const parts = nome.split(' ').filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return parts[0].charAt(0).toUpperCase() + parts[parts.length - 1].charAt(0).toUpperCase();
 };
 
 // ============ PÁGINA PRINCIPAL ============
@@ -98,7 +59,6 @@ const AlunosPageSimplificado = () => {
         if (busca && !aluno.nome.toLowerCase().includes(busca.toLowerCase())) return false;
         return true;
       });
-    // Já vem ordenado pelo hook
   }, [alunos, turmaFiltro, busca]);
 
   const handleAlunoClick = (alunoId: string) => {
@@ -170,46 +130,73 @@ const AlunosPageSimplificado = () => {
         />
       </div>
 
-      {/* Lista de Alunos */}
-      <div className="space-y-0.5">
-        {isLoading ? (
-          Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 py-2.5 px-3">
-              <Skeleton className="w-10 h-10 rounded-full" />
-              <div className="flex-1 flex items-center gap-2">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-3 w-12" />
-              </div>
+      {/* Grid de Alunos */}
+      {isLoading ? (
+        <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex flex-col items-center gap-1 p-1.5">
+              <Skeleton className="w-14 h-14 rounded-full" />
+              <Skeleton className="w-12 h-3 rounded" />
             </div>
-          ))
-        ) : alunosFiltrados.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div 
-              className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-              style={{ backgroundColor: `${accentColor}15` }}
-            >
-              <Users size={32} style={{ color: accentColor }} strokeWidth={1.5} />
-            </div>
-            <h2 className="text-lg font-semibold text-white mb-2">
-              Nenhum aluno encontrado
-            </h2>
-            <p className="text-white/50 text-sm max-w-xs font-light">
-              {busca || turmaFiltro
-                ? 'Tente ajustar os filtros de busca'
-                : 'Não há alunos nas suas turmas'
-              }
-            </p>
+          ))}
+        </div>
+      ) : alunosFiltrados.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div 
+            className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+            style={{ backgroundColor: `${accentColor}15` }}
+          >
+            <Users size={32} style={{ color: accentColor }} strokeWidth={1.5} />
           </div>
-        ) : (
-          alunosFiltrados.map((aluno) => (
-            <AlunoStatusLinhaSimplificado
-              key={aluno.id}
-              aluno={aluno}
-              onClick={() => handleAlunoClick(aluno.id)}
-            />
-          ))
-        )}
-      </div>
+          <h2 className="text-lg font-semibold text-white mb-2">
+            Nenhum aluno encontrado
+          </h2>
+          <p className="text-white/50 text-sm max-w-xs font-light">
+            {busca || turmaFiltro
+              ? 'Tente ajustar os filtros de busca'
+              : 'Não há alunos nas suas turmas'
+            }
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+          {alunosFiltrados.map((aluno) => {
+            const statusColor = getStatusColor(aluno.status);
+            const nomeAbreviado = getAbreviatedName(aluno.nome);
+            const iniciais = getIniciais(aluno.nome);
+
+            return (
+              <button
+                key={aluno.id}
+                onClick={() => handleAlunoClick(aluno.id)}
+                className="flex flex-col items-center gap-1 p-1.5 rounded-xl
+                  hover:bg-white/5 transition-all duration-200 
+                  active:scale-95 group"
+              >
+                <div className="relative">
+                  <Avatar className="h-14 w-14 ring-2 ring-transparent group-hover:ring-white/20 transition-all">
+                    <AvatarImage src={aluno.avatarUrl} className="object-cover" />
+                    <AvatarFallback 
+                      className="text-white text-base font-semibold"
+                      style={{ backgroundColor: `${accentColor}40` }}
+                    >
+                      {iniciais}
+                    </AvatarFallback>
+                  </Avatar>
+                  {/* Bolinha de status */}
+                  <div 
+                    className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#0d0d0d]"
+                    style={{ backgroundColor: statusColor }}
+                  />
+                </div>
+                <span className="text-white/80 text-xs font-medium text-center leading-tight">
+                  {nomeAbreviado}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Contador de resultados */}
       {!isLoading && alunosFiltrados.length > 0 && (
