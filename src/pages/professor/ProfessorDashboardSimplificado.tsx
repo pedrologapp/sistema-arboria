@@ -4,6 +4,7 @@ import { ClipboardList, Users, Settings, BookOpen, ChevronRight } from 'lucide-r
 import { useNavigate } from 'react-router-dom';
 import ConteudoModal from '@/components/professor/ConteudoModal';
 import BannerFaseInfo from '@/components/professor/BannerFaseInfo';
+import { AlertBoxesTurmas } from '@/components/professor/AlertBoxesTurmas';
 
 // Detectar gênero pelo primeiro nome (heurística simples)
 const getGenero = (nome: string): 'masculino' | 'feminino' => {
@@ -134,6 +135,13 @@ const ProfessorDashboardSimplificado = () => {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Alertas das Turmas */}
+      {turmasVinculadas && turmasVinculadas.length > 0 && (
+        <AlertBoxesTurmas 
+          onAlunoClick={(alunoId) => navigate(`/professor/aluno/${alunoId}`)} 
+        />
       )}
 
       {/* Quick Actions */}
