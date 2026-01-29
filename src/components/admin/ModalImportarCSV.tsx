@@ -40,16 +40,11 @@ interface ProfessorCSV {
 
 interface ProgressoState {
   ativo: boolean;
-  processados: number;
   total: number;
-  loteAtual: number;
-  totalLotes: number;
   criados: number;
   atualizados: number;
   erros: string[];
 }
-
-const TAMANHO_LOTE = 20;
 
 const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -60,10 +55,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
   
   const [progresso, setProgresso] = useState<ProgressoState>({
     ativo: false,
-    processados: 0,
     total: 0,
-    loteAtual: 0,
-    totalLotes: 0,
     criados: 0,
     atualizados: 0,
     erros: []
@@ -261,67 +253,78 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
     });
   };
 
-  // Divide array em lotes
-  const dividirEmLotes = <T,>(array: T[], tamanho: number): T[][] => {
-    const lotes: T[][] = [];
-    for (let i = 0; i < array.length; i += tamanho) {
-      lotes.push(array.slice(i, i + tamanho));
-    }
-    return lotes;
-  };
-
-  // Processa importação em lotes
+  // Processa importação - NOVA VERSÃO RÁPIDA (sem Auth)
   const processarImportacao = async () => {
-    const lotes = dividirEmLotes(dados, TAMANHO_LOTE);
-    
     setProgresso({
       ativo: true,
-      processados: 0,
       total: dados.length,
-      loteAtual: 0,
-      totalLotes: lotes.length,
       criados: 0,
       atualizados: 0,
       erros: []
     });
 
-    let totalCriados = 0;
-    let totalAtualizados = 0;
-    const todosErros: string[] = [];
+    try {
+      if (tipo === 'alunos') {
+        // NOVA FUNÇÃO RÁPIDA - envia todos de uma vez
+        const alunos = (dados as AlunoCSV[]).map((aluno) => ({
+          matricula: aluno.matricula,
+          nome: aluno.nome,
+          sobrenome: aluno.sobrenome,
+          serie: aluno.serie,
+          turma: aluno.turma,
+          segmento: aluno.segmento,
+          casa_id: aluno.casa_id ? parseInt(aluno.casa_id) : null,
+          int_intrapessoal: parseInt(aluno.int_intrapessoal || '0') || 0,
+          int_interpessoal: parseInt(aluno.int_interpessoal || '0') || 0,
+          int_naturalista: parseInt(aluno.int_naturalista || '0') || 0,
+          int_logico: parseInt(aluno.int_logico || '0') || 0,
+          int_linguistica: parseInt(aluno.int_linguistica || '0') || 0,
+          int_espacial: parseInt(aluno.int_espacial || '0') || 0,
+          int_corporal: parseInt(aluno.int_corporal || '0') || 0,
+          int_musical: parseInt(aluno.int_musical || '0') || 0,
+        }));
 
-    for (let i = 0; i < lotes.length; i++) {
-      const lote = lotes[i];
-      
-      setProgresso(prev => ({
-        ...prev,
-        loteAtual: i + 1,
-        processados: i * TAMANHO_LOTE
-      }));
+        const { data, error } = await supabase.functions.invoke('import-alunos-rapido', {
+          body: { alunos, institutionId }
+        });
 
-      try {
-        // Preparar dados do lote
-        const users = lote.map((item) => {
-          if (tipo === 'alunos') {
-            const aluno = item as AlunoCSV;
-            return {
-              matricula: aluno.matricula,
-              nome: aluno.nome,
-              sobrenome: aluno.sobrenome,
-              serie: aluno.serie,
-              turma: aluno.turma,
-              segmento: aluno.segmento,
-              casa_id: aluno.casa_id ? parseInt(aluno.casa_id) : null,
-              instituicao: institutionId,
-              int_intrapessoal: parseInt(aluno.int_intrapessoal || '0') || 0,
-              int_interpessoal: parseInt(aluno.int_interpessoal || '0') || 0,
-              int_naturalista: parseInt(aluno.int_naturalista || '0') || 0,
-              int_logico: parseInt(aluno.int_logico || '0') || 0,
-              int_linguistica: parseInt(aluno.int_linguistica || '0') || 0,
-              int_espacial: parseInt(aluno.int_espacial || '0') || 0,
-              int_corporal: parseInt(aluno.int_corporal || '0') || 0,
-              int_musical: parseInt(aluno.int_musical || '0') || 0,
-            };
-          } else {
+        if (error) {
+          console.error('Erro na importação rápida:', error);
+          setProgresso(prev => ({
+            ...prev,
+            ativo: false,
+            erros: [error.message || 'Erro na importação']
+          }));
+          toast.error('Erro na importação: ' + error.message);
+          return;
+        }
+
+        setProgresso({
+          ativo: false,
+          total: dados.length,
+          criados: data?.criados || 0,
+          atualizados: data?.atualizados || 0,
+          erros: data?.errors || []
+        });
+
+        const total = (data?.criados || 0) + (data?.atualizados || 0);
+        if ((data?.errors?.length || 0) === 0) {
+          toast.success(`${total} alunos importados! (${data?.criados} novos, ${data?.atualizados} atualizados)`);
+          onClose();
+        } else {
+          toast.warning(`${total} importados, ${data?.errors?.length} erros`);
+        }
+
+      } else {
+        // Professores - usar função antiga (com Auth)
+        const lotes = dividirEmLotes(dados, 20);
+        let totalCriados = 0;
+        let totalAtualizados = 0;
+        const todosErros: string[] = [];
+
+        for (let i = 0; i < lotes.length; i++) {
+          const lote = lotes[i];
+          const users = lote.map((item) => {
             const prof = item as ProfessorCSV;
             return {
               email: prof.email,
@@ -330,79 +333,56 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
               casa_id: prof.casa_id ? parseInt(prof.casa_id) : null,
               instituicao: institutionId
             };
-          }
-        });
+          });
 
-        // Chamar edge function para este lote com retry
-        let tentativa = 0;
-        const maxTentativas = 2;
-        let sucesso = false;
+          const { data, error } = await supabase.functions.invoke('import-users', {
+            body: { users, tipo }
+          });
 
-        while (tentativa < maxTentativas && !sucesso) {
-          tentativa++;
-          try {
-            const { data, error } = await supabase.functions.invoke('import-users', {
-              body: { users, tipo }
-            });
-
-            if (error) {
-              console.error(`Erro no lote ${i + 1} (tentativa ${tentativa}):`, error);
-              if (tentativa >= maxTentativas) {
-                todosErros.push(`Lote ${i + 1}: ${error.message}`);
-              }
-            } else {
-              totalCriados += data?.criados || 0;
-              totalAtualizados += data?.atualizados || 0;
-              if (data?.errors?.length) {
-                todosErros.push(...data.errors);
-              }
-              sucesso = true;
+          if (error) {
+            todosErros.push(`Lote ${i + 1}: ${error.message}`);
+          } else {
+            totalCriados += data?.criados || 0;
+            totalAtualizados += data?.atualizados || 0;
+            if (data?.errors?.length) {
+              todosErros.push(...data.errors);
             }
-          } catch (err: any) {
-            console.error(`Exceção no lote ${i + 1} (tentativa ${tentativa}):`, err);
-            if (tentativa >= maxTentativas) {
-              todosErros.push(`Lote ${i + 1}: Falha na conexão - tente novamente`);
-            }
-          }
-
-          // Aguardar antes de retry
-          if (!sucesso && tentativa < maxTentativas) {
-            await new Promise(resolve => setTimeout(resolve, 2000));
           }
         }
-      } catch (err: any) {
-        console.error(`Erro crítico no lote ${i + 1}:`, err);
-        todosErros.push(`Lote ${i + 1}: ${err.message || 'Erro desconhecido'}`);
-      }
 
-      // Atualizar progresso
+        setProgresso({
+          ativo: false,
+          total: dados.length,
+          criados: totalCriados,
+          atualizados: totalAtualizados,
+          erros: todosErros
+        });
+
+        if (todosErros.length === 0) {
+          toast.success(`${totalCriados + totalAtualizados} professores importados!`);
+          onClose();
+        } else {
+          toast.warning(`${totalCriados + totalAtualizados} importados, ${todosErros.length} erros`);
+        }
+      }
+    } catch (err: any) {
+      console.error('Erro crítico na importação:', err);
       setProgresso(prev => ({
         ...prev,
-        processados: Math.min((i + 1) * TAMANHO_LOTE, dados.length),
-        criados: totalCriados,
-        atualizados: totalAtualizados,
-        erros: todosErros
+        ativo: false,
+        erros: [err.message || 'Erro desconhecido']
       }));
-
-      // Pequena pausa entre lotes para não sobrecarregar
-      if (i < lotes.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
+      toast.error('Erro na importação: ' + (err.message || 'Erro desconhecido'));
     }
+  };
 
-    // Finalização
-    setProgresso(prev => ({
-      ...prev,
-      ativo: false,
-      processados: dados.length
-    }));
-
-    if (todosErros.length === 0) {
-      toast.success(`${totalCriados + totalAtualizados} ${tipo} importados com sucesso! (${totalCriados} novos, ${totalAtualizados} atualizados)`);
-      onClose();
-    } else {
-      toast.warning(`${totalCriados + totalAtualizados} importados, ${todosErros.length} erros`);
+  // Divide array em lotes (usado apenas para professores)
+  const dividirEmLotes = <T,>(array: T[], tamanho: number): T[][] => {
+    const lotes: T[][] = [];
+    for (let i = 0; i < array.length; i += tamanho) {
+      lotes.push(array.slice(i, i + tamanho));
     }
+    return lotes;
   };
 
   const limparArquivo = () => {
@@ -411,10 +391,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
     setErros([]);
     setProgresso({
       ativo: false,
-      processados: 0,
       total: 0,
-      loteAtual: 0,
-      totalLotes: 0,
       criados: 0,
       atualizados: 0,
       erros: []
@@ -425,7 +402,6 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
   };
 
   const colunasPreview = colunasObrigatorias;
-  const porcentagem = progresso.total > 0 ? Math.round((progresso.processados / progresso.total) * 100) : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
@@ -454,22 +430,15 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
           {/* Barra de Progresso (durante importação) */}
           {progresso.ativo && (
             <div className="p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-xl space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
-                  <span className="text-sm font-medium text-indigo-400">
-                    Processando lote {progresso.loteAtual} de {progresso.totalLotes}...
-                  </span>
-                </div>
-                <span className="text-sm text-indigo-300">{porcentagem}%</span>
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                <span className="text-sm font-medium text-indigo-400">
+                  Importando {progresso.total} {tipo}...
+                </span>
               </div>
-              
-              <Progress value={porcentagem} className="h-2" />
-              
-              <div className="flex items-center justify-between text-xs text-indigo-300/80">
-                <span>{progresso.processados} de {progresso.total} processados</span>
-                <span>{progresso.criados} novos • {progresso.atualizados} atualizados</span>
-              </div>
+              <p className="text-xs text-indigo-300/80">
+                Aguarde, isso deve levar apenas alguns segundos.
+              </p>
             </div>
           )}
 

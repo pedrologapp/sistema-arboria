@@ -41,3 +41,9 @@ verify_jwt = false
 
 [functions.sync-alunos-pull]
 verify_jwt = false
+
+[functions.import-alunos-rapido]
+verify_jwt = false
+
+[functions.gerar-contas-alunos]
+verify_jwt = false

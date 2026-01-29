@@ -2418,7 +2418,9 @@ export type Database = {
           avatar_url: string | null
           casa: string | null
           casa_id: number | null
+          conta_criada: boolean | null
           created_at: string
+          email_gerado: string | null
           full_name: string | null
           id: string
           institution: string | null
@@ -2437,7 +2439,9 @@ export type Database = {
           avatar_url?: string | null
           casa?: string | null
           casa_id?: number | null
+          conta_criada?: boolean | null
           created_at?: string
+          email_gerado?: string | null
           full_name?: string | null
           id: string
           institution?: string | null
@@ -2456,7 +2460,9 @@ export type Database = {
           avatar_url?: string | null
           casa?: string | null
           casa_id?: number | null
+          conta_criada?: boolean | null
           created_at?: string
+          email_gerado?: string | null
           full_name?: string | null
           id?: string
           institution?: string | null
