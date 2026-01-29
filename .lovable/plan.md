@@ -1,219 +1,212 @@
 
-# Plano: Criar Aba "Conteúdo" para Infantil/Fundamental 1
+# Plano: Sistema de Conteúdo Editável pelo Admin (por Série/Inteligência)
 
 ## Objetivo
 
-Adicionar uma nova aba **Conteúdo** no menu inferior do professor de Infantil e Fundamental 1, que exibe uma lista das 8 inteligências com seus brasões (igual à imagem de referência das missões) + uma opção especial "Conteúdo Geral Arboria" no topo.
+Criar um sistema onde o **Admin** pode fazer upload de PDFs de conteúdo para cada **Inteligência** e **Série**, de forma que os professores do Infantil/Fundamental 1 possam acessar esses materiais na aba Conteúdo.
 
-## Visão Geral do Layout
+## Estrutura de Dados
+
+Cada série tem arquivos diferentes, organizados por:
+- **Inteligência** (8 inteligências: Linguística, Lógico-Matemática, etc.)
+- **Série** (1 a 9, onde 1-5 = Infantil/F1, 6-9 = F2)
+- **Semana** (1 a 4, como no sistema atual)
+
+## Alterações no Banco de Dados
+
+### Nova Tabela: `conteudo_inteligencia`
+
+```sql
+CREATE TABLE public.conteudo_inteligencia (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  institution_id uuid NOT NULL REFERENCES institutions(id) ON DELETE CASCADE,
+  inteligencia_id integer NOT NULL REFERENCES inteligencias(id) ON DELETE CASCADE,
+  serie smallint NOT NULL CHECK (serie >= 1 AND serie <= 9),
+  semana smallint NOT NULL CHECK (semana >= 1 AND semana <= 4),
+  titulo text,
+  descricao text,
+  arquivo_nome text NOT NULL,
+  arquivo_url text NOT NULL,
+  arquivo_tamanho bigint,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  UNIQUE(institution_id, inteligencia_id, serie, semana)
+);
+
+-- RLS
+ALTER TABLE public.conteudo_inteligencia ENABLE ROW LEVEL SECURITY;
+
+-- Admin pode gerenciar
+CREATE POLICY "Admin pode gerenciar conteudo_inteligencia"
+ON public.conteudo_inteligencia FOR ALL
+USING (
+  institution_id = public.get_user_institution_id() 
+  AND public.has_role(auth.uid(), 'admin')
+);
+
+-- Professor pode ver
+CREATE POLICY "Professor pode ver conteudo_inteligencia"
+ON public.conteudo_inteligencia FOR SELECT
+USING (
+  institution_id = public.get_user_institution_id() 
+  AND public.has_role(auth.uid(), 'professor')
+);
+```
+
+## Fluxo do Admin
+
+### 1. Nova Página: Gerenciar Conteúdo por Inteligência
+
+**Rota:** `/admin/conteudo`
+
+**Layout:**
+```text
+┌──────────────────────────────────────────┐
+│  ← Voltar            Gerenciar Conteúdo  │
+├──────────────────────────────────────────┤
+│                                          │
+│  [Escudo] Linguística              →     │
+│           8 arquivos em 3 séries         │
+│                                          │
+│  [Escudo] Lógico-Matemática        →     │
+│           4 arquivos em 2 séries         │
+│                                          │
+│  ... (continua com as 8)                 │
+│                                          │
+└──────────────────────────────────────────┘
+```
+
+### 2. Página de Detalhes: Conteúdo por Série
+
+**Rota:** `/admin/conteudo/inteligencia/:id`
+
+**Layout com tabs por série:**
+```text
+┌──────────────────────────────────────────┐
+│  ← Voltar       [Escudo] Linguística     │
+├──────────────────────────────────────────┤
+│                                          │
+│  [ 1º ] [ 2º ] [ 3º ] [ 4º ] [ 5º ]      │  ← Tabs de séries
+│                                          │
+├──────────────────────────────────────────┤
+│                                          │
+│  📄 Semana 1                             │
+│     [+ Adicionar PDF]                    │
+│                                          │
+│  📄 Semana 2                             │
+│     guia-semana-2.pdf     ⋮              │
+│     1.2 MB                               │
+│                                          │
+│  📄 Semana 3                             │
+│     [+ Adicionar PDF]                    │
+│                                          │
+│  📄 Semana 4                             │
+│     [+ Adicionar PDF]                    │
+│                                          │
+└──────────────────────────────────────────┘
+```
+
+## Fluxo do Professor
+
+### Página `ConteudoInteligenciaPage.tsx` Atualizada
+
+Ao acessar uma inteligência, o professor verá:
+1. Descrição da inteligência (conteúdo estático existente)
+2. Objetivos, Atividades, Sinais (conteúdo estático existente)
+3. **Materiais de Apoio** - agora busca do banco baseado na série das turmas do professor
 
 ```text
-┌─────────────────────────────────────────┐
-│  📚 Conteúdo                            │
-├─────────────────────────────────────────┤
-│                                         │
-│  🌳 Conteúdo Geral Arboria         →    │
-│     Filosofia, metodologia, guias       │
-│                                         │
-├─────────────────────────────────────────┤
-│                                         │
-│  [Escudo] Linguística              →    │
-│           Ver conteúdo da fase          │
-│                                         │
-│  [Escudo] Lógico-Matemática        →    │
-│           Ver conteúdo da fase          │
-│                                         │
-│  [Escudo] Espacial                 →    │
-│           Ver conteúdo da fase          │
-│                                         │
-│  ... (continua com as 8)                │
-│                                         │
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│  ← Voltar   [Escudo] Linguística         │
+├──────────────────────────────────────────┤
+│                                          │
+│  📋 Sobre esta Inteligência              │
+│     [descrição...]                       │
+│                                          │
+│  🎯 Objetivos da Fase                    │
+│     • Objetivo 1                         │
+│     • Objetivo 2                         │
+│                                          │
+│  💡 Atividades Sugeridas                 │
+│     1. Atividade 1                       │
+│     2. Atividade 2                       │
+│                                          │
+│  👁 Sinais para Observar                 │
+│     • Sinal 1                            │
+│     • Sinal 2                            │
+│                                          │
+├──────────────────────────────────────────┤
+│  📁 Materiais de Apoio — 2º ano          │
+├──────────────────────────────────────────┤
+│                                          │
+│  Semana 1                                │
+│  ┌────────────────────────────────────┐  │
+│  │ 📄 guia-semana-1.pdf     [Ver] [↓] │  │
+│  │    1.5 MB                          │  │
+│  └────────────────────────────────────┘  │
+│                                          │
+│  Semana 2                                │
+│  ┌────────────────────────────────────┐  │
+│  │ 📄 atividades-semana-2.pdf [Ver][↓]│  │
+│  │    2.3 MB                          │  │
+│  └────────────────────────────────────┘  │
+│                                          │
+│  Semana 3 · Semana 4                     │
+│  (Nenhum material disponível ainda)      │
+│                                          │
+└──────────────────────────────────────────┘
 ```
 
 ## Arquivos a Criar
 
 | Arquivo | Descrição |
 |---------|-----------|
-| `src/pages/professor/ConteudoPage.tsx` | Página principal da aba Conteúdo (lista das 8 inteligências + Geral) |
-| `src/pages/professor/ConteudoInteligenciaPage.tsx` | Página de detalhes do conteúdo de uma inteligência específica |
-| `src/pages/professor/ConteudoGeralPage.tsx` | Página de conteúdo geral do Arboria |
+| `src/pages/admin/ConteudoAdminPage.tsx` | Lista de inteligências para gerenciar |
+| `src/pages/admin/ConteudoInteligenciaAdminPage.tsx` | Tabs por série + upload de PDFs por semana |
 
 ## Arquivos a Modificar
 
 | Arquivo | Alterações |
 |---------|------------|
-| `src/components/professor/ProfessorBottomNavSimplificado.tsx` | Adicionar aba "Conteúdo" com ícone `BookOpen` |
-| `src/App.tsx` | Adicionar rotas `/professor/conteudo`, `/professor/conteudo/geral` e `/professor/conteudo/inteligencia/:id` |
+| `src/App.tsx` | Adicionar rotas `/admin/conteudo` e `/admin/conteudo/inteligencia/:id` |
+| `src/pages/professor/ConteudoInteligenciaPage.tsx` | Buscar PDFs do banco baseado na série do professor |
+| `src/components/AdminBottomNav.tsx` ou menu lateral | Adicionar link para "Conteúdo" |
 
-## Detalhes de Implementação
+## Lógica de Séries para Professor
 
-### 1. Menu Inferior (`ProfessorBottomNavSimplificado.tsx`)
+O professor do Infantil/F1 pode ter turmas de múltiplas séries. A página mostrará:
+1. Se o professor tem apenas 1 série → mostra os PDFs dessa série diretamente
+2. Se tem múltiplas séries → mostra seletor de série no topo
 
-**Adicionar item de navegação:**
 ```typescript
-const navItems: NavItemConfig[] = [
-  { id: 'home', icon: <Home size={20} />, label: 'Home', path: '/professor' },
-  { id: 'circulo', icon: <Sparkles size={20} />, label: 'Círculo', path: '/professor/circulo' },
-  { id: 'conteudo', icon: <BookOpen size={20} />, label: 'Conteúdo', path: '/professor/conteudo' }, // NOVO
-  { id: 'alunos', icon: <Users size={20} />, label: 'Alunos', path: '/professor/alunos' },
-];
+// Buscar séries das turmas do professor
+const { data: turmas } = await supabase
+  .from('professor_turma')
+  .select('turmas(serie)')
+  .eq('professor_id', professorId);
+
+const series = [...new Set(turmas.map(t => t.turmas.serie))];
 ```
 
-**Atualizar lógica de activeIndex:**
-```typescript
-if (currentPath === '/professor') return 0;
-if (currentPath.startsWith('/professor/circulo')) return 1;
-if (currentPath.startsWith('/professor/conteudo')) return 2;  // NOVO
-if (currentPath.startsWith('/professor/alunos')) return 3;    // Ajustado
+## Storage Bucket
+
+Reutilizar bucket existente `fase-conteudos` ou criar novo `inteligencia-conteudos`:
 ```
-
-### 2. Página Principal (`ConteudoPage.tsx`)
-
-**Estrutura:**
-- Header com título "📚 Conteúdo"
-- Card especial "Conteúdo Geral Arboria" no topo (verde/emerald)
-- Divisor
-- Lista das 8 inteligências (mesmo padrão visual da imagem)
-  - Usa componente `CasaBrasao` com size="medium"
-  - Nome da inteligência
-  - Texto "Ver conteúdo da fase"
-  - Seta para indicar navegação
-
-**Query para buscar inteligências:**
-```typescript
-const { data: inteligencias } = useQuery({
-  queryKey: ['inteligencias'],
-  queryFn: async () => {
-    const { data } = await supabase
-      .from('inteligencias')
-      .select('id, nome, emoji, cor_hex, brasao_url')
-      .order('id');
-    return data;
-  }
-});
-```
-
-### 3. Página de Conteúdo Geral (`ConteudoGeralPage.tsx`)
-
-**Conteúdo:**
-- Header com voltar + "Conteúdo Geral Arboria"
-- Seção "Essência do Arboria" (reutilizar estilo do ConteudoModal)
-- Seção "Filosofia do Projeto"
-- Seção "Como Observar Alunos"
-- Seção "Guias para o Professor"
-- Links para PDFs/materiais de apoio
-
-### 4. Página de Inteligência (`ConteudoInteligenciaPage.tsx`)
-
-**Conteúdo:**
-- Header com voltar + brasão + nome da inteligência
-- Seção "Descrição da Fase"
-- Seção "Objetivos"
-- Seção "Atividades Sugeridas"
-- Seção "Sinais para Observar" (lista dos sinais relacionados)
-- Materiais de apoio (PDFs por semana)
-
-### 5. Rotas (`App.tsx`)
-
-**Adicionar:**
-```typescript
-// Aba Conteúdo (Infantil/F1)
-<Route path="/professor/conteudo" element={
-  <ProfessorProtectedRoute>
-    <ProfessorLayout>
-      <ConteudoPage />
-    </ProfessorLayout>
-  </ProfessorProtectedRoute>
-} />
-<Route path="/professor/conteudo/geral" element={
-  <ProfessorProtectedRoute>
-    <ProfessorLayout>
-      <ConteudoGeralPage />
-    </ProfessorLayout>
-  </ProfessorProtectedRoute>
-} />
-<Route path="/professor/conteudo/inteligencia/:inteligenciaId" element={
-  <ProfessorProtectedRoute>
-    <ProfessorLayout>
-      <ConteudoInteligenciaPage />
-    </ProfessorLayout>
-  </ProfessorProtectedRoute>
-} />
-```
-
-## Layout Visual da Lista de Inteligências
-
-Cada item segue o padrão da imagem:
-```typescript
-<button className="w-full p-3 rounded-xl bg-white/5 hover:bg-white/10 
-  text-left transition-colors flex items-center justify-between">
-  <div className="flex items-center gap-3">
-    <CasaBrasao 
-      brasaoUrl={inteligencia.brasao_url}
-      emoji={inteligencia.emoji}
-      nome={inteligencia.nome}
-      size="medium"  // 56px como na imagem
-    />
-    <div>
-      <p className="text-white font-medium">{inteligencia.nome}</p>
-      <p className="text-white/40 text-xs">Ver conteúdo da fase</p>
-    </div>
-  </div>
-  <ChevronRight className="text-white/30" />
-</button>
-```
-
-## Card Especial "Conteúdo Geral"
-
-Destaque visual diferenciado:
-```typescript
-<button 
-  onClick={() => navigate('/professor/conteudo/geral')}
-  className="w-full p-4 rounded-xl text-left transition-colors
-    bg-gradient-to-r from-emerald-500/20 to-emerald-500/10
-    border border-emerald-500/30 hover:border-emerald-500/50
-    hover:bg-emerald-500/20"
->
-  <div className="flex items-center gap-3">
-    <div className="w-14 h-14 rounded-xl bg-emerald-500/20 
-      flex items-center justify-center">
-      <TreePine className="w-7 h-7 text-emerald-400" />
-    </div>
-    <div className="flex-1">
-      <p className="text-white font-semibold">Conteúdo Geral Arboria</p>
-      <p className="text-white/50 text-sm">Filosofia, metodologia, guias</p>
-    </div>
-    <ChevronRight className="text-emerald-400/50" />
-  </div>
-</button>
-```
-
-## Fluxo de Navegação
-
-```text
-Menu Inferior
-    │
-    ▼
-📚 Conteúdo (ConteudoPage)
-    │
-    ├── 🌳 Conteúdo Geral Arboria → ConteudoGeralPage
-    │       └── Filosofia, metodologia, guias para professor
-    │
-    ├── [Linguística] → ConteudoInteligenciaPage/1
-    │       └── Descrição, objetivos, atividades, sinais
-    │
-    ├── [Lógico-Matemática] → ConteudoInteligenciaPage/2
-    │       └── ...
-    │
-    └── ... (demais inteligências)
+inteligencia-conteudos/
+  ├── inteligencia-1/
+  │   ├── serie-1/
+  │   │   ├── semana-1/arquivo.pdf
+  │   │   ├── semana-2/arquivo.pdf
+  │   ├── serie-2/
+  │   │   └── ...
+  ├── inteligencia-2/
+  │   └── ...
 ```
 
 ## Resumo
 
-1. **Nova aba no menu**: `Conteúdo` entre `Círculo` e `Alunos`
-2. **Página principal**: Lista as 8 inteligências com brasões + opção geral no topo
-3. **Páginas de detalhes**: Conteúdo específico por inteligência ou geral
-4. **Visual**: Replica o layout da imagem de referência (brasões de 56px, textos descritivos)
-5. **Exclusivo para Infantil/F1**: Usa o BottomNav simplificado
-
+1. **Banco**: Nova tabela `conteudo_inteligencia` (inteligência + série + semana)
+2. **Admin**: Páginas para gerenciar uploads por inteligência/série
+3. **Professor**: Página de inteligência exibe PDFs filtrados pela série das suas turmas
+4. **Reuso**: Mesma lógica de upload do `TabConteudo` existente
+5. **Flexibilidade**: Cada série pode ter arquivos diferentes para a mesma inteligência
