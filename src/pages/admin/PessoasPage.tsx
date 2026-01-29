@@ -34,6 +34,7 @@ const PessoasPage = () => {
   const queryClient = useQueryClient();
   const [tabAtiva, setTabAtiva] = useState<TabType>('alunos');
   const [busca, setBusca] = useState('');
+  const [filtroSegmento, setFiltroSegmento] = useState('');
   const [filtroSerie, setFiltroSerie] = useState('');
   const [filtroTurma, setFiltroTurma] = useState('');
   const [filtroCasa, setFiltroCasa] = useState('');
@@ -205,11 +206,12 @@ const PessoasPage = () => {
         aluno.full_name?.toLowerCase().includes(busca.toLowerCase()) ||
         aluno.nome?.toLowerCase().includes(busca.toLowerCase()) ||
         aluno.sobrenome?.toLowerCase().includes(busca.toLowerCase());
+      const matchSegmento = !filtroSegmento || aluno.segmento === filtroSegmento;
       const matchSerie = !filtroSerie || aluno.serie === filtroSerie;
       const matchTurma = !filtroTurma || aluno.turma === filtroTurma;
       const matchCasa = !filtroCasa || aluno.casa_id === Number(filtroCasa);
       
-      return matchBusca && matchSerie && matchTurma && matchCasa;
+      return matchBusca && matchSegmento && matchSerie && matchTurma && matchCasa;
     })
     ?.sort((a, b) => {
       // Primeiro por serie
@@ -220,7 +222,8 @@ const PessoasPage = () => {
       return (a.full_name || '').localeCompare(b.full_name || '');
     });
 
-  // Séries e turmas únicas
+  // Segmentos, séries e turmas únicas
+  const segmentosUnicos = [...new Set(alunos?.map(a => a.segmento).filter(Boolean))].sort() as string[];
   const seriesUnicas = [...new Set(alunos?.map(a => a.serie).filter(Boolean))].sort();
   const turmasUnicas = [...new Set(alunos?.map(a => a.turma).filter(Boolean))].sort();
 
@@ -280,6 +283,21 @@ const PessoasPage = () => {
           <>
             {/* Filtros */}
             <div className="flex gap-2 overflow-x-auto pb-2">
+              <select
+                value={filtroSegmento}
+                onChange={(e) => setFiltroSegmento(e.target.value)}
+                className="p-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm min-w-[120px]"
+              >
+                <option value="">Segmento</option>
+                {segmentosUnicos.map(seg => (
+                  <option key={seg} value={seg}>
+                    {seg === 'infantil' ? 'Infantil' : 
+                     seg === 'fundamental1' ? 'Fund. I' : 
+                     seg === 'fundamental2' ? 'Fund. II' : seg}
+                  </option>
+                ))}
+              </select>
+              
               <select
                 value={filtroSerie}
                 onChange={(e) => setFiltroSerie(e.target.value)}
