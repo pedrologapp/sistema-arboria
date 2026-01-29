@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Users } from 'lucide-react';
+import { ChevronLeft, Users2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
@@ -8,13 +8,15 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 interface Aluno {
   id: string;
   nome: string;
+  nomeAbreviado: string;
+  iniciais: string;
   avatarUrl?: string;
 }
 
 const CirculoTurmaDirectPage = () => {
   const { turmaId } = useParams<{ turmaId: string }>();
   const navigate = useNavigate();
-  const { profile, turmasVinculadas } = useProfessor();
+  const { turmasVinculadas } = useProfessor();
 
   // Encontrar dados da turma
   const turmaInfo = turmasVinculadas?.find(t => t.id === turmaId);
@@ -49,13 +51,23 @@ const CirculoTurmaDirectPage = () => {
 
       return data.map(at => {
         const p = at.profiles as any;
-        const nomeCompleto = p.full_name || 
-          [p.nome, p.sobrenome].filter(Boolean).join(' ') || 
-          'Sem nome';
+        const primeiroNome = p.nome || p.full_name?.split(' ')[0] || 'Aluno';
+        const sobrenome = p.sobrenome || p.full_name?.split(' ').slice(1).join(' ') || '';
+        
+        // Nome abreviado: Primeiro Nome + Inicial do sobrenome
+        const nomeAbreviado = sobrenome 
+          ? `${primeiroNome} ${sobrenome.charAt(0).toUpperCase()}.`
+          : primeiroNome;
+        
+        // Iniciais para avatar
+        const iniciais = primeiroNome.charAt(0).toUpperCase() + 
+          (sobrenome ? sobrenome.charAt(0).toUpperCase() : '');
 
         return {
           id: p.id,
-          nome: nomeCompleto,
+          nome: p.full_name || [p.nome, p.sobrenome].filter(Boolean).join(' ') || 'Sem nome',
+          nomeAbreviado,
+          iniciais,
           avatarUrl: p.avatar_url || undefined,
         };
       }).sort((a, b) => a.nome.localeCompare(b.nome));
@@ -67,70 +79,67 @@ const CirculoTurmaDirectPage = () => {
     navigate(`/professor/circulo/aluno/${alunoId}`);
   };
 
-  const accentColor = '#6366f1';
-
   return (
-    <div className="space-y-6 pt-4">
-      {/* Header com voltar */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate('/professor/circulo')}
-          className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
-        >
-          <ChevronLeft className="w-5 h-5 text-white" />
-        </button>
-        <div>
+    <div className="space-y-5 pt-4">
+      {/* Header com voltar e botão Selecionar */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/professor/circulo')}
+            className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-white" />
+          </button>
           <h1 className="text-xl font-bold text-white">
-            {turmaInfo ? `${turmaInfo.serie}º ${turmaInfo.turma_letra}` : 'Turma'}
+            {turmaInfo ? `${turmaInfo.serie}º Ano ${turmaInfo.turma_letra}` : 'Turma'}
           </h1>
-          {turmaInfo && (
-            <p className="text-sm text-white/50">{turmaInfo.nome}</p>
-          )}
         </div>
-      </div>
-
-      {/* Subtitle */}
-      <div className="flex items-center gap-2">
-        <Users className="w-4 h-4 text-white/50" />
-        <p className="text-white/60 text-sm">
-          {alunos?.length || 0} alunos • Selecione para observar
-        </p>
+        
+        {/* Botão Selecionar (futuro) */}
+        <button
+          className="flex items-center gap-2 px-3 py-2 rounded-lg
+            bg-white/5 hover:bg-white/10 transition-colors
+            text-white/70 text-sm font-medium"
+        >
+          <Users2 className="w-4 h-4" />
+          Selecionar
+        </button>
       </div>
 
       {/* Loading */}
       {isLoading && (
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse" />
+        <div className="grid grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="flex flex-col items-center gap-2">
+              <div className="w-20 h-20 rounded-full bg-white/5 animate-pulse" />
+              <div className="w-16 h-4 bg-white/5 rounded animate-pulse" />
+            </div>
           ))}
         </div>
       )}
 
-      {/* Lista de Alunos */}
-      {!isLoading && alunos && (
-        <div className="space-y-2">
+      {/* Grid de Alunos */}
+      {!isLoading && alunos && alunos.length > 0 && (
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
           {alunos.map((aluno) => (
             <button
               key={aluno.id}
               onClick={() => handleAlunoClick(aluno.id)}
-              className="w-full flex items-center gap-3 p-3 rounded-xl
-                bg-gradient-to-r from-white/[0.06] to-white/[0.02]
-                border border-white/10 hover:border-white/20
-                transition-all duration-200 active:scale-[0.98]"
+              className="flex flex-col items-center gap-2 p-2 rounded-xl
+                hover:bg-white/5 transition-all duration-200 
+                active:scale-95 group"
             >
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={aluno.avatarUrl} />
+              <Avatar className="h-20 w-20 ring-2 ring-transparent group-hover:ring-white/20 transition-all">
+                <AvatarImage src={aluno.avatarUrl} className="object-cover" />
                 <AvatarFallback 
-                  className="text-white text-sm font-medium"
-                  style={{ backgroundColor: `${accentColor}30` }}
+                  className="text-white text-xl font-semibold bg-[#1e3a5f]"
                 >
-                  {aluno.nome.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                  {aluno.iniciais}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-white font-medium flex-1 text-left">
-                {aluno.nome}
+              <span className="text-white/80 text-sm font-medium text-center leading-tight">
+                {aluno.nomeAbreviado}
               </span>
-              <ChevronLeft className="w-4 h-4 text-white/30 rotate-180" />
             </button>
           ))}
         </div>
@@ -139,7 +148,7 @@ const CirculoTurmaDirectPage = () => {
       {/* Empty State */}
       {!isLoading && (!alunos || alunos.length === 0) && (
         <div className="text-center py-12">
-          <Users className="w-12 h-12 text-white/20 mx-auto mb-4" />
+          <Users2 className="w-12 h-12 text-white/20 mx-auto mb-4" />
           <p className="text-white/50">Nenhum aluno encontrado nesta turma</p>
         </div>
       )}
