@@ -871,6 +871,80 @@ export type Database = {
         }
         Relationships: []
       }
+      conteudo_inteligencia: {
+        Row: {
+          arquivo_nome: string
+          arquivo_tamanho: number | null
+          arquivo_url: string
+          created_at: string | null
+          descricao: string | null
+          id: string
+          institution_id: string
+          inteligencia_id: number
+          semana: number
+          serie: number
+          titulo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          arquivo_nome: string
+          arquivo_tamanho?: number | null
+          arquivo_url: string
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          institution_id: string
+          inteligencia_id: number
+          semana: number
+          serie: number
+          titulo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          arquivo_nome?: string
+          arquivo_tamanho?: number | null
+          arquivo_url?: string
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          institution_id?: string
+          inteligencia_id?: number
+          semana?: number
+          serie?: number
+          titulo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conteudo_inteligencia_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conteudo_inteligencia_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "inteligencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conteudo_inteligencia_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "perfil_inteligencias_aluno"
+            referencedColumns: ["inteligencia_id"]
+          },
+          {
+            foreignKeyName: "conteudo_inteligencia_inteligencia_id_fkey"
+            columns: ["inteligencia_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_casas"
+            referencedColumns: ["casa_id"]
+          },
+        ]
+      }
       conversa_participantes: {
         Row: {
           conversa_id: string
