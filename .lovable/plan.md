@@ -1,97 +1,162 @@
 
-# Plano: Associar Alunos às Turmas para Professores de Infantil/Fundamental 1
+# Plano: Painel de Alertas para Professores de Infantil/Fundamental 1
 
-## Problema Identificado
+## Objetivo
 
-A política RLS atual de `aluno_turma` permite que professores vejam alunos apenas através do vínculo `professor_casa` (usado pelo Fundamental 2). Professores de Infantil e Fundamental 1 que usam `professor_turma` **não conseguem ver seus alunos** porque não existe uma política RLS para esse cenário.
+Adicionar o painel de alertas (igual ao da imagem) no dashboard de professores de Infantil e Fundamental 1, mostrando alertas dos alunos das **turmas vinculadas** ao professor (em vez da Casa, usada no Fundamental 2).
 
-### Política Atual (Fundamental 2 apenas)
+## Arquitetura Atual
 
-```sql
--- Só funciona para F2 (via professor_casa)
-"Professores veem aluno_turma da sua casa" → verifica professor_casa.casa_id = aluno.casa_id
+| Segmento | Vínculo | Alertas baseados em |
+|----------|---------|---------------------|
+| **Fundamental 2** | `professor_casa` (Casa) | Alunos da Casa (`profiles.casa_id`) |
+| **Infantil / F1** | `professor_turma` (Turmas) | Alunos das Turmas (`aluno_turma`) |
+
+O hook `useAlertasAlunos` atual só funciona para F2, pois busca alunos via `casa_id`.
+
+## Mudanças Necessárias
+
+### 1. Novo Hook: `useAlertasAlunosTurmas`
+
+Criar um hook específico para buscar alertas baseados nas turmas do professor.
+
+**Arquivo:** `src/hooks/useAlertasAlunosTurmas.ts`
+
+```typescript
+// Lógica principal:
+// 1. Buscar turmas do professor via ProfessorContext
+// 2. Buscar alunos via aluno_turma (turma_id IN turmasVinculadas)
+// 3. Processar alertas da mesma forma que useAlertasAlunos
 ```
 
-### Dados Atuais no Banco
+Diferenças do hook original:
+- Usa `turmasVinculadas` do contexto em vez de `casaMentor`
+- Busca alunos via `aluno_turma` (JOIN com profiles)
+- Query key inclui IDs das turmas
 
-| Tabela | Status |
-|--------|--------|
-| `aluno_turma` | Alunos vinculados às turmas (1º A = 18 alunos, 5º A = 21 alunos, etc.) |
-| `professor_turma` | Rita de Cássia vinculada ao 5º A e 5º B |
+### 2. Novo Componente: `AlertBoxesTurmas`
 
-O problema é que a **política RLS bloqueia** a visualização para professores de Infantil/F1.
+Componente para renderizar o grid de alertas com título adaptado.
 
-## Solução
+**Arquivo:** `src/components/professor/AlertBoxesTurmas.tsx`
 
-Criar uma nova política RLS que permita professores verem alunos das turmas às quais estão vinculados via `professor_turma`.
+Mudanças visuais:
+- Título: "ALERTAS DAS TURMAS" (em vez de "Alertas da Casa")
+- Mesmo grid 2x2 com os 4 tipos de alertas
+- Reutiliza `AlertGridCard` e `AlertaDetalheModal`
 
-### 1. Nova Política RLS
+### 3. Atualizar Dashboard Simplificado
 
-```sql
-CREATE POLICY "Professores veem aluno_turma das suas turmas"
-ON aluno_turma
-FOR SELECT
-USING (
-  has_role(auth.uid(), 'professor') 
-  AND turma_id = ANY(get_professor_turma_ids())
-);
-```
+Adicionar a seção de alertas no `ProfessorDashboardSimplificado`.
 
-Esta política usa a função `get_professor_turma_ids()` que já existe e retorna um array com os IDs das turmas do professor logado.
+**Arquivo:** `src/pages/professor/ProfessorDashboardSimplificado.tsx`
 
-### 2. Verificação da Função Helper
+Adicionar entre a seção "Minhas Turmas" e "Ações Rápidas":
+- Componente `AlertBoxesTurmas`
+- Navegação para perfil do aluno ao clicar
 
-A função `get_professor_turma_ids()` já existe no banco:
-
-```sql
--- Função existente (criada anteriormente)
-CREATE OR REPLACE FUNCTION get_professor_turma_ids()
-RETURNS UUID[] AS $$
-  SELECT COALESCE(ARRAY_AGG(turma_id), ARRAY[]::UUID[])
-  FROM professor_turma 
-  WHERE professor_id = auth.uid() AND ativo = true;
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
-```
-
-## Arquivo de Migração
-
-Criar uma migração SQL com a nova política:
-
-```sql
--- Política para professores de Infantil/F1 verem alunos das suas turmas
-CREATE POLICY "Professores veem aluno_turma das suas turmas vinculadas"
-ON public.aluno_turma
-FOR SELECT
-USING (
-  has_role(auth.uid(), 'professor'::app_role) 
-  AND turma_id = ANY(public.get_professor_turma_ids())
-);
-```
-
-## Resultado Esperado
-
-Após a migração:
+## Fluxo de Dados
 
 ```text
-1. Professora Rita de Cássia (Fundamental 1) faz login
-2. Sistema detecta segmento = 'fundamental1'
-3. Carrega turmas vinculadas: [5º A, 5º B]
-4. Ao acessar /professor/circulo:
-   └─> Vê cards: [5º A] [5º B]
-5. Clica em "5º A"
-   └─> Query busca aluno_turma WHERE turma_id = '...' AND ativo = true
-   └─> RLS permite (turma_id está em get_professor_turma_ids())
-   └─> Exibe 21 alunos do 5º A
+1. Professor de Infantil/F1 faz login
+2. ProfessorContext carrega turmasVinculadas: [{id: '5A', ...}, {id: '5B', ...}]
+3. useAlertasAlunosTurmas busca:
+   └─> aluno_turma WHERE turma_id IN ('5A', '5B') AND ativo = true
+   └─> profiles dos alunos encontrados
+   └─> observacoes da fase atual
+   └─> alertas_alunos ativos
+4. Calcula totais por categoria
+5. AlertBoxesTurmas renderiza grid 2x2
 ```
 
-## Resumo Técnico
+## Categorias de Alertas (mesmas do F2)
 
-| Item | Ação |
-|------|------|
-| **Migração SQL** | Criar política RLS para `aluno_turma` usando `professor_turma` |
-| **Função Helper** | Já existe: `get_professor_turma_ids()` |
-| **Código Frontend** | Nenhuma alteração necessária (hooks já estão corretos) |
+| Categoria | Ícone | Lógica |
+|-----------|-------|--------|
+| Precisam de você | 🔴 | Alerta `precisa_atencao` ativo |
+| Celebre | ✨ | Alerta `celebrar` ou 2 positivos consecutivos |
+| Não esqueça | 🟡 | 14+ dias sem observação na fase |
+| Fase anterior | ⚠️ | Alertas pendentes de fase anterior |
 
-## Arquivos Modificados
+## Arquivos a Criar/Modificar
 
-- **Nova migração SQL**: Política RLS para professores de Infantil/F1
+| Arquivo | Ação |
+|---------|------|
+| `src/hooks/useAlertasAlunosTurmas.ts` | **Criar** - Hook para alertas por turma |
+| `src/components/professor/AlertBoxesTurmas.tsx` | **Criar** - Componente do grid de alertas |
+| `src/pages/professor/ProfessorDashboardSimplificado.tsx` | **Modificar** - Adicionar seção de alertas |
+
+## Layout Visual Final
+
+```text
+┌─────────────────────────────────────┐
+│  Olá, Rita!                     ⚙️  │
+│  Professora • Fundamental 1         │
+├─────────────────────────────────────┤
+│  MINHAS TURMAS                      │
+│  ┌─────────┐  ┌─────────┐           │
+│  │  5º A   │  │  5º B   │           │
+│  └─────────┘  └─────────┘           │
+├─────────────────────────────────────┤
+│  ALERTAS DAS TURMAS          ← NOVO │
+│  ┌─────────┐  ┌─────────┐           │
+│  │🔴 0     │  │✨ 0     │           │
+│  │Precisam │  │Celebre  │           │
+│  └─────────┘  └─────────┘           │
+│  ┌─────────┐  ┌─────────┐           │
+│  │🟡 0     │  │⚠️ 0     │           │
+│  │Não esq. │  │Fase ant.│           │
+│  └─────────┘  └─────────┘           │
+├─────────────────────────────────────┤
+│  AÇÕES RÁPIDAS                      │
+│  [📋 Fazer Observação]              │
+│  [👥 Meus Alunos]                   │
+│  [📖 Conteúdo]                      │
+└─────────────────────────────────────┘
+```
+
+## Detalhes Técnicos
+
+### Query para buscar alunos das turmas
+
+```typescript
+const turmaIds = turmasVinculadas?.map(t => t.id) || [];
+
+// Buscar vínculos ativos
+const { data: alunosTurma } = await supabase
+  .from('aluno_turma')
+  .select('aluno_id')
+  .in('turma_id', turmaIds)
+  .eq('ativo', true);
+
+const alunoIds = alunosTurma?.map(a => a.aluno_id) || [];
+
+// Buscar profiles dos alunos
+const { data: alunos } = await supabase
+  .from('profiles')
+  .select('id, nome, sobrenome, avatar_url, serie, turma')
+  .in('id', alunoIds);
+```
+
+### Condição de habilitação do hook
+
+```typescript
+enabled: !!profile?.institution_id && 
+         !!turmasVinculadas && 
+         turmasVinculadas.length > 0
+```
+
+### Query key com turmas
+
+```typescript
+queryKey: [
+  'alertas-alunos-turmas', 
+  profile?.institution_id, 
+  turmasVinculadas?.map(t => t.id).join(','),
+  faseAtual?.id
+]
+```
+
+## Resumo
+
+O plano adiciona o painel de alertas ao dashboard de professores de Infantil/F1, usando a mesma interface visual do F2 mas com dados baseados nas turmas vinculadas ao professor. A lógica de cálculo de alertas permanece a mesma (14 dias sem observação, 2 positivos consecutivos, etc.).
