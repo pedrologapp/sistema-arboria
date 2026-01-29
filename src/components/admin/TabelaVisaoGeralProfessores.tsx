@@ -39,16 +39,25 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
 
       if (turmasError) throw turmasError;
 
-      // Buscar vínculos professor_turma ativos
+      // Buscar vínculos professor_turma ativos (sem JOIN)
       const { data: vinculos } = await supabase
         .from('professor_turma')
-        .select(`
-          turma_id,
-          professor_id,
-          profiles:professor_id (full_name)
-        `)
+        .select('turma_id, professor_id')
         .eq('institution_id', institutionId)
         .eq('ativo', true);
+
+      // Buscar nomes dos professores separadamente
+      const professorIds = [...new Set(vinculos?.map(v => v.professor_id) || [])];
+      let professorMap = new Map<string, string>();
+      
+      if (professorIds.length > 0) {
+        const { data: professores } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', professorIds);
+        
+        professorMap = new Map(professores?.map(p => [p.id, p.full_name || '']) || []);
+      }
 
       // Mapear turmas com professores
       const turmasComProfessor = turmas?.map(turma => {
@@ -56,7 +65,7 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
         return {
           ...turma,
           professor_id: vinculo?.professor_id || null,
-          professor_nome: (vinculo?.profiles as any)?.full_name || null
+          professor_nome: vinculo ? professorMap.get(vinculo.professor_id) || null : null
         };
       }) || [];
 
@@ -75,17 +84,25 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
         .select('id, nome, emoji, codigo')
         .order('id');
 
-      // Buscar mentores
+      // Buscar mentores (sem JOIN)
       const { data: mentores } = await supabase
         .from('professor_casa')
-        .select(`
-          casa_id,
-          professor_id,
-          eh_mentor_principal,
-          profiles:professor_id (full_name)
-        `)
+        .select('casa_id, professor_id, eh_mentor_principal')
         .eq('institution_id', institutionId)
         .eq('ativo', true);
+
+      // Buscar nomes dos mentores separadamente
+      const mentorIds = [...new Set(mentores?.map(m => m.professor_id) || [])];
+      let mentorMap = new Map<string, string>();
+      
+      if (mentorIds.length > 0) {
+        const { data: mentoresProfiles } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', mentorIds);
+        
+        mentorMap = new Map(mentoresProfiles?.map(p => [p.id, p.full_name || '']) || []);
+      }
 
       // Mapear casas com mentores
       const casasComMentor = casas?.map(casa => {
@@ -93,7 +110,7 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
         return {
           ...casa,
           professor_id: mentor?.professor_id || null,
-          professor_nome: (mentor?.profiles as any)?.full_name || null,
+          professor_nome: mentor ? mentorMap.get(mentor.professor_id) || null : null,
           eh_mentor_principal: mentor?.eh_mentor_principal || false
         };
       }) || [];
