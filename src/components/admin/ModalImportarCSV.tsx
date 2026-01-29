@@ -333,23 +333,45 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
           }
         });
 
-        // Chamar edge function para este lote
-        const { data, error } = await supabase.functions.invoke('import-users', {
-          body: { users, tipo }
-        });
+        // Chamar edge function para este lote com retry
+        let tentativa = 0;
+        const maxTentativas = 2;
+        let sucesso = false;
 
-        if (error) {
-          console.error(`Erro no lote ${i + 1}:`, error);
-          todosErros.push(`Lote ${i + 1}: ${error.message}`);
-        } else {
-          totalCriados += data?.criados || 0;
-          totalAtualizados += data?.atualizados || 0;
-          if (data?.errors?.length) {
-            todosErros.push(...data.errors);
+        while (tentativa < maxTentativas && !sucesso) {
+          tentativa++;
+          try {
+            const { data, error } = await supabase.functions.invoke('import-users', {
+              body: { users, tipo }
+            });
+
+            if (error) {
+              console.error(`Erro no lote ${i + 1} (tentativa ${tentativa}):`, error);
+              if (tentativa >= maxTentativas) {
+                todosErros.push(`Lote ${i + 1}: ${error.message}`);
+              }
+            } else {
+              totalCriados += data?.criados || 0;
+              totalAtualizados += data?.atualizados || 0;
+              if (data?.errors?.length) {
+                todosErros.push(...data.errors);
+              }
+              sucesso = true;
+            }
+          } catch (err: any) {
+            console.error(`Exceção no lote ${i + 1} (tentativa ${tentativa}):`, err);
+            if (tentativa >= maxTentativas) {
+              todosErros.push(`Lote ${i + 1}: Falha na conexão - tente novamente`);
+            }
+          }
+
+          // Aguardar antes de retry
+          if (!sucesso && tentativa < maxTentativas) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
           }
         }
       } catch (err: any) {
-        console.error(`Exceção no lote ${i + 1}:`, err);
+        console.error(`Erro crítico no lote ${i + 1}:`, err);
         todosErros.push(`Lote ${i + 1}: ${err.message || 'Erro desconhecido'}`);
       }
 
