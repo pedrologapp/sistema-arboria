@@ -19,6 +19,7 @@ import ModalImportarCSV from '@/components/admin/ModalImportarCSV';
 import ModalAdicionarUsuario from '@/components/admin/ModalAdicionarUsuario';
 import ModalExcluirAlunosMassa from '@/components/admin/ModalExcluirAlunosMassa';
 import ModalGerarContas from '@/components/admin/ModalGerarContas';
+import TabelaVisaoGeralProfessores from '@/components/admin/TabelaVisaoGeralProfessores';
 
 type TabType = 'alunos' | 'professores' | 'admins';
 
@@ -142,7 +143,7 @@ const PessoasPage = () => {
       // Buscar profiles desses users na instituição
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
-        .select('id, nome, sobrenome, full_name, avatar_url, created_at')
+        .select('id, nome, sobrenome, full_name, avatar_url, created_at, segmento')
         .eq('institution_id', institutionId)
         .in('id', userIds)
         .order('full_name');
@@ -155,11 +156,19 @@ const PessoasPage = () => {
         .select('professor_id, casa_id, eh_mentor_principal, ativo')
         .eq('institution_id', institutionId)
         .eq('ativo', true);
+
+      // Buscar vínculos professor_turma
+      const { data: vinculosTurma } = await supabase
+        .from('professor_turma')
+        .select('professor_id, turma_id')
+        .eq('institution_id', institutionId)
+        .eq('ativo', true);
       
       // Combinar dados
       return profiles?.map(prof => ({
         ...prof,
-        professor_casa: vinculos?.filter(v => v.professor_id === prof.id) || []
+        professor_casa: vinculos?.filter(v => v.professor_id === prof.id) || [],
+        turmas_count: vinculosTurma?.filter(v => v.professor_id === prof.id)?.length || 0
       })) || [];
     },
     enabled: !!institutionId
@@ -471,15 +480,27 @@ const PessoasPage = () => {
               <div className="space-y-2">
                 {professores?.map((prof) => {
                   const casaVinculo = prof.professor_casa?.find((pc: any) => pc.ativo);
+                  const segmentoProf = prof.segmento || 'fundamental2';
+                  
+                  // Determinar subtítulo baseado no segmento
+                  let subtitulo: string;
+                  if (segmentoProf === 'fundamental2') {
+                    subtitulo = casaVinculo 
+                      ? `Mentor: ${getNomeCasa(casaVinculo.casa_id)}`
+                      : 'Sem casa atribuída';
+                  } else {
+                    const segLabel = segmentoProf === 'infantil' ? 'Infantil' : 'Fund. I';
+                    subtitulo = prof.turmas_count > 0
+                      ? `${segLabel} • ${prof.turmas_count} turma(s)`
+                      : `${segLabel} • Sem turmas`;
+                  }
+                  
                   return (
                     <PessoaCard
                       key={prof.id}
                       nome={prof.full_name || `${prof.nome} ${prof.sobrenome}`}
                       avatarUrl={prof.avatar_url}
-                      subtitulo={casaVinculo 
-                        ? `Mentor: ${getNomeCasa(casaVinculo.casa_id)}`
-                        : 'Sem casa atribuída'
-                      }
+                      subtitulo={subtitulo}
                       onClick={() => navigate(`/admin/pessoas/professor/${prof.id}`)}
                     />
                   );
@@ -492,6 +513,11 @@ const PessoasPage = () => {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* Tabela de Visão Geral */}
+            {institutionId && (
+              <TabelaVisaoGeralProfessores institutionId={institutionId} />
             )}
 
             {/* Botões */}

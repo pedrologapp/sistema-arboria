@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { X, Loader2, Check, Copy, Eye, EyeOff } from 'lucide-react';
+import { X, Loader2, Check, Copy, Eye, EyeOff, CheckSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ModalAdicionarUsuarioProps {
@@ -18,6 +18,12 @@ const segmentoLabels: Record<Segmento, string> = {
   fundamental2: 'Fundamental 2',
 };
 
+const SERIES_POR_SEGMENTO: Record<Segmento, number[]> = {
+  infantil: [2, 3, 4, 5],
+  fundamental1: [1, 2, 3, 4, 5],
+  fundamental2: [6, 7, 8, 9],
+};
+
 const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarUsuarioProps) => {
   const queryClient = useQueryClient();
   const [nome, setNome] = useState('');
@@ -27,6 +33,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
   const [turma, setTurma] = useState('');
   const [casaId, setCasaId] = useState('');
   const [segmento, setSegmento] = useState<Segmento>('fundamental2');
+  const [turmasSelecionadas, setTurmasSelecionadas] = useState<string[]>([]);
   const [senhaGerada, setSenhaGerada] = useState<string | null>(null);
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [criando, setCriando] = useState(false);
@@ -42,6 +49,33 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
       return data || [];
     }
   });
+
+  // Buscar turmas disponíveis para o segmento (para professores de Infantil/F1)
+  const { data: turmasDisponiveis } = useQuery({
+    queryKey: ['turmas-por-segmento', segmento, institutionId],
+    queryFn: async () => {
+      const series = SERIES_POR_SEGMENTO[segmento] || [];
+      
+      const { data } = await supabase
+        .from('turmas')
+        .select('id, nome, serie, turma_letra')
+        .eq('institution_id', institutionId)
+        .in('serie', series)
+        .order('serie')
+        .order('turma_letra');
+      
+      return data || [];
+    },
+    enabled: tipo === 'professor' && segmento !== 'fundamental2'
+  });
+
+  const toggleTurma = (turmaId: string) => {
+    setTurmasSelecionadas(prev => 
+      prev.includes(turmaId)
+        ? prev.filter(id => id !== turmaId)
+        : [...prev, turmaId]
+    );
+  };
 
   // Séries disponíveis
   const series = ['6º ano', '7º ano', '8º ano', '9º ano'];
@@ -81,9 +115,13 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
         body.role = 'user';
       } else if (tipo === 'professor') {
         body.segmento = segmento;
-        // Só incluir casa_id se for fundamental2
+        // Para fundamental2, casa é obrigatória
         if (segmento === 'fundamental2' && casaId) {
           body.casa_id = parseInt(casaId);
+        }
+        // Para infantil/fundamental1, turmas são obrigatórias
+        if (segmento !== 'fundamental2' && turmasSelecionadas.length > 0) {
+          body.turma_ids = turmasSelecionadas;
         }
       } else if (tipo === 'admin') {
         body.role = 'admin';
@@ -126,6 +164,8 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
       if (!segmento) return false;
       // Para fundamental2, casa é obrigatória
       if (segmento === 'fundamental2' && !casaId) return false;
+      // Para infantil/fundamental1, pelo menos uma turma é obrigatória
+      if (segmento !== 'fundamental2' && turmasSelecionadas.length === 0) return false;
     }
     return true;
   };
@@ -301,9 +341,11 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
                   value={segmento}
                   onChange={(e) => {
                     setSegmento(e.target.value as Segmento);
-                    // Limpar casa se mudar de fundamental2 para outro
+                    // Limpar seleções anteriores
                     if (e.target.value !== 'fundamental2') {
                       setCasaId('');
+                    } else {
+                      setTurmasSelecionadas([]);
                     }
                   }}
                   className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white"
@@ -336,13 +378,45 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
                 </div>
               )}
 
-              {/* Info para professores sem casa */}
+              {/* Campo Turmas - aparece para infantil e fundamental1 */}
               {segmento !== 'fundamental2' && (
-                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-                  <p className="text-blue-400 text-sm">
-                    Professores do {segmentoLabels[segmento]} participam de todas as fases 
-                    do segmento e não são vinculados a uma casa específica.
-                  </p>
+                <div>
+                  <label className="block text-sm text-white/60 mb-1.5">
+                    Turmas Vinculadas
+                  </label>
+                  {turmasDisponiveis && turmasDisponiveis.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 bg-white/5 rounded-xl border border-white/10">
+                      {turmasDisponiveis.map(t => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => toggleTurma(t.id)}
+                          className={`p-2 rounded-lg border text-sm flex items-center gap-2 transition-colors ${
+                            turmasSelecionadas.includes(t.id)
+                              ? 'bg-white/20 border-white text-white'
+                              : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
+                          }`}
+                        >
+                          <CheckSquare className={`w-4 h-4 ${
+                            turmasSelecionadas.includes(t.id) ? 'text-green-400' : 'text-white/30'
+                          }`} />
+                          {t.nome}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center">
+                      <p className="text-amber-400 text-sm">
+                        Nenhuma turma cadastrada para {segmentoLabels[segmento]}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {turmasSelecionadas.length > 0 && (
+                    <p className="text-xs text-white/40 mt-2">
+                      {turmasSelecionadas.length} turma(s) selecionada(s)
+                    </p>
+                  )}
                 </div>
               )}
             </>
