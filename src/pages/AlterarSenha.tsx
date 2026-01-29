@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Lock, Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { Lock, Eye, EyeOff, AlertTriangle, ArrowLeft } from 'lucide-react';
 
 const AlterarSenha = () => {
   const { user } = useAuth();
@@ -67,7 +67,15 @@ const AlterarSenha = () => {
 
   return (
     <div className="min-h-screen w-full bg-black flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-white/5 border-white/10">
+      <Card className="w-full max-w-md bg-white/5 border-white/10 relative">
+        {/* Botão Voltar */}
+        <button
+          onClick={() => navigate(-1)}
+          className="absolute top-4 left-4 p-2 rounded-full hover:bg-white/10 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5 text-white/60" />
+        </button>
+        
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 p-3 bg-amber-500/20 rounded-full w-fit">
             <AlertTriangle className="w-8 h-8 text-amber-400" />
