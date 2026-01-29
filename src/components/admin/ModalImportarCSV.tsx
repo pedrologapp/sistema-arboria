@@ -11,6 +11,7 @@ interface ModalImportarCSVProps {
   tipo: 'alunos' | 'professores';
   institutionId: string;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 interface AlunoCSV {
@@ -46,7 +47,7 @@ interface ProgressoState {
   erros: string[];
 }
 
-const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProps) => {
+const ModalImportarCSV = ({ tipo, institutionId, onClose, onSuccess }: ModalImportarCSVProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [dados, setDados] = useState<(AlunoCSV | ProfessorCSV)[]>([]);
@@ -310,6 +311,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
         const total = (data?.criados || 0) + (data?.atualizados || 0);
         if ((data?.errors?.length || 0) === 0) {
           toast.success(`${total} alunos importados! (${data?.criados} novos, ${data?.atualizados} atualizados)`);
+          onSuccess?.();
           onClose();
         } else {
           toast.warning(`${total} importados, ${data?.errors?.length} erros`);
@@ -360,6 +362,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose }: ModalImportarCSVProp
 
         if (todosErros.length === 0) {
           toast.success(`${totalCriados + totalAtualizados} professores importados!`);
+          onSuccess?.();
           onClose();
         } else {
           toast.warning(`${totalCriados + totalAtualizados} importados, ${todosErros.length} erros`);
