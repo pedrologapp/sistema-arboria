@@ -1,68 +1,83 @@
 
-# Plano: Remover Pontuação e Ajustar Status para Infantil/Fundamental 1
+# Plano: Otimizar Grid de Alunos na Aba Círculo
 
-## ✅ CONCLUÍDO
+## Objetivo
 
-### Objetivo
+Ajustar o layout da grade de alunos em `CirculoTurmaDirectPage.tsx` para caber 4-5 alunos por linha, reduzindo o tamanho dos avatares e espaçamentos para diminuir a necessidade de scroll.
 
-Ajustar a lista de alunos e perfil para Infantil/F1 removendo todos os elementos de pontuação e alterando a lógica de status para ser baseada em **observações** em vez de entregas.
+## Mudanças
 
-### Mudanças Implementadas
+### Arquivo: `src/pages/professor/circulo/CirculoTurmaDirectPage.tsx`
 
-#### 1. Lista de Alunos (`AlunosPageSimplificado.tsx`)
+| Elemento | Antes | Depois |
+|----------|-------|--------|
+| Grid | `grid-cols-3 sm:grid-cols-4 md:grid-cols-5` | `grid-cols-4 sm:grid-cols-5` |
+| Gap | `gap-4` | `gap-2` |
+| Avatar | `h-20 w-20` (80px) | `h-14 w-14` (56px) |
+| Fonte iniciais | `text-xl` | `text-base` |
+| Fonte nome | `text-sm` | `text-xs` |
+| Padding botão | `p-2` | `p-1.5` |
+| Skeleton | `w-20 h-20` | `w-14 h-14` |
 
-**Removido:**
-- ✅ Ícone de troféu e título "Ranking de Pontos"
-- ✅ Estrela amarela com pontos ao lado do nome
-- ✅ Numeração de posição (1, 2, 3...)
+### Layout Final
 
-**Mantido:**
-- ✅ Avatar com bolinha de status (verde = tem observações, cinza = sem observações)
-- ✅ Nome + Série/Turma
-- ✅ Seta de navegação
+**Em mobile (4 por linha):**
+```text
+[AC] [AC] [AC] [EF]
+[EH] [ET] [FF] [HC]
+[JN] [JG] [LF] [LV]
+[LM] [MV] [MA] [...]
+```
 
-#### 2. Perfil do Aluno (`PerfilAlunoPageSimplificado.tsx`)
+**Em telas maiores (5 por linha):**
+```text
+[AC] [AC] [AC] [EF] [EH]
+[ET] [FF] [HC] [JN] [JG]
+[LF] [LV] [LM] [MV] [MA]
+```
 
-**Removido:**
-- ✅ Cards de "Pontos" e "Ranking"
-- ✅ StatusCard (que mencionava entregas e média)
+## Benefícios
 
-**Mantido:**
-- ✅ Seção de Inteligências (8 barras de progresso)
-- ✅ Seção de Observações do Professor (FeedbackEstadoCard + histórico)
+- 21 alunos cabem em 5-6 linhas (4/linha) ou 4-5 linhas (5/linha)
+- Menos scroll para o professor
+- Nome abreviado mantido legível ("Abraão C.")
+- Iniciais no círculo permanecem visíveis
 
-#### 3. Hook (`useAlunosTurmasComStatus.ts`)
+## Código Alterado
 
-**Alterado:**
-- ✅ Status baseado em observações (não pontos)
-- ✅ `status: 'com_observacao' | 'sem_observacao'`
-- ✅ Ordenação por nome alfabético (não por pontos)
+**Grid e gaps (linha ~123):**
+```typescript
+// De:
+<div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
 
-#### 4. Hook (`usePerfilAlunoSimplificado.ts`)
+// Para:
+<div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+```
 
-**Removido:**
-- ✅ `pontosTotais`
-- ✅ `ranking`
-- ✅ `totalAlunosTurma`
-- ✅ `percentualEntregas`
-- ✅ `mediaNotas`
-- ✅ `status`
+**Botão/Card do aluno (linhas ~125-143):**
+```typescript
+// De:
+<button className="... p-2 ...">
+  <Avatar className="h-20 w-20 ...">
+    <AvatarFallback className="... text-xl ...">
+  </Avatar>
+  <span className="... text-sm ...">
 
-**Adicionado:**
-- ✅ `quantidadeObservacoes`
-- ✅ `temObservacoes` (boolean)
+// Para:
+<button className="... p-1.5 ...">
+  <Avatar className="h-14 w-14 ...">
+    <AvatarFallback className="... text-base ...">
+  </Avatar>
+  <span className="... text-xs ...">
+```
 
-### Nova Lógica de Status
+**Skeletons de loading (linhas ~111-118):**
+```typescript
+// De:
+<div className="grid grid-cols-3 gap-4">
+  <div className="w-20 h-20 ...">
 
-| Condição | Status | Cor | Descrição |
-|----------|--------|-----|-----------|
-| Tem observações | `com_observacao` | Verde | Aluno está sendo acompanhado |
-| Sem observações | `sem_observacao` | Cinza | "Nenhuma observação registrada" |
-
-### Resumo
-
-Para Infantil/Fundamental 1:
-1. ✅ Lista de alunos mostra apenas avatar, nome, série/turma e seta
-2. ✅ Perfil do aluno mostra apenas série/turma (sem pontos/ranking)
-3. ✅ Status baseado em observações (não entregas)
-4. ✅ Cores: verde se tem observações, cinza se não tem
+// Para:
+<div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+  <div className="w-14 h-14 ...">
+```
