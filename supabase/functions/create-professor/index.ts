@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
       institution_id, 
       segmento,
       casa_id, // Opcional - só obrigatório para fundamental2
+      turma_ids, // NOVO: Array de UUIDs - obrigatório para infantil/fundamental1
       ano_letivo = 2025 
     } = await req.json()
 
@@ -85,6 +86,14 @@ Deno.serve(async (req) => {
     if (segmento === 'fundamental2' && !casa_id) {
       return new Response(
         JSON.stringify({ error: 'Casa é obrigatória para professores do Fundamental 2' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Para infantil/fundamental1, turma_ids é obrigatório
+    if ((segmento === 'infantil' || segmento === 'fundamental1') && (!turma_ids || turma_ids.length === 0)) {
+      return new Response(
+        JSON.stringify({ error: 'Turmas são obrigatórias para professores de Infantil e Fundamental 1' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -166,8 +175,31 @@ Deno.serve(async (req) => {
         )
       }
       console.log(`[create-professor] Professor linked to casa ${casa_id}`)
-    } else {
-      console.log(`[create-professor] Professor de ${segmento} não precisa de casa`)
+    }
+
+    // 5. Link to turmas via professor_turma (APENAS para infantil/fundamental1)
+    if ((segmento === 'infantil' || segmento === 'fundamental1') && turma_ids?.length > 0) {
+      const turmaLinks = turma_ids.map((turma_id: string) => ({
+        professor_id: userId,
+        turma_id,
+        institution_id,
+        ano_letivo,
+        eh_regente: true,
+        ativo: true
+      }))
+
+      const { error: turmaError } = await supabaseAdmin
+        .from('professor_turma')
+        .insert(turmaLinks)
+
+      if (turmaError) {
+        console.error('[create-professor] Turma link error:', turmaError)
+        return new Response(
+          JSON.stringify({ error: `Failed to link professor to turmas: ${turmaError.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      console.log(`[create-professor] Professor linked to ${turma_ids.length} turma(s)`)
     }
 
     console.log(`[create-professor] Professor ${nome} ${sobrenome} created successfully!`)
@@ -183,6 +215,7 @@ Deno.serve(async (req) => {
           full_name: `${nome} ${sobrenome}`,
           segmento,
           casa_id: segmento === 'fundamental2' ? casa_id : null,
+          turma_ids: (segmento === 'infantil' || segmento === 'fundamental1') ? turma_ids : null,
           institution_id
         }
       }),

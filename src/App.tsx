@@ -48,7 +48,7 @@ import PerfilPage from "./pages/aluno/PerfilPage";
 import ConfiguracoesPage from "./pages/aluno/ConfiguracoesPage";
 
 // Professor pages
-import ProfessorDashboard from "./pages/professor/ProfessorDashboard";
+import ProfessorDashboardWrapper from "./pages/professor/ProfessorDashboardWrapper";
 import ProfessorMissoesPage from "./pages/professor/MissoesPage";
 import NovaMissaoPage from "./pages/professor/NovaMissaoPage";
 import EditarMissaoPage from "./pages/professor/EditarMissaoPage";
@@ -57,10 +57,11 @@ import EntregasPage from "./pages/professor/EntregasPage";
 import AvaliarEntregaPage from "./pages/professor/AvaliarEntregaPage";
 import CirculoPage from "./pages/professor/CirculoPage";
 import CirculoTurmaPage from "./pages/professor/circulo/CirculoTurmaPage";
+import CirculoTurmaDirectPage from "./pages/professor/circulo/CirculoTurmaDirectPage";
 import CirculoAlunosPage from "./pages/professor/circulo/CirculoAlunosPage";
 import CirculoRegistrarPage from "./pages/professor/circulo/CirculoRegistrarPage";
 import CirculoRegistrarMultiplosPage from "./pages/professor/circulo/CirculoRegistrarMultiplosPage";
-import AlunosPage from "./pages/professor/AlunosPage";
+import AlunosPageWrapper from "./pages/professor/AlunosPageWrapper";
 import PerfilAlunoPage from "./pages/professor/PerfilAlunoPage";
 import ProfessorConfiguracoesPage from "./pages/professor/ProfessorConfiguracoesPage";
 import MissoesSeriePage from "./pages/professor/MissoesSeriePage";
@@ -181,7 +182,7 @@ const App = () => (
             <Route path="/professor" element={
               <ProfessorProtectedRoute>
                 <ProfessorLayout>
-                  <ProfessorDashboard />
+                  <ProfessorDashboardWrapper />
                 </ProfessorLayout>
               </ProfessorProtectedRoute>
             } />
@@ -333,6 +334,13 @@ const App = () => (
                 </ProfessorLayout>
               </ProfessorProtectedRoute>
             } />
+            <Route path="/professor/circulo/turma/:turmaId" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <CirculoTurmaDirectPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
             <Route path="/professor/circulo/serie/:serie/turma/:turma" element={
               <ProfessorProtectedRoute>
                 <ProfessorLayout>
@@ -357,7 +365,7 @@ const App = () => (
             <Route path="/professor/alunos" element={
               <ProfessorProtectedRoute>
                 <ProfessorLayout>
-                  <AlunosPage />
+                  <AlunosPageWrapper />
                 </ProfessorLayout>
               </ProfessorProtectedRoute>
             } />

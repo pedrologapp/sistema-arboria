@@ -2,13 +2,15 @@ import { ReactNode } from 'react';
 import { ProfessorProvider, useProfessor } from '@/contexts/ProfessorContext';
 import ProfessorHeader from '@/components/professor/ProfessorHeader';
 import ProfessorBottomNav from '@/components/professor/ProfessorBottomNav';
+import ProfessorLayoutSimplificado from '@/layouts/ProfessorLayoutSimplificado';
 import { useAppBadge } from '@/hooks/useAppBadge';
 
 interface ProfessorLayoutProps {
   children: ReactNode;
 }
 
-const ProfessorLayoutContent = ({ children }: ProfessorLayoutProps) => {
+// Layout completo para Fundamental 2 (com Casa/Mentor)
+const ProfessorLayoutF2 = ({ children }: ProfessorLayoutProps) => {
   const { profile, casaMentor, isLoading } = useProfessor();
 
   // Ativar badge no ícone do app
@@ -39,6 +41,28 @@ const ProfessorLayoutContent = ({ children }: ProfessorLayoutProps) => {
       <ProfessorBottomNav />
     </div>
   );
+};
+
+// Router que escolhe layout baseado no segmento
+const ProfessorLayoutContent = ({ children }: ProfessorLayoutProps) => {
+  const { segmento, isLoading } = useProfessor();
+
+  // Enquanto carrega, mostra loading
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
+
+  // Infantil e Fundamental 1 usam layout simplificado
+  if (segmento === 'infantil' || segmento === 'fundamental1') {
+    return <ProfessorLayoutSimplificado>{children}</ProfessorLayoutSimplificado>;
+  }
+
+  // Fundamental 2 usa layout completo (com casa/mentor)
+  return <ProfessorLayoutF2>{children}</ProfessorLayoutF2>;
 };
 
 const ProfessorLayout = ({ children }: ProfessorLayoutProps) => {
