@@ -9,8 +9,8 @@ export interface AlunoComStatusTurma {
   turma: string;
   turmaId: string;
   avatarUrl?: string;
-  pontosTotais: number;
-  status: 'destaque' | 'regular' | 'risco';
+  quantidadeObservacoes: number;
+  status: 'com_observacao' | 'sem_observacao';
 }
 
 export const useAlunosTurmasComStatus = () => {
@@ -59,20 +59,20 @@ export const useAlunosTurmasComStatus = () => {
         return [];
       }
 
-      // Buscar pontos de todos os alunos
+      // Buscar contagem de observações de todos os alunos
       const alunoIds = alunosTurma.map(at => (at.profiles as any).id);
       
-      const { data: pontosData } = await supabase
-        .from('pontos_gerais')
-        .select('aluno_id, pontos')
+      const { data: observacoesData } = await supabase
+        .from('observacoes')
+        .select('aluno_id')
         .in('aluno_id', alunoIds);
 
-      // Criar mapa de pontos por aluno
-      const pontosMap = new Map<string, number>();
-      if (pontosData) {
-        for (const p of pontosData) {
-          const atual = pontosMap.get(p.aluno_id) || 0;
-          pontosMap.set(p.aluno_id, atual + (p.pontos || 0));
+      // Criar mapa de quantidade de observações por aluno
+      const obsMap = new Map<string, number>();
+      if (observacoesData) {
+        for (const o of observacoesData) {
+          const atual = obsMap.get(o.aluno_id) || 0;
+          obsMap.set(o.aluno_id, atual + 1);
         }
       }
 
@@ -85,15 +85,12 @@ export const useAlunosTurmasComStatus = () => {
           [profileData.nome, profileData.sobrenome].filter(Boolean).join(' ') || 
           'Sem nome';
 
-        const pontosTotais = pontosMap.get(profileData.id) || 0;
+        const quantidadeObservacoes = obsMap.get(profileData.id) || 0;
 
-        // Calcular status baseado em pontos
-        let status: 'destaque' | 'regular' | 'risco' = 'risco';
-        if (pontosTotais > 50) {
-          status = 'destaque';
-        } else if (pontosTotais > 0) {
-          status = 'regular';
-        }
+        // Status baseado em observações
+        const status: 'com_observacao' | 'sem_observacao' = quantidadeObservacoes > 0 
+          ? 'com_observacao' 
+          : 'sem_observacao';
 
         return {
           id: profileData.id,
@@ -102,18 +99,13 @@ export const useAlunosTurmasComStatus = () => {
           turma: profileData.turma || turmaData.turma_letra,
           turmaId: turmaData.id,
           avatarUrl: profileData.avatar_url || undefined,
-          pontosTotais,
+          quantidadeObservacoes,
           status,
         };
       });
 
-      // Ordenar por pontuação decrescente, depois por nome
-      return alunos.sort((a, b) => {
-        if (b.pontosTotais !== a.pontosTotais) {
-          return b.pontosTotais - a.pontosTotais;
-        }
-        return a.nome.localeCompare(b.nome);
-      });
+      // Ordenar por nome alfabético
+      return alunos.sort((a, b) => a.nome.localeCompare(b.nome));
     },
     enabled: !!turmasVinculadas && turmasVinculadas.length > 0 && !!profile?.institution_id
   });

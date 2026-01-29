@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Search, Trophy, Star, ChevronRight } from 'lucide-react';
+import { Users, Search, ChevronRight } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useAlunosTurmasComStatus, type AlunoComStatusTurma } from '@/hooks/useAlunosTurmasComStatus';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,25 +10,22 @@ const accentColor = '#6366f1';
 // ============ COMPONENTE DE LINHA DO ALUNO ============
 
 interface AlunoStatusLinhaSimplificadoProps {
-  posicao: number;
   aluno: AlunoComStatusTurma;
   onClick: () => void;
 }
 
 const getStatusColor = (status: AlunoComStatusTurma['status']) => {
   switch (status) {
-    case 'destaque':
-      return '#22C55E'; // Verde
-    case 'risco':
-      return '#EF4444'; // Vermelho
-    case 'regular':
-      return '#EAB308'; // Amarelo
+    case 'com_observacao':
+      return '#22C55E'; // Verde - tem observações
+    case 'sem_observacao':
+      return '#6B7280'; // Cinza - sem observações
     default:
       return '#6B7280'; // Cinza
   }
 };
 
-const AlunoStatusLinhaSimplificado = ({ posicao, aluno, onClick }: AlunoStatusLinhaSimplificadoProps) => {
+const AlunoStatusLinhaSimplificado = ({ aluno, onClick }: AlunoStatusLinhaSimplificadoProps) => {
   const statusColor = getStatusColor(aluno.status);
 
   return (
@@ -37,11 +34,6 @@ const AlunoStatusLinhaSimplificado = ({ posicao, aluno, onClick }: AlunoStatusLi
       className="w-full flex items-center gap-3 py-2.5 px-3 
         hover:bg-white/5 rounded-lg transition-colors group"
     >
-      {/* Posição no ranking */}
-      <span className="text-white/40 text-sm font-medium w-6 text-right flex-shrink-0">
-        {posicao}
-      </span>
-      
       {/* Avatar com bolinha de status */}
       <div className="relative flex-shrink-0">
         {aluno.avatarUrl ? (
@@ -72,14 +64,6 @@ const AlunoStatusLinhaSimplificado = ({ posicao, aluno, onClick }: AlunoStatusLi
         </span>
         <span className="text-white/40 text-xs flex-shrink-0">
           {aluno.serie} {aluno.turma}
-        </span>
-      </div>
-      
-      {/* Pontuação com ícone Star */}
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-        <span className="text-yellow-400 text-sm font-semibold">
-          {aluno.pontosTotais}pts
         </span>
       </div>
       
@@ -186,26 +170,16 @@ const AlunosPageSimplificado = () => {
         />
       </div>
 
-      {/* Título do Ranking */}
-      <div className="flex items-center gap-2 pt-2">
-        <Trophy className="w-4 h-4 text-yellow-500" strokeWidth={1.5} />
-        <span className="text-white/40 text-xs uppercase tracking-wider font-medium">
-          Ranking de Pontos
-        </span>
-      </div>
-
-      {/* Lista de Alunos (Ranking) */}
+      {/* Lista de Alunos */}
       <div className="space-y-0.5">
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3 py-2.5 px-3">
-              <Skeleton className="w-6 h-4" />
               <Skeleton className="w-10 h-10 rounded-full" />
               <div className="flex-1 flex items-center gap-2">
                 <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-3 w-8" />
+                <Skeleton className="h-3 w-12" />
               </div>
-              <Skeleton className="h-4 w-16" />
             </div>
           ))
         ) : alunosFiltrados.length === 0 ? (
@@ -227,10 +201,9 @@ const AlunosPageSimplificado = () => {
             </p>
           </div>
         ) : (
-          alunosFiltrados.map((aluno, index) => (
+          alunosFiltrados.map((aluno) => (
             <AlunoStatusLinhaSimplificado
               key={aluno.id}
-              posicao={index + 1}
               aluno={aluno}
               onClick={() => handleAlunoClick(aluno.id)}
             />
