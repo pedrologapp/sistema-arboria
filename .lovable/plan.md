@@ -1,207 +1,143 @@
 
-# Plano: Atualizar Aba de Alunos para Infantil/Fundamental 1
+# Plano: Remover Pontuação e Ajustar Status para Infantil/Fundamental 1
 
 ## Objetivo
 
-Atualizar a página de alunos (`AlunosPageSimplificado.tsx`) para ter o mesmo layout do Fundamental 2 (lista com ranking, avatar, nome, série/turma e pontos), e criar uma página de perfil adaptada que:
-- **NÃO** mostra informações de Casa
-- **NÃO** mostra seção de Missões
-- Mostra Série e Turma
-- Mantém seções de Status, Inteligências e Observações do Professor
+Ajustar a lista de alunos e perfil para Infantil/F1 removendo todos os elementos de pontuação e alterando a lógica de status para ser baseada em **observações** em vez de entregas.
 
-## Referência Visual
+## Mudanças Necessárias
 
-### Lista de Alunos (imagem 1)
-```text
-┌─────────────────────────────────────────────┐
-│  TURMA    [Todas] [A] [B] [C]               │
-│  ┌──────────────────────────────────────┐   │
-│  │  🔍 Buscar aluno...                  │   │
-│  └──────────────────────────────────────┘   │
-│                                             │
-│  1   (A)  Adryan ...   6º AnoA  ⭐ 0pts  >  │
-│       🔴                                    │
-│                                             │
-│          1 de 1 alunos                      │
-└─────────────────────────────────────────────┘
+### 1. Lista de Alunos (`AlunosPageSimplificado.tsx`)
+
+**Remover:**
+- Ícone de troféu e título "Ranking de Pontos"
+- Estrela amarela com pontos ao lado do nome
+- Numeração de posição (1, 2, 3...)
+
+**Manter:**
+- Avatar com bolinha de status
+- Nome + Série/Turma
+- Seta de navegação
+
+**Layout final de cada linha:**
+```
+  (A)  Adryan Samuel da Silva   5º A   >
+   🔴
 ```
 
-### Perfil do Aluno (imagens 2 e 3)
-```text
-┌─────────────────────────────────────────────┐
-│  ←                              💬          │
-│                                             │
-│               (  A  )                       │
-│          Adryan Samuel da Silva             │
-│              5º Ano A                       │
-│                                             │
-│     ┌─────────┐   ┌─────────┐               │
-│     │   0     │   │   #1    │               │
-│     │ Pontos  │   │  de 21  │               │
-│     └─────────┘   └─────────┘               │
-│                                             │
-│  ▪ STATUS                                   │
-│  ┌─────────────────────────────────────┐    │
-│  │ ⚠️ EM RISCO                          │    │
-│  │ 0% entregas • Média 0.0              │    │
-│  └─────────────────────────────────────┘    │
-│                                             │
-│  ▪ INTELIGÊNCIAS                            │
-│  [barras de progresso das 8 inteligências]  │
-│                                             │
-│  ▪ OBSERVAÇÕES DO PROFESSOR                 │
-│  ┌─────────────────────────────────────┐    │
-│  │ 👁️ AGUARDANDO SEU OLHAR               │    │
-│  │ Adryan ainda não foi observado       │    │
-│  │ nesta fase.                          │    │
-│  │ Registre sua primeira observação.    │    │
-│  └─────────────────────────────────────┘    │
-│                                             │
-│  [  ⊕ Registrar observação  ]              │
-│                                             │
-│  ❌ NÃO MOSTRA MISSÕES DA FASE              │
-└─────────────────────────────────────────────┘
+### 2. Perfil do Aluno (`PerfilAlunoPageSimplificado.tsx`)
+
+**Remover:**
+- Cards de "Pontos" e "Ranking"
+- StatusCard atual (que menciona entregas e média)
+
+**Alterar Status:**
+- Se tem observações → mostrar mensagem informativa
+- Se não tem observações → mostrar "Nenhuma observação registrada" (neutro, não vermelho "em risco")
+
+**Layout do perfil:**
 ```
+┌─────────────────────────────────────┐
+│  ←                              💬  │
+│                                     │
+│               (  A  )               │
+│          Adryan Samuel da Silva     │
+│              5º Ano A               │
+│                                     │  ← SEM cards de pontos/ranking
+│                                     │
+│  ▪ INTELIGÊNCIAS                    │
+│  [barras de progresso]              │
+│                                     │
+│  ▪ OBSERVAÇÕES DO PROFESSOR         │
+│  [cards de estado/histórico]        │
+│                                     │
+│  [  ⊕ Registrar observação  ]      │
+└─────────────────────────────────────┘
+```
+
+### 3. Hook (`useAlunosTurmasComStatus.ts`)
+
+**Alterar lógica de status:**
+- Buscar contagem de observações do aluno
+- Se tem observações → `regular` (amarelo) ou sem status
+- Se não tem observações → mostrar estado neutro (cinza)
+
+### 4. Hook (`usePerfilAlunoSimplificado.ts`)
+
+**Remover:**
+- `pontosTotais`
+- `ranking`
+- `totalAlunosTurma`
+- `percentualEntregas`
+- `mediaNotas`
+
+**Adicionar:**
+- `quantidadeObservacoes`
+- `temObservacoes` (boolean)
 
 ## Arquivos a Modificar
 
-| Arquivo | Ação |
-|---------|------|
-| `src/pages/professor/AlunosPageSimplificado.tsx` | **Modificar** - Novo layout com ranking e AlunoStatusLinha |
-| `src/pages/professor/PerfilAlunoPageSimplificado.tsx` | **Criar** - Versão adaptada sem Casa e sem Missões |
-| `src/hooks/usePerfilAlunoSimplificado.ts` | **Criar** - Hook adaptado para Infantil/F1 |
-| `src/pages/professor/AlunosPageWrapper.tsx` | **Modificar** - Usar página correta de perfil |
-| `src/App.tsx` | **Modificar** - Adicionar rota condicional de perfil |
+| Arquivo | Alterações |
+|---------|------------|
+| `src/pages/professor/AlunosPageSimplificado.tsx` | Remover pontos, ranking, troféu. Simplificar linha do aluno |
+| `src/pages/professor/PerfilAlunoPageSimplificado.tsx` | Remover cards pontos/ranking e StatusCard. Manter só inteligências + observações |
+| `src/hooks/useAlunosTurmasComStatus.ts` | Mudar lógica de status para baseada em observações |
+| `src/hooks/usePerfilAlunoSimplificado.ts` | Remover campos de pontuação |
 
-## Detalhes Técnicos
+## Nova Lógica de Status
 
-### 1. AlunosPageSimplificado - Novo Layout
+| Condição | Status | Cor | Descrição |
+|----------|--------|-----|-----------|
+| Tem observações recentes | `regular` | Amarelo | Aluno está sendo acompanhado |
+| Sem observações | `sem_observacao` | Cinza | "Nenhuma observação registrada" |
 
-Baseado no `AlunosPage.tsx` (F2), mas adaptado:
+### Detalhes Técnicos
 
+**Hook useAlunosTurmasComStatus - Nova Query:**
 ```typescript
-// Mudanças principais:
-// - Adicionar título "Ranking de Pontos" com ícone Trophy
-// - Usar componente AlunoStatusLinha para cada aluno
-// - Ordenar por pontuação decrescente
-// - Navegar para /professor/alunos/{id} ao clicar
-
-// Filtros:
-// - TURMA: baseado nas turmasVinculadas do professor
-// - Campo de busca por nome
-```
-
-### 2. Novo Hook: usePerfilAlunoSimplificado
-
-Hook similar ao `usePerfilAluno`, mas:
-- Ranking calculado dentro da TURMA (não da Casa)
-- `totalAlunosTurma` em vez de `totalAlunosCasa`
-- Sem buscar `casaNome`, `casaCor`, `casaEmoji`
-- Cor padrão fixa (ex: indigo `#6366f1`)
-- Omite busca de missões
-
-```typescript
-export interface PerfilAlunoSimplificadoData {
-  id: string;
-  nome: string;
-  serie: string;
-  turma: string;
-  turmaId: string;
-  avatarUrl?: string;
-  pontosTotais: number;
-  ranking: number;
-  totalAlunosTurma: number;
-  status: 'destaque' | 'regular' | 'risco';
-  percentualEntregas: number;
-  mediaNotas: number;
-  inteligencias: { id: number; nome: string; emoji: string; cor: string; score: number }[];
-  observacoes: Observacao[];
-  alertaAtivo: AlertaAtivo | null;
-  ultimaObservacao: { sinal: string; dataHora: string } | null;
-  temObsFaseAtual: boolean;
-  faseAtualNome?: string;
-  conversaRegistrada?: ConversaRegistrada | null;
-}
-```
-
-### 3. Novo Componente: PerfilAlunoPageSimplificado
-
-Cópia do `PerfilAlunoPage.tsx` com estas diferenças:
-
-| Elemento | F2 (Original) | Infantil/F1 (Simplificado) |
-|----------|---------------|----------------------------|
-| Subtítulo | "6º Ano A • Linguística" | "5º Ano A" (só série/turma) |
-| Ranking | "#1 de 45" (da Casa) | "#1 de 21" (da Turma) |
-| Cor do avatar/bordas | `casaCor` dinâmica | `#6366f1` (indigo fixo) |
-| Seção Missões da Fase | ✅ Exibe | ❌ Omitida |
-| Seção Inteligências | ✅ Exibe | ✅ Exibe |
-| Seção Observações | ✅ Exibe | ✅ Exibe |
-
-### 4. Roteamento Condicional
-
-No `App.tsx`, a rota `/professor/alunos/:id` precisa renderizar a página correta baseada no segmento do professor:
-
-```typescript
-// Opção 1: Criar um wrapper que detecta o segmento
-// PerfilAlunoPageWrapper.tsx
-const { segmento } = useProfessor();
-return segmento === 'fundamental2' 
-  ? <PerfilAlunoPage /> 
-  : <PerfilAlunoPageSimplificado />;
-```
-
-## Fluxo de Navegação
-
-```text
-Professor de Fundamental 1 logado:
-  │
-  ├─> /professor/alunos
-  │     │
-  │     └─> AlunosPageSimplificado
-  │           │
-  │           └─> Lista com ranking (1, 2, 3...)
-  │                 │
-  │                 └─> Clica em aluno
-  │                       │
-  │                       └─> /professor/alunos/{id}
-  │                             │
-  │                             └─> PerfilAlunoPageSimplificado
-  │                                   │
-  │                                   ├─> Avatar + Nome
-  │                                   ├─> Série/Turma (sem Casa)
-  │                                   ├─> Pontos + Ranking na Turma
-  │                                   ├─> Status (Destaque/Regular/Risco)
-  │                                   ├─> Inteligências (8 barras)
-  │                                   ├─> Observações do Professor
-  │                                   └─> ❌ Sem Missões
-```
-
-## Dados de Status e Ranking
-
-### Cálculo do Status (mantém a mesma lógica)
-- **Destaque**: ≥75% de entregas E média ≥7.0
-- **Regular**: Entre 50-75% de entregas OU média entre 5.0-7.0
-- **Risco**: <50% de entregas OU média <5.0
-
-### Cálculo do Ranking (adaptado para Turma)
-```typescript
-// Buscar todos alunos da mesma turma
-const { data: alunosTurma } = await supabase
-  .from('aluno_turma')
+// Buscar contagem de observações por aluno
+const { data: observacoesData } = await supabase
+  .from('observacoes')
   .select('aluno_id')
-  .eq('turma_id', alunoTurmaId)
-  .eq('ativo', true);
+  .in('aluno_id', alunoIds);
 
-// Comparar pontos para determinar posição
+// Criar mapa de quantidade
+const obsMap = new Map<string, number>();
+for (const o of observacoesData || []) {
+  const atual = obsMap.get(o.aluno_id) || 0;
+  obsMap.set(o.aluno_id, atual + 1);
+}
+
+// Status baseado em observações
+const quantidadeObs = obsMap.get(alunoId) || 0;
+const status = quantidadeObs > 0 ? 'regular' : 'sem_observacao';
 ```
 
-## Resumo de Arquivos
+**Componente de linha simplificado:**
+```typescript
+// Sem numeração, sem pontos
+<button className="w-full flex items-center gap-3 py-2.5 px-3">
+  {/* Avatar com bolinha de status */}
+  <div className="relative">
+    <Avatar />
+    <StatusDot />
+  </div>
+  
+  {/* Nome + Série/Turma */}
+  <div className="flex-1 flex items-center gap-2">
+    <span>{aluno.nome}</span>
+    <span className="text-white/40">{aluno.serie} {aluno.turma}</span>
+  </div>
+  
+  {/* Seta */}
+  <ChevronRight />
+</button>
+```
 
-| Arquivo | Ação |
-|---------|------|
-| `src/pages/professor/AlunosPageSimplificado.tsx` | **Modificar** |
-| `src/hooks/usePerfilAlunoSimplificado.ts` | **Criar** |
-| `src/pages/professor/PerfilAlunoPageSimplificado.tsx` | **Criar** |
-| `src/pages/professor/PerfilAlunoPageWrapper.tsx` | **Criar** |
-| `src/App.tsx` | **Modificar** (usar wrapper) |
+## Resumo
 
+Para Infantil/Fundamental 1:
+1. Lista de alunos mostra apenas avatar, nome, série/turma e seta
+2. Perfil do aluno mostra apenas série/turma (sem pontos/ranking)
+3. Status baseado em observações (não entregas)
+4. Cores: amarelo se tem observações, cinza se não tem
