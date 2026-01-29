@@ -1,77 +1,157 @@
 
-# Plano: Adicionar Botão Voltar na Página de Alterar Senha
+# Plano: Adicionar Upload de Foto de Perfil para Professor e Aluno (Admin)
 
-## Problema
+## Objetivo
 
-A página `/alterar-senha` não possui um botão de voltar, deixando o usuário sem opção de navegação quando acessa voluntariamente (ex: vindo do perfil de um professor/admin).
+1. **Professor**: Adicionar opção para o professor alterar sua própria foto na página de Configurações
+2. **Admin**: Adicionar opção para o admin alterar a foto do aluno no perfil do aluno
 
-## Solução
+## Alterações Necessárias
 
-Adicionar um botão de voltar no canto superior esquerdo do card, usando `navigate(-1)` para retornar à página anterior no histórico.
+### 1. Banco de Dados - Nova Política RLS para Admin
 
-## Alterações em `AlterarSenha.tsx`
+O bucket `avatars` atualmente só permite que o próprio usuário faça upload. Precisamos adicionar uma política que permita que **admins** façam upload de fotos para qualquer usuário.
 
-### 1. Importar ícone ArrowLeft
+```sql
+-- Admin pode fazer upload de avatars de qualquer usuário
+CREATE POLICY "Admin can upload any avatar"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (
+  bucket_id = 'avatars' AND 
+  public.has_role(auth.uid(), 'admin')
+);
 
-```typescript
-import { Lock, Eye, EyeOff, AlertTriangle, ArrowLeft } from 'lucide-react';
+-- Admin pode deletar avatars de qualquer usuário
+CREATE POLICY "Admin can delete any avatar"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (
+  bucket_id = 'avatars' AND 
+  public.has_role(auth.uid(), 'admin')
+);
+
+-- Admin pode atualizar avatars de qualquer usuário
+CREATE POLICY "Admin can update any avatar"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (
+  bucket_id = 'avatars' AND 
+  public.has_role(auth.uid(), 'admin')
+);
 ```
 
-### 2. Adicionar botão voltar no topo do Card
+### 2. Página de Configurações do Professor
 
-Posicionar o botão de forma absoluta no canto superior esquerdo do card:
+**Arquivo:** `src/pages/professor/ProfessorConfiguracoesPage.tsx`
 
-```typescript
-<Card className="w-full max-w-md bg-white/5 border-white/10 relative">
-  {/* Botão Voltar */}
-  <button
-    onClick={() => navigate(-1)}
-    className="absolute top-4 left-4 p-2 rounded-full hover:bg-white/10 transition-colors"
-  >
-    <ArrowLeft className="w-5 h-5 text-white/60" />
-  </button>
-  
-  <CardHeader className="text-center">
-    {/* ... resto do header */}
-  </CardHeader>
-  {/* ... */}
-</Card>
-```
+**Alterações:**
+- Importar o componente `AvatarUpload`
+- Importar `useAuth` para obter o `user.id`
+- Substituir o Avatar estático pelo componente `AvatarUpload`
+- Usar `refreshData` do `useProfessor()` como callback de sucesso
 
-## Resultado Visual
+**Layout Atualizado:**
 
 ```text
 ┌──────────────────────────────────────────┐
-│  ←                                       │  ← Botão voltar
-│                                          │
-│              ⚠️                          │
-│                                          │
-│         Altere sua Senha                 │
-│  Por segurança, você precisa criar...    │
-│                                          │
-│  Nova Senha                              │
+│  ← Voltar               Configurações    │
+├──────────────────────────────────────────┤
+│  MEU PERFIL                              │
 │  ┌────────────────────────────────────┐  │
-│  │ 🔒 Mínimo 6 caracteres          👁 │  │
+│  │                                    │  │
+│  │         [    FOTO    ]             │  │  ← Clicável para upload
+│  │         📷 Alterar Foto            │  │
+│  │                                    │  │
+│  │   Professor Fulano                 │  │
+│  │   🏛 Mentor - Casa Linguística     │  │
+│  │                                    │  │
 │  └────────────────────────────────────┘  │
 │                                          │
-│  Confirmar Nova Senha                    │
-│  ┌────────────────────────────────────┐  │
-│  │ 🔒 Repita a nova senha          👁 │  │
-│  └────────────────────────────────────┘  │
-│                                          │
-│  ┌────────────────────────────────────┐  │
-│  │        Salvar Nova Senha           │  │
-│  └────────────────────────────────────┘  │
+│  SEGURANÇA                               │
+│  [ 🔒 Alterar Senha               →  ]   │
 │                                          │
 └──────────────────────────────────────────┘
 ```
 
-## Arquivo a Modificar
+### 3. Criar Componente AdminAvatarUpload
 
-- `src/pages/AlterarSenha.tsx`
+**Arquivo:** `src/components/admin/AdminAvatarUpload.tsx`
 
-## Comportamento
+O componente `AvatarUpload` existente foi feito para o aluno editar sua própria foto. Para o admin, precisamos de um componente similar que:
+- Receba o `userId` do aluno/professor que está sendo editado
+- Possa fazer upload para qualquer usuário (graças à nova política RLS)
+- Tenha visual adaptado para o contexto admin (sem a cor da casa)
 
-- `navigate(-1)` volta para a página anterior no histórico do navegador
-- Funciona corretamente vindo de qualquer origem (admin, professor, configurações)
-- Estilo consistente com outros botões de voltar do sistema (hover com bg-white/10)
+**Props:**
+```typescript
+interface AdminAvatarUploadProps {
+  userId: string;
+  currentAvatarUrl: string | null;
+  onUploadSuccess: () => void;
+  size?: 'sm' | 'md' | 'lg';
+}
+```
+
+### 4. Página de Perfil do Aluno (Admin)
+
+**Arquivo:** `src/pages/admin/PerfilAlunoAdminPage.tsx`
+
+**Alterações:**
+- Importar o componente `AdminAvatarUpload`
+- Substituir o avatar estático (linhas 293-300) pelo componente de upload
+- Invalidar query `admin-aluno-perfil` após upload
+
+**Layout Atualizado:**
+
+```text
+┌──────────────────────────────────────────┐
+│  ← Voltar                                │
+│                                          │
+│   [    FOTO    ] 📷     Nome Aluno       │  ← Clicável para upload
+│                         6º A • Linguística│
+│                                          │
+├──────────────────────────────────────────┤
+│  Informações                             │
+│  ...                                     │
+└──────────────────────────────────────────┘
+```
+
+## Arquivos a Criar
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `src/components/admin/AdminAvatarUpload.tsx` | Componente de upload de avatar para uso pelo admin |
+
+## Arquivos a Modificar
+
+| Arquivo | Alterações |
+|---------|------------|
+| `src/pages/professor/ProfessorConfiguracoesPage.tsx` | Adicionar AvatarUpload na seção "Meu Perfil" |
+| `src/pages/admin/PerfilAlunoAdminPage.tsx` | Adicionar AdminAvatarUpload no header |
+
+## Fluxo de Upload
+
+```text
+Professor (Configurações)           Admin (Perfil do Aluno)
+        │                                    │
+        ▼                                    ▼
+   AvatarUpload                      AdminAvatarUpload
+        │                                    │
+        ▼                                    ▼
+  bucket: avatars                     bucket: avatars
+  path: {userId}/avatar.ext           path: {alunoId}/avatar.ext
+        │                                    │
+        ▼                                    ▼
+  Atualiza profiles.avatar_url       Atualiza profiles.avatar_url
+        │                                    │
+        ▼                                    ▼
+  refreshData()                      invalidateQueries()
+```
+
+## Resumo
+
+1. **Nova migração SQL**: Políticas RLS para admin poder fazer upload de avatars
+2. **Novo componente**: `AdminAvatarUpload` para uso nas páginas de admin
+3. **Professor**: Integrar `AvatarUpload` na página de Configurações
+4. **Admin Aluno**: Integrar `AdminAvatarUpload` no perfil do aluno
