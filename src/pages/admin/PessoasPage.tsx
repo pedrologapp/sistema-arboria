@@ -11,12 +11,14 @@ import {
   Plus,
   Upload,
   Loader2,
-  Trash2
+  Trash2,
+  Key
 } from 'lucide-react';
 import PessoaCard from '@/components/admin/PessoaCard';
 import ModalImportarCSV from '@/components/admin/ModalImportarCSV';
 import ModalAdicionarUsuario from '@/components/admin/ModalAdicionarUsuario';
 import ModalExcluirAlunosMassa from '@/components/admin/ModalExcluirAlunosMassa';
+import ModalGerarContas from '@/components/admin/ModalGerarContas';
 
 type TabType = 'alunos' | 'professores' | 'admins';
 
@@ -38,6 +40,7 @@ const PessoasPage = () => {
   const [modalImportarAberto, setModalImportarAberto] = useState(false);
   const [modalAdicionarAberto, setModalAdicionarAberto] = useState(false);
   const [modalExcluirMassaAberto, setModalExcluirMassaAberto] = useState(false);
+  const [modalGerarContasAberto, setModalGerarContasAberto] = useState(false);
   const [tipoAdicionar, setTipoAdicionar] = useState<'aluno' | 'professor' | 'admin'>('aluno');
 
   // Buscar institution_id do admin logado
@@ -70,21 +73,21 @@ const PessoasPage = () => {
     }
   });
 
-  // Buscar alunos (role = 'user')
-  const { data: alunos, isLoading: loadingAlunos } = useQuery({
+  // Buscar alunos (role = 'user') e contar sem conta
+  const { data: alunosData, isLoading: loadingAlunos } = useQuery({
     queryKey: ['admin-alunos', institutionId],
     queryFn: async () => {
       // 1. Buscar TODOS os profiles da instituição
       const { data: allProfiles, error: profileError } = await supabase
         .from('profiles')
-        .select('id, nome, sobrenome, full_name, serie, turma, casa_id, avatar_url, created_at, segmento')
+        .select('id, nome, sobrenome, full_name, serie, turma, casa_id, avatar_url, created_at, segmento, conta_criada')
         .eq('institution_id', institutionId)
         .order('serie')
         .order('turma')
         .order('full_name');
       
       if (profileError) throw profileError;
-      if (!allProfiles || allProfiles.length === 0) return [];
+      if (!allProfiles || allProfiles.length === 0) return { alunos: [], semConta: 0, segmentos: [] };
       
       // 2. Buscar todos os user_roles com role = 'user' (sem filtro de ID)
       const { data: roleUsers, error: roleError } = await supabase
@@ -98,10 +101,26 @@ const PessoasPage = () => {
       const studentIds = new Set(roleUsers?.map(r => r.user_id) || []);
       
       // 4. Filtrar profiles que são alunos
-      return allProfiles.filter(p => studentIds.has(p.id));
+      const alunosList = allProfiles.filter(p => studentIds.has(p.id));
+      
+      // 5. Contar alunos sem conta Auth (conta_criada = false)
+      const semConta = alunosList.filter(a => a.conta_criada === false).length;
+      
+      // 6. Extrair segmentos únicos dos alunos sem conta
+      const segmentos = [...new Set(
+        alunosList
+          .filter(a => a.conta_criada === false && a.segmento)
+          .map(a => a.segmento)
+      )].filter(Boolean) as string[];
+      
+      return { alunos: alunosList, semConta, segmentos };
     },
     enabled: !!institutionId
   });
+
+  const alunos = alunosData?.alunos || [];
+  const alunosSemConta = alunosData?.semConta || 0;
+  const segmentosDisponiveis = alunosData?.segmentos || [];
 
   // Buscar professores (role = 'professor')
   const { data: professores, isLoading: loadingProfessores } = useQuery({
@@ -392,6 +411,17 @@ const PessoasPage = () => {
                 </button>
               </div>
               
+              {/* Botão Gerar Contas (se tiver alunos sem conta) */}
+              {alunosSemConta > 0 && (
+                <button
+                  onClick={() => setModalGerarContasAberto(true)}
+                  className="w-full p-3 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl hover:bg-amber-500/20 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Key className="w-5 h-5" />
+                  Gerar Contas ({alunosSemConta} alunos sem acesso)
+                </button>
+              )}
+              
               {/* Botão Excluir Todos */}
               {(alunos?.length || 0) > 0 && (
                 <button
@@ -541,6 +571,20 @@ const PessoasPage = () => {
           institutionId={institutionId}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['admin-alunos'] });
+          }}
+        />
+      )}
+
+      {/* Modal Gerar Contas */}
+      {modalGerarContasAberto && institutionId && (
+        <ModalGerarContas
+          institutionId={institutionId}
+          totalSemConta={alunosSemConta}
+          segmentos={segmentosDisponiveis}
+          onClose={() => setModalGerarContasAberto(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['admin-alunos'] });
+            setModalGerarContasAberto(false);
           }}
         />
       )}
