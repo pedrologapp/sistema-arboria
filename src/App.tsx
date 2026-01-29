@@ -62,7 +62,7 @@ import CirculoAlunosPage from "./pages/professor/circulo/CirculoAlunosPage";
 import CirculoRegistrarPage from "./pages/professor/circulo/CirculoRegistrarPage";
 import CirculoRegistrarMultiplosPage from "./pages/professor/circulo/CirculoRegistrarMultiplosPage";
 import AlunosPageWrapper from "./pages/professor/AlunosPageWrapper";
-import PerfilAlunoPage from "./pages/professor/PerfilAlunoPage";
+import PerfilAlunoPageWrapper from "./pages/professor/PerfilAlunoPageWrapper";
 import ProfessorConfiguracoesPage from "./pages/professor/ProfessorConfiguracoesPage";
 import MissoesSeriePage from "./pages/professor/MissoesSeriePage";
 import MissoesSemanaPage from "./pages/professor/MissoesSemanaPage";
@@ -372,7 +372,7 @@ const App = () => (
             <Route path="/professor/alunos/:id" element={
               <ProfessorProtectedRoute>
                 <ProfessorLayout>
-                  <PerfilAlunoPage />
+                  <PerfilAlunoPageWrapper />
                 </ProfessorLayout>
               </ProfessorProtectedRoute>
             } />
