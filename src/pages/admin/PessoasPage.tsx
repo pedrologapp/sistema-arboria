@@ -366,11 +366,11 @@ const PessoasPage = () => {
                       )}
                       
                       {/* Nome + Segmento + Série/Turma inline */}
-                      <div className="flex-1 min-w-0 flex items-center">
-                        <span className="text-white text-sm font-medium truncate">
+                      <div className="flex-1 min-w-0 flex items-center gap-2">
+                        <span className="text-white text-sm font-medium truncate min-w-[80px] max-w-[60%]">
                           {aluno.full_name || `${aluno.nome} ${aluno.sobrenome}`}
                         </span>
-                        <span className="text-white/40 text-xs ml-2 flex-shrink-0">
+                        <span className="text-white/40 text-xs truncate">
                           {aluno.segmento && `${aluno.segmento} · `}{aluno.serie?.replace(' ano', '')} {aluno.turma}
                         </span>
                       </div>
