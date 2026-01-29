@@ -40,6 +40,9 @@ const INTELIGENCIAS_MAP = [
   { campo: 'int_intrapessoal', id: 8 },
 ];
 
+// Preposições comuns em sobrenomes portugueses
+const PREPOSICOES = ['de', 'da', 'do', 'dos', 'das', 'e', 'del', 'di'];
+
 function normalizeText(text: string): string {
   return text
     .normalize('NFD')
@@ -50,15 +53,27 @@ function normalizeText(text: string): string {
     .trim();
 }
 
+// Encontra o primeiro fragmento significativo (não-preposição)
+function getFragmentoSignificativo(texto: string): string {
+  const partes = texto.split(' ').filter(p => p.trim());
+  for (const parte of partes) {
+    if (!PREPOSICOES.includes(parte.toLowerCase())) {
+      return parte;
+    }
+  }
+  return partes[0] || texto; // Fallback para primeiro fragmento
+}
+
 function generateDeterministicEmail(nome: string, sobrenome: string, matricula: string): string {
   const primeiroNome = normalizeText(nome.split(' ')[0]);
-  const primeiroSobrenome = normalizeText(sobrenome.split(' ')[0]);
+  const fragmentoSobrenome = normalizeText(getFragmentoSignificativo(sobrenome));
   const matriculaNorm = matricula.replace(/[^a-zA-Z0-9]/g, '');
-  return `${primeiroNome}.${primeiroSobrenome}.${matriculaNorm}@aluno.arboria.com`;
+  return `${primeiroNome}.${fragmentoSobrenome}.${matriculaNorm}@aluno.arboria.com`;
 }
 
 function generatePassword(sobrenome: string): string {
-  return normalizeText(sobrenome.split(' ')[0]) + '123';
+  const fragmento = getFragmentoSignificativo(sobrenome);
+  return normalizeText(fragmento) + '123';
 }
 
 Deno.serve(async (req: Request) => {
