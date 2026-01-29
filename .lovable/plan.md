@@ -1,56 +1,70 @@
 
-# Plano: Corrigir Exibição do Nome na Lista de Alunos
+# Plano: Adicionar Filtro por Segmento na Lista de Alunos
 
-## Problema Identificado
+## Contexto
 
-Na lista de alunos do admin, aparece apenas a **inicial do nome** (ex: "A") ao lado do avatar, em vez do nome completo (ex: "Ana Beatriz Barbosa Ferreira").
+O sistema possui 3 segmentos educacionais:
+- **infantil** - Educação Infantil
+- **fundamental1** - Ensino Fundamental I  
+- **fundamental2** - Ensino Fundamental II (únicos que terão acesso ao sistema)
 
-## Causa Raiz
+O administrador precisa filtrar alunos por segmento para gerenciar melhor cada grupo.
 
-O layout CSS está causando o problema:
+## Mudanças Necessárias
 
-```html
-<div className="flex-1 min-w-0 flex items-center">
-  <span className="truncate">{nome}</span>              <!-- Encolhe demais! -->
-  <span className="flex-shrink-0">{segmento + série}</span>  <!-- Não encolhe -->
-</div>
+### Arquivo: `src/pages/admin/PessoasPage.tsx`
+
+#### 1. Adicionar estado do filtro (linha ~39)
+```typescript
+const [filtroSegmento, setFiltroSegmento] = useState('');
 ```
 
-O segundo span com `flex-shrink-0` (ex: "infantil · Grupo IV A") ocupa todo o espaço disponível, forçando o span do nome a ter largura quase zero, exibindo apenas 1 letra devido ao `truncate`.
+#### 2. Extrair segmentos únicos dos alunos (linha ~225)
+```typescript
+const segmentosUnicos = [...new Set(alunos?.map(a => a.segmento).filter(Boolean))].sort();
+```
 
-## Solução
+#### 3. Adicionar condição de filtro (linha ~211)
+```typescript
+const matchSegmento = !filtroSegmento || aluno.segmento === filtroSegmento;
+return matchBusca && matchSerie && matchTurma && matchCasa && matchSegmento;
+```
 
-Reorganizar o layout para que o **nome tenha prioridade** e o segmento possa encolher/truncar se necessário:
-
-### Opção Escolhida
-
-Colocar o nome como prioridade com largura mínima garantida, e permitir que o segmento seja truncado:
-
+#### 4. Adicionar select de segmento na UI (antes do filtro de Série)
 ```tsx
-{/* Nome + Segmento + Série/Turma inline */}
-<div className="flex-1 min-w-0 flex items-center gap-2">
-  <span className="text-white text-sm font-medium truncate min-w-[80px] max-w-[60%]">
-    {aluno.full_name || `${aluno.nome} ${aluno.sobrenome}`}
-  </span>
-  <span className="text-white/40 text-xs truncate">
-    {aluno.segmento && `${aluno.segmento} · `}{aluno.serie?.replace(' ano', '')} {aluno.turma}
-  </span>
-</div>
+<select
+  value={filtroSegmento}
+  onChange={(e) => setFiltroSegmento(e.target.value)}
+  className="p-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm min-w-[130px]"
+>
+  <option value="">Segmento</option>
+  {segmentosUnicos.map(seg => (
+    <option key={seg} value={seg}>
+      {seg === 'infantil' ? 'Infantil' : 
+       seg === 'fundamental1' ? 'Fund. I' : 
+       seg === 'fundamental2' ? 'Fund. II' : seg}
+    </option>
+  ))}
+</select>
 ```
 
-### Mudanças
+## Layout dos Filtros (Após Mudança)
 
-1. **Nome**: Adicionar `min-w-[80px]` para garantir pelo menos 80px de largura
-2. **Nome**: Adicionar `max-w-[60%]` para não ocupar tudo
-3. **Segmento**: Remover `flex-shrink-0` e adicionar `truncate` para permitir encolher
-4. **Container**: Adicionar `gap-2` para espaçamento consistente
+```
+[Segmento ▼] [Série ▼] [Turma ▼] [Casa ▼]
+```
 
-## Arquivo a Modificar
+O filtro de Segmento aparecerá primeiro, permitindo filtrar rapidamente por nível educacional antes de refinar por série/turma.
 
-- `src/pages/admin/PessoasPage.tsx` (linhas 369-375)
+## Comportamento
 
-## Resultado Esperado
+- Quando selecionar "Infantil": mostra apenas alunos da educação infantil
+- Quando selecionar "Fund. I": mostra apenas fundamental 1
+- Quando selecionar "Fund. II": mostra apenas fundamental 2 (os que terão acesso)
+- Quando limpar o filtro: mostra todos os segmentos
 
-| Antes | Depois |
-|-------|--------|
-| Avatar + **A** + infantil · Grupo IV A | Avatar + **Ana Beatriz** + infantil · Grupo IV A |
+## Arquivos Modificados
+
+| Arquivo | Tipo de Mudança |
+|---------|-----------------|
+| `src/pages/admin/PessoasPage.tsx` | Adicionar estado, lógica de filtro e componente select |
