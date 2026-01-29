@@ -1,21 +1,104 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Search, ChevronRight } from 'lucide-react';
+import { Users, Search, Trophy, Star, ChevronRight } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
-import { useAlunosTurmas } from '@/hooks/useAlunosTurmas';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useAlunosTurmasComStatus, type AlunoComStatusTurma } from '@/hooks/useAlunosTurmasComStatus';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const accentColor = '#6366f1';
+
+// ============ COMPONENTE DE LINHA DO ALUNO ============
+
+interface AlunoStatusLinhaSimplificadoProps {
+  posicao: number;
+  aluno: AlunoComStatusTurma;
+  onClick: () => void;
+}
+
+const getStatusColor = (status: AlunoComStatusTurma['status']) => {
+  switch (status) {
+    case 'destaque':
+      return '#22C55E'; // Verde
+    case 'risco':
+      return '#EF4444'; // Vermelho
+    case 'regular':
+      return '#EAB308'; // Amarelo
+    default:
+      return '#6B7280'; // Cinza
+  }
+};
+
+const AlunoStatusLinhaSimplificado = ({ posicao, aluno, onClick }: AlunoStatusLinhaSimplificadoProps) => {
+  const statusColor = getStatusColor(aluno.status);
+
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 py-2.5 px-3 
+        hover:bg-white/5 rounded-lg transition-colors group"
+    >
+      {/* Posição no ranking */}
+      <span className="text-white/40 text-sm font-medium w-6 text-right flex-shrink-0">
+        {posicao}
+      </span>
+      
+      {/* Avatar com bolinha de status */}
+      <div className="relative flex-shrink-0">
+        {aluno.avatarUrl ? (
+          <img 
+            src={aluno.avatarUrl} 
+            alt={aluno.nome}
+            className="w-10 h-10 rounded-full object-cover"
+          />
+        ) : (
+          <div 
+            className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold"
+            style={{ backgroundColor: `${accentColor}40` }}
+          >
+            {aluno.nome.charAt(0).toUpperCase()}
+          </div>
+        )}
+        {/* Bolinha de status */}
+        <div 
+          className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#0d0d0d]"
+          style={{ backgroundColor: statusColor }}
+        />
+      </div>
+      
+      {/* Nome + Série/Turma (em linha) */}
+      <div className="flex-1 flex items-center gap-2 min-w-0">
+        <span className="text-white text-sm font-medium truncate">
+          {aluno.nome}
+        </span>
+        <span className="text-white/40 text-xs flex-shrink-0">
+          {aluno.serie} {aluno.turma}
+        </span>
+      </div>
+      
+      {/* Pontuação com ícone Star */}
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+        <span className="text-yellow-400 text-sm font-semibold">
+          {aluno.pontosTotais}pts
+        </span>
+      </div>
+      
+      {/* Seta */}
+      <ChevronRight className="w-4 h-4 text-white/20 flex-shrink-0 group-hover:text-white/40 transition-colors" />
+    </button>
+  );
+};
+
+// ============ PÁGINA PRINCIPAL ============
 
 const AlunosPageSimplificado = () => {
   const navigate = useNavigate();
   const { turmasVinculadas, segmento } = useProfessor();
-  const { data: alunos, isLoading } = useAlunosTurmas();
+  const { data: alunos, isLoading } = useAlunosTurmasComStatus();
 
   // Estados de filtro
   const [turmaFiltro, setTurmaFiltro] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
-
-  const accentColor = '#6366f1';
 
   // Label do segmento
   const segmentoLabel = segmento === 'infantil' ? 'Educação Infantil' : 
@@ -30,13 +113,12 @@ const AlunosPageSimplificado = () => {
         if (turmaFiltro && aluno.turmaId !== turmaFiltro) return false;
         if (busca && !aluno.nome.toLowerCase().includes(busca.toLowerCase())) return false;
         return true;
-      })
-      .sort((a, b) => a.nome.localeCompare(b.nome));
+      });
+    // Já vem ordenado pelo hook
   }, [alunos, turmaFiltro, busca]);
 
   const handleAlunoClick = (alunoId: string) => {
-    // Para Infantil/F1, vai direto para registro de observação
-    navigate(`/professor/circulo/aluno/${alunoId}`);
+    navigate(`/professor/alunos/${alunoId}`);
   };
 
   return (
@@ -104,16 +186,26 @@ const AlunosPageSimplificado = () => {
         />
       </div>
 
-      {/* Lista de Alunos */}
-      <div className="space-y-2">
+      {/* Título do Ranking */}
+      <div className="flex items-center gap-2 pt-2">
+        <Trophy className="w-4 h-4 text-yellow-500" strokeWidth={1.5} />
+        <span className="text-white/40 text-xs uppercase tracking-wider font-medium">
+          Ranking de Pontos
+        </span>
+      </div>
+
+      {/* Lista de Alunos (Ranking) */}
+      <div className="space-y-0.5">
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 p-3">
+            <div key={i} className="flex items-center gap-3 py-2.5 px-3">
+              <Skeleton className="w-6 h-4" />
               <Skeleton className="w-10 h-10 rounded-full" />
-              <div className="flex-1">
-                <Skeleton className="h-4 w-28 mb-1" />
-                <Skeleton className="h-3 w-16" />
+              <div className="flex-1 flex items-center gap-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-3 w-8" />
               </div>
+              <Skeleton className="h-4 w-16" />
             </div>
           ))
         ) : alunosFiltrados.length === 0 ? (
@@ -135,32 +227,13 @@ const AlunosPageSimplificado = () => {
             </p>
           </div>
         ) : (
-          alunosFiltrados.map((aluno) => (
-            <button
+          alunosFiltrados.map((aluno, index) => (
+            <AlunoStatusLinhaSimplificado
               key={aluno.id}
+              posicao={index + 1}
+              aluno={aluno}
               onClick={() => handleAlunoClick(aluno.id)}
-              className="w-full flex items-center gap-3 p-3 rounded-xl
-                bg-gradient-to-r from-white/[0.06] to-white/[0.02]
-                border border-white/10 hover:border-white/20
-                transition-all duration-200 active:scale-[0.98]"
-            >
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={aluno.avatarUrl} />
-                <AvatarFallback 
-                  className="text-white text-sm font-medium"
-                  style={{ backgroundColor: `${accentColor}30` }}
-                >
-                  {aluno.nome.split(' ').map(n => n[0]).slice(0, 2).join('')}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 text-left">
-                <span className="text-white font-medium block">{aluno.nome}</span>
-                <span className="text-white/50 text-xs">
-                  {aluno.serie} {aluno.turma} • {aluno.turmaNome}
-                </span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-white/30" />
-            </button>
+            />
           ))
         )}
       </div>
