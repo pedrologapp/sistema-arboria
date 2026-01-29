@@ -1,100 +1,56 @@
 
-# Plano: Corrigir Inserção de Roles na Importação
+# Plano: Corrigir Exibição do Nome na Lista de Alunos
 
 ## Problema Identificado
 
-Os logs mostram o erro:
-```
-Erro ao inserir roles: invalid input syntax for type smallint: ""
-```
+Na lista de alunos do admin, aparece apenas a **inicial do nome** (ex: "A") ao lado do avatar, em vez do nome completo (ex: "Ana Beatriz Barbosa Ferreira").
 
-### Diagnóstico
+## Causa Raiz
 
-1. **95 profiles existem no banco** ✅
-2. **0 registros em `user_roles` com role='user'** ❌
-3. **A query da lista cruza profiles com user_roles** - sem roles, nenhum aluno aparece
+O layout CSS está causando o problema:
 
-### Causa Raiz
-
-O código de upsert está usando:
-```typescript
-.upsert(rolesData, { onConflict: 'user_id,role' })
+```html
+<div className="flex-1 min-w-0 flex items-center">
+  <span className="truncate">{nome}</span>              <!-- Encolhe demais! -->
+  <span className="flex-shrink-0">{segmento + série}</span>  <!-- Não encolhe -->
+</div>
 ```
 
-O Supabase SDK interpreta incorretamente o parâmetro `onConflict` com múltiplas colunas como string. Isso causa uma tentativa de cast inválido gerando o erro de `smallint`.
+O segundo span com `flex-shrink-0` (ex: "infantil · Grupo IV A") ocupa todo o espaço disponível, forçando o span do nome a ter largura quase zero, exibindo apenas 1 letra devido ao `truncate`.
 
 ## Solução
 
-Mudar para um insert simples em vez de upsert (já que são registros novos), e tratar conflitos via `ignoreDuplicates`:
+Reorganizar o layout para que o **nome tenha prioridade** e o segmento possa encolher/truncar se necessário:
 
-```typescript
-const { error: rolesError } = await supabaseAdmin
-  .from('user_roles')
-  .insert(rolesData)
-  .select();
+### Opção Escolhida
+
+Colocar o nome como prioridade com largura mínima garantida, e permitir que o segmento seja truncado:
+
+```tsx
+{/* Nome + Segmento + Série/Turma inline */}
+<div className="flex-1 min-w-0 flex items-center gap-2">
+  <span className="text-white text-sm font-medium truncate min-w-[80px] max-w-[60%]">
+    {aluno.full_name || `${aluno.nome} ${aluno.sobrenome}`}
+  </span>
+  <span className="text-white/40 text-xs truncate">
+    {aluno.segmento && `${aluno.segmento} · `}{aluno.serie?.replace(' ano', '')} {aluno.turma}
+  </span>
+</div>
 ```
 
-## Mudanças Necessárias
+### Mudanças
 
-**Arquivo:** `supabase/functions/import-alunos-rapido/index.ts`
+1. **Nome**: Adicionar `min-w-[80px]` para garantir pelo menos 80px de largura
+2. **Nome**: Adicionar `max-w-[60%]` para não ocupar tudo
+3. **Segmento**: Remover `flex-shrink-0` e adicionar `truncate` para permitir encolher
+4. **Container**: Adicionar `gap-2` para espaçamento consistente
 
-### 1. Corrigir inserção de roles (linhas 256-268)
+## Arquivo a Modificar
 
-**De:**
-```typescript
-const rolesData = successfulUsers.map(u => ({
-  user_id: u.authId,
-  role: 'user' as const
-}));
-
-const { error: rolesError } = await supabaseAdmin
-  .from('user_roles')
-  .upsert(rolesData, { onConflict: 'user_id,role' });
-```
-
-**Para:**
-```typescript
-// Inserir roles um por um para evitar problemas com enum
-for (const user of successfulUsers) {
-  const { error: roleError } = await supabaseAdmin
-    .from('user_roles')
-    .insert({ 
-      user_id: user.authId, 
-      role: 'user' 
-    });
-  
-  if (roleError) {
-    console.error(`[import-alunos-rapido] Erro role ${user.authId}:`, roleError);
-  }
-}
-```
-
-### 2. Adicionar script para corrigir alunos já importados
-
-Depois da correção, rodar uma query para inserir os roles dos 95 alunos que já existem:
-
-```sql
-INSERT INTO user_roles (user_id, role)
-SELECT p.id, 'user'::app_role
-FROM profiles p
-WHERE p.institution_id = '902876e9-b263-4c01-9013-aeef7b6d24e1'
-  AND NOT EXISTS (
-    SELECT 1 FROM user_roles ur WHERE ur.user_id = p.id
-  );
-```
-
-## Fluxo Após Correção
-
-1. Atualizar a Edge Function com insert individual
-2. Executar migration para corrigir os 95 alunos existentes
-3. A lista mostrará os alunos imediatamente
-
-## Arquivos a Modificar
-
-1. **`supabase/functions/import-alunos-rapido/index.ts`** - Corrigir lógica de insert de roles
-2. **Migration SQL** - Inserir roles para alunos já importados
+- `src/pages/admin/PessoasPage.tsx` (linhas 369-375)
 
 ## Resultado Esperado
 
-- Os 95 alunos aparecerão na lista imediatamente após a migration
-- Novas importações criarão os roles corretamente
+| Antes | Depois |
+|-------|--------|
+| Avatar + **A** + infantil · Grupo IV A | Avatar + **Ana Beatriz** + infantil · Grupo IV A |
