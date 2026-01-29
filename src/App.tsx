@@ -77,6 +77,9 @@ import EntregasAlunoPage from "./pages/professor/EntregasAlunoPage";
 import ProfessorChatPage from "./pages/professor/ProfessorChatPage";
 import ProfessorCanalViewPage from "./pages/professor/ProfessorCanalViewPage";
 import ProfessorDmPage from "./pages/professor/ProfessorDmPage";
+import ConteudoPage from "./pages/professor/ConteudoPage";
+import ConteudoGeralPage from "./pages/professor/ConteudoGeralPage";
+import ConteudoInteligenciaPage from "./pages/professor/ConteudoInteligenciaPage";
 
 const queryClient = new QueryClient();
 
@@ -401,6 +404,29 @@ const App = () => (
               <ProfessorProtectedRoute>
                 <ProfessorLayout>
                   <ProfessorDmPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            
+            {/* Conteúdo Routes (Infantil/F1) */}
+            <Route path="/professor/conteudo" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <ConteudoPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/conteudo/geral" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <ConteudoGeralPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/conteudo/inteligencia/:inteligenciaId" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <ConteudoInteligenciaPage />
                 </ProfessorLayout>
               </ProfessorProtectedRoute>
             } />
