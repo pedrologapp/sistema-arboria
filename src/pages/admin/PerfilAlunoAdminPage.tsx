@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   ArrowLeft, 
-  User, 
   Key, 
   Trash2, 
   Loader2,
@@ -12,6 +11,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
+import AdminAvatarUpload from '@/components/admin/AdminAvatarUpload';
 
 const SERIES = ['6º ano', '7º ano', '8º ano', '9º ano'];
 const TURMAS = ['A', 'B', 'C', 'D'];
@@ -291,13 +291,14 @@ const PerfilAlunoAdminPage = () => {
         </button>
 
         <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center overflow-hidden">
-            {aluno.avatar_url ? (
-              <img src={aluno.avatar_url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <User className="w-10 h-10 text-white/40" />
-            )}
-          </div>
+          <AdminAvatarUpload
+            userId={id!}
+            currentAvatarUrl={aluno.avatar_url}
+            onUploadSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['admin-aluno-perfil', id] });
+            }}
+            size="md"
+          />
           <div>
             <h1 className="text-xl font-semibold text-white">
               {aluno.full_name || `${aluno.nome} ${aluno.sobrenome}`}
