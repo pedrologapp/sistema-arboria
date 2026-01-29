@@ -96,7 +96,13 @@ const ProfessorDashboardSimplificado = () => {
         <h1 className="text-2xl font-bold text-white mb-1">
           Olá, {firstName}!
         </h1>
-        <p className="text-white/50 text-sm mb-4">{titulo} • {segmentoLabel}</p>
+        <p className="text-white/50 text-sm mb-4">
+          {titulo} • <span style={{ color: faseAtual?.inteligencia?.cor_hex || '#fff' }}>
+            {faseAtual?.inteligencia?.nome 
+              ? `Fase ${faseAtual.inteligencia.nome}` 
+              : 'Nenhuma fase ativa'}
+          </span>
+        </p>
 
         {/* Banner Informativo de Fase */}
         <BannerFaseInfo 
