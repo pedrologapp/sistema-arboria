@@ -292,26 +292,7 @@ const PerfilAlunoPage = () => {
         />
       </div>
 
-      {/* Inteligências */}
-      <div className="px-0">
-        <p className="text-white/40 text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
-          <Brain className="w-3.5 h-3.5" strokeWidth={1.5} />
-          Inteligências
-        </p>
-        <div className="space-y-2.5 bg-white/5 rounded-xl p-4 border border-white/10">
-          {aluno.inteligencias.map((intel) => (
-            <InteligenciaProgressBar 
-              key={intel.id}
-              emoji={intel.emoji}
-              nome={intel.nome}
-              score={intel.score}
-              cor={intel.cor}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* OBSERVAÇÕES DO PROFESSOR - NOVA SEÇÃO */}
+      {/* OBSERVAÇÕES DO PROFESSOR */}
       <div className="px-0">
         <p className="text-white/40 text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
           <Eye className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -374,6 +355,25 @@ const PerfilAlunoPage = () => {
           <PlusCircle className="w-4 h-4" strokeWidth={1.5} />
           <span className="text-sm font-medium">Registrar observação</span>
         </button>
+      </div>
+
+      {/* Inteligências */}
+      <div className="px-0">
+        <p className="text-white/40 text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
+          <Brain className="w-3.5 h-3.5" strokeWidth={1.5} />
+          Inteligências
+        </p>
+        <div className="space-y-2.5 bg-white/5 rounded-xl p-4 border border-white/10">
+          {aluno.inteligencias.map((intel) => (
+            <InteligenciaProgressBar 
+              key={intel.id}
+              emoji={intel.emoji}
+              nome={intel.nome}
+              score={intel.score}
+              cor={intel.cor}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Missões da Fase */}
