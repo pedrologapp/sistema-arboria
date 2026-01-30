@@ -1,112 +1,139 @@
 
 
-# Plano: Aceitar Matrícula na Edge Function
+# Plano: Exibir Todos os Campos Ricos do N8N
 
-## Problema Identificado
+## Resumo do Problema
 
-O N8N está enviando um UUID que não corresponde ao Arboria. O aluno existe, mas com ID diferente:
-
-| Campo | Valor N8N | Valor Arboria |
-|-------|-----------|---------------|
-| UUID | `7ef95c7e-c0f7-41ea-82f3-e488f20ab128` | `84938726-22bb-48fe-9263-4a20cc2af164` |
-| Matrícula | `2287.2026` | `22872026` |
+Os dados enviados pelo N8N estão sendo salvos corretamente no banco, mas não estão sendo exibidos completamente na tela. Há também duplicação de alertas.
 
 ---
 
-## Solução
+## Diagnóstico Detalhado
 
-Modificar a Edge Function para aceitar identificação por matrícula, que é o campo comum entre sistemas.
+### Dados Salvos vs Exibidos
+
+| Campo N8N | Salvo no Banco | Exibido na Tela |
+|-----------|----------------|-----------------|
+| `texto_acontecendo` | ✅ | ⚠️ Parcial (só início) |
+| `hipoteses` (com perguntas) | ✅ | ❌ Busca do banco local |
+| `acoes_sugeridas` (com prioridade) | ✅ | ❌ Busca do banco local |
+| `arquetipo` completo | ✅ | ⚠️ Parcial |
+| `mensagem_professor` | ✅ | ❌ Não exibido |
+| `o_que_nao_fazer` | ✅ | ❌ Não exibido |
+| `padrao_identificado` | ✅ | ❌ Não exibido |
+
+### Duplicação de Alertas
+
+Existem 2 alertas ativos para Adryan:
+1. **N8N** (motivo: `analise_n8n`) - criado às 01:10
+2. **Sistema** (motivo: `ultimas_2_atencao`) - criado às 17:51
+
+A Edge Function só arquiva alertas com `motivo = 'analise_n8n'`, mas o sistema local cria alertas separados.
 
 ---
 
-## Alterações na Edge Function
+## Alterações Necessárias
 
-### Arquivo: `supabase/functions/receber-sugestao-n8n/index.ts`
+### Arquivo 1: `supabase/functions/receber-sugestao-n8n/index.ts`
 
-### Novo Payload Aceito
-
-```json
-{
-  "aluno_id": "uuid-opcional-se-tiver-matricula",
-  "aluno_matricula": "22872026",
-  ...
-}
-```
-
-### Nova Lógica de Busca
+Arquivar TODOS os alertas ativos do aluno, não só os de N8N:
 
 ```typescript
-// Prioridade: matricula > aluno_id
-let aluno = null;
+// ANTES
+.eq("motivo", "analise_n8n");
 
-if (payload.aluno_matricula) {
-  // Normalizar matricula (remover pontos e hífens)
-  const matriculaNormalizada = payload.aluno_matricula.replace(/[.\-]/g, '');
-  
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, institution_id, casa_id")
-    .eq("matricula_externa", matriculaNormalizada)
-    .maybeSingle();
-  
-  aluno = data;
-}
-
-// Fallback para aluno_id se não encontrou por matrícula
-if (!aluno && payload.aluno_id) {
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, institution_id, casa_id")
-    .eq("id", payload.aluno_id)
-    .maybeSingle();
-  
-  aluno = data;
-}
-
-if (!aluno) {
-  return new Response(
-    JSON.stringify({
-      success: false,
-      error: `Aluno não encontrado. Verifique aluno_matricula ou aluno_id.`,
-    }),
-    { status: 404 }
-  );
-}
+// DEPOIS
+// Sem filtro de motivo - arquiva qualquer alerta ativo
 ```
 
----
+### Arquivo 2: `src/hooks/usePerfilAluno.ts`
 
-## Validação de Campos
-
-Atualizar validação para aceitar matricula OU id:
+Priorizar dados do N8N no `dados_contexto`:
 
 ```typescript
-if (!payload.aluno_id && !payload.aluno_matricula) {
-  return new Response(
-    JSON.stringify({
-      success: false,
-      error: "Informe aluno_id ou aluno_matricula",
-    }),
-    { status: 400 }
-  );
+// Se veio do N8N (motivo: analise_n8n), usar dados diretos
+if (alertaData.motivo === 'analise_n8n') {
+  // Hipóteses do dados_contexto
+  hipoteses = (dadosContexto?.hipoteses || []).map(h => ({
+    titulo: h.titulo,
+    descricao: h.descricao,
+    perguntas: h.perguntas || []
+  }));
+  
+  // Ações sugeridas do dados_contexto
+  acoesSugeridas = (dadosContexto?.acoes_sugeridas || []).map(a => ({
+    titulo: a.acao,
+    icone: 'MessageCircle',
+    codigo: a.acao,
+    prioridade: a.prioridade
+  }));
+  
+  // Novos campos
+  mensagemProfessor = dadosContexto?.mensagem_professor;
+  oQueNaoFazer = dadosContexto?.o_que_nao_fazer;
+  padraoIdentificado = dadosContexto?.padrao_identificado;
 }
 ```
+
+Adicionar novas propriedades na interface `AlertaAtivo`:
+- `mensagemProfessor?: string`
+- `oQueNaoFazer?: string[]`
+- `padraoIdentificado?: { nome: string; significado: string }`
+
+### Arquivo 3: `src/components/professor/FeedbackEstadoCard.tsx`
+
+Adicionar novas seções visuais:
+
+1. **Arquétipo destacado** (para alertas de atenção também)
+2. **Seção "O que não fazer"** com ícone de alerta
+3. **Mensagem para o professor** como rodapé encorajador
+4. **Padrão identificado** após as hipóteses
 
 ---
 
-## Configuração N8N
+## Layout Visual Proposto
 
-Após a atualização, o N8N pode enviar:
-
-```json
-{
-  "aluno_matricula": "2287.2026",
-  "estado": "precisa_atencao",
-  "texto_acontecendo": "Descrição..."
-}
+```text
+┌─────────────────────────────────────────────────┐
+│ ⚠️ ALERTA ATIVO                                 │
+├─────────────────────────────────────────────────┤
+│ O QUE ESTÁ ACONTECENDO:                         │
+│ "Adryan demonstra capacidade cognitiva clara    │
+│ (3x pegou rápido), mas apresentou isolamento    │
+│ seguido de travamento..."                       │
+│                                                 │
+│ 🔍 PADRÃO IDENTIFICADO: [Nome do Padrão]        │
+│                                                 │
+│ 🏆 ARQUÉTIPO: O Mestre das Palavras             │
+│ "Domínio excepcional da linguagem..."           │
+│ 💡 Sugestão: "Use a força linguística..."       │
+│                                                 │
+│ ────────── [Clique para expandir] ──────────    │
+│                                                 │
+│ 💡 HIPÓTESES:                                   │
+│ ┌─────────────────────────────────────────────┐ │
+│ │ Conflito Relacional Recente                 │ │
+│ │ O isolamento seguido de travamento pode...  │ │
+│ │ 💬 "Alguém disse algo que te incomodou?"    │ │
+│ └─────────────────────────────────────────────┘ │
+│                                                 │
+│ ✅ AÇÕES SUGERIDAS:                             │
+│ [!] Conversa Privada de Investigação (alta)     │
+│ [!] Estratégia da Escrita Protegida (alta)      │
+│ [•] Ponte Linguística (média)                   │
+│                                                 │
+│ ❌ O QUE NÃO FAZER:                             │
+│ • Expor o comportamento publicamente            │
+│ • Pressionar por resposta imediata              │
+│                                                 │
+│ ─────────────────────────────────────────────── │
+│ 💬 MENSAGEM PARA VOCÊ:                          │
+│ "Professor(a), você fez a coisa CERTA ao        │
+│ registrar isso. Adryan não está 'piorando'..."  │
+│                                                 │
+│         [⚙️ Registrar minha ação]               │
+└─────────────────────────────────────────────────┘
 ```
-
-A função normalizará automaticamente `2287.2026` para `22872026`.
 
 ---
 
@@ -114,14 +141,17 @@ A função normalizará automaticamente `2287.2026` para `22872026`.
 
 | Arquivo | Mudança |
 |---------|---------|
-| `supabase/functions/receber-sugestao-n8n/index.ts` | Adicionar busca por matricula_externa |
+| `supabase/functions/receber-sugestao-n8n/index.ts` | Arquivar TODOS os alertas ativos |
+| `src/hooks/usePerfilAluno.ts` | Priorizar dados do N8N, adicionar novos campos |
+| `src/components/professor/FeedbackEstadoCard.tsx` | Adicionar seções: padrão, o que não fazer, mensagem professor |
+| `src/pages/professor/PerfilAlunoPage.tsx` | Passar novos props para FeedbackEstadoCard |
 
 ---
 
-## Resumo para o N8N
+## Resumo das Mudanças
 
-Após implementação:
-- Pode usar `aluno_matricula` (recomendado)
-- Formato aceito: `22872026` ou `2287.2026` (normalizado automaticamente)
-- O `aluno_id` continua funcionando se for o UUID do Arboria
+1. **Edge Function**: Corrigir arquivamento para eliminar duplicatas
+2. **Hook**: Mapear todos os campos ricos do N8N
+3. **Componente**: Exibir novas seções visuais
+4. **Página**: Conectar os novos dados ao componente
 
