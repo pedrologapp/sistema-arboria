@@ -69,6 +69,22 @@ interface AlertaAtivo {
   };
   // Flag para identificar origem N8N
   geradoPorN8N?: boolean;
+  // Campos N8N completos (estrutura fixa)
+  tipoRecomendacao?: string;
+  nomeRecomendacao?: string;
+  porQueEsteTipo?: string;
+  prioridade?: 'urgente' | 'importante' | 'normal';
+  oQueFazerAgora?: {
+    objetivo: string;
+    contexto: string;
+    scriptPrincipal: string;
+    comoEscutar: string;
+  };
+  useAForca?: {
+    forcasUtilizadas: string;
+    opcaoA?: { nome: string; script: string; porQueFunciona: string };
+    opcaoB?: { nome: string; script: string; porQueFunciona: string };
+  };
 }
 
 export interface ConversaRegistrada {
@@ -536,7 +552,6 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
               porQueFunciona: a.por_que_funciona
             }));
           }
-          }
           
           // Buscar arquétipo para celebração
           let arquetipo: Arquetipo | undefined;
@@ -692,7 +707,31 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
               areaDificuldade: (dadosContexto.elemento_ponte as any).area_dificuldade
             } : undefined,
             // Flag para identificar origem N8N
-            geradoPorN8N
+            geradoPorN8N,
+            // Campos N8N estruturados completos
+            tipoRecomendacao: (dadosContexto?.tipo_recomendacao as string) || undefined,
+            nomeRecomendacao: (dadosContexto?.nome_recomendacao as string) || undefined,
+            porQueEsteTipo: (dadosContexto?.por_que_este_tipo as string) || undefined,
+            prioridade: (dadosContexto?.prioridade as 'urgente' | 'importante' | 'normal') || undefined,
+            oQueFazerAgora: dadosContexto?.o_que_fazer_agora ? {
+              objetivo: (dadosContexto.o_que_fazer_agora as any).objetivo || '',
+              contexto: (dadosContexto.o_que_fazer_agora as any).contexto || '',
+              scriptPrincipal: (dadosContexto.o_que_fazer_agora as any).script_principal || '',
+              comoEscutar: (dadosContexto.o_que_fazer_agora as any).como_escutar || ''
+            } : undefined,
+            useAForca: dadosContexto?.use_a_forca ? {
+              forcasUtilizadas: (dadosContexto.use_a_forca as any).forcas_utilizadas || '',
+              opcaoA: (dadosContexto.use_a_forca as any).opcao_a ? {
+                nome: (dadosContexto.use_a_forca as any).opcao_a.nome || '',
+                script: (dadosContexto.use_a_forca as any).opcao_a.script || '',
+                porQueFunciona: (dadosContexto.use_a_forca as any).opcao_a.por_que_funciona || ''
+              } : undefined,
+              opcaoB: (dadosContexto.use_a_forca as any).opcao_b ? {
+                nome: (dadosContexto.use_a_forca as any).opcao_b.nome || '',
+                script: (dadosContexto.use_a_forca as any).opcao_b.script || '',
+                porQueFunciona: (dadosContexto.use_a_forca as any).opcao_b.por_que_funciona || ''
+              } : undefined
+            } : undefined
           };
         } else {
           // Se não há alerta no banco, verificar se houve resolução recente
