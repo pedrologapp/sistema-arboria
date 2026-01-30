@@ -72,7 +72,7 @@ const ConfirmarObservacaoModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="bg-[#1a1a2e] border-white/10 text-white max-w-sm">
+      <DialogContent className="bg-[#1a1a2e] border-white/10 text-white max-w-sm" hideCloseButton>
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold flex items-center justify-between">
             Adicionar observação?
