@@ -44,6 +44,18 @@ interface SugestaoPayload {
   sugestao_anterior_resumo?: string;
   observacao_nova?: string;
   requer_resposta?: boolean;
+  
+  // Novos campos ricos do N8N
+  como_reagir?: {
+    se_aceitar: string;
+    se_recusar: string;
+    alerta?: string;
+  };
+  
+  elemento_ponte?: {
+    forcas: string | string[];
+    area_dificuldade: string;
+  };
 }
 
 Deno.serve(async (req) => {
@@ -215,6 +227,9 @@ Deno.serve(async (req) => {
       sugestao_anterior_resumo: payload.sugestao_anterior_resumo || null,
       observacao_nova: payload.observacao_nova || null,
       requer_resposta: payload.requer_resposta || false,
+      // Novos campos ricos do N8N
+      como_reagir: payload.como_reagir || null,
+      elemento_ponte: payload.elemento_ponte || null,
     };
 
     // 8. Insert new alert
