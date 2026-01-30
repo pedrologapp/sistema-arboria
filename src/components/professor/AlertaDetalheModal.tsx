@@ -164,7 +164,9 @@ export const AlertaDetalheModal = ({
                     {/* Mostrar arquétipo para celebrações */}
                     {tipo === 'celebrar' && alerta.dados_contexto?.arquetipo && (
                       <div className="text-xs text-amber-400 mt-0.5">
-                        🏆 "{alerta.dados_contexto.arquetipo as string}"
+                        🏆 "{typeof alerta.dados_contexto.arquetipo === 'object' 
+                          ? (alerta.dados_contexto.arquetipo as { nome_arquetipo?: string })?.nome_arquetipo || 'Potencial identificado'
+                          : String(alerta.dados_contexto.arquetipo)}"
                       </div>
                     )}
                     {tipo === 'celebrar' && !alerta.dados_contexto?.arquetipo && (
