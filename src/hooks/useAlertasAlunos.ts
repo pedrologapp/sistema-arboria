@@ -11,7 +11,7 @@ export interface AlertaAluno {
     serie: string;
     turma: string;
   };
-  tipo_alerta: 'precisa_atencao' | 'celebrar' | 'nao_esquecer' | 'fase_anterior';
+  tipo_alerta: 'precisa_atencao' | 'celebrar' | 'nao_esquecer' | 'fase_anterior' | 'aguardando_explicacao';
   motivo: string;
   dados_contexto: Record<string, unknown>;
   created_at: string;
@@ -31,6 +31,22 @@ export interface AlertaFaseAnterior {
   motivo: string;
   observadoFaseAtual: boolean;
   dados_contexto: Record<string, unknown>;
+}
+
+export interface AlertaExplicacao {
+  id: string;
+  aluno: {
+    id: string;
+    nome: string;
+    avatarUrl?: string;
+    serie: string;
+    turma: string;
+  };
+  tipo_contradicao: string;
+  perguntas_professor: string[];
+  sugestao_anterior_resumo: string;
+  observacao_nova: string;
+  created_at: string;
 }
 
 export interface AlunoSimples {
@@ -53,6 +69,7 @@ export interface BadgesAtivos {
   celebrar: number;
   naoEsquecer: number;
   atencaoFaseAnterior: number;
+  aguardandoExplicacao: number;
 }
 
 export interface AlertasAgrupados {
@@ -61,11 +78,13 @@ export interface AlertasAgrupados {
   celebrar: AlertaAluno[];
   naoEsquecer: AlertaAluno[];
   atencaoFaseAnterior: AlertaFaseAnterior[];
+  aguardandoExplicacao: AlertaExplicacao[];
   totais: {
     precisaAtencao: number;
     celebrar: number;
     naoEsquecer: number;
     atencaoFaseAnterior: number;
+    aguardandoExplicacao: number;
   };
   badgesAtivos: BadgesAtivos;
   isLoading: boolean;
@@ -84,8 +103,9 @@ export const useAlertasAlunos = () => {
           celebrar: [],
           naoEsquecer: [],
           atencaoFaseAnterior: [],
-          totais: { precisaAtencao: 0, celebrar: 0, naoEsquecer: 0, atencaoFaseAnterior: 0 },
-          badgesAtivos: { precisaAtencao: 0, celebrar: 0, naoEsquecer: 0, atencaoFaseAnterior: 0 },
+          aguardandoExplicacao: [],
+          totais: { precisaAtencao: 0, celebrar: 0, naoEsquecer: 0, atencaoFaseAnterior: 0, aguardandoExplicacao: 0 },
+          badgesAtivos: { precisaAtencao: 0, celebrar: 0, naoEsquecer: 0, atencaoFaseAnterior: 0, aguardandoExplicacao: 0 },
           isLoading: false
         };
       }
@@ -245,7 +265,7 @@ export const useAlertasAlunos = () => {
             serie: alerta.aluno?.serie || '',
             turma: alerta.aluno?.turma || ''
           },
-          tipo_alerta: alerta.tipo_alerta as 'precisa_atencao' | 'celebrar' | 'nao_esquecer' | 'fase_anterior',
+          tipo_alerta: alerta.tipo_alerta as 'precisa_atencao' | 'celebrar' | 'nao_esquecer' | 'fase_anterior' | 'aguardando_explicacao',
           motivo: alerta.motivo,
           dados_contexto: (alerta.dados_contexto as Record<string, unknown>) || {},
           created_at: alerta.created_at || '',
@@ -313,7 +333,20 @@ export const useAlertasAlunos = () => {
       const celebrarDb = alertasFaseAtual.filter(a => a.tipo_alerta === 'celebrar');
       const naoEsquecerDb = alertasFaseAtual.filter(a => a.tipo_alerta === 'nao_esquecer');
       
-      // 10.1 Calcular celebrações dinâmicas (2 positivos consecutivos)
+      // 10.1 Extrair alertas de aguardando_explicacao
+      const aguardandoExplicacao: AlertaExplicacao[] = alertasFaseAtual
+        .filter(a => a.tipo_alerta === 'aguardando_explicacao')
+        .map(alerta => ({
+          id: alerta.id,
+          aluno: alerta.aluno,
+          tipo_contradicao: (alerta.dados_contexto?.tipo_contradicao as string) || '',
+          perguntas_professor: (alerta.dados_contexto?.perguntas_professor as string[]) || [],
+          sugestao_anterior_resumo: (alerta.dados_contexto?.sugestao_anterior_resumo as string) || '',
+          observacao_nova: (alerta.dados_contexto?.observacao_nova as string) || '',
+          created_at: alerta.created_at
+        }));
+      
+      // 10.2 Calcular celebrações dinâmicas (2 positivos consecutivos)
       const celebracoesDinamicas: AlertaAluno[] = [];
       const alunosJaCelebrados = new Set(celebrarDb.map(c => c.aluno.id));
       
@@ -369,6 +402,9 @@ export const useAlertasAlunos = () => {
       const badgesFaseAnterior = alertasComBadge.filter(a => 
         a.fase_origem_id && a.fase_origem_id !== faseAtual?.id
       ).length;
+      const badgesExplicacao = alertasComBadge.filter(a => 
+        a.tipo_alerta === 'aguardando_explicacao'
+      ).length;
 
       return {
         bannerComeceAqui,
@@ -376,17 +412,20 @@ export const useAlertasAlunos = () => {
         celebrar,
         naoEsquecer,
         atencaoFaseAnterior,
+        aguardandoExplicacao,
         totais: {
           precisaAtencao: precisaAtencao.length,
           celebrar: celebrar.length,
           naoEsquecer: naoEsquecer.length,
-          atencaoFaseAnterior: atencaoFaseAnterior.length
+          atencaoFaseAnterior: atencaoFaseAnterior.length,
+          aguardandoExplicacao: aguardandoExplicacao.length
         },
         badgesAtivos: {
           precisaAtencao: badgesPrecisa,
           celebrar: badgesCelebrar,
           naoEsquecer: badgesNaoEsquecer + alunosNaoEsquecer.length, // Incluir calculados
-          atencaoFaseAnterior: badgesFaseAnterior
+          atencaoFaseAnterior: badgesFaseAnterior,
+          aguardandoExplicacao: badgesExplicacao
         },
         isLoading: false
       };
@@ -404,7 +443,8 @@ export const useAlertasAlunos = () => {
     celebrar: query.data?.celebrar || [],
     naoEsquecer: query.data?.naoEsquecer || [],
     atencaoFaseAnterior: query.data?.atencaoFaseAnterior || [],
-    totais: query.data?.totais || { precisaAtencao: 0, celebrar: 0, naoEsquecer: 0, atencaoFaseAnterior: 0 },
-    badgesAtivos: query.data?.badgesAtivos || { precisaAtencao: 0, celebrar: 0, naoEsquecer: 0, atencaoFaseAnterior: 0 }
+    aguardandoExplicacao: query.data?.aguardandoExplicacao || [],
+    totais: query.data?.totais || { precisaAtencao: 0, celebrar: 0, naoEsquecer: 0, atencaoFaseAnterior: 0, aguardandoExplicacao: 0 },
+    badgesAtivos: query.data?.badgesAtivos || { precisaAtencao: 0, celebrar: 0, naoEsquecer: 0, atencaoFaseAnterior: 0, aguardandoExplicacao: 0 }
   };
 };

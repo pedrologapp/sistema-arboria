@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { useAlertasAlunosTurmas } from '@/hooks/useAlertasAlunosTurmas';
 import { AlertGridCard } from './AlertGridCard';
 import { AlertaDetalheModal } from './AlertaDetalheModal';
+import { ExplicacaoContradicaoModal } from './ExplicacaoContradicaoModal';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { AlertaAluno, AlertaFaseAnterior } from '@/hooks/useAlertasAlunos';
+import type { AlertaAluno, AlertaFaseAnterior, AlertaExplicacao } from '@/hooks/useAlertasAlunos';
 
 interface AlertBoxesTurmasProps {
   onAlunoClick: (alunoId: string) => void;
 }
 
-type AlertType = 'precisa_atencao' | 'celebrar' | 'nao_esquecer' | 'atencao_fase_anterior';
+type AlertType = 'precisa_atencao' | 'celebrar' | 'nao_esquecer' | 'atencao_fase_anterior' | 'aguardando_explicacao';
 
 interface AlertConfig {
   id: AlertType;
@@ -42,6 +43,12 @@ const alertConfigs: AlertConfig[] = [
     icon: '⚠️',
     label: 'Fase anterior',
     colorActive: '#8B4000'
+  },
+  {
+    id: 'aguardando_explicacao',
+    icon: '💬',
+    label: 'Aguardando você',
+    colorActive: '#6B21A8'
   }
 ];
 
@@ -50,7 +57,8 @@ export const AlertBoxesTurmas = ({ onAlunoClick }: AlertBoxesTurmasProps) => {
     precisaAtencao, 
     celebrar, 
     naoEsquecer, 
-    atencaoFaseAnterior, 
+    atencaoFaseAnterior,
+    aguardandoExplicacao, 
     totais, 
     badgesAtivos,
     isLoading 
@@ -58,6 +66,7 @@ export const AlertBoxesTurmas = ({ onAlunoClick }: AlertBoxesTurmasProps) => {
   
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<AlertType | null>(null);
+  const [explicacaoModal, setExplicacaoModal] = useState<AlertaExplicacao | null>(null);
 
   const getAlertasByType = (type: AlertType): AlertaAluno[] => {
     switch (type) {
@@ -74,6 +83,7 @@ export const AlertBoxesTurmas = ({ onAlunoClick }: AlertBoxesTurmasProps) => {
       case 'celebrar': return totais.celebrar;
       case 'nao_esquecer': return totais.naoEsquecer;
       case 'atencao_fase_anterior': return totais.atencaoFaseAnterior;
+      case 'aguardando_explicacao': return totais.aguardandoExplicacao;
       default: return 0;
     }
   };
@@ -84,6 +94,7 @@ export const AlertBoxesTurmas = ({ onAlunoClick }: AlertBoxesTurmasProps) => {
       case 'celebrar': return badgesAtivos?.celebrar || 0;
       case 'nao_esquecer': return badgesAtivos?.naoEsquecer || 0;
       case 'atencao_fase_anterior': return badgesAtivos?.atencaoFaseAnterior || 0;
+      case 'aguardando_explicacao': return badgesAtivos?.aguardandoExplicacao || 0;
       default: return 0;
     }
   };
@@ -96,12 +107,17 @@ export const AlertBoxesTurmas = ({ onAlunoClick }: AlertBoxesTurmasProps) => {
     setModalOpen(true);
   };
 
+  const handleExplicacaoClick = (alerta: AlertaExplicacao) => {
+    setModalOpen(false);
+    setExplicacaoModal(alerta);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-3">
         <Skeleton className="h-4 w-32 bg-white/10" />
         <div className="grid grid-cols-2 gap-3">
-          {[1, 2, 3, 4].map(i => (
+          {[1, 2, 3, 4, 5].map(i => (
             <Skeleton key={i} className="h-24 rounded-xl bg-white/10" />
           ))}
         </div>
@@ -117,7 +133,7 @@ export const AlertBoxesTurmas = ({ onAlunoClick }: AlertBoxesTurmasProps) => {
           Alertas das Turmas
         </h3>
 
-        {/* Grid 2x2 */}
+        {/* Grid 2x3 */}
         <div className="grid grid-cols-2 gap-3">
           {alertConfigs.map(config => (
             <AlertGridCard
@@ -144,7 +160,18 @@ export const AlertBoxesTurmas = ({ onAlunoClick }: AlertBoxesTurmasProps) => {
           tipo={selectedType}
           alertas={getAlertasByType(selectedType)}
           alertasFaseAnterior={atencaoFaseAnterior}
+          alertasExplicacao={aguardandoExplicacao}
           onAlunoClick={onAlunoClick}
+          onExplicacaoClick={handleExplicacaoClick}
+        />
+      )}
+
+      {/* Modal de explicação */}
+      {explicacaoModal && (
+        <ExplicacaoContradicaoModal
+          isOpen={!!explicacaoModal}
+          onClose={() => setExplicacaoModal(null)}
+          alerta={explicacaoModal}
         />
       )}
     </>

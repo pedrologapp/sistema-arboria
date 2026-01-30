@@ -2,15 +2,17 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ChevronRight, X } from 'lucide-react';
-import { AlertaAluno, AlertaFaseAnterior } from '@/hooks/useAlertasAlunos';
+import { AlertaAluno, AlertaFaseAnterior, AlertaExplicacao } from '@/hooks/useAlertasAlunos';
 
 interface AlertaDetalheModalProps {
   isOpen: boolean;
   onClose: () => void;
-  tipo: 'precisa_atencao' | 'celebrar' | 'nao_esquecer' | 'atencao_fase_anterior';
+  tipo: 'precisa_atencao' | 'celebrar' | 'nao_esquecer' | 'atencao_fase_anterior' | 'aguardando_explicacao';
   alertas: AlertaAluno[];
   alertasFaseAnterior: AlertaFaseAnterior[];
+  alertasExplicacao?: AlertaExplicacao[];
   onAlunoClick: (alunoId: string) => void;
+  onExplicacaoClick?: (alerta: AlertaExplicacao) => void;
 }
 
 const configByTipo = {
@@ -33,7 +35,18 @@ const configByTipo = {
     icon: '⚠️',
     title: 'Fase anterior',
     subtitle: 'Alertas pendentes da fase anterior'
+  },
+  aguardando_explicacao: {
+    icon: '💬',
+    title: 'Aguardando você',
+    subtitle: 'Contradições que precisam de explicação'
   }
+};
+
+const tipoContradicaoLabels: Record<string, string> = {
+  celebracao_para_atencao: 'Celebração → Atenção',
+  atencao_para_recuperacao: 'Atenção → Recuperação',
+  outro: 'Mudança de padrão'
 };
 
 const getInitials = (name: string) => {
@@ -51,11 +64,19 @@ export const AlertaDetalheModal = ({
   tipo,
   alertas,
   alertasFaseAnterior,
-  onAlunoClick
+  alertasExplicacao = [],
+  onAlunoClick,
+  onExplicacaoClick
 }: AlertaDetalheModalProps) => {
   const config = configByTipo[tipo];
   const isFaseAnterior = tipo === 'atencao_fase_anterior';
-  const items = isFaseAnterior ? alertasFaseAnterior : alertas;
+  const isExplicacao = tipo === 'aguardando_explicacao';
+  
+  const items = isExplicacao 
+    ? alertasExplicacao 
+    : isFaseAnterior 
+      ? alertasFaseAnterior 
+      : alertas;
   const count = items.length;
 
   return (
@@ -85,7 +106,9 @@ export const AlertaDetalheModal = ({
         {/* Cabeçalho de colunas */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
           <span className="text-white/30 text-xs uppercase tracking-wider">Aluno</span>
-          <span className="text-white/30 text-xs uppercase tracking-wider">Motivo</span>
+          <span className="text-white/30 text-xs uppercase tracking-wider">
+            {isExplicacao ? 'Situação' : 'Motivo'}
+          </span>
         </div>
 
         {/* Lista compacta */}
@@ -95,6 +118,43 @@ export const AlertaDetalheModal = ({
               <p className="text-white/50 text-sm text-center py-8">
                 Nenhum alerta nesta categoria
               </p>
+            ) : isExplicacao ? (
+              // Renderização para aguardando_explicacao
+              alertasExplicacao.map((alerta) => (
+                <button
+                  key={alerta.id}
+                  onClick={() => onExplicacaoClick?.(alerta)}
+                  className="w-full flex items-center gap-3 py-2.5 px-4 hover:bg-purple-900/20 transition-colors text-left"
+                >
+                  <Avatar className="h-7 w-7">
+                    <AvatarImage src={alerta.aluno.avatarUrl || ''} />
+                    <AvatarFallback className="bg-purple-900/30 text-white text-xs">
+                      {getInitials(alerta.aluno.nome)}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-white text-sm font-medium truncate">
+                        {alerta.aluno.nome}
+                      </span>
+                      <span className="text-white/40 text-xs flex-shrink-0">
+                        {alerta.aluno.serie}{alerta.aluno.turma}
+                      </span>
+                    </div>
+                    <div className="text-xs text-purple-400 mt-0.5">
+                      {tipoContradicaoLabels[alerta.tipo_contradicao] || 'Contradição detectada'}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="px-2 py-0.5 bg-purple-800/50 text-purple-300 text-xs rounded-full">
+                      Responder
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-white/30" />
+                  </div>
+                </button>
+              ))
             ) : isFaseAnterior ? (
               alertasFaseAnterior.map((alerta) => (
                 <button
