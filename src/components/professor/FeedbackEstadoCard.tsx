@@ -83,6 +83,8 @@ interface FeedbackEstadoCardProps {
   // Novos campos ricos do N8N
   mensagemProfessor?: string;
   oQueNaoFazer?: string[];
+  // Flag para identificar origem N8N
+  geradoPorN8N?: boolean;
 }
 
 const estadoConfig = {
@@ -198,9 +200,12 @@ export function FeedbackEstadoCard({
   celebracaoSubtipo,
   conversaRegistrada,
   mensagemProfessor,
-  oQueNaoFazer
+  oQueNaoFazer,
+  geradoPorN8N
 }: FeedbackEstadoCardProps) {
   const [expandido, setExpandido] = useState(false);
+  // Estado para hipóteses colapsáveis individualmente (para layout N8N)
+  const [hipotesesExpandidas, setHipotesesExpandidas] = useState<Record<number, boolean>>({});
   
   // Estados de celebração
   const estadosCelebracao = ['celebrar', 'celebrar_descoberta', 'celebrar_confirmacao', 'brilhando'];
@@ -213,20 +218,42 @@ export function FeedbackEstadoCard({
     (estado === 'celebrar_confirmacao' ? 'confirmacao' : null) ||
     (arquetipo?.tipo?.toLowerCase().includes('descoberta') ? 'descoberta' : null) ||
     (arquetipo?.tipo?.toLowerCase().includes('confirm') ? 'confirmacao' : null) ||
-    (ehCelebracao ? 'confirmacao' : null); // Fallback para confirmação se for celebração sem subtipo
+    (ehCelebracao ? 'confirmacao' : null);
   
-  // Para celebrações, sempre usar config de 'celebrar' (CELEBRE! no topo)
+  // Para celebrações, sempre usar config de 'celebrar'
   const estadoConfig_key = ehCelebracao ? 'celebrar' : estado;
   const config = estadoConfig[estadoConfig_key] || estadoConfig.aguardando;
   const Icon = config.icon;
   
-  const temDetalhes = (hipoteses && hipoteses.length > 0) || 
-                      (acoesSugeridas && acoesSugeridas.length > 0) ||
-                      (contexto && contexto.length > 0) ||
-                      (oQueNaoFazer && oQueNaoFazer.length > 0) ||
-                      mensagemProfessor ||
-                      padrao ||
-                      arquetipo;
+  // Para N8N, verificar se tem dados ricos específicos
+  const temDetalhesN8N = geradoPorN8N && (
+    (hipoteses && hipoteses.length > 0) || 
+    (acoesSugeridas && acoesSugeridas.length > 0) ||
+    (arquetipo?.sugestao_conversa) ||
+    (oQueNaoFazer && oQueNaoFazer.length > 0) ||
+    mensagemProfessor
+  );
+  
+  // Para não-N8N, usar lógica anterior
+  const temDetalhes = temDetalhesN8N || (
+    !geradoPorN8N && (
+      (hipoteses && hipoteses.length > 0) || 
+      (acoesSugeridas && acoesSugeridas.length > 0) ||
+      (contexto && contexto.length > 0) ||
+      (oQueNaoFazer && oQueNaoFazer.length > 0) ||
+      mensagemProfessor ||
+      padrao ||
+      arquetipo
+    )
+  );
+  
+  // Toggle de hipótese individual
+  const toggleHipotese = (index: number) => {
+    setHipotesesExpandidas(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
   
   // Estados que mostram botão de ação
   const estadosComAcao = ['precisa_atencao', 'fique_de_olho', 'atencao_recente'];
@@ -234,9 +261,6 @@ export function FeedbackEstadoCard({
   // Descoberta: só mostra arquétipo se tiver nome_arquetipo preenchido
   const ehDescoberta = subtipoFinal === 'descoberta' && arquetipo?.nome_arquetipo;
   const ehConfirmacao = subtipoFinal === 'confirmacao';
-  
-  // Estados de alerta (para mostrar seções especiais)
-  const ehAlerta = estado === 'precisa_atencao';
 
   return (
     <div className={cn(
@@ -253,49 +277,101 @@ export function FeedbackEstadoCard({
           </span>
         </div>
         
-        <p className={cn('text-base leading-relaxed', config.textColor)}>
-          {textoAcontecendo}
-        </p>
-        
-        {/* Mensagem padrão */}
-        <p className={cn('text-sm mt-2 opacity-80', config.textColor)}>
-          {config.mensagemPadrao}
-        </p>
-        
-        {/* Padrão identificado (se houver) */}
-        {padrao && (
-          <div className="mt-3 p-2 bg-black/20 rounded-lg">
-            <p className={cn('text-sm font-medium', config.textColor)}>
-              Padrão: {padrao.nome}
+        {/* Para N8N: Mostrar texto resumido + padrão */}
+        {geradoPorN8N ? (
+          <>
+            <p className={cn('text-base leading-relaxed', config.textColor)}>
+              {textoAcontecendo.length > 150 
+                ? `${textoAcontecendo.substring(0, 150)}...` 
+                : textoAcontecendo}
             </p>
-            <p className={cn('text-xs opacity-80', config.textColor)}>
-              {padrao.significado}
+            
+            {/* Padrão identificado - destaque para N8N */}
+            {padrao && (
+              <div className="mt-3 p-3 bg-black/30 rounded-lg border border-white/10">
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4 text-amber-400" />
+                  <span className="text-sm font-semibold text-amber-400">
+                    Padrão: {padrao.nome}
+                  </span>
+                </div>
+                <p className={cn('text-xs opacity-80 mt-1', config.textColor)}>
+                  {padrao.significado}
+                </p>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <p className={cn('text-base leading-relaxed', config.textColor)}>
+              {textoAcontecendo}
             </p>
-          </div>
+            
+            {/* Mensagem padrão - apenas para não-N8N */}
+            <p className={cn('text-sm mt-2 opacity-80', config.textColor)}>
+              {config.mensagemPadrao}
+            </p>
+            
+            {/* Padrão identificado - layout antigo para não-N8N */}
+            {padrao && (
+              <div className="mt-3 p-2 bg-black/20 rounded-lg">
+                <p className={cn('text-sm font-medium', config.textColor)}>
+                  Padrão: {padrao.nome}
+                </p>
+                <p className={cn('text-xs opacity-80', config.textColor)}>
+                  {padrao.significado}
+                </p>
+              </div>
+            )}
+          </>
         )}
         
-        {/* Arquétipo para celebrações de Descoberta */}
-        {ehDescoberta && arquetipo && (
-          <div className="mt-4 space-y-3">
-            {/* Seção Arquétipo */}
-            <div className="p-3 bg-black/20 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Lightbulb className="w-4 h-4 text-yellow-300" />
-                <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wide">
-                  Arquétipo Possível
-                </span>
+        {/* === SEÇÕES ABAIXO SÓ APARECEM SE NÃO FOR N8N === */}
+        {!geradoPorN8N && (
+          <>
+            {/* Arquétipo para celebrações de Descoberta */}
+            {ehDescoberta && arquetipo && (
+              <div className="mt-4 space-y-3">
+                <div className="p-3 bg-black/20 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Lightbulb className="w-4 h-4 text-yellow-300" />
+                    <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wide">
+                      Arquétipo Possível
+                    </span>
+                  </div>
+                  <p className="text-white font-medium text-lg">
+                    "{arquetipo.nome_arquetipo}"
+                  </p>
+                  <p className="text-white/80 text-sm mt-1">
+                    {arquetipo.significado}
+                  </p>
+                </div>
+                
+                {/* Como Potencializar - apenas se NÃO for N8N */}
+                {arquetipo.potencializar && arquetipo.potencializar.length > 0 && (
+                  <div className="p-3 bg-black/20 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Target className="w-4 h-4 text-yellow-300" />
+                      <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wide">
+                        Como Potencializar
+                      </span>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {arquetipo.potencializar.map((item, i) => (
+                        <li key={i} className="text-white/90 text-sm flex items-start gap-2">
+                          <span className="text-yellow-300">✨</span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
-              <p className="text-white font-medium text-lg">
-                "{arquetipo.nome_arquetipo}"
-              </p>
-              <p className="text-white/80 text-sm mt-1">
-                {arquetipo.significado}
-              </p>
-            </div>
+            )}
             
-            {/* Como Potencializar */}
-            {arquetipo.potencializar && arquetipo.potencializar.length > 0 && (
-              <div className="p-3 bg-black/20 rounded-lg">
+            {/* Para Confirmação - NÃO N8N */}
+            {ehConfirmacao && (
+              <div className="mt-4 p-3 bg-black/20 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Target className="w-4 h-4 text-yellow-300" />
                   <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wide">
@@ -303,37 +379,55 @@ export function FeedbackEstadoCard({
                   </span>
                 </div>
                 <ul className="space-y-1.5">
-                  {arquetipo.potencializar.map((item, i) => (
-                    <li key={i} className="text-white/90 text-sm flex items-start gap-2">
-                      <span className="text-yellow-300">✨</span>
-                      {item}
-                    </li>
-                  ))}
+                  {arquetipo?.potencializar && arquetipo.potencializar.length > 0 ? (
+                    arquetipo.potencializar.map((item, i) => (
+                      <li key={i} className="text-white/90 text-sm flex items-start gap-2">
+                        <span className="text-yellow-300">✨</span>
+                        {item}
+                      </li>
+                    ))
+                  ) : (
+                    <>
+                      <li className="text-white/90 text-sm flex items-start gap-2">
+                        <span className="text-yellow-300">✨</span>
+                        Desafios de nível avançado
+                      </li>
+                      <li className="text-white/90 text-sm flex items-start gap-2">
+                        <span className="text-yellow-300">✨</span>
+                        Papel de mentor para colegas
+                      </li>
+                      <li className="text-white/90 text-sm flex items-start gap-2">
+                        <span className="text-yellow-300">✨</span>
+                        Projetos de protagonismo{casaNome ? ` em ${casaNome}` : ''}
+                      </li>
+                    </>
+                  )}
                 </ul>
               </div>
             )}
-          </div>
-        )}
-        
-        {/* Para Confirmação - Sugestões de potencialização (sempre mostra, mesmo se arquetipo vier sem nome) */}
-        {ehConfirmacao && (
-          <div className="mt-4 p-3 bg-black/20 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Target className="w-4 h-4 text-yellow-300" />
-              <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wide">
-                Como Potencializar
-              </span>
-            </div>
-            <ul className="space-y-1.5">
-              {arquetipo?.potencializar && arquetipo.potencializar.length > 0 ? (
-                arquetipo.potencializar.map((item, i) => (
-                  <li key={i} className="text-white/90 text-sm flex items-start gap-2">
-                    <span className="text-yellow-300">✨</span>
-                    {item}
-                  </li>
-                ))
-              ) : (
-                <>
+            
+            {/* Arquétipo simples (para estados NÃO celebração) - NÃO N8N */}
+            {!ehCelebracao && arquetipo && (
+              <div className="mt-3 p-2 bg-black/20 rounded-lg">
+                <p className={cn('text-sm font-medium', config.textColor)}>
+                  🏆 {arquetipo.tipo}: {arquetipo.nome_arquetipo}
+                </p>
+                <p className={cn('text-xs opacity-80', config.textColor)}>
+                  {arquetipo.significado}
+                </p>
+              </div>
+            )}
+            
+            {/* Fallback para celebração genérica - NÃO N8N */}
+            {ehCelebracao && !ehDescoberta && !ehConfirmacao && (
+              <div className="mt-4 p-3 bg-black/20 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="w-4 h-4 text-yellow-300" />
+                  <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wide">
+                    Como Potencializar
+                  </span>
+                </div>
+                <ul className="space-y-1.5">
                   <li className="text-white/90 text-sm flex items-start gap-2">
                     <span className="text-yellow-300">✨</span>
                     Desafios de nível avançado
@@ -346,56 +440,16 @@ export function FeedbackEstadoCard({
                     <span className="text-yellow-300">✨</span>
                     Projetos de protagonismo{casaNome ? ` em ${casaNome}` : ''}
                   </li>
-                </>
-              )}
-            </ul>
-          </div>
+                </ul>
+              </div>
+            )}
+          </>
         )}
         
-        {/* Arquétipo simples (para estados NÃO celebração que têm arquétipo) */}
-        {!ehCelebracao && arquetipo && (
-          <div className="mt-3 p-2 bg-black/20 rounded-lg">
-            <p className={cn('text-sm font-medium', config.textColor)}>
-              🏆 {arquetipo.tipo}: {arquetipo.nome_arquetipo}
-            </p>
-            <p className={cn('text-xs opacity-80', config.textColor)}>
-              {arquetipo.significado}
-            </p>
-          </div>
-        )}
-        
-        {/* Fallback para celebração genérica sem arquetipo (sempre mostrar potencializar) */}
-        {ehCelebracao && !ehDescoberta && !ehConfirmacao && (
-          <div className="mt-4 p-3 bg-black/20 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Target className="w-4 h-4 text-yellow-300" />
-              <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wide">
-                Como Potencializar
-              </span>
-            </div>
-            <ul className="space-y-1.5">
-              <li className="text-white/90 text-sm flex items-start gap-2">
-                <span className="text-yellow-300">✨</span>
-                Desafios de nível avançado
-              </li>
-              <li className="text-white/90 text-sm flex items-start gap-2">
-                <span className="text-yellow-300">✨</span>
-                Papel de mentor para colegas
-              </li>
-              <li className="text-white/90 text-sm flex items-start gap-2">
-                <span className="text-yellow-300">✨</span>
-                Projetos de protagonismo{casaNome ? ` em ${casaNome}` : ''}
-              </li>
-            </ul>
-          </div>
-        )}
-        
-        {/* SEÇÃO: COMO FALAR COM O ALUNO (apenas para celebrações) */}
-        {ehCelebracao && (
+        {/* SEÇÃO: COMO FALAR COM O ALUNO (apenas para celebrações NÃO N8N) */}
+        {!geradoPorN8N && ehCelebracao && (
           <div className="mt-5 space-y-4">
-            {/* Container destacado para "Como falar com o aluno" */}
             <div className="p-4 bg-amber-950/40 rounded-xl border border-amber-600/30">
-              {/* Sugestão de conversa */}
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-3">
                   <MessageCircle className="w-5 h-5 text-yellow-300" />
@@ -414,7 +468,6 @@ export function FeedbackEstadoCard({
               
               {/* EVITAR e PREFERIR lado a lado */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* EVITAR */}
                 <div className="p-3 bg-red-900/20 rounded-lg border border-red-500/20">
                   <div className="flex items-center gap-2 mb-2">
                     <AlertOctagon className="w-4 h-4 text-red-400" />
@@ -432,7 +485,6 @@ export function FeedbackEstadoCard({
                   </ul>
                 </div>
                 
-                {/* PREFERIR */}
                 <div className="p-3 bg-green-900/20 rounded-lg border border-green-500/20">
                   <div className="flex items-center gap-2 mb-2">
                     <ThumbsUp className="w-4 h-4 text-green-400" />
@@ -460,7 +512,6 @@ export function FeedbackEstadoCard({
       {ehCelebracao && onRegistrarConversa && (
         <div className="px-4 pb-4 pt-2">
           {conversaRegistrada ? (
-            // Estado: Conversa já registrada
             <div className="w-full py-3 px-4 rounded-xl bg-green-900/20 border-2 border-dashed border-green-500/30 flex items-center justify-center gap-2">
               <CheckCircle className="w-4 h-4 text-green-400" />
               <span className="text-green-400 text-sm font-medium">
@@ -468,7 +519,6 @@ export function FeedbackEstadoCard({
               </span>
             </div>
           ) : (
-            // Estado: Ainda não registrou
             <button
               onClick={onRegistrarConversa}
               className="w-full py-3 rounded-xl border-2 border-dashed border-amber-500/50 
@@ -495,7 +545,7 @@ export function FeedbackEstadoCard({
         </div>
       )}
       
-      {/* Expandir detalhes (apenas para estados com mais info) */}
+      {/* Expandir detalhes (para N8N ou não-celebração com detalhes) */}
       {temDetalhes && !ehCelebracao && (
         <>
           <button
@@ -518,134 +568,262 @@ export function FeedbackEstadoCard({
           
           {expandido && (
             <div className="p-4 bg-black/10 space-y-4">
-              {/* Contexto */}
-              {contexto && contexto.length > 0 && (
-                <div>
-                  <h4 className={cn('text-sm font-semibold mb-2 flex items-center gap-2', config.textColor)}>
-                    <Eye className="w-4 h-4" />
-                    Contexto
-                  </h4>
-                  <ul className="space-y-1">
-                    {contexto.map((item, i) => (
-                      <li key={i} className={cn('text-sm opacity-90', config.textColor)}>
-                        • {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {/* Hipóteses */}
-              {hipoteses && hipoteses.length > 0 && (
-                <div>
-                  <h4 className={cn('text-sm font-semibold mb-2 flex items-center gap-2', config.textColor)}>
-                    <Lightbulb className="w-4 h-4" />
-                    Hipóteses
-                  </h4>
-                  <ul className="space-y-2">
-                    {hipoteses.map((hipotese, i) => (
-                      <li key={i} className="bg-black/10 p-2 rounded-lg">
-                        <p className={cn('text-sm font-medium', config.textColor)}>
-                          {hipotese.titulo}
-                        </p>
-                        <p className={cn('text-xs opacity-80', config.textColor)}>
-                          {hipotese.descricao}
-                        </p>
-                        {hipotese.perguntas && hipotese.perguntas.length > 0 && (
-                          <div className="mt-1">
-                            {hipotese.perguntas.map((pergunta, j) => (
-                              <p key={j} className={cn('text-xs italic opacity-70', config.textColor)}>
-                                💬 "{pergunta}"
-                              </p>
-                            ))}
+              {/* === LAYOUT N8N === */}
+              {geradoPorN8N ? (
+                <>
+                  {/* Hipóteses colapsáveis individualmente */}
+                  {hipoteses && hipoteses.length > 0 && (
+                    <div>
+                      <h4 className={cn('text-sm font-semibold mb-3 flex items-center gap-2', config.textColor)}>
+                        <Lightbulb className="w-4 h-4" />
+                        Hipóteses
+                      </h4>
+                      <div className="space-y-2">
+                        {hipoteses.map((hipotese, i) => (
+                          <div key={i} className="bg-black/20 rounded-lg overflow-hidden">
+                            <button
+                              onClick={() => toggleHipotese(i)}
+                              className="w-full p-3 flex items-center justify-between text-left hover:bg-black/10 transition-colors"
+                            >
+                              <span className={cn('text-sm font-medium', config.textColor)}>
+                                ▸ {hipotese.titulo}
+                              </span>
+                              {hipotesesExpandidas[i] ? (
+                                <ChevronUp className="w-4 h-4 text-white/60" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4 text-white/60" />
+                              )}
+                            </button>
+                            {hipotesesExpandidas[i] && (
+                              <div className="px-3 pb-3 space-y-2">
+                                <p className={cn('text-xs opacity-80', config.textColor)}>
+                                  {hipotese.descricao}
+                                </p>
+                                {hipotese.perguntas && hipotese.perguntas.length > 0 && (
+                                  <div className="mt-2 p-2 bg-blue-900/20 rounded-lg border border-blue-500/20">
+                                    {hipotese.perguntas.map((pergunta, j) => (
+                                      <p key={j} className="text-xs text-blue-300 italic">
+                                        💬 "{pergunta}"
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {/* Ações Sugeridas */}
-              {acoesSugeridas && acoesSugeridas.length > 0 && (
-                <div>
-                  <h4 className={cn('text-sm font-semibold mb-2 flex items-center gap-2', config.textColor)}>
-                    <Target className="w-4 h-4" />
-                    Ações Sugeridas
-                  </h4>
-                  <ul className="space-y-1">
-                    {acoesSugeridas.map((acao, i) => (
-                      <li 
-                        key={i} 
-                        className={cn(
-                          'text-sm flex items-center gap-2 p-2 rounded-lg',
-                          acao.prioridade === 'alta' ? 'bg-red-900/30' :
-                          acao.prioridade === 'media' ? 'bg-yellow-900/30' :
-                          'bg-green-900/30',
-                          config.textColor
-                        )}
-                      >
-                        <span className={cn(
-                          'text-xs px-1.5 py-0.5 rounded font-medium',
-                          acao.prioridade === 'alta' ? 'bg-red-500 text-white' :
-                          acao.prioridade === 'media' ? 'bg-yellow-500 text-black' :
-                          'bg-green-500 text-white'
-                        )}>
-                          {acao.prioridade === 'alta' ? '!' : acao.prioridade === 'media' ? '•' : '○'}
-                        </span>
-                        {acao.acao}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {/* Potencializar (para arquétipos - dentro de expandido) */}
-              {!ehCelebracao && arquetipo?.potencializar && arquetipo.potencializar.length > 0 && (
-                <div>
-                  <h4 className={cn('text-sm font-semibold mb-2 flex items-center gap-2', config.textColor)}>
-                    <Sparkles className="w-4 h-4" />
-                    Como Potencializar
-                  </h4>
-                  <ul className="space-y-1">
-                    {arquetipo.potencializar.map((item, i) => (
-                      <li key={i} className={cn('text-sm opacity-90', config.textColor)}>
-                        ✨ {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {/* O QUE NÃO FAZER (do N8N) */}
-              {oQueNaoFazer && oQueNaoFazer.length > 0 && (
-                <div className="p-3 bg-red-900/20 rounded-lg border border-red-500/20">
-                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2 text-red-400">
-                    <AlertOctagon className="w-4 h-4" />
-                    O Que NÃO Fazer
-                  </h4>
-                  <ul className="space-y-1">
-                    {oQueNaoFazer.map((item, i) => (
-                      <li key={i} className="text-sm text-white/80 flex items-start gap-2">
-                        <span className="text-red-400 flex-shrink-0">✗</span>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {/* MENSAGEM PARA O PROFESSOR (do N8N) */}
-              {mensagemProfessor && (
-                <div className="p-3 bg-blue-900/20 rounded-lg border border-blue-500/20">
-                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2 text-blue-400">
-                    <MessageCircle className="w-4 h-4" />
-                    Mensagem para Você
-                  </h4>
-                  <p className="text-sm text-white/90 leading-relaxed italic">
-                    "{mensagemProfessor}"
-                  </p>
-                </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Ações Sugeridas com prioridade visual */}
+                  {acoesSugeridas && acoesSugeridas.length > 0 && (
+                    <div>
+                      <h4 className={cn('text-sm font-semibold mb-2 flex items-center gap-2', config.textColor)}>
+                        <Target className="w-4 h-4" />
+                        Ações Sugeridas
+                      </h4>
+                      <ul className="space-y-1.5">
+                        {acoesSugeridas.map((acao, i) => (
+                          <li 
+                            key={i} 
+                            className={cn(
+                              'text-sm flex items-center gap-2 p-2.5 rounded-lg',
+                              acao.prioridade === 'alta' ? 'bg-red-900/30' :
+                              acao.prioridade === 'media' ? 'bg-yellow-900/30' :
+                              'bg-green-900/30',
+                              config.textColor
+                            )}
+                          >
+                            <span className={cn(
+                              'text-base flex-shrink-0',
+                            )}>
+                              {acao.prioridade === 'alta' ? '🔴' : acao.prioridade === 'media' ? '🟡' : '🟢'}
+                            </span>
+                            {acao.acao}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {/* Arquétipo com sugestao_conversa (para alertas N8N) */}
+                  {arquetipo?.sugestao_conversa && (
+                    <div className="p-3 bg-amber-900/20 rounded-lg border border-amber-500/20">
+                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2 text-amber-400">
+                        <Award className="w-4 h-4" />
+                        {arquetipo.nome_arquetipo ? `Arquétipo: ${arquetipo.nome_arquetipo}` : 'Como usar a força do aluno'}
+                      </h4>
+                      <p className="text-sm text-white/90 leading-relaxed italic">
+                        💬 "{arquetipo.sugestao_conversa}"
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* O QUE NÃO FAZER (N8N) */}
+                  {oQueNaoFazer && oQueNaoFazer.length > 0 && (
+                    <div className="p-3 bg-red-900/20 rounded-lg border border-red-500/20">
+                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2 text-red-400">
+                        <AlertOctagon className="w-4 h-4" />
+                        O Que NÃO Fazer
+                      </h4>
+                      <ul className="space-y-1">
+                        {oQueNaoFazer.map((item, i) => (
+                          <li key={i} className="text-sm text-white/80 flex items-start gap-2">
+                            <span className="text-red-400 flex-shrink-0">✗</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {/* MENSAGEM PARA O PROFESSOR (N8N) */}
+                  {mensagemProfessor && (
+                    <div className="p-3 bg-blue-900/20 rounded-lg border border-blue-500/20">
+                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2 text-blue-400">
+                        <MessageCircle className="w-4 h-4" />
+                        Mensagem para Você
+                      </h4>
+                      <p className="text-sm text-white/90 leading-relaxed italic">
+                        "{mensagemProfessor}"
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* === LAYOUT NÃO-N8N (original) === */}
+                  {/* Contexto */}
+                  {contexto && contexto.length > 0 && (
+                    <div>
+                      <h4 className={cn('text-sm font-semibold mb-2 flex items-center gap-2', config.textColor)}>
+                        <Eye className="w-4 h-4" />
+                        Contexto
+                      </h4>
+                      <ul className="space-y-1">
+                        {contexto.map((item, i) => (
+                          <li key={i} className={cn('text-sm opacity-90', config.textColor)}>
+                            • {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {/* Hipóteses */}
+                  {hipoteses && hipoteses.length > 0 && (
+                    <div>
+                      <h4 className={cn('text-sm font-semibold mb-2 flex items-center gap-2', config.textColor)}>
+                        <Lightbulb className="w-4 h-4" />
+                        Hipóteses
+                      </h4>
+                      <ul className="space-y-2">
+                        {hipoteses.map((hipotese, i) => (
+                          <li key={i} className="bg-black/10 p-2 rounded-lg">
+                            <p className={cn('text-sm font-medium', config.textColor)}>
+                              {hipotese.titulo}
+                            </p>
+                            <p className={cn('text-xs opacity-80', config.textColor)}>
+                              {hipotese.descricao}
+                            </p>
+                            {hipotese.perguntas && hipotese.perguntas.length > 0 && (
+                              <div className="mt-1">
+                                {hipotese.perguntas.map((pergunta, j) => (
+                                  <p key={j} className={cn('text-xs italic opacity-70', config.textColor)}>
+                                    💬 "{pergunta}"
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {/* Ações Sugeridas */}
+                  {acoesSugeridas && acoesSugeridas.length > 0 && (
+                    <div>
+                      <h4 className={cn('text-sm font-semibold mb-2 flex items-center gap-2', config.textColor)}>
+                        <Target className="w-4 h-4" />
+                        Ações Sugeridas
+                      </h4>
+                      <ul className="space-y-1">
+                        {acoesSugeridas.map((acao, i) => (
+                          <li 
+                            key={i} 
+                            className={cn(
+                              'text-sm flex items-center gap-2 p-2 rounded-lg',
+                              acao.prioridade === 'alta' ? 'bg-red-900/30' :
+                              acao.prioridade === 'media' ? 'bg-yellow-900/30' :
+                              'bg-green-900/30',
+                              config.textColor
+                            )}
+                          >
+                            <span className={cn(
+                              'text-xs px-1.5 py-0.5 rounded font-medium',
+                              acao.prioridade === 'alta' ? 'bg-red-500 text-white' :
+                              acao.prioridade === 'media' ? 'bg-yellow-500 text-black' :
+                              'bg-green-500 text-white'
+                            )}>
+                              {acao.prioridade === 'alta' ? '!' : acao.prioridade === 'media' ? '•' : '○'}
+                            </span>
+                            {acao.acao}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {/* Potencializar (para arquétipos - dentro de expandido) */}
+                  {!ehCelebracao && arquetipo?.potencializar && arquetipo.potencializar.length > 0 && (
+                    <div>
+                      <h4 className={cn('text-sm font-semibold mb-2 flex items-center gap-2', config.textColor)}>
+                        <Sparkles className="w-4 h-4" />
+                        Como Potencializar
+                      </h4>
+                      <ul className="space-y-1">
+                        {arquetipo.potencializar.map((item, i) => (
+                          <li key={i} className={cn('text-sm opacity-90', config.textColor)}>
+                            ✨ {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {/* O QUE NÃO FAZER */}
+                  {oQueNaoFazer && oQueNaoFazer.length > 0 && (
+                    <div className="p-3 bg-red-900/20 rounded-lg border border-red-500/20">
+                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2 text-red-400">
+                        <AlertOctagon className="w-4 h-4" />
+                        O Que NÃO Fazer
+                      </h4>
+                      <ul className="space-y-1">
+                        {oQueNaoFazer.map((item, i) => (
+                          <li key={i} className="text-sm text-white/80 flex items-start gap-2">
+                            <span className="text-red-400 flex-shrink-0">✗</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {/* MENSAGEM PARA O PROFESSOR */}
+                  {mensagemProfessor && (
+                    <div className="p-3 bg-blue-900/20 rounded-lg border border-blue-500/20">
+                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2 text-blue-400">
+                        <MessageCircle className="w-4 h-4" />
+                        Mensagem para Você
+                      </h4>
+                      <p className="text-sm text-white/90 leading-relaxed italic">
+                        "{mensagemProfessor}"
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
               
               {/* Botão "Registrar minha ação" - após as ações sugeridas */}
