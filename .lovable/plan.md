@@ -1,258 +1,236 @@
 
-# Plano: Sincronização de Scores de Inteligência com N8N
 
-## Visão Geral
+# Plano: Receptor de Sugestões do N8N
 
-Adicionar ao Painel de Monitoramento (`MonitorPage.tsx`) um recurso completo para sincronizar os scores de inteligência dos alunos com o sistema externo N8N.
+## Objetivo
+Criar uma Edge Function que receba sugestões geradas pela IA do N8N e as salve na tabela `alertas_alunos`, onde o professor já visualiza no perfil do aluno.
 
 ---
 
-## Arquitetura da Solução
+## Arquitetura
 
 ```text
-┌──────────────────────────────────────────────────────────────────────┐
-│                         MonitorPage.tsx                              │
-│  ┌────────────────────────────────────────────────────────────┐      │
-│  │  ModalSincronizarScores                                    │      │
-│  │  - Seletor de tipo (aluno/turma/série/todos)              │      │
-│  │  - Seletores dinâmicos                                     │      │
-│  │  - Prévia de quantidade                                    │      │
-│  │  - Botão sincronizar                                       │      │
-│  └─────────────────────────┬──────────────────────────────────┘      │
-│                            │                                          │
-│                            ▼                                          │
-│  ┌────────────────────────────────────────────────────────────┐      │
-│  │  Função buscarDadosSincronizacao()                         │      │
-│  │  - Query de alunos com filtro                              │      │
-│  │  - Query de scores (perfil_inteligencias_aluno)            │      │
-│  │  - Monta payload JSON                                      │      │
-│  └─────────────────────────┬──────────────────────────────────┘      │
-│                            │                                          │
-│                            ▼                                          │
-│  ┌────────────────────────────────────────────────────────────┐      │
-│  │  POST → https://n8n.vinirossa.com.br/webhook/arboria-sync  │      │
-│  └────────────────────────────────────────────────────────────┘      │
-└──────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                  N8N                                        │
+│  1. Recebe observacao via webhook                                          │
+│  2. Busca contexto do aluno                                                │
+│  3. Chama IA (OpenAI/Gemini)                                               │
+│  4. Gera sugestao                                                          │
+└────────────────────────────────────┬────────────────────────────────────────┘
+                                     │
+                                     ▼ POST
+┌─────────────────────────────────────────────────────────────────────────────┐
+│     Edge Function: receber-sugestao-n8n                                     │
+│                                                                             │
+│  1. Valida X-Arboria-Secret                                                │
+│  2. Valida payload                                                          │
+│  3. Arquiva alertas antigos do aluno                                        │
+│  4. Insere novo alerta em alertas_alunos                                   │
+│  5. (Opcional) Envia push notification ao professor                         │
+└────────────────────────────────────┬────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Tabela: alertas_alunos                                                     │
+│  - tipo_alerta: precisa_atencao | celebrar | neutro                        │
+│  - dados_contexto: JSONB com hipoteses, acoes, etc                         │
+│  - notificacao_ativa: true                                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Professor abre perfil do aluno                                             │
+│  FeedbackEstadoCard exibe a sugestao                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Componentes a Criar/Modificar
+## Edge Function: receber-sugestao-n8n
 
-### 1. Novo Componente: `ModalSincronizarScores.tsx`
-**Local:** `src/components/admin/ModalSincronizarScores.tsx`
+### Endpoint
+```
+POST https://uoxcnkqjxthivsvxqonj.supabase.co/functions/v1/receber-sugestao-n8n
+```
 
-Interface com:
-- Radio buttons para tipo de sincronização (aluno/turma/série/todos)
-- Select de aluno (quando tipo = aluno)
-- Select de turma (quando tipo = turma)
-- Select de série (quando tipo = série)
-- Select de ano letivo
-- Card de prévia mostrando quantidade de alunos e registros
-- Botões Cancelar e Sincronizar Agora
-- Estados de loading, sucesso e erro
+### Headers Obrigatorios
+```
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+X-Arboria-Secret: <token_compartilhado>
+```
 
-### 2. Modificar: `MonitorPage.tsx`
-**Local:** `src/pages/admin/MonitorPage.tsx`
-
-Transformar a página placeholder em dashboard funcional:
-- Header com título e botão "Sincronizar Scores"
-- Seção para o recurso de sincronização
-- Integração com o modal
-
----
-
-## Estrutura de Dados
-
-### Payload a Enviar
+### Payload Aceito
 ```json
 {
-  "tipo": "sincronizar_scores",
-  "instituicao_id": "902876e9-b263-4c01-9013-aeef7b6d24e1",
-  "data_sincronizacao": "2026-01-30T15:00:00Z",
-  "filtro": {
-    "tipo": "turma",
-    "valor": "6º Ano - A"
-  },
-  "alunos": [
+  "aluno_id": "uuid-do-aluno (obrigatorio)",
+  "observacao_gatilho_id": "uuid-da-observacao-que-disparou (opcional)",
+  
+  "estado": "precisa_atencao | celebrar | neutro",
+  "texto_acontecendo": "Descricao do que esta acontecendo...",
+  
+  "sinal_principal": "Nome do sinal principal",
+  "sinal_codigo": "codigo_snake_case",
+  
+  "hipoteses": [
     {
-      "aluno_id": "uuid",
-      "aluno_matricula": "2287.2026",
-      "aluno_nome": "Nome Completo",
-      "serie": "6º Ano",
-      "turma": "A",
-      "casa_id": 1,
-      "casa_nome": "Linguística",
-      "ano_letivo": 2026,
-      "scores": [
-        {
-          "inteligencia_id": 1,
-          "inteligencia_codigo": "linguistica",
-          "inteligencia_nome": "Linguística",
-          "score_atual": 42.50,
-          "score_ultima_fase": 55.00,
-          "total_evidencias": 5,
-          "fase_atual": 2,
-          "eh_casa_do_aluno": true
-        }
-        // ... 8 inteligências
-      ]
+      "titulo": "Titulo da Hipotese",
+      "descricao": "Explicacao detalhada",
+      "perguntas": ["Pergunta para investigar"]
     }
   ],
-  "resumo": {
-    "total_alunos": 25,
-    "total_registros": 200
-  }
+  
+  "acoes_sugeridas": [
+    {
+      "acao": "Descricao da acao",
+      "prioridade": "alta | media | baixa"
+    }
+  ],
+  
+  "padrao_identificado": {
+    "nome": "Nome do padrao",
+    "significado": "O que esse padrao indica"
+  },
+  
+  "arquetipo": {
+    "nome_arquetipo": "O Mestre das Palavras",
+    "tipo": "descoberta | confirmacao",
+    "significado": "Explicacao",
+    "potencializar": ["Dica 1", "Dica 2"],
+    "sugestao_conversa": "Frase sugerida para o professor"
+  },
+  
+  "prioridade": "importante | normal | baixa",
+  "mensagem_professor": "Mensagem de encorajamento ao professor"
+}
+```
+
+### Resposta de Sucesso
+```json
+{
+  "success": true,
+  "alerta_id": "uuid-do-alerta-criado",
+  "message": "Sugestao recebida e salva com sucesso"
+}
+```
+
+### Resposta de Erro
+```json
+{
+  "success": false,
+  "error": "Descricao do erro"
 }
 ```
 
 ---
 
-## Queries SQL Necessárias
+## Logica da Edge Function
 
-### Query 1: Buscar Alunos com Filtros
-```sql
-SELECT 
-  p.id as aluno_id,
-  p.matricula_externa,
-  p.full_name,
-  p.serie,
-  p.turma,
-  p.casa_id,
-  i.nome as casa_nome
-FROM profiles p
-LEFT JOIN inteligencias i ON i.id = p.casa_id
-JOIN user_roles ur ON ur.user_id = p.id AND ur.role = 'user'
-WHERE p.institution_id = $institution_id
-  AND ($serie IS NULL OR p.serie = $serie)
-  AND ($turma IS NULL OR p.turma = $turma)
-  AND ($aluno_id IS NULL OR p.id = $aluno_id)
-ORDER BY p.serie, p.turma, p.full_name;
+### 1. Validar Secret
+```typescript
+const secret = req.headers.get('X-Arboria-Secret');
+if (secret !== Deno.env.get('N8N_WEBHOOK_SECRET')) {
+  return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+}
 ```
 
-### Query 2: Buscar Scores por Aluno
-```sql
-SELECT 
-  s.aluno_id,
-  s.inteligencia_id,
-  i.codigo as inteligencia_codigo,
-  i.nome as inteligencia_nome,
-  s.score_atual,
-  s.score_ultima_fase,
-  s.total_evidencias,
-  s.fase_atual,
-  p.casa_id = s.inteligencia_id as eh_casa_do_aluno
-FROM inteligencia_scores s
-JOIN inteligencias i ON i.id = s.inteligencia_id
-JOIN profiles p ON p.id = s.aluno_id
-WHERE s.aluno_id = ANY($aluno_ids)
-  AND s.ano_letivo = $ano_letivo
-ORDER BY s.aluno_id, i.ordem;
+### 2. Validar Campos Obrigatorios
+```typescript
+if (!payload.aluno_id || !payload.estado || !payload.texto_acontecendo) {
+  return new Response(JSON.stringify({ error: 'Campos obrigatorios ausentes' }), { status: 400 });
+}
 ```
 
----
-
-## Fluxo de Implementação
-
-### Passo 1: Criar o Modal
-Criar `src/components/admin/ModalSincronizarScores.tsx` com:
-- Props: `institutionId`, `onClose`, `onSuccess`
-- Estados para tipo de filtro, seleções, loading, resultado
-- Queries para buscar listas de alunos, turmas, séries
-- Função para calcular prévia
-- Função para executar sincronização
-
-### Passo 2: Atualizar MonitorPage
-Modificar `src/pages/admin/MonitorPage.tsx`:
-- Adicionar botão no header para abrir modal
-- Gerenciar estado do modal
-- Buscar `institutionId` do admin logado
-- Manter visual escuro consistente com o resto do admin
-
-### Passo 3: Implementar Envio ao N8N
-No modal, função `handleSincronizar`:
-1. Buscar alunos conforme filtro selecionado
-2. Buscar scores de todos os alunos encontrados
-3. Montar payload no formato especificado
-4. Fazer POST para o endpoint N8N
-5. Tratar resposta (sucesso/erro)
-
----
-
-## Detalhes Técnicos
-
-### Endpoint N8N
-```
-POST https://n8n.vinirossa.com.br/webhook/arboria-sync-scores
-Headers:
-  Content-Type: application/json
-  X-Arboria-Token: (opcional, pode ser adicionado depois)
+### 3. Buscar Dados do Aluno
+```typescript
+const { data: aluno } = await supabase
+  .from('profiles')
+  .select('id, institution_id, casa_id')
+  .eq('id', payload.aluno_id)
+  .single();
 ```
 
-### Permissões
-- Página já protegida por `ProtectedRoute requireAdmin`
-- Apenas admins da instituição terão acesso
-- Não precisa de RLS adicional pois usa consultas server-side seguras
+### 4. Arquivar Alertas Antigos
+```typescript
+await supabase
+  .from('alertas_alunos')
+  .update({ status: 'arquivado', notificacao_ativa: false })
+  .eq('aluno_id', payload.aluno_id)
+  .eq('status', 'ativo');
+```
 
-### Performance
-- Alunos buscados em batch (não um por um)
-- Scores agrupados por aluno_id
-- Limite de 500 alunos por sincronização (se necessário)
+### 5. Inserir Novo Alerta
+```typescript
+const dadosContexto = {
+  estado: payload.estado,
+  sinal_principal: payload.sinal_principal,
+  sinal_codigo: payload.sinal_codigo,
+  texto_acontecendo: payload.texto_acontecendo,
+  hipoteses: payload.hipoteses,
+  acoes_sugeridas: payload.acoes_sugeridas,
+  padrao_identificado: payload.padrao_identificado,
+  arquetipo: payload.arquetipo,
+  mensagem_professor: payload.mensagem_professor,
+  gerado_por: 'n8n',
+  timestamp_analise: new Date().toISOString()
+};
 
----
-
-## Interface Visual
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  🔄 Sincronizar Scores de Inteligência              [✕]    │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  Sincronizar:                                               │
-│  ◉ Um aluno       [ Buscar aluno...           ▼]           │
-│  ○ Uma turma      [ Selecionar turma          ▼]           │
-│  ○ Uma série      [ Selecionar série          ▼]           │
-│  ○ Todos os alunos                                         │
-│                                                             │
-│  Ano letivo: [ 2026 ▼ ]                                    │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  📊 Prévia                                          │   │
-│  │  25 alunos  •  200 registros de inteligência       │   │
-│  └─────────────────────────────────────────────────────┘   │
-│                                                             │
-│  ⚠️ Esta operação pode levar alguns segundos.              │
-│                                                             │
-│           [ Cancelar ]    [ 🔄 Sincronizar Agora ]         │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+await supabase.from('alertas_alunos').insert({
+  institution_id: aluno.institution_id,
+  aluno_id: payload.aluno_id,
+  tipo_alerta: payload.estado,
+  motivo: 'analise_n8n',
+  status: 'ativo',
+  notificacao_ativa: true,
+  fase_id: faseAtualId,
+  dados_contexto: dadosContexto
+});
 ```
 
 ---
 
-## Arquivos a Criar/Modificar
+## Secret para Autenticacao
 
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| `src/components/admin/ModalSincronizarScores.tsx` | Criar | Modal completo de sincronização |
-| `src/pages/admin/MonitorPage.tsx` | Modificar | Adicionar botão e integrar modal |
-
----
-
-## Considerações de Segurança
-
-1. **Autenticação**: Página protegida por `ProtectedRoute requireAdmin`
-2. **Dados sensíveis**: Payload contém nomes de alunos - OK pois é sincronização interna
-3. **Rate limiting**: Considerar adicionar delay se muitos alunos
-4. **Token de segurança**: Campo preparado para `X-Arboria-Token` (implementar depois se necessário)
+Sera necessario adicionar um secret no projeto:
+- **Nome**: `N8N_WEBHOOK_SECRET`
+- **Valor**: Token seguro compartilhado com o N8N (ex: `arboria_n8n_2026_secret_token`)
 
 ---
 
-## Testes Recomendados
+## Webhook de Feedback (Opcional - Fase 2)
 
-Após implementação:
-1. Testar sincronização de 1 aluno específico
-2. Testar sincronização de 1 turma (ex: 6º A)
-3. Testar sincronização de 1 série (ex: 6º Ano)
-4. Verificar no N8N se payload chegou completo
-5. Verificar feedback de sucesso/erro na interface
+Quando o professor registrar uma acao ou conversa, o sistema pode enviar um POST de volta para o N8N:
+
+```
+POST https://n8n.vinirossa.com.br/webhook/arboria-feedback
+```
+
+```json
+{
+  "tipo": "acao_professor",
+  "alerta_id": "uuid",
+  "aluno_id": "uuid",
+  "professor_id": "uuid",
+  "acao_tomada": "conversa_individual",
+  "notas": "Texto do professor",
+  "created_at": "2026-01-30T15:00:00Z"
+}
+```
+
+---
+
+## Arquivos a Criar
+
+| Arquivo | Descricao |
+|---------|-----------|
+| `supabase/functions/receber-sugestao-n8n/index.ts` | Edge Function receptora |
+
+---
+
+## Teste Apos Implementacao
+
+1. Fazer POST de teste para o endpoint
+2. Verificar se o alerta aparece na tabela `alertas_alunos`
+3. Abrir perfil do aluno no app e verificar se a sugestao aparece
+4. Registrar acao/conversa e verificar se status atualiza
+
