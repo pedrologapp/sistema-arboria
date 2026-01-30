@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { useAlertasAlunos, AlertaAluno, AlertaFaseAnterior } from '@/hooks/useAlertasAlunos';
+import { useAlertasAlunos, AlertaAluno, AlertaFaseAnterior, AlertaExplicacao } from '@/hooks/useAlertasAlunos';
 import { AlertGridCard } from './AlertGridCard';
 import { AlertaDetalheModal } from './AlertaDetalheModal';
+import { ExplicacaoContradicaoModal } from './ExplicacaoContradicaoModal';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface AlertBoxesProps {
   onAlunoClick: (alunoId: string) => void;
 }
 
-type AlertType = 'precisa_atencao' | 'celebrar' | 'nao_esquecer' | 'atencao_fase_anterior';
+type AlertType = 'precisa_atencao' | 'celebrar' | 'nao_esquecer' | 'atencao_fase_anterior' | 'aguardando_explicacao';
 
 interface AlertConfig {
   id: AlertType;
@@ -41,6 +42,12 @@ const alertConfigs: AlertConfig[] = [
     icon: '⚠️',
     label: 'Fase anterior',
     colorActive: '#8B4000'
+  },
+  {
+    id: 'aguardando_explicacao',
+    icon: '💬',
+    label: 'Aguardando você',
+    colorActive: '#6B21A8'
   }
 ];
 
@@ -49,7 +56,8 @@ export const AlertBoxes = ({ onAlunoClick }: AlertBoxesProps) => {
     precisaAtencao, 
     celebrar, 
     naoEsquecer, 
-    atencaoFaseAnterior, 
+    atencaoFaseAnterior,
+    aguardandoExplicacao, 
     totais, 
     badgesAtivos,
     isLoading 
@@ -57,6 +65,7 @@ export const AlertBoxes = ({ onAlunoClick }: AlertBoxesProps) => {
   
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<AlertType | null>(null);
+  const [explicacaoModal, setExplicacaoModal] = useState<AlertaExplicacao | null>(null);
 
   const getAlertasByType = (type: AlertType): AlertaAluno[] => {
     switch (type) {
@@ -73,6 +82,7 @@ export const AlertBoxes = ({ onAlunoClick }: AlertBoxesProps) => {
       case 'celebrar': return totais.celebrar;
       case 'nao_esquecer': return totais.naoEsquecer;
       case 'atencao_fase_anterior': return totais.atencaoFaseAnterior;
+      case 'aguardando_explicacao': return totais.aguardandoExplicacao;
       default: return 0;
     }
   };
@@ -83,6 +93,7 @@ export const AlertBoxes = ({ onAlunoClick }: AlertBoxesProps) => {
       case 'celebrar': return badgesAtivos?.celebrar || 0;
       case 'nao_esquecer': return badgesAtivos?.naoEsquecer || 0;
       case 'atencao_fase_anterior': return badgesAtivos?.atencaoFaseAnterior || 0;
+      case 'aguardando_explicacao': return badgesAtivos?.aguardandoExplicacao || 0;
       default: return 0;
     }
   };
@@ -95,12 +106,17 @@ export const AlertBoxes = ({ onAlunoClick }: AlertBoxesProps) => {
     setModalOpen(true);
   };
 
+  const handleExplicacaoClick = (alerta: AlertaExplicacao) => {
+    setModalOpen(false);
+    setExplicacaoModal(alerta);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-3">
         <Skeleton className="h-4 w-32" />
         <div className="grid grid-cols-2 gap-3">
-          {[1, 2, 3, 4].map(i => (
+          {[1, 2, 3, 4, 5].map(i => (
             <Skeleton key={i} className="h-24 rounded-xl" />
           ))}
         </div>
@@ -116,7 +132,7 @@ export const AlertBoxes = ({ onAlunoClick }: AlertBoxesProps) => {
           Alertas da Casa
         </h3>
 
-        {/* Grid 2x2 */}
+        {/* Grid 2x3 (ou 2x2 + 1 centralizado) */}
         <div className="grid grid-cols-2 gap-3">
           {alertConfigs.map(config => (
             <AlertGridCard
@@ -143,7 +159,18 @@ export const AlertBoxes = ({ onAlunoClick }: AlertBoxesProps) => {
           tipo={selectedType}
           alertas={getAlertasByType(selectedType)}
           alertasFaseAnterior={atencaoFaseAnterior}
+          alertasExplicacao={aguardandoExplicacao}
           onAlunoClick={onAlunoClick}
+          onExplicacaoClick={handleExplicacaoClick}
+        />
+      )}
+
+      {/* Modal de explicação */}
+      {explicacaoModal && (
+        <ExplicacaoContradicaoModal
+          isOpen={!!explicacaoModal}
+          onClose={() => setExplicacaoModal(null)}
+          alerta={explicacaoModal}
         />
       )}
     </>

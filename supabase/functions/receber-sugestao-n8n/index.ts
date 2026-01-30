@@ -10,7 +10,7 @@ interface SugestaoPayload {
   aluno_id?: string;
   aluno_matricula?: string;
   observacao_gatilho_id?: string;
-  estado: "precisa_atencao" | "celebrar" | "neutro";
+  estado: "precisa_atencao" | "celebrar" | "neutro" | "aguardando_explicacao";
   texto_acontecendo: string;
   sinal_principal?: string;
   sinal_codigo?: string;
@@ -37,6 +37,13 @@ interface SugestaoPayload {
   prioridade?: "importante" | "normal" | "baixa";
   mensagem_professor?: string;
   o_que_nao_fazer?: string[];
+  
+  // Campos para contradição (aguardando_explicacao)
+  tipo_contradicao?: "celebracao_para_atencao" | "atencao_para_recuperacao" | "outro";
+  perguntas_professor?: string[];
+  sugestao_anterior_resumo?: string;
+  observacao_nova?: string;
+  requer_resposta?: boolean;
 }
 
 Deno.serve(async (req) => {
@@ -91,7 +98,7 @@ Deno.serve(async (req) => {
     }
 
     // Validate estado value
-    const estadosValidos = ["precisa_atencao", "celebrar", "neutro"];
+    const estadosValidos = ["precisa_atencao", "celebrar", "neutro", "aguardando_explicacao"];
     if (!estadosValidos.includes(payload.estado)) {
       return new Response(
         JSON.stringify({
@@ -202,6 +209,12 @@ Deno.serve(async (req) => {
       observacao_gatilho_id: payload.observacao_gatilho_id || null,
       gerado_por: "n8n",
       timestamp_analise: new Date().toISOString(),
+      // Campos específicos para contradição
+      tipo_contradicao: payload.tipo_contradicao || null,
+      perguntas_professor: payload.perguntas_professor || [],
+      sugestao_anterior_resumo: payload.sugestao_anterior_resumo || null,
+      observacao_nova: payload.observacao_nova || null,
+      requer_resposta: payload.requer_resposta || false,
     };
 
     // 8. Insert new alert
