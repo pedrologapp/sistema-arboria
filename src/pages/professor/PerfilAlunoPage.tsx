@@ -19,6 +19,7 @@ import { FeedbackEstadoCard } from '@/components/professor/FeedbackEstadoCard';
 import HistoricoObservacoes from '@/components/professor/HistoricoObservacoes';
 import RegistrarAcaoModal from '@/components/professor/RegistrarAcaoModal';
 import RegistrarConversaModal from '@/components/professor/RegistrarConversaModal';
+import SugestaoAtivaModal from '@/components/professor/SugestaoAtivaModal';
 
 // ============ COMPONENTES AUXILIARES ============
 
@@ -149,6 +150,9 @@ const PerfilAlunoPage = () => {
   // Estado para modal de registrar conversa (celebração)
   const [modalConversaOpen, setModalConversaOpen] = useState(false);
 
+  // Estado para modal de sugestão ativa
+  const [modalSugestaoAtiva, setModalSugestaoAtiva] = useState(false);
+
   // Loading state
   if (isLoading) {
     return (
@@ -182,8 +186,12 @@ const PerfilAlunoPage = () => {
   };
 
   const handleRegistrarObservacao = () => {
-    // Navegar diretamente para tela de registro de observação (Círculo)
-    navigate(`/professor/circulo/aluno/${id}`);
+    // Se tem alerta de atenção ativo, mostrar modal de aviso primeiro
+    if (aluno.alertaAtivo?.tipo === 'precisa_atencao') {
+      setModalSugestaoAtiva(true);
+    } else {
+      navigate(`/professor/circulo/aluno/${id}`);
+    }
   };
 
   const handleRegistrarConversa = () => {
@@ -200,6 +208,21 @@ const PerfilAlunoPage = () => {
 
   const handleVerHistorico = () => {
     navigate(`/professor/alunos/${id}/observacoes`);
+  };
+
+  const handleContinuarParaObservacao = () => {
+    setModalSugestaoAtiva(false);
+    navigate(`/professor/circulo/aluno/${id}`);
+  };
+
+  const handleAbrirRegistrarAcao = () => {
+    setModalSugestaoAtiva(false);
+    setModalRegistrarOpen(true);
+  };
+
+  const handleVerDetalhes = () => {
+    setModalSugestaoAtiva(false);
+    // Apenas fecha o modal para ver o card de feedback
   };
 
   // Extrair primeiro nome
@@ -420,6 +443,21 @@ const PerfilAlunoPage = () => {
         alertaId={aluno.alertaAtivo?.alertaId}
         subtipo={aluno.alertaAtivo?.subtipo as 'descoberta' | 'confirmacao' | undefined}
         onSalvar={handleSalvarConversa}
+      />
+
+      {/* Modal de Sugestão Ativa */}
+      <SugestaoAtivaModal
+        isOpen={modalSugestaoAtiva}
+        onClose={() => setModalSugestaoAtiva(false)}
+        nomeAluno={primeiroNome}
+        textoAcontecendo={aluno.alertaAtivo?.textoAcontecendo || 'Este aluno precisa de atenção.'}
+        acoesSugeridas={aluno.alertaAtivo?.acoesSugeridas?.slice(0, 3).map(a => ({
+          titulo: a.titulo,
+          prioridade: a.prioridade
+        }))}
+        onRegistrarAcao={handleAbrirRegistrarAcao}
+        onRegistrarObservacao={handleContinuarParaObservacao}
+        onVerDetalhes={handleVerDetalhes}
       />
     </div>
   );
