@@ -353,6 +353,7 @@ const PerfilAlunoPage = () => {
           conversaRegistrada={aluno.conversaRegistrada}
           mensagemProfessor={aluno.alertaAtivo?.mensagemProfessor}
           oQueNaoFazer={aluno.alertaAtivo?.oQueNaoFazer}
+          geradoPorN8N={aluno.alertaAtivo?.geradoPorN8N}
         />
         
         {/* Histórico de Observações */}

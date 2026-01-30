@@ -52,6 +52,8 @@ interface AlertaAtivo {
   // Novos campos ricos do N8N
   mensagemProfessor?: string;
   oQueNaoFazer?: string[];
+  // Flag para identificar origem N8N
+  geradoPorN8N?: boolean;
 }
 
 export interface ConversaRegistrada {
@@ -451,7 +453,8 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
               descricao: h.descricao,
               perguntas: h.perguntas || []
             }));
-          } else if (alertaData.tipo_alerta === 'precisa_atencao') {
+          } else if (!geradoPorN8N && alertaData.tipo_alerta === 'precisa_atencao') {
+            // APENAS buscar do banco se NÃO for N8N
             // Primeiro tentar buscar por sinal
             if (sinalCodigo) {
               const { data: hipotesesSinal } = await supabase
@@ -499,7 +502,8 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
               codigo: a.acao,
               prioridade: a.prioridade
             }));
-          } else if (alertaData.tipo_alerta === 'precisa_atencao') {
+          } else if (!geradoPorN8N && alertaData.tipo_alerta === 'precisa_atencao') {
+            // APENAS buscar do banco se NÃO for N8N
             const { data: acoesData } = await supabase
               .from('acoes_sugeridas')
               .select('titulo, icone')
@@ -518,7 +522,7 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           // Buscar arquétipo para celebração
           let arquetipo: Arquetipo | undefined;
           
-          // Se veio do N8N com arquétipo, priorizar
+          // Se veio do N8N com arquétipo, priorizar (não buscar do banco)
           if (geradoPorN8N && dadosContexto?.arquetipo) {
             const arquetipoN8N = dadosContexto.arquetipo as {
               nome_arquetipo?: string;
@@ -529,10 +533,11 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
             arquetipo = {
               nome: arquetipoN8N.nome_arquetipo || '',
               significado: arquetipoN8N.significado || '',
-              potencializar: arquetipoN8N.potencializar || [],
-              sugestao_conversa: arquetipoN8N.sugestao_conversa
+              potencializar: [], // Vazio para N8N - não mostrar "Como Potencializar" genérico
+              sugestao_conversa: arquetipoN8N.sugestao_conversa // Esse é o campo importante do N8N
             };
-          } else if (alertaData.tipo_alerta === 'celebrar' && subtipo === 'descoberta' && casaCodigo && faseAtualCodigo) {
+          } else if (!geradoPorN8N && alertaData.tipo_alerta === 'celebrar' && subtipo === 'descoberta' && casaCodigo && faseAtualCodigo) {
+            // APENAS buscar do banco se NÃO for N8N
             const { data: arquetipoData } = await supabase
               .from('arquetipos')
               .select('nome_arquetipo, significado, potencializar, sugestao_conversa, frases_evitar, frases_preferir')
@@ -551,7 +556,8 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
                 frases_preferir: arquetipoData.frases_preferir || undefined
               };
             }
-          } else if (alertaData.tipo_alerta === 'celebrar' && subtipo === 'confirmacao' && casaCodigo) {
+          } else if (!geradoPorN8N && alertaData.tipo_alerta === 'celebrar' && subtipo === 'confirmacao' && casaCodigo) {
+            // APENAS buscar do banco se NÃO for N8N
             // Para confirmação: casa = fase (usar casaCodigo para ambos)
             const { data: arquetipoData } = await supabase
               .from('arquetipos')
@@ -655,7 +661,9 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
             padrao: padraoIdentificado,
             // Novos campos do N8N
             mensagemProfessor: (dadosContexto?.mensagem_professor as string) || undefined,
-            oQueNaoFazer: (dadosContexto?.o_que_nao_fazer as string[]) || undefined
+            oQueNaoFazer: (dadosContexto?.o_que_nao_fazer as string[]) || undefined,
+            // Flag para identificar origem N8N
+            geradoPorN8N
           };
         } else {
           // Se não há alerta no banco, calcular estado baseado nas observações
