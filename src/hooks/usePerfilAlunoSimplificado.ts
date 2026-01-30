@@ -15,6 +15,12 @@ interface AcaoSugerida {
   titulo: string;
   icone: string;
   codigo: string;
+  prioridade?: 'alta' | 'media' | 'baixa';
+  script?: string;
+  objetivo?: string;
+  contexto?: string;
+  comoEscutar?: string;
+  porQueFunciona?: string;
 }
 
 interface Arquetipo {
@@ -47,6 +53,34 @@ interface AlertaAtivo {
     nome: string;
     significado: string;
     acao_recomendada?: string;
+  };
+  // Novos campos ricos do N8N
+  mensagemProfessor?: string;
+  oQueNaoFazer?: string[];
+  comoReagir?: {
+    seAceitar: string;
+    seRecusar: string;
+    alerta?: string;
+  };
+  elementoPonte?: {
+    forcas: string | string[];
+    areaDificuldade: string;
+  };
+  geradoPorN8N?: boolean;
+  tipoRecomendacao?: string;
+  nomeRecomendacao?: string;
+  porQueEsteTipo?: string;
+  prioridade?: 'urgente' | 'importante' | 'normal';
+  oQueFazerAgora?: {
+    objetivo: string;
+    contexto: string;
+    scriptPrincipal: string;
+    comoEscutar: string;
+  };
+  useAForca?: {
+    forcasUtilizadas: string;
+    opcaoA?: { nome: string; script: string; porQueFunciona: string };
+    opcaoB?: { nome: string; script: string; porQueFunciona: string };
   };
 }
 
@@ -269,9 +303,35 @@ export const usePerfilAlunoSimplificado = (alunoId: string | undefined) => {
             }
           }
           
+          // Verificar se veio do N8N
+          const geradoPorN8N = dadosContexto?.gerado_por === 'n8n';
+          
           // Buscar ações sugeridas
           let acoesSugeridas: AcaoSugerida[] = [];
-          if (alertaData.tipo_alerta === 'precisa_atencao') {
+          
+          // Se veio do N8N, priorizar dados do dados_contexto
+          if (geradoPorN8N && dadosContexto?.acoes_sugeridas) {
+            const acoesN8N = dadosContexto.acoes_sugeridas as Array<{
+              acao: string;
+              prioridade: 'alta' | 'media' | 'baixa';
+              script?: string;
+              objetivo?: string;
+              contexto?: string;
+              como_escutar?: string;
+              por_que_funciona?: string;
+            }>;
+            acoesSugeridas = acoesN8N.map(a => ({
+              titulo: a.acao,
+              icone: 'MessageCircle',
+              codigo: a.acao,
+              prioridade: a.prioridade,
+              script: a.script,
+              objetivo: a.objetivo,
+              contexto: a.contexto,
+              comoEscutar: a.como_escutar,
+              porQueFunciona: a.por_que_funciona
+            }));
+          } else if (alertaData.tipo_alerta === 'precisa_atencao') {
             const { data: acoesData } = await supabase
               .from('acoes_sugeridas')
               .select('titulo, icone')
@@ -287,9 +347,13 @@ export const usePerfilAlunoSimplificado = (alunoId: string | undefined) => {
             }
           }
           
+          // Extrair padrão identificado do N8N
+          const padraoIdentificado = dadosContexto?.padrao_identificado as { nome: string; significado: string } | undefined;
+          
           alertaAtivo = {
             tipo: alertaData.tipo_alerta as AlertaAtivo['tipo'],
-            motivo: alertaData.motivo,
+            subtipo: (dadosContexto?.tipo_celebracao as 'descoberta' | 'confirmacao') || undefined,
+            motivo: (dadosContexto?.texto_acontecendo as string) || alertaData.motivo,
             contexto: (dadosContexto?.contexto as string[]) || [],
             hipoteses,
             sugestoes: (dadosContexto?.sugestoes as string[]) || [],
@@ -298,11 +362,49 @@ export const usePerfilAlunoSimplificado = (alunoId: string | undefined) => {
             alertaId: alertaData.id,
             sinalCodigo,
             padraoCodigo,
-            sinalPredominante: dadosContexto?.sinal_predominante as string,
+            sinalPredominante: (dadosContexto?.sinal_predominante as string) || (dadosContexto?.sinal_principal as string),
             sinalSecundario: dadosContexto?.sinal_secundario as string,
             quantidadeSinal: dadosContexto?.quantidade_sinal as number,
-            textoAcontecendo: dadosContexto?.texto_acontecendo as string,
-            padrao: dadosContexto?.padrao as { nome: string; significado: string; acao_recomendada?: string }
+            textoAcontecendo: (dadosContexto?.texto_acontecendo as string) || alertaData.motivo,
+            padrao: padraoIdentificado || (dadosContexto?.padrao as { nome: string; significado: string; acao_recomendada?: string }),
+            // Novos campos do N8N
+            mensagemProfessor: (dadosContexto?.mensagem_professor as string) || undefined,
+            oQueNaoFazer: (dadosContexto?.o_que_nao_fazer as string[]) || undefined,
+            // Campos ricos do N8N
+            comoReagir: dadosContexto?.como_reagir ? {
+              seAceitar: (dadosContexto.como_reagir as any).se_aceitar,
+              seRecusar: (dadosContexto.como_reagir as any).se_recusar,
+              alerta: (dadosContexto.como_reagir as any).alerta
+            } : undefined,
+            elementoPonte: dadosContexto?.elemento_ponte ? {
+              forcas: (dadosContexto.elemento_ponte as any).forcas,
+              areaDificuldade: (dadosContexto.elemento_ponte as any).area_dificuldade
+            } : undefined,
+            geradoPorN8N,
+            // Campos N8N estruturados completos
+            tipoRecomendacao: (dadosContexto?.tipo_recomendacao as string) || undefined,
+            nomeRecomendacao: (dadosContexto?.nome_recomendacao as string) || undefined,
+            porQueEsteTipo: (dadosContexto?.por_que_este_tipo as string) || undefined,
+            prioridade: (dadosContexto?.prioridade as 'urgente' | 'importante' | 'normal') || undefined,
+            oQueFazerAgora: dadosContexto?.o_que_fazer_agora ? {
+              objetivo: (dadosContexto.o_que_fazer_agora as any).objetivo || '',
+              contexto: (dadosContexto.o_que_fazer_agora as any).contexto || '',
+              scriptPrincipal: (dadosContexto.o_que_fazer_agora as any).script_principal || '',
+              comoEscutar: (dadosContexto.o_que_fazer_agora as any).como_escutar || ''
+            } : undefined,
+            useAForca: dadosContexto?.use_a_forca ? {
+              forcasUtilizadas: (dadosContexto.use_a_forca as any).forcas_utilizadas || '',
+              opcaoA: (dadosContexto.use_a_forca as any).opcao_a ? {
+                nome: (dadosContexto.use_a_forca as any).opcao_a.nome || '',
+                script: (dadosContexto.use_a_forca as any).opcao_a.script || '',
+                porQueFunciona: (dadosContexto.use_a_forca as any).opcao_a.por_que_funciona || ''
+              } : undefined,
+              opcaoB: (dadosContexto.use_a_forca as any).opcao_b ? {
+                nome: (dadosContexto.use_a_forca as any).opcao_b.nome || '',
+                script: (dadosContexto.use_a_forca as any).opcao_b.script || '',
+                porQueFunciona: (dadosContexto.use_a_forca as any).opcao_b.por_que_funciona || ''
+              } : undefined
+            } : undefined
           };
         }
       }

@@ -22,6 +22,11 @@ interface SugestaoPayload {
   acoes_sugeridas?: Array<{
     acao: string;
     prioridade: "alta" | "media" | "baixa";
+    script?: string;
+    objetivo?: string;
+    contexto?: string;
+    como_escutar?: string;
+    por_que_funciona?: string;
   }>;
   padrao_identificado?: {
     nome: string;
@@ -34,7 +39,7 @@ interface SugestaoPayload {
     potencializar?: string[];
     sugestao_conversa?: string;
   };
-  prioridade?: "importante" | "normal" | "baixa";
+  prioridade?: "urgente" | "importante" | "normal";
   mensagem_professor?: string;
   o_que_nao_fazer?: string[];
   
@@ -45,7 +50,7 @@ interface SugestaoPayload {
   observacao_nova?: string;
   requer_resposta?: boolean;
   
-  // Novos campos ricos do N8N
+  // Campos ricos do N8N
   como_reagir?: {
     se_aceitar: string;
     se_recusar: string;
@@ -55,6 +60,32 @@ interface SugestaoPayload {
   elemento_ponte?: {
     forcas: string | string[];
     area_dificuldade: string;
+  };
+  
+  // NOVOS CAMPOS ESTRUTURADOS
+  tipo_recomendacao?: string;
+  nome_recomendacao?: string;
+  por_que_este_tipo?: string;
+  
+  o_que_fazer_agora?: {
+    objetivo: string;
+    contexto: string;
+    script_principal: string;
+    como_escutar: string;
+  };
+  
+  use_a_forca?: {
+    forcas_utilizadas: string;
+    opcao_a: {
+      nome: string;
+      script: string;
+      por_que_funciona: string;
+    };
+    opcao_b: {
+      nome: string;
+      script: string;
+      por_que_funciona: string;
+    };
   };
 }
 
@@ -227,9 +258,15 @@ Deno.serve(async (req) => {
       sugestao_anterior_resumo: payload.sugestao_anterior_resumo || null,
       observacao_nova: payload.observacao_nova || null,
       requer_resposta: payload.requer_resposta || false,
-      // Novos campos ricos do N8N
+      // Campos ricos do N8N
       como_reagir: payload.como_reagir || null,
       elemento_ponte: payload.elemento_ponte || null,
+      // NOVOS CAMPOS ESTRUTURADOS
+      tipo_recomendacao: payload.tipo_recomendacao || null,
+      nome_recomendacao: payload.nome_recomendacao || null,
+      por_que_este_tipo: payload.por_que_este_tipo || null,
+      o_que_fazer_agora: payload.o_que_fazer_agora || null,
+      use_a_forca: payload.use_a_forca || null,
     };
 
     // 8. Insert new alert

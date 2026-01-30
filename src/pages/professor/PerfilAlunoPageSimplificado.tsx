@@ -253,8 +253,8 @@ const PerfilAlunoPageSimplificado = () => {
           faseNome={aluno.faseAtualNome}
           celebracaoSubtipo={aluno.alertaAtivo?.subtipo as 'descoberta' | 'confirmacao' | undefined}
           conversaRegistrada={aluno.conversaRegistrada}
-          comoReagir={aluno.alertaAtivo?.comoReagir}
-          elementoPonte={aluno.alertaAtivo?.elementoPonte}
+          comoReagir={aluno.alertaAtivo?.comoReagir as any}
+          elementoPonte={aluno.alertaAtivo?.elementoPonte as any}
         />
         
         {/* Histórico de Observações */}
