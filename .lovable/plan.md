@@ -1,51 +1,60 @@
 
 
-# Plano: Corrigir Dois Botões X no Modal de Observação
+# Plano: Pop-up de Aviso para Qualquer Alerta Ativo
 
-## Problema Identificado
+## Problema
 
-O modal "Adicionar observação?" exibe **dois ícones X** porque:
-
-1. Há um botão X **customizado** na linha 79 do `ConfirmarObservacaoModal.tsx`
-2. O componente `DialogContent` do Radix UI já inclui um botão X **automático** por padrão
+Atualmente, o pop-up só aparece quando `aluno.alertaAtivo?.tipo === 'precisa_atencao'`. Para alunos com outros tipos de alerta (como "celebre"), o sistema navega direto para a página de observação sem avisar.
 
 ---
 
 ## Solução
 
-Adicionar a prop `hideCloseButton` ao `DialogContent` para ocultar o botão X automático do Radix, mantendo apenas o botão customizado que já está posicionado corretamente dentro do título.
+Alterar a condição para verificar se **existe qualquer alerta ativo** (`aluno.alertaAtivo` não é null/undefined), em vez de verificar apenas o tipo específico `precisa_atencao`.
 
 ---
 
-## Alteração
+## Alterações
 
-**Arquivo:** `src/components/professor/circulo/ConfirmarObservacaoModal.tsx`
+### 1. Arquivo: `src/pages/professor/PerfilAlunoPage.tsx`
 
-**Linha 75** - Adicionar `hideCloseButton`:
+**Linha 188-195** - Modificar condição:
 
 ```typescript
 // DE:
-<DialogContent className="bg-[#1a1a2e] border-white/10 text-white max-w-sm">
+const handleRegistrarObservacao = () => {
+  if (aluno.alertaAtivo?.tipo === 'precisa_atencao') {
+    setModalSugestaoAtiva(true);
+  } else {
+    navigate(`/professor/circulo/aluno/${id}`);
+  }
+};
 
 // PARA:
-<DialogContent className="bg-[#1a1a2e] border-white/10 text-white max-w-sm" hideCloseButton>
+const handleRegistrarObservacao = () => {
+  // Se tem QUALQUER alerta ativo, mostrar modal de aviso primeiro
+  if (aluno.alertaAtivo) {
+    setModalSugestaoAtiva(true);
+  } else {
+    navigate(`/professor/circulo/aluno/${id}`);
+  }
+};
 ```
+
+### 2. Arquivo: `src/pages/professor/PerfilAlunoPageSimplificado.tsx`
+
+**Mesma alteração** - Modificar a condição de `aluno.alertaAtivo?.tipo === 'precisa_atencao'` para `aluno.alertaAtivo`.
 
 ---
 
-## Resultado Visual
+## Comportamento Após Alteração
 
-```text
-ANTES (dois X):                    DEPOIS (um X):
-┌────────────────────────┐        ┌────────────────────────┐
-│ Adicionar observação? ✕│ ✕      │ Adicionar observação? ✕│
-│                        │        │                        │
-│ Sinal: Desistiu        │        │ Sinal: Desistiu        │
-│ Aluno: Adryan Samuel   │        │ Aluno: Adryan Samuel   │
-└────────────────────────┘        └────────────────────────┘
-      ↑           ↑                         ↑
-   customizado  Radix                   apenas um
-```
+| Situação do Aluno | Antes | Depois |
+|-------------------|-------|--------|
+| "Precisam de você" (atenção) | Mostra pop-up | Mostra pop-up |
+| "Celebre" (celebração) | Navega direto | Mostra pop-up |
+| "Não esqueça" (esquecimento) | Navega direto | Mostra pop-up |
+| Sem alerta ativo | Navega direto | Navega direto |
 
 ---
 
@@ -53,13 +62,6 @@ ANTES (dois X):                    DEPOIS (um X):
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/professor/circulo/ConfirmarObservacaoModal.tsx` | Adicionar `hideCloseButton` na linha 75 |
-
----
-
-## Detalhes Técnicos
-
-- O componente `DialogContent` em `src/components/ui/dialog.tsx` já suporta a prop `hideCloseButton` (linhas 30-35)
-- Quando `hideCloseButton={true}` ou `hideCloseButton` é passado, o botão X padrão do Radix não é renderizado
-- O botão customizado na linha 79 permanece funcionando normalmente
+| `src/pages/professor/PerfilAlunoPage.tsx` | Linha 190: trocar condição |
+| `src/pages/professor/PerfilAlunoPageSimplificado.tsx` | Mesma alteração |
 
