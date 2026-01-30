@@ -1,95 +1,209 @@
-# Plano: Exibir Todos os Campos Ricos do N8N
 
-## ✅ STATUS: IMPLEMENTADO
+# Plano: Exibir Apenas Dados do N8N no Alerta
 
----
+## Problema Identificado
 
-## Problema Resolvido
+O componente `FeedbackEstadoCard` exibe informações genéricas do banco local como fallback, mesmo quando os dados ricos do N8N estão disponíveis. O usuário quer ver APENAS o que o N8N envia.
 
-1. **Duplicação de alertas** - A Edge Function agora arquiva TODOS os alertas ativos do aluno (não só os de N8N)
-2. **Dados não exibidos** - O hook e componente agora mapeiam e exibem todos os campos ricos
+## Diagnóstico Detalhado
 
----
+### Comportamento Atual (Problemático)
 
-## Alterações Realizadas
+| Campo N8N | Mapeado no Hook | Exibido no Card |
+|-----------|-----------------|-----------------|
+| `texto_acontecendo` | motivo | Apenas no header |
+| `padrao_identificado` | padrao | Mostrado, mas sem destaque |
+| `hipoteses` (com perguntas) | hipoteses | Exibido, mas com fallback do banco |
+| `acoes_sugeridas` (com prioridade) | acoesSugeridas | Exibido |
+| `arquetipo.sugestao_conversa` | arquetipo | Exibido APENAS para celebrações |
+| `mensagem_professor` | mensagemProfessor | Exibido |
+| `o_que_nao_fazer` | oQueNaoFazer | Exibido |
 
-### 1. Edge Function (`supabase/functions/receber-sugestao-n8n/index.ts`)
-- ✅ Removido filtro `.eq("motivo", "analise_n8n")` - agora arquiva qualquer alerta ativo
-- ✅ Adicionado campo `o_que_nao_fazer` ao payload e dados_contexto
+### Problemas Específicos
 
-### 2. Hook (`src/hooks/usePerfilAluno.ts`)
-- ✅ Interface `AcaoSugerida` agora inclui `prioridade`
-- ✅ Interface `AlertaAtivo` agora inclui:
-  - `mensagemProfessor?: string`
-  - `oQueNaoFazer?: string[]`
-- ✅ Prioriza dados do N8N para:
-  - Hipóteses (com perguntas)
-  - Ações sugeridas (com prioridade)
-  - Arquétipo completo
-- ✅ Extrai `padraoIdentificado` do dados_contexto
-- ✅ Prioriza `texto_acontecendo` do N8N
+1. **Hook (`usePerfilAluno.ts`)**:
+   - Linhas 454-485: Quando é N8N, prioriza dados do N8N, MAS ainda tem fallback para buscar hipóteses do banco local
+   - Precisa garantir que quando `geradoPorN8N = true`, NÃO busque dados genéricos
 
-### 3. Componente (`src/components/professor/FeedbackEstadoCard.tsx`)
-- ✅ Novas props: `mensagemProfessor`, `oQueNaoFazer`
-- ✅ Nova variável: `ehAlerta` para estados de alerta
-- ✅ Novas seções visuais na área expandida:
-  - **O Que NÃO Fazer** (fundo vermelho, ícone AlertOctagon)
-  - **Mensagem para Você** (fundo azul, ícone MessageCircle)
-- ✅ `temDetalhes` atualizado para considerar novos campos
-
-### 4. Página (`src/pages/professor/PerfilAlunoPage.tsx`)
-- ✅ Passa `mensagemProfessor` e `oQueNaoFazer` para FeedbackEstadoCard
-- ✅ Passa `prioridade` das ações sugeridas corretamente
+2. **Componente (`FeedbackEstadoCard.tsx`)**:
+   - Linhas 318-353: "Como Potencializar" genérico aparece para confirmações mesmo sem dados
+   - Linhas 355-365: Arquétipo simples para NÃO celebrações não mostra `sugestao_conversa`
+   - Linhas 367-391: Fallback genérico para celebrações sem arquétipo
 
 ---
 
-## Dados Agora Exibidos
+## Alterações Necessárias
 
-| Campo N8N | Seção na UI |
-|-----------|-------------|
-| `texto_acontecendo` | Texto principal do card |
-| `hipoteses` (com perguntas) | Ver Mais → Hipóteses (com 💬 perguntas) |
-| `acoes_sugeridas` (com prioridade) | Ver Mais → Ações Sugeridas (badges coloridos) |
-| `arquetipo` | Ver Mais → Arquétipo |
-| `padrao_identificado` | Card de Padrão |
-| `o_que_nao_fazer` | Ver Mais → O Que NÃO Fazer (nova seção) |
-| `mensagem_professor` | Ver Mais → Mensagem para Você (nova seção) |
+### Arquivo 1: `src/hooks/usePerfilAluno.ts`
+
+**Objetivo**: Quando `geradoPorN8N = true`, NÃO buscar dados genéricos do banco.
+
+**Mudanças**:
+1. Adicionar flag `geradoPorN8N` ao objeto `alertaAtivo`
+2. Remover fallbacks de busca no banco quando é N8N
+3. Passar arquétipo com `sugestao_conversa` completo
+
+### Arquivo 2: `src/components/professor/FeedbackEstadoCard.tsx`
+
+**Objetivo**: Redesenhar o layout para alertas N8N com seções colapsáveis.
+
+**Mudanças**:
+1. Adicionar prop `geradoPorN8N?: boolean`
+2. Para alertas N8N, usar layout diferente:
+   - Header: texto_acontecendo resumido + padrão
+   - Botão "Ver mais" expande
+   - Dentro: Hipóteses colapsáveis (com perguntas)
+   - Ações com badges de prioridade
+   - Arquétipo com sugestao_conversa (não só para celebrações)
+   - O que não fazer
+   - Mensagem do professor
+3. Remover seções de fallback genérico quando é N8N
+
+### Arquivo 3: `src/pages/professor/PerfilAlunoPage.tsx`
+
+**Objetivo**: Passar prop `geradoPorN8N` para o card.
 
 ---
 
-## Como Testar
+## Layout Visual Proposto
 
-1. Envie uma sugestão do N8N com todos os campos:
-```json
-{
-  "aluno_matricula": "22872026",
-  "estado": "precisa_atencao",
-  "texto_acontecendo": "Descrição detalhada...",
-  "hipoteses": [
-    {
-      "titulo": "Hipótese 1",
-      "descricao": "Descrição",
-      "perguntas": ["Pergunta para investigar?"]
-    }
-  ],
-  "acoes_sugeridas": [
-    {"acao": "Conversar com o aluno", "prioridade": "alta"},
-    {"acao": "Observar mais", "prioridade": "media"}
-  ],
-  "o_que_nao_fazer": [
-    "Expor publicamente",
-    "Pressionar por resposta"
-  ],
-  "mensagem_professor": "Você está fazendo a coisa certa..."
+```text
+┌──────────────────────────────────────────────────────┐
+│ ⚠️ ALERTA ATIVO                                       │
+│                                                       │
+│ "Adryan demonstra capacidade cognitiva clara..."      │
+│ (texto_acontecendo - resumido ~100 chars)             │
+│                                                       │
+│ 🔍 Padrão: [padrao_identificado.nome]                 │
+│                                                       │
+│                 [Ver mais ↓]                          │
+└──────────────────────────────────────────────────────┘
+```
+
+Ao expandir:
+
+```text
+┌──────────────────────────────────────────────────────┐
+│ 💡 HIPÓTESES                                          │
+│                                                       │
+│ ▸ Conflito Relacional Recente                    [+] │
+│ ▸ Mudança no Contexto Familiar                   [+] │
+│ ▸ Ansiedade de Performance                       [+] │
+│ ▸ Sobrecarga Cognitiva Tardia                    [+] │
+│                                                       │
+│ (Cada hipótese expande para mostrar descrição         │
+│  e pergunta sugerida)                                 │
+└──────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────┐
+│ ✅ AÇÕES SUGERIDAS                                    │
+│                                                       │
+│ 🔴 Conversa Privada de Investigação                   │
+│ 🔴 Estratégia da Escrita Protegida                    │
+│ 🔴 Mapeamento de Gatilhos                             │
+│ 🟡 Ponte Linguística                                  │
+│ 🔴 Contato com Família (via coordenação)              │
+└──────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────┐
+│ 🏆 ARQUÉTIPO: O Mestre das Palavras                   │
+│                                                       │
+│ 💬 "Use a força linguística de Adryan COMO            │
+│     FERRAMENTA DE DIAGNÓSTICO. Peça que ele           │
+│     ESCREVA (não fale) sobre o que está sentindo..."  │
+│                                                       │
+│ (sugestao_conversa - como usar a força do aluno)      │
+└──────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────┐
+│ ❌ O QUE NÃO FAZER                                    │
+│                                                       │
+│ ✗ Expor o comportamento publicamente                  │
+│ ✗ Pressionar por resposta imediata                    │
+│ ✗ Elogiar apenas resultado/competência                │
+└──────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────┐
+│ 💬 MENSAGEM PARA VOCÊ                                 │
+│                                                       │
+│ "Professor(a), você fez a coisa CERTA ao registrar    │
+│  isso. Adryan não está 'piorando' - está sinalizando. │
+│  Sua missão agora não é 'consertar' - é INVESTIGAR    │
+│  e ACOLHER..."                                        │
+└──────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────┐
+│             [⚙️ Registrar minha ação]                  │
+└──────────────────────────────────────────────────────┘
+```
+
+---
+
+## Detalhes Técnicos
+
+### Hook: Nova estrutura do `alertaAtivo`
+
+```typescript
+alertaAtivo = {
+  // ... campos existentes ...
+  geradoPorN8N: true, // NOVO: flag para indicar origem
+  arquetipo: {
+    nome: 'O Mestre das Palavras',
+    significado: 'Domínio excepcional da linguagem',
+    potencializar: [], // Vazio para N8N - não mostrar
+    sugestao_conversa: 'Use a força linguística...' // USAR ESTE
+  }
+};
+```
+
+### Componente: Lógica de exibição
+
+```typescript
+// Para alertas N8N, não mostrar "Como Potencializar" genérico
+if (!geradoPorN8N && arquetipo?.potencializar?.length > 0) {
+  // Mostrar potencializar
+}
+
+// Para alertas N8N com sugestao_conversa, mostrar seção dedicada
+if (geradoPorN8N && arquetipo?.sugestao_conversa) {
+  // Mostrar "Como usar a força do aluno"
 }
 ```
 
-2. Acesse o perfil do aluno e clique em "Ver mais" no card de alerta
-3. Verifique se todas as seções aparecem corretamente
+### Hipóteses Colapsáveis
+
+Cada hipótese terá um estado individual de expansão:
+
+```typescript
+const [hipotesesExpandidas, setHipotesesExpandidas] = useState<Record<number, boolean>>({});
+```
 
 ---
 
-## Observações
+## Arquivos a Modificar
 
-- O alerta duplicado de Adryan foi arquivado manualmente
-- Novos alertas do N8N vão arquivar automaticamente qualquer alerta existente
+| Arquivo | Mudança |
+|---------|---------|
+| `src/hooks/usePerfilAluno.ts` | Adicionar flag `geradoPorN8N`, remover fallbacks |
+| `src/components/professor/FeedbackEstadoCard.tsx` | Layout N8N, hipóteses colapsáveis, sugestao_conversa |
+| `src/pages/professor/PerfilAlunoPage.tsx` | Passar `geradoPorN8N` ao componente |
+
+---
+
+## Resumo das Mudanças
+
+1. **Hook**: Identificar quando é N8N e não buscar dados genéricos
+2. **Componente**: 
+   - Hipóteses colapsáveis individualmente
+   - Seção de arquétipo com `sugestao_conversa` para alertas
+   - Remover "Como Potencializar" genérico quando N8N
+   - Prioridades visuais nas ações (🔴🟡🟢)
+3. **Página**: Passar flag de origem
+
+---
+
+## O Que NÃO Será Alterado
+
+- Lógica de celebrações (funciona corretamente)
+- Busca de dados do banco quando NÃO é N8N (fallback ainda funciona)
+- Estilos base do card (cores, bordas, etc.)
