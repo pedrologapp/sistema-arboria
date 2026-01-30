@@ -1,295 +1,399 @@
 
-# Plano: Funcionalidade de Reset de Aluno (Admin)
+# Plano: Exibição Completa das Sugestões N8N com Cards Expansíveis
 
 ## Resumo
 
-Implementar botão "Resetar Aluno" no perfil do aluno (área admin) que zera todos os dados de testes (observações, alertas, scores) mantendo os dados cadastrais, com confirmação segura via digitação do nome.
+O N8N está enviando dados ricos (scripts, opções A/B, como reagir, elemento de ponte) mas o frontend não está extraindo nem renderizando esses campos. Este plano implementa a exibição completa com cards expansíveis e scripts destacados.
 
 ---
 
-## Arquitetura do Fluxo
+## Diagnóstico Técnico
+
+### Problema 1: Edge Function - Campos Faltando
+A Edge Function `receber-sugestao-n8n` **não aceita** os campos:
+- `como_reagir`
+- `elemento_ponte`
+- Campos ricos dentro de `acoes_sugeridas` (script, objetivo, contexto, como_escutar, por_que_funciona)
+
+### Problema 2: Hook - Extração Incompleta
+O hook `usePerfilAluno.ts` (linhas 502-512) extrai apenas:
+```typescript
+{ acao: string; prioridade: string }
+```
+Ignora: `script`, `objetivo`, `contexto`, `como_escutar`, `por_que_funciona`
+
+### Problema 3: Componente - Falta de Renderização
+O `FeedbackEstadoCard.tsx` não renderiza:
+- Cards expansíveis com scripts destacados
+- Seção "COMO REAGIR"
+- Seção "ELEMENTO DE PONTE"
+
+---
+
+## Arquitetura da Solução
 
 ```text
-┌─────────────────────────────────────────────────────────────────────┐
-│                      FLUXO DO RESET DE ALUNO                         │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  Admin clica em "Resetar Aluno" (botão laranja)                     │
-│       ↓                                                              │
-│  Modal abre mostrando:                                               │
-│    - Nome do aluno                                                   │
-│    - Lista do que será deletado                                      │
-│    - Campo para digitar nome de confirmação                          │
-│       ↓                                                              │
-│  Admin digita nome do aluno corretamente                             │
-│       ↓                                                              │
-│  Botão "Confirmar Reset" é habilitado                                │
-│       ↓                                                              │
-│  Clica → Chama Edge Function reset-aluno-dados                       │
-│       ↓                                                              │
-│  Edge Function:                                                      │
-│    1. Verifica se é admin                                            │
-│    2. Deleta dados na ordem correta                                  │
-│    3. Reseta scores para 35                                          │
-│    4. Registra log de auditoria                                      │
-│    5. Retorna contagem do que foi deletado                           │
-│       ↓                                                              │
-│  Toast de sucesso com resumo                                         │
-│       ↓                                                              │
-│  Página recarrega os dados do aluno                                  │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          FLUXO CORRIGIDO                                 │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  N8N envia payload completo                                              │
+│       ↓                                                                  │
+│  Edge Function (ATUALIZAR)                                               │
+│    → Aceitar: como_reagir, elemento_ponte                                │
+│    → Salvar campos ricos de acoes_sugeridas                              │
+│       ↓                                                                  │
+│  dados_contexto (JSONB já correto)                                       │
+│       ↓                                                                  │
+│  Hook usePerfilAluno (ATUALIZAR)                                         │
+│    → Expandir interface AcaoSugerida                                     │
+│    → Extrair: como_reagir, elemento_ponte                                │
+│       ↓                                                                  │
+│  FeedbackEstadoCard (ATUALIZAR)                                          │
+│    → Props expandidas                                                    │
+│    → Cards expansíveis com script em destaque                            │
+│    → Seção COMO REAGIR                                                   │
+│    → Seção ELEMENTO DE PONTE                                             │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 1. Alterações no Banco de Dados
+## 1. Edge Function: Aceitar Novos Campos
 
-### 1.1 Criar tabela `admin_logs`
+### Arquivo: `supabase/functions/receber-sugestao-n8n/index.ts`
 
-```sql
-CREATE TABLE admin_logs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  institution_id uuid NOT NULL,
-  admin_id uuid NOT NULL,
-  acao text NOT NULL,
-  alvo_id uuid,
-  alvo_tipo text,
-  detalhes jsonb DEFAULT '{}',
-  created_at timestamptz DEFAULT now()
-);
-
--- Índices para consultas
-CREATE INDEX idx_admin_logs_institution ON admin_logs(institution_id);
-CREATE INDEX idx_admin_logs_admin ON admin_logs(admin_id);
-CREATE INDEX idx_admin_logs_created ON admin_logs(created_at DESC);
-
--- RLS
-ALTER TABLE admin_logs ENABLE ROW LEVEL SECURITY;
-
--- Apenas admins podem ver/inserir logs
-CREATE POLICY "Admin pode inserir logs" ON admin_logs
-  FOR INSERT WITH CHECK (has_role(auth.uid(), 'admin'));
-
-CREATE POLICY "Admin pode ver logs da instituição" ON admin_logs
-  FOR SELECT USING (
-    institution_id = get_user_institution_id() 
-    AND has_role(auth.uid(), 'admin')
-  );
-```
-
----
-
-## 2. Backend (Edge Function)
-
-### 2.1 Criar `supabase/functions/reset-aluno-dados/index.ts`
-
-**Responsabilidades:**
-- Verificar se o usuário é admin
-- Executar deletes na ordem correta (respeitando dependências)
-- Resetar scores para valor inicial (35)
-- Registrar log de auditoria
-- Retornar contagem de registros afetados
-
-**Payload esperado:**
+**Adicionar à interface SugestaoPayload:**
 ```typescript
-{
-  alunoId: string;
-  confirmacaoNome: string; // nome digitado pelo admin para confirmar
+// Novos campos ricos
+como_reagir?: {
+  se_aceitar: string;
+  se_recusar: string;
+  alerta?: string;
+};
+
+elemento_ponte?: {
+  forcas: string | string[];
+  area_dificuldade: string;
+};
+```
+
+**Adicionar ao dadosContexto:**
+```typescript
+como_reagir: payload.como_reagir || null,
+elemento_ponte: payload.elemento_ponte || null,
+```
+
+---
+
+## 2. Hook: Expandir Interfaces e Extração
+
+### Arquivo: `src/hooks/usePerfilAluno.ts`
+
+**Expandir interface AcaoSugerida (linha ~14):**
+```typescript
+interface AcaoSugerida {
+  titulo: string;
+  icone: string;
+  codigo: string;
+  prioridade?: 'alta' | 'media' | 'baixa';
+  // Campos ricos do N8N
+  script?: string;
+  objetivo?: string;
+  contexto?: string;
+  comoEscutar?: string;
+  porQueFunciona?: string;
 }
 ```
 
-**Resposta:**
+**Adicionar novos campos ao AlertaAtivo (linha ~52):**
 ```typescript
-{
-  success: true;
-  resumo: {
-    observacoes: number;
-    alertas: number;
-    acoes_professor: number;
-    acoes_celebracao: number;
-    evidencias: number;
-    historico: number;
-    scores_resetados: number;
-  };
-  aluno_nome: string;
+// Novos campos ricos do N8N
+comoReagir?: {
+  seAceitar: string;
+  seRecusar: string;
+  alerta?: string;
+};
+elementoPonte?: {
+  forcas: string | string[];
+  areaDificuldade: string;
+};
+```
+
+**Atualizar extração de acoes_sugeridas (linha ~502-512):**
+```typescript
+if (geradoPorN8N && dadosContexto?.acoes_sugeridas) {
+  const acoesN8N = dadosContexto.acoes_sugeridas as Array<{
+    acao: string;
+    prioridade: 'alta' | 'media' | 'baixa';
+    script?: string;
+    objetivo?: string;
+    contexto?: string;
+    como_escutar?: string;
+    por_que_funciona?: string;
+  }>;
+  acoesSugeridas = acoesN8N.map(a => ({
+    titulo: a.acao,
+    icone: 'MessageCircle',
+    codigo: a.acao,
+    prioridade: a.prioridade,
+    script: a.script,
+    objetivo: a.objetivo,
+    contexto: a.contexto,
+    comoEscutar: a.como_escutar,
+    porQueFunciona: a.por_que_funciona
+  }));
 }
 ```
 
-**Lógica (ordem das operações):**
-1. Buscar dados do aluno (nome, institution_id)
-2. Validar que confirmacaoNome corresponde ao nome completo do aluno
-3. Deletar na ordem:
-   - `acoes_professor` → retornar count
-   - `acoes_celebracao` → retornar count
-   - `alertas_alunos` → retornar count
-   - `inteligencia_evidencias` → retornar count
-   - `observacoes` → retornar count
-   - `inteligencia_historico` → retornar count
-4. Update em `inteligencia_scores`:
-   - `score_atual = 35.00`
-   - `score_ultima_fase = 0`
-   - `total_evidencias = 0`
-5. Inserir registro em `admin_logs`:
-   ```json
-   {
-     "institution_id": "...",
-     "admin_id": "...",
-     "acao": "reset_aluno_dados",
-     "alvo_id": "aluno_id",
-     "alvo_tipo": "aluno",
-     "detalhes": {
-       "aluno_nome": "...",
-       "resumo": { ... }
-     }
-   }
-   ```
-6. Retornar sucesso com resumo
+**Adicionar extração de novos campos (linha ~670):**
+```typescript
+// Novos campos ricos do N8N
+comoReagir: dadosContexto?.como_reagir ? {
+  seAceitar: (dadosContexto.como_reagir as any).se_aceitar,
+  seRecusar: (dadosContexto.como_reagir as any).se_recusar,
+  alerta: (dadosContexto.como_reagir as any).alerta
+} : undefined,
+elementoPonte: dadosContexto?.elemento_ponte ? {
+  forcas: (dadosContexto.elemento_ponte as any).forcas,
+  areaDificuldade: (dadosContexto.elemento_ponte as any).area_dificuldade
+} : undefined,
+```
 
 ---
 
-## 3. Frontend
+## 3. Componente: Props Expandidas
 
-### 3.1 Atualizar `src/pages/admin/PerfilAlunoAdminPage.tsx`
+### Arquivo: `src/components/professor/FeedbackEstadoCard.tsx`
 
-**Mudanças:**
+**Expandir interface AcaoSugerida (linha ~27):**
+```typescript
+interface AcaoSugerida {
+  acao: string;
+  prioridade: 'alta' | 'media' | 'baixa';
+  // Campos ricos do N8N
+  script?: string;
+  objetivo?: string;
+  contexto?: string;
+  comoEscutar?: string;
+  porQueFunciona?: string;
+}
+```
 
-1. **Adicionar import:**
-   - `RotateCcw` do lucide-react (ícone de refresh)
+**Adicionar novas props (linha ~50):**
+```typescript
+comoReagir?: {
+  seAceitar: string;
+  seRecusar: string;
+  alerta?: string;
+};
+elementoPonte?: {
+  forcas: string | string[];
+  areaDificuldade: string;
+};
+```
 
-2. **Adicionar state** (linha ~40):
-   ```typescript
-   const [showConfirmResetDados, setShowConfirmResetDados] = useState(false);
-   const [confirmacaoNome, setConfirmacaoNome] = useState('');
-   ```
+---
 
-3. **Criar mutation** para reset de dados:
-   ```typescript
-   const resetarDadosMutation = useMutation({
-     mutationFn: async () => {
-       const { data, error } = await supabase.functions.invoke('reset-aluno-dados', {
-         body: { 
-           alunoId: id,
-           confirmacaoNome: confirmacaoNome.trim()
-         }
-       });
-       if (error) throw error;
-       if (data?.error) throw new Error(data.error);
-       return data;
-     },
-     onSuccess: (data) => {
-       const { resumo } = data;
-       toast.success(
-         `Aluno resetado! ${resumo.observacoes} obs, ${resumo.alertas} alertas, ${resumo.scores_resetados} scores.`,
-         { duration: 5000 }
-       );
-       setShowConfirmResetDados(false);
-       setConfirmacaoNome('');
-       // Invalidar queries para recarregar dados
-       queryClient.invalidateQueries({ queryKey: ['admin-aluno-perfil', id] });
-       queryClient.invalidateQueries({ queryKey: ['admin-aluno-scores', id] });
-     },
-     onError: (error) => {
-       toast.error('Erro ao resetar: ' + error.message);
-     }
-   });
-   ```
+## 4. Componente: Renderização Expandida
 
-4. **Adicionar botão** na seção "Ações" (após resetar senha, antes de excluir):
-   ```tsx
-   <button
-     onClick={() => setShowConfirmResetDados(true)}
-     className="w-full p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl text-left hover:bg-orange-500/20 transition-colors"
-   >
-     <div className="flex items-center gap-3">
-       <RotateCcw className="w-5 h-5 text-orange-500" />
-       <div>
-         <p className="text-orange-400 font-medium">Resetar Dados</p>
-         <p className="text-orange-400/60 text-sm">Zera observações, alertas e scores</p>
-       </div>
-     </div>
-   </button>
-   ```
+### Layout Visual Proposto
 
-5. **Adicionar modal** de confirmação (após modal de excluir):
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│  ⚠️ ALERTA ATIVO                                                         │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────────┐ │
+│  │  🔗 ELEMENTO DE PONTE                                               │ │
+│  │  Força: Linguística → Dificuldade: comunicação e engajamento       │ │
+│  └────────────────────────────────────────────────────────────────────┘ │
+│                                                                          │
+│  "🎯 INVESTIGAÇÃO GENTIL — Resgate da Confiança Linguística..."         │
+│  [Ler mais/menos]                                                        │
+│                                                                          │
+│  ┌ Padrão Detectado ─────────────────────────────────────────────────┐  │
+│  │ Sinais de Atenção Consecutivos                                     │  │
+│  └────────────────────────────────────────────────────────────────────┘ │
+│                                                                          │
+│  [Ver mais ▼]                                                            │
+│                                                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│  EXPANDIDO:                                                              │
+│                                                                          │
+│  ═════════════════════════════════════════════════════════════════════  │
+│  📌 O QUE FAZER AGORA                                        [ALTA] [▲] │
+│  ───────────────────────────────────────────────────────────────────── │
+│  Objetivo: Reconectar Adryan com ambiente de aprendizagem               │
+│  Contexto: Encontrar momento privado...                                  │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────────┐ │
+│  │ 💬 DIGA:                                                           │ │
+│  │ "Adryan Samuel, quero te ouvir. Quer escrever três palavras..."   │ │
+│  └────────────────────────────────────────────────────────────────────┘ │
+│                                                                          │
+│  👂 Como escutar: ESCUTE SEM JULGAR. Observe o tom, o ritmo.            │
+│  ═════════════════════════════════════════════════════════════════════  │
+│                                                                          │
+│  🅰️ Opção A: Escrita Livre                                    [ALTA] [▼] │
+│  (clicável para expandir script)                                         │
+│                                                                          │
+│  🅱️ Opção B: Registro Privado                                [MÉDIA] [▼] │
+│  (clicável para expandir script)                                         │
+│                                                                          │
+│  ═════════════════════════════════════════════════════════════════════  │
+│  🔄 COMO REAGIR                                                          │
+│  ───────────────────────────────────────────────────────────────────── │
+│  ✅ Se aceitar: "Valeu por compartilhar. Me ajudou a entender."          │
+│  ❌ Se recusar: "Tudo bem. Quando quiser, me avisa."                     │
+│  ⚠️ NÃO INSISTA.                                                         │
+│  ═════════════════════════════════════════════════════════════════════  │
+│                                                                          │
+│  ⚠️ O QUE NÃO FAZER                                                      │
+│  ✗ Não perguntar diretamente...                                          │
+│                                                                          │
+│  💬 MENSAGEM PARA VOCÊ                                                   │
+│  "Adryan precisa de espaço e acolhimento..."                             │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────────┐ │
+│  │  🎯 Registrar minha ação                                           │ │
+│  └────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
+### Implementação das Novas Seções
+
+**4.1 ELEMENTO DE PONTE (após o header, antes do texto):**
 ```tsx
-{/* Modal Confirmar Reset de Dados */}
-{showConfirmResetDados && (
-  <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-    <div className="bg-[#1A1A1A] rounded-2xl p-6 w-full max-w-md">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
-          <AlertTriangle className="w-6 h-6 text-orange-500" />
+{geradoPorN8N && elementoPonte && (
+  <div className="mb-4 p-3 bg-purple-900/20 rounded-lg border border-purple-500/20">
+    <div className="flex items-center gap-2 mb-1">
+      <span className="text-purple-400 text-xs font-semibold uppercase tracking-wide">
+        🔗 Elemento de Ponte
+      </span>
+    </div>
+    <div className="flex items-center gap-2 text-sm">
+      <span className="text-white font-medium">
+        Força: {Array.isArray(elementoPonte.forcas) 
+          ? elementoPonte.forcas.join(', ') 
+          : elementoPonte.forcas}
+      </span>
+      <span className="text-purple-400">→</span>
+      <span className="text-white/80">
+        Dificuldade: {elementoPonte.areaDificuldade}
+      </span>
+    </div>
+  </div>
+)}
+```
+
+**4.2 CARDS DE AÇÃO EXPANSÍVEIS (substituir renderização atual):**
+```tsx
+{acoesSugeridas.map((acao, i) => {
+  const isExpanded = acoesExpandidas[i] ?? (i === 0); // Primeira aberta por padrão
+  const temConteudoRico = acao.script || acao.objetivo || acao.contexto;
+  
+  return (
+    <div key={i} className={cn(
+      'rounded-lg border overflow-hidden transition-all',
+      acao.prioridade === 'alta' ? 'border-red-500/30 bg-red-900/20' :
+      acao.prioridade === 'media' ? 'border-amber-500/30 bg-amber-900/20' :
+      'border-green-500/30 bg-green-900/20'
+    )}>
+      <button
+        onClick={() => toggleAcao(i)}
+        className="w-full p-3 flex items-start gap-3 text-left hover:bg-white/5"
+      >
+        {/* Badge de prioridade */}
+        <span className={cn(
+          'text-[10px] font-semibold uppercase px-2 py-1 rounded',
+          acao.prioridade === 'alta' ? 'bg-red-500 text-white' :
+          acao.prioridade === 'media' ? 'bg-amber-500 text-black' :
+          'bg-green-500 text-white'
+        )}>
+          {acao.prioridade === 'alta' ? 'Alta' : 
+           acao.prioridade === 'media' ? 'Média' : 'Baixa'}
+        </span>
+        
+        <span className="flex-1 text-sm font-medium text-white">{acao.acao}</span>
+        
+        {temConteudoRico && (
+          <ChevronDown className={cn(
+            'w-4 h-4 text-white/40 transition-transform',
+            isExpanded && 'rotate-180'
+          )} />
+        )}
+      </button>
+      
+      {/* Conteúdo expandido */}
+      {isExpanded && temConteudoRico && (
+        <div className="px-3 pb-3 space-y-3 border-t border-white/10">
+          {/* Objetivo */}
+          {acao.objetivo && (
+            <p className="text-white/80 text-sm pt-3">
+              <strong className="text-white">Objetivo:</strong> {acao.objetivo}
+            </p>
+          )}
+          
+          {/* Contexto */}
+          {acao.contexto && (
+            <p className="text-white/60 text-sm">
+              <strong className="text-white/80">Contexto:</strong> {acao.contexto}
+            </p>
+          )}
+          
+          {/* SCRIPT EM DESTAQUE */}
+          {acao.script && (
+            <div className="p-3 bg-blue-900/40 rounded-lg border border-blue-500/30">
+              <p className="text-blue-400 text-xs font-semibold mb-1">💬 DIGA:</p>
+              <p className="text-white text-sm leading-relaxed italic">
+                "{acao.script}"
+              </p>
+            </div>
+          )}
+          
+          {/* Como escutar */}
+          {acao.comoEscutar && (
+            <p className="text-white/70 text-sm">
+              <span className="text-amber-400">👂</span> {acao.comoEscutar}
+            </p>
+          )}
+          
+          {/* Por que funciona */}
+          {acao.porQueFunciona && (
+            <p className="text-green-400/80 text-sm">
+              <span className="text-green-400">✓</span> Por que funciona: {acao.porQueFunciona}
+            </p>
+          )}
         </div>
-        <h3 className="text-white text-lg font-medium">Resetar Aluno</h3>
-      </div>
-      
-      <p className="text-white/60 text-sm mb-4">
-        Você está prestes a resetar:
+      )}
+    </div>
+  );
+})}
+```
+
+**4.3 SEÇÃO COMO REAGIR (após ações, antes de "o que não fazer"):**
+```tsx
+{geradoPorN8N && comoReagir && (
+  <div className="p-3 bg-emerald-900/20 rounded-lg border border-emerald-500/20">
+    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2 text-emerald-400">
+      🔄 Como Reagir
+    </h4>
+    <div className="space-y-2">
+      <p className="text-sm text-white/90">
+        <span className="text-green-400 mr-2">✅</span>
+        <strong>Se aceitar:</strong> "{comoReagir.seAceitar}"
       </p>
-      
-      <p className="text-white font-semibold text-lg mb-4 text-center bg-white/5 p-3 rounded-lg">
-        {aluno.full_name || `${aluno.nome} ${aluno.sobrenome}`}
+      <p className="text-sm text-white/90">
+        <span className="text-red-400 mr-2">❌</span>
+        <strong>Se recusar:</strong> "{comoReagir.seRecusar}"
       </p>
-      
-      <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3 mb-4">
-        <p className="text-orange-400 text-sm font-medium mb-2">
-          Isso irá DELETAR permanentemente:
+      {comoReagir.alerta && (
+        <p className="text-sm text-amber-400 font-semibold mt-2">
+          ⚠️ {comoReagir.alerta}
         </p>
-        <ul className="text-orange-400/80 text-sm space-y-1">
-          <li>• Todas as observações</li>
-          <li>• Todos os alertas/sugestões da IA</li>
-          <li>• Todas as ações registradas</li>
-          <li>• Todas as evidências de inteligência</li>
-          <li>• Histórico de scores</li>
-        </ul>
-        <p className="text-orange-400/80 text-sm mt-2">
-          Os scores serão resetados para 35 (inicial).
-        </p>
-      </div>
-      
-      <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4">
-        <p className="text-red-400 text-sm flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4" />
-          Esta ação NÃO pode ser desfeita!
-        </p>
-      </div>
-      
-      <div className="mb-4">
-        <label className="text-white/60 text-sm mb-2 block">
-          Para confirmar, digite o nome do aluno:
-        </label>
-        <input
-          type="text"
-          value={confirmacaoNome}
-          onChange={(e) => setConfirmacaoNome(e.target.value)}
-          placeholder={aluno.full_name || `${aluno.nome} ${aluno.sobrenome}`}
-          className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/30"
-        />
-      </div>
-      
-      <div className="flex gap-3">
-        <button
-          onClick={() => {
-            setShowConfirmResetDados(false);
-            setConfirmacaoNome('');
-          }}
-          className="flex-1 p-3 bg-white/10 text-white rounded-xl"
-        >
-          Cancelar
-        </button>
-        <button
-          onClick={() => resetarDadosMutation.mutate()}
-          disabled={
-            resetarDadosMutation.isPending || 
-            confirmacaoNome.toLowerCase().trim() !== (aluno.full_name || `${aluno.nome} ${aluno.sobrenome}`).toLowerCase().trim()
-          }
-          className="flex-1 p-3 bg-orange-500 text-white font-medium rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {resetarDadosMutation.isPending ? 'Resetando...' : 'Confirmar Reset'}
-        </button>
-      </div>
+      )}
     </div>
   </div>
 )}
@@ -297,95 +401,79 @@ CREATE POLICY "Admin pode ver logs da instituição" ON admin_logs
 
 ---
 
-## 4. Arquivos a Criar
+## 5. Atualizar Passagem de Props
 
-| Arquivo | Descrição |
-|---------|-----------|
-| `supabase/functions/reset-aluno-dados/index.ts` | Edge function para executar o reset |
+### Arquivo: `src/pages/professor/PerfilAlunoPage.tsx`
+
+**Adicionar novas props ao FeedbackEstadoCard (linha ~339):**
+```tsx
+<FeedbackEstadoCard
+  // ... props existentes ...
+  comoReagir={aluno.alertaAtivo?.comoReagir}
+  elementoPonte={aluno.alertaAtivo?.elementoPonte}
+/>
+```
+
+### Arquivo: `src/pages/professor/PerfilAlunoPageSimplificado.tsx`
+
+**Mesma atualização (paridade).**
 
 ---
 
-## 5. Arquivos a Modificar
+## 6. Estado Inicial dos Colapsáveis
 
-| Arquivo | Alterações |
-|---------|------------|
-| `src/pages/admin/PerfilAlunoAdminPage.tsx` | Botão, modal e mutation de reset |
-
----
-
-## 6. Migração SQL
-
-```sql
--- Criar tabela de logs administrativos
-CREATE TABLE admin_logs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  institution_id uuid NOT NULL,
-  admin_id uuid NOT NULL,
-  acao text NOT NULL,
-  alvo_id uuid,
-  alvo_tipo text,
-  detalhes jsonb DEFAULT '{}',
-  created_at timestamptz DEFAULT now()
-);
-
--- Índices
-CREATE INDEX idx_admin_logs_institution ON admin_logs(institution_id);
-CREATE INDEX idx_admin_logs_admin ON admin_logs(admin_id);
-CREATE INDEX idx_admin_logs_created ON admin_logs(created_at DESC);
-
--- RLS
-ALTER TABLE admin_logs ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Admin pode inserir logs" ON admin_logs
-  FOR INSERT WITH CHECK (has_role(auth.uid(), 'admin'));
-
-CREATE POLICY "Admin pode ver logs da instituição" ON admin_logs
-  FOR SELECT USING (
-    institution_id = get_user_institution_id() 
-    AND has_role(auth.uid(), 'admin')
-  );
+**Primeira ação aberta por padrão:**
+```typescript
+const [acoesExpandidas, setAcoesExpandidas] = useState<Record<number, boolean>>({
+  0: true // Primeira ação (O QUE FAZER AGORA) aberta
+});
 ```
 
 ---
 
-## 7. Visual Final
+## 7. Arquivos a Modificar
 
-### Botão na Seção "Ações"
-
-| Ordem | Botão | Cor | Ícone |
-|-------|-------|-----|-------|
-| 1 | Resetar Senha | Amarelo | Key |
-| **2** | **Resetar Dados** | **Laranja** | **RotateCcw** |
-| 3 | Excluir Aluno | Vermelho | Trash2 |
-
-### Modal de Confirmação
-
-- Fundo escuro `#1A1A1A`
-- Ícone laranja (AlertTriangle)
-- Nome do aluno em destaque
-- Lista do que será deletado em box laranja
-- Aviso "não pode ser desfeita" em box vermelho
-- Campo de texto para confirmar
-- Botão desabilitado até nome bater
+| Arquivo | Alterações |
+|---------|------------|
+| `supabase/functions/receber-sugestao-n8n/index.ts` | Aceitar `como_reagir`, `elemento_ponte` |
+| `src/hooks/usePerfilAluno.ts` | Expandir interfaces + extração |
+| `src/components/professor/FeedbackEstadoCard.tsx` | Props + renderização expandida |
+| `src/pages/professor/PerfilAlunoPage.tsx` | Passar novas props |
+| `src/pages/professor/PerfilAlunoPageSimplificado.tsx` | Paridade |
 
 ---
 
-## 8. Detalhes de Segurança
+## 8. Ordem de Implementação
 
-1. **Verificação de Role**: Edge function verifica `user_roles` antes de executar
-2. **Confirmação por Nome**: Evita cliques acidentais
-3. **Log de Auditoria**: Registra quem fez, quando e o que foi deletado
-4. **Apenas Admin**: RLS garante que só admins acessam
+1. **Edge Function** - Aceitar novos campos
+2. **Hook** - Expandir interfaces e extração
+3. **Componente** - Props e estado de colapsáveis
+4. **Componente** - Renderização ELEMENTO DE PONTE
+5. **Componente** - Cards de ação expansíveis com scripts
+6. **Componente** - Seção COMO REAGIR
+7. **Pages** - Passar novas props
+8. **Deploy** - Edge function
 
 ---
 
-## 9. Resumo de Dependências
+## 9. Comportamento dos Colapsáveis
 
-A ordem de deleção respeita as dependências:
-1. `acoes_professor` (referencia alertas)
-2. `acoes_celebracao` (referencia alertas)  
-3. `alertas_alunos` (referenciado por ações)
-4. `inteligencia_evidencias` (referencia observações)
-5. `observacoes` (referenciada por evidências)
-6. `inteligencia_historico` (independente)
-7. UPDATE `inteligencia_scores` (não deleta, apenas reseta)
+| Ação | Comportamento |
+|------|---------------|
+| Primeira ação (📌) | Aberta por padrão |
+| Demais ações | Fechadas por padrão |
+| Clique | Toggle individual |
+| Múltiplas abertas | Permitido |
+
+---
+
+## Detalhes Técnicos
+
+### Destaque do Script
+O script terá fundo azul (`bg-blue-900/40`) com borda (`border-blue-500/30`) para destacar visualmente a frase exata que o professor deve dizer.
+
+### Responsividade
+Todo o layout usa Tailwind e funcionará em mobile e desktop.
+
+### Fallback
+Se o N8N não enviar `como_reagir` ou `elemento_ponte`, as seções simplesmente não aparecem (graceful degradation).
