@@ -101,7 +101,7 @@ const RegistrarAcaoModal = ({
     };
     
     try {
-      await fetch('https://n8n.escolaamadeus.com/webhook-test/projetoarboria', {
+      await fetch('https://webhook.escolaamadeus.com/webhook/projetoarboria', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
