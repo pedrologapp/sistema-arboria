@@ -87,6 +87,18 @@ interface FeedbackEstadoCardProps {
   geradoPorN8N?: boolean;
 }
 
+// Helper para separar título e descrição de ação
+const parseAcao = (acao: string): { titulo: string; descricao: string | null } => {
+  const colonIndex = acao.indexOf(':');
+  if (colonIndex === -1) {
+    return { titulo: acao, descricao: null };
+  }
+  return {
+    titulo: acao.substring(0, colonIndex).trim(),
+    descricao: acao.substring(colonIndex + 1).trim()
+  };
+};
+
 const estadoConfig = {
   brilhando: {
     titulo: 'BRILHANDO!',
@@ -204,8 +216,12 @@ export function FeedbackEstadoCard({
   geradoPorN8N
 }: FeedbackEstadoCardProps) {
   const [expandido, setExpandido] = useState(false);
+  // Estado para texto acontecendo expansível
+  const [textoExpandido, setTextoExpandido] = useState(false);
   // Estado para hipóteses colapsáveis individualmente (para layout N8N)
   const [hipotesesExpandidas, setHipotesesExpandidas] = useState<Record<number, boolean>>({});
+  // Estado para ações colapsáveis individualmente
+  const [acoesExpandidas, setAcoesExpandidas] = useState<Record<number, boolean>>({});
   
   // Estados de celebração
   const estadosCelebracao = ['celebrar', 'celebrar_descoberta', 'celebrar_confirmacao', 'brilhando'];
@@ -255,8 +271,19 @@ export function FeedbackEstadoCard({
     }));
   };
   
+  // Toggle de ação individual
+  const toggleAcao = (index: number) => {
+    setAcoesExpandidas(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
+  
   // Estados que mostram botão de ação
   const estadosComAcao = ['precisa_atencao', 'fique_de_olho', 'atencao_recente'];
+  
+  // Texto expansível - limite de 150 caracteres
+  const textoLongo = textoAcontecendo.length > 150;
   
   // Descoberta: só mostra arquétipo se tiver nome_arquetipo preenchido
   const ehDescoberta = subtipoFinal === 'descoberta' && arquetipo?.nome_arquetipo;
@@ -272,30 +299,49 @@ export function FeedbackEstadoCard({
       <div className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <Icon className={cn('w-5 h-5', config.iconColor)} />
-          <span className={cn('font-bold text-sm uppercase tracking-wide', config.textColor)}>
+          <span className={cn('font-semibold text-xs uppercase tracking-wider', config.textColor)}>
             {config.titulo}
           </span>
         </div>
         
-        {/* Para N8N: Mostrar texto resumido + padrão */}
+        {/* Para N8N: Mostrar texto com "Ler mais/menos" + padrão */}
         {geradoPorN8N ? (
           <>
-            <p className={cn('text-base leading-relaxed', config.textColor)}>
-              {textoAcontecendo.length > 150 
-                ? `${textoAcontecendo.substring(0, 150)}...` 
-                : textoAcontecendo}
-            </p>
+            {/* Texto acontecendo expansível */}
+            <div>
+              <p className={cn('text-sm leading-relaxed', config.textColor)}>
+                {textoLongo && !textoExpandido 
+                  ? `${textoAcontecendo.substring(0, 150)}...` 
+                  : textoAcontecendo}
+              </p>
+              {textoLongo && (
+                <button
+                  onClick={() => setTextoExpandido(!textoExpandido)}
+                  className="mt-2 text-xs text-white/60 hover:text-white/80 flex items-center gap-1 transition-colors"
+                >
+                  {textoExpandido ? 'Ler menos' : 'Ler mais'}
+                  {textoExpandido ? (
+                    <ChevronUp className="w-3 h-3" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3" />
+                  )}
+                </button>
+              )}
+            </div>
             
             {/* Padrão identificado - destaque para N8N */}
             {padrao && (
-              <div className="mt-3 p-3 bg-black/30 rounded-lg border border-white/10">
-                <div className="flex items-center gap-2">
+              <div className="mt-4 p-3 bg-black/30 rounded-lg border border-white/10">
+                <div className="flex items-center gap-2 mb-1">
                   <Target className="w-4 h-4 text-amber-400" />
-                  <span className="text-sm font-semibold text-amber-400">
-                    Padrão: {padrao.nome}
+                  <span className="text-xs font-semibold text-amber-400 uppercase tracking-wide">
+                    Padrão Detectado
                   </span>
                 </div>
-                <p className={cn('text-xs opacity-80 mt-1', config.textColor)}>
+                <p className={cn('text-sm font-medium', config.textColor)}>
+                  {padrao.nome}
+                </p>
+                <p className={cn('text-xs text-white/60 mt-1', config.textColor)}>
                   {padrao.significado}
                 </p>
               </div>
@@ -303,12 +349,12 @@ export function FeedbackEstadoCard({
           </>
         ) : (
           <>
-            <p className={cn('text-base leading-relaxed', config.textColor)}>
+            <p className={cn('text-sm leading-relaxed', config.textColor)}>
               {textoAcontecendo}
             </p>
             
             {/* Mensagem padrão - apenas para não-N8N */}
-            <p className={cn('text-sm mt-2 opacity-80', config.textColor)}>
+            <p className={cn('text-xs mt-2 text-white/60', config.textColor)}>
               {config.mensagemPadrao}
             </p>
             
@@ -318,7 +364,7 @@ export function FeedbackEstadoCard({
                 <p className={cn('text-sm font-medium', config.textColor)}>
                   Padrão: {padrao.nome}
                 </p>
-                <p className={cn('text-xs opacity-80', config.textColor)}>
+                <p className={cn('text-xs text-white/60', config.textColor)}>
                   {padrao.significado}
                 </p>
               </div>
@@ -616,34 +662,65 @@ export function FeedbackEstadoCard({
                     </div>
                   )}
                   
-                  {/* Ações Sugeridas com prioridade visual */}
+                  {/* Ações Sugeridas - Layout de Cards com Título/Descrição */}
                   {acoesSugeridas && acoesSugeridas.length > 0 && (
                     <div>
-                      <h4 className={cn('text-sm font-semibold mb-2 flex items-center gap-2', config.textColor)}>
-                        <Target className="w-4 h-4" />
+                      <h4 className="text-xs font-semibold uppercase tracking-wide text-white/60 mb-3 flex items-center gap-2">
+                        <Target className="w-3.5 h-3.5" />
                         Ações Sugeridas
                       </h4>
-                      <ul className="space-y-1.5">
-                        {acoesSugeridas.map((acao, i) => (
-                          <li 
-                            key={i} 
-                            className={cn(
-                              'text-sm flex items-center gap-2 p-2.5 rounded-lg',
-                              acao.prioridade === 'alta' ? 'bg-red-900/30' :
-                              acao.prioridade === 'media' ? 'bg-yellow-900/30' :
-                              'bg-green-900/30',
-                              config.textColor
-                            )}
-                          >
-                            <span className={cn(
-                              'text-base flex-shrink-0',
-                            )}>
-                              {acao.prioridade === 'alta' ? '🔴' : acao.prioridade === 'media' ? '🟡' : '🟢'}
-                            </span>
-                            {acao.acao}
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="space-y-2">
+                        {acoesSugeridas.map((acao, i) => {
+                          const { titulo, descricao } = parseAcao(acao.acao);
+                          const isExpanded = acoesExpandidas[i];
+                          
+                          return (
+                            <div 
+                              key={i} 
+                              className={cn(
+                                'rounded-lg border overflow-hidden transition-all',
+                                acao.prioridade === 'alta' ? 'border-red-500/30 bg-red-900/20' :
+                                acao.prioridade === 'media' ? 'border-amber-500/30 bg-amber-900/20' :
+                                'border-green-500/30 bg-green-900/20'
+                              )}
+                            >
+                              <button
+                                onClick={() => toggleAcao(i)}
+                                className="w-full p-3 flex items-start gap-3 text-left hover:bg-white/5 transition-colors"
+                              >
+                                {/* Badge de prioridade - chip colorido */}
+                                <span className={cn(
+                                  'text-[10px] font-semibold uppercase px-2 py-1 rounded flex-shrink-0 mt-0.5',
+                                  acao.prioridade === 'alta' ? 'bg-red-500 text-white' :
+                                  acao.prioridade === 'media' ? 'bg-amber-500 text-black' :
+                                  'bg-green-500 text-white'
+                                )}>
+                                  {acao.prioridade === 'alta' ? 'Alta' : acao.prioridade === 'media' ? 'Média' : 'Baixa'}
+                                </span>
+                                
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-white">{titulo}</p>
+                                  {descricao && (
+                                    <p className={cn(
+                                      'text-xs text-white/60 mt-1 leading-relaxed',
+                                      !isExpanded && 'line-clamp-1'
+                                    )}>
+                                      {descricao}
+                                    </p>
+                                  )}
+                                </div>
+                                
+                                {descricao && (
+                                  <ChevronDown className={cn(
+                                    'w-4 h-4 text-white/40 flex-shrink-0 transition-transform mt-0.5',
+                                    isExpanded && 'rotate-180'
+                                  )} />
+                                )}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                   

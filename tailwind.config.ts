@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Lexend', 'sans-serif'],
+        sans: ['Inter', 'sans-serif'],
         fantasy: ['Playfair Display', 'Georgia', 'serif'],
       },
       colors: {
