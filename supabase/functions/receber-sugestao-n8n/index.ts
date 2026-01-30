@@ -7,7 +7,8 @@ const corsHeaders = {
 };
 
 interface SugestaoPayload {
-  aluno_id: string;
+  aluno_id?: string;
+  aluno_matricula?: string;
   observacao_gatilho_id?: string;
   estado: "precisa_atencao" | "celebrar" | "neutro";
   texto_acontecendo: string;
@@ -59,16 +60,30 @@ Deno.serve(async (req) => {
     // 2. Parse and validate payload
     const payload: SugestaoPayload = await req.json();
 
-    if (!payload.aluno_id || !payload.estado || !payload.texto_acontecendo) {
-      console.error("Bad request: Missing required fields", {
+    // Validate required fields - need at least matricula OR id
+    if (!payload.aluno_id && !payload.aluno_matricula) {
+      console.error("Bad request: Missing student identifier", {
         has_aluno_id: !!payload.aluno_id,
+        has_aluno_matricula: !!payload.aluno_matricula,
+      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Informe aluno_id ou aluno_matricula",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!payload.estado || !payload.texto_acontecendo) {
+      console.error("Bad request: Missing required fields", {
         has_estado: !!payload.estado,
         has_texto: !!payload.texto_acontecendo,
       });
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Campos obrigatórios ausentes: aluno_id, estado, texto_acontecendo",
+          error: "Campos obrigatórios ausentes: estado, texto_acontecendo",
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -92,23 +107,55 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 4. Fetch student data
-    const { data: aluno, error: alunoError } = await supabase
-      .from("profiles")
-      .select("id, institution_id, casa_id")
-      .eq("id", payload.aluno_id)
-      .single();
+    // 4. Fetch student data - priority: matricula > aluno_id
+    let aluno: { id: string; institution_id: string; casa_id: number | null } | null = null;
 
-    if (alunoError || !aluno) {
-      console.error("Student not found:", payload.aluno_id, alunoError);
+    if (payload.aluno_matricula) {
+      // Normalize matricula (remove dots and hyphens)
+      const matriculaNormalizada = payload.aluno_matricula.replace(/[.\-]/g, '');
+      console.log("Looking up student by matricula:", matriculaNormalizada);
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, institution_id, casa_id")
+        .eq("matricula_externa", matriculaNormalizada)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Error looking up by matricula:", error);
+      }
+      aluno = data;
+    }
+
+    // Fallback to aluno_id if not found by matricula
+    if (!aluno && payload.aluno_id) {
+      console.log("Looking up student by id:", payload.aluno_id);
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, institution_id, casa_id")
+        .eq("id", payload.aluno_id)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Error looking up by id:", error);
+      }
+      aluno = data;
+    }
+
+    if (!aluno) {
+      const identifier = payload.aluno_matricula || payload.aluno_id;
+      console.error("Student not found:", identifier);
       return new Response(
         JSON.stringify({
           success: false,
-          error: `Aluno não encontrado: ${payload.aluno_id}`,
+          error: `Aluno não encontrado. Verifique aluno_matricula ou aluno_id. Valor recebido: ${identifier}`,
         }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log("Student found:", { id: aluno.id, institution_id: aluno.institution_id });
 
     // 5. Get current active phase for the institution
     const { data: faseAtual } = await supabase
@@ -129,7 +176,7 @@ Deno.serve(async (req) => {
         notificacao_ativa: false,
         updated_at: new Date().toISOString(),
       })
-      .eq("aluno_id", payload.aluno_id)
+      .eq("aluno_id", aluno.id)
       .eq("status", "ativo")
       .eq("motivo", "analise_n8n");
 
@@ -160,7 +207,7 @@ Deno.serve(async (req) => {
       .from("alertas_alunos")
       .insert({
         institution_id: aluno.institution_id,
-        aluno_id: payload.aluno_id,
+      aluno_id: aluno.id,
         tipo_alerta: payload.estado,
         motivo: "analise_n8n",
         status: "ativo",
@@ -184,7 +231,8 @@ Deno.serve(async (req) => {
 
     console.log("Sugestão recebida e salva com sucesso:", {
       alerta_id: novoAlerta.id,
-      aluno_id: payload.aluno_id,
+      aluno_id: aluno.id,
+      aluno_matricula: payload.aluno_matricula,
       estado: payload.estado,
     });
 
