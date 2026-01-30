@@ -27,6 +27,12 @@ interface Hipotese {
 interface AcaoSugerida {
   acao: string;
   prioridade: 'alta' | 'media' | 'baixa';
+  // Campos ricos do N8N
+  script?: string;
+  objetivo?: string;
+  contexto?: string;
+  comoEscutar?: string;
+  porQueFunciona?: string;
 }
 
 // Frases padrão baseadas em Carol Dweck
@@ -83,6 +89,16 @@ interface FeedbackEstadoCardProps {
   // Novos campos ricos do N8N
   mensagemProfessor?: string;
   oQueNaoFazer?: string[];
+  // Novos campos ricos do N8N
+  comoReagir?: {
+    seAceitar: string;
+    seRecusar: string;
+    alerta?: string;
+  };
+  elementoPonte?: {
+    forcas: string | string[];
+    areaDificuldade: string;
+  };
   // Flag para identificar origem N8N
   geradoPorN8N?: boolean;
 }
@@ -213,6 +229,8 @@ export function FeedbackEstadoCard({
   conversaRegistrada,
   mensagemProfessor,
   oQueNaoFazer,
+  comoReagir,
+  elementoPonte,
   geradoPorN8N
 }: FeedbackEstadoCardProps) {
   const [expandido, setExpandido] = useState(false);
@@ -307,6 +325,28 @@ export function FeedbackEstadoCard({
         {/* Para N8N: Mostrar texto com "Ler mais/menos" + padrão */}
         {geradoPorN8N ? (
           <>
+            {/* ELEMENTO DE PONTE - Novo! */}
+            {elementoPonte && (
+              <div className="mb-4 p-3 bg-purple-900/20 rounded-lg border border-purple-500/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-purple-400 text-xs font-semibold uppercase tracking-wide">
+                    🔗 Elemento de Ponte
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-sm flex-wrap">
+                  <span className="text-white font-medium">
+                    Força: {Array.isArray(elementoPonte.forcas) 
+                      ? elementoPonte.forcas.join(', ') 
+                      : elementoPonte.forcas}
+                  </span>
+                  <span className="text-purple-400">→</span>
+                  <span className="text-white/80">
+                    Dificuldade: {elementoPonte.areaDificuldade}
+                  </span>
+                </div>
+              </div>
+            )}
+            
             {/* Texto acontecendo expansível */}
             <div>
               <p className={cn('text-sm leading-relaxed', config.textColor)}>
@@ -662,7 +702,7 @@ export function FeedbackEstadoCard({
                     </div>
                   )}
                   
-                  {/* Ações Sugeridas - Layout de Cards com Título/Descrição */}
+                  {/* Ações Sugeridas - Layout de Cards Expansíveis com Conteúdo Rico */}
                   {acoesSugeridas && acoesSugeridas.length > 0 && (
                     <div>
                       <h4 className="text-xs font-semibold uppercase tracking-wide text-white/60 mb-3 flex items-center gap-2">
@@ -672,7 +712,8 @@ export function FeedbackEstadoCard({
                       <div className="space-y-2">
                         {acoesSugeridas.map((acao, i) => {
                           const { titulo, descricao } = parseAcao(acao.acao);
-                          const isExpanded = acoesExpandidas[i];
+                          const isExpanded = acoesExpandidas[i] ?? (i === 0); // Primeira aberta por padrão
+                          const temConteudoRico = acao.script || acao.objetivo || acao.contexto || acao.comoEscutar || acao.porQueFunciona;
                           
                           return (
                             <div 
@@ -700,23 +741,70 @@ export function FeedbackEstadoCard({
                                 
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-white">{titulo}</p>
-                                  {descricao && (
-                                    <p className={cn(
-                                      'text-xs text-white/60 mt-1 leading-relaxed',
-                                      !isExpanded && 'line-clamp-1'
-                                    )}>
+                                  {descricao && !isExpanded && (
+                                    <p className="text-xs text-white/60 mt-1 leading-relaxed line-clamp-1">
                                       {descricao}
                                     </p>
                                   )}
                                 </div>
                                 
-                                {descricao && (
+                                {(temConteudoRico || descricao) && (
                                   <ChevronDown className={cn(
                                     'w-4 h-4 text-white/40 flex-shrink-0 transition-transform mt-0.5',
                                     isExpanded && 'rotate-180'
                                   )} />
                                 )}
                               </button>
+                              
+                              {/* Conteúdo expandido com dados ricos */}
+                              {isExpanded && (temConteudoRico || descricao) && (
+                                <div className="px-3 pb-3 space-y-3 border-t border-white/10">
+                                  {/* Descrição completa */}
+                                  {descricao && (
+                                    <p className="text-white/80 text-sm pt-3">
+                                      {descricao}
+                                    </p>
+                                  )}
+                                  
+                                  {/* Objetivo */}
+                                  {acao.objetivo && (
+                                    <p className="text-white/80 text-sm">
+                                      <strong className="text-white">Objetivo:</strong> {acao.objetivo}
+                                    </p>
+                                  )}
+                                  
+                                  {/* Contexto */}
+                                  {acao.contexto && (
+                                    <p className="text-white/60 text-sm">
+                                      <strong className="text-white/80">Contexto:</strong> {acao.contexto}
+                                    </p>
+                                  )}
+                                  
+                                  {/* SCRIPT EM DESTAQUE */}
+                                  {acao.script && (
+                                    <div className="p-3 bg-blue-900/40 rounded-lg border border-blue-500/30">
+                                      <p className="text-blue-400 text-xs font-semibold mb-1">💬 DIGA:</p>
+                                      <p className="text-white text-sm leading-relaxed italic">
+                                        "{acao.script}"
+                                      </p>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Como escutar */}
+                                  {acao.comoEscutar && (
+                                    <p className="text-white/70 text-sm">
+                                      <span className="text-amber-400">👂</span> {acao.comoEscutar}
+                                    </p>
+                                  )}
+                                  
+                                  {/* Por que funciona */}
+                                  {acao.porQueFunciona && (
+                                    <p className="text-green-400/80 text-sm">
+                                      <span className="text-green-400">✓</span> Por que funciona: {acao.porQueFunciona}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -734,6 +822,30 @@ export function FeedbackEstadoCard({
                       <p className="text-sm text-white/90 leading-relaxed italic">
                         💬 "{arquetipo.sugestao_conversa}"
                       </p>
+                    </div>
+                  )}
+                  
+                  {/* COMO REAGIR (N8N) - Novo! */}
+                  {comoReagir && (
+                    <div className="p-3 bg-emerald-900/20 rounded-lg border border-emerald-500/20">
+                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2 text-emerald-400">
+                        🔄 Como Reagir
+                      </h4>
+                      <div className="space-y-2">
+                        <p className="text-sm text-white/90">
+                          <span className="text-green-400 mr-2">✅</span>
+                          <strong>Se aceitar:</strong> "{comoReagir.seAceitar}"
+                        </p>
+                        <p className="text-sm text-white/90">
+                          <span className="text-red-400 mr-2">❌</span>
+                          <strong>Se recusar:</strong> "{comoReagir.seRecusar}"
+                        </p>
+                        {comoReagir.alerta && (
+                          <p className="text-sm text-amber-400 font-semibold mt-2">
+                            ⚠️ {comoReagir.alerta}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
                   

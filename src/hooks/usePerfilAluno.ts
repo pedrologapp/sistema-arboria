@@ -16,6 +16,12 @@ interface AcaoSugerida {
   icone: string;
   codigo: string;
   prioridade?: 'alta' | 'media' | 'baixa';
+  // Campos ricos do N8N
+  script?: string;
+  objetivo?: string;
+  contexto?: string;
+  comoEscutar?: string;
+  porQueFunciona?: string;
 }
 
 interface Arquetipo {
@@ -52,6 +58,15 @@ interface AlertaAtivo {
   // Novos campos ricos do N8N
   mensagemProfessor?: string;
   oQueNaoFazer?: string[];
+  comoReagir?: {
+    seAceitar: string;
+    seRecusar: string;
+    alerta?: string;
+  };
+  elementoPonte?: {
+    forcas: string | string[];
+    areaDificuldade: string;
+  };
   // Flag para identificar origem N8N
   geradoPorN8N?: boolean;
 }
@@ -503,28 +518,24 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
             const acoesN8N = dadosContexto.acoes_sugeridas as Array<{
               acao: string;
               prioridade: 'alta' | 'media' | 'baixa';
+              script?: string;
+              objetivo?: string;
+              contexto?: string;
+              como_escutar?: string;
+              por_que_funciona?: string;
             }>;
             acoesSugeridas = acoesN8N.map(a => ({
               titulo: a.acao,
-              icone: 'MessageCircle', // Default icon
+              icone: 'MessageCircle',
               codigo: a.acao,
-              prioridade: a.prioridade
+              prioridade: a.prioridade,
+              script: a.script,
+              objetivo: a.objetivo,
+              contexto: a.contexto,
+              comoEscutar: a.como_escutar,
+              porQueFunciona: a.por_que_funciona
             }));
-          } else if (!geradoPorN8N && alertaData.tipo_alerta === 'precisa_atencao') {
-            // APENAS buscar do banco se NÃO for N8N
-            const { data: acoesData } = await supabase
-              .from('acoes_sugeridas')
-              .select('titulo, icone')
-              .eq('tipo_alerta', 'atencao_geral')
-              .order('ordem');
-            
-            if (acoesData && acoesData.length > 0) {
-              acoesSugeridas = acoesData.map(a => ({
-                titulo: substituirTemplate(a.titulo, { nome: primeiroNome }),
-                icone: a.icone,
-                codigo: a.icone // Usar icone como código da ação
-              }));
-            }
+          }
           }
           
           // Buscar arquétipo para celebração
@@ -670,6 +681,16 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
             // Novos campos do N8N
             mensagemProfessor: (dadosContexto?.mensagem_professor as string) || undefined,
             oQueNaoFazer: (dadosContexto?.o_que_nao_fazer as string[]) || undefined,
+            // Novos campos ricos do N8N
+            comoReagir: dadosContexto?.como_reagir ? {
+              seAceitar: (dadosContexto.como_reagir as any).se_aceitar,
+              seRecusar: (dadosContexto.como_reagir as any).se_recusar,
+              alerta: (dadosContexto.como_reagir as any).alerta
+            } : undefined,
+            elementoPonte: dadosContexto?.elemento_ponte ? {
+              forcas: (dadosContexto.elemento_ponte as any).forcas,
+              areaDificuldade: (dadosContexto.elemento_ponte as any).area_dificuldade
+            } : undefined,
             // Flag para identificar origem N8N
             geradoPorN8N
           };
@@ -772,7 +793,7 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
               alertaId: '',
               textoAcontecendo: textoGerado
             };
-            }
+          }
           }
           // Se não deveCalcularEstado, alertaAtivo permanece null (tela limpa após "Melhorou")
         }

@@ -357,6 +357,8 @@ const PerfilAlunoPage = () => {
           conversaRegistrada={aluno.conversaRegistrada}
           mensagemProfessor={aluno.alertaAtivo?.mensagemProfessor}
           oQueNaoFazer={aluno.alertaAtivo?.oQueNaoFazer}
+          comoReagir={aluno.alertaAtivo?.comoReagir}
+          elementoPonte={aluno.alertaAtivo?.elementoPonte}
           geradoPorN8N={aluno.alertaAtivo?.geradoPorN8N}
         />
         
