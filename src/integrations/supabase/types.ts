@@ -233,6 +233,47 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_logs: {
+        Row: {
+          acao: string
+          admin_id: string
+          alvo_id: string | null
+          alvo_tipo: string | null
+          created_at: string | null
+          detalhes: Json | null
+          id: string
+          institution_id: string
+        }
+        Insert: {
+          acao: string
+          admin_id: string
+          alvo_id?: string | null
+          alvo_tipo?: string | null
+          created_at?: string | null
+          detalhes?: Json | null
+          id?: string
+          institution_id: string
+        }
+        Update: {
+          acao?: string
+          admin_id?: string
+          alvo_id?: string | null
+          alvo_tipo?: string | null
+          created_at?: string | null
+          detalhes?: Json | null
+          id?: string
+          institution_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_logs_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alertas_alunos: {
         Row: {
           acao_tomada: string | null
