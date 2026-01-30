@@ -97,8 +97,8 @@ const PerfilAlunoPageSimplificado = () => {
   };
 
   const handleRegistrarObservacao = () => {
-    // Se tem alerta de atenção ativo, mostrar modal de aviso primeiro
-    if (aluno.alertaAtivo?.tipo === 'precisa_atencao') {
+    // Se tem QUALQUER alerta ativo, mostrar modal de aviso primeiro
+    if (aluno.alertaAtivo) {
       setModalSugestaoAtiva(true);
     } else {
       navigate(`/professor/circulo/aluno/${id}`);
