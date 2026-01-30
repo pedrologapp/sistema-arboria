@@ -38,7 +38,7 @@ const configByTipo = {
   },
   aguardando_explicacao: {
     icon: '💬',
-    title: 'Aguardando você',
+    title: 'Precisa de justificativa',
     subtitle: 'Contradições que precisam de explicação'
   }
 };
