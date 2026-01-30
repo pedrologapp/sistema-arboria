@@ -80,6 +80,9 @@ interface FeedbackEstadoCardProps {
   faseNome?: string;
   celebracaoSubtipo?: 'descoberta' | 'confirmacao';
   conversaRegistrada?: ConversaRegistrada | null;
+  // Novos campos ricos do N8N
+  mensagemProfessor?: string;
+  oQueNaoFazer?: string[];
 }
 
 const estadoConfig = {
@@ -193,7 +196,9 @@ export function FeedbackEstadoCard({
   casaNome,
   faseNome,
   celebracaoSubtipo,
-  conversaRegistrada
+  conversaRegistrada,
+  mensagemProfessor,
+  oQueNaoFazer
 }: FeedbackEstadoCardProps) {
   const [expandido, setExpandido] = useState(false);
   
@@ -218,6 +223,8 @@ export function FeedbackEstadoCard({
   const temDetalhes = (hipoteses && hipoteses.length > 0) || 
                       (acoesSugeridas && acoesSugeridas.length > 0) ||
                       (contexto && contexto.length > 0) ||
+                      (oQueNaoFazer && oQueNaoFazer.length > 0) ||
+                      mensagemProfessor ||
                       padrao ||
                       arquetipo;
   
@@ -227,6 +234,9 @@ export function FeedbackEstadoCard({
   // Descoberta: só mostra arquétipo se tiver nome_arquetipo preenchido
   const ehDescoberta = subtipoFinal === 'descoberta' && arquetipo?.nome_arquetipo;
   const ehConfirmacao = subtipoFinal === 'confirmacao';
+  
+  // Estados de alerta (para mostrar seções especiais)
+  const ehAlerta = estado === 'precisa_atencao';
 
   return (
     <div className={cn(
@@ -604,6 +614,37 @@ export function FeedbackEstadoCard({
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+              
+              {/* O QUE NÃO FAZER (do N8N) */}
+              {oQueNaoFazer && oQueNaoFazer.length > 0 && (
+                <div className="p-3 bg-red-900/20 rounded-lg border border-red-500/20">
+                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2 text-red-400">
+                    <AlertOctagon className="w-4 h-4" />
+                    O Que NÃO Fazer
+                  </h4>
+                  <ul className="space-y-1">
+                    {oQueNaoFazer.map((item, i) => (
+                      <li key={i} className="text-sm text-white/80 flex items-start gap-2">
+                        <span className="text-red-400 flex-shrink-0">✗</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {/* MENSAGEM PARA O PROFESSOR (do N8N) */}
+              {mensagemProfessor && (
+                <div className="p-3 bg-blue-900/20 rounded-lg border border-blue-500/20">
+                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2 text-blue-400">
+                    <MessageCircle className="w-4 h-4" />
+                    Mensagem para Você
+                  </h4>
+                  <p className="text-sm text-white/90 leading-relaxed italic">
+                    "{mensagemProfessor}"
+                  </p>
                 </div>
               )}
               

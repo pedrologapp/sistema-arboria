@@ -334,7 +334,7 @@ const PerfilAlunoPage = () => {
           hipoteses={aluno.alertaAtivo?.hipoteses}
           acoesSugeridas={aluno.alertaAtivo?.acoesSugeridas?.map(a => ({
             acao: a.titulo,
-            prioridade: 'media' as const
+            prioridade: a.prioridade || 'media' as const
           }))}
           padrao={aluno.alertaAtivo?.padrao}
           arquetipo={aluno.alertaAtivo?.arquetipo ? {
@@ -351,6 +351,8 @@ const PerfilAlunoPage = () => {
           faseNome={aluno.faseAtualNome}
           celebracaoSubtipo={aluno.alertaAtivo?.subtipo as 'descoberta' | 'confirmacao' | undefined}
           conversaRegistrada={aluno.conversaRegistrada}
+          mensagemProfessor={aluno.alertaAtivo?.mensagemProfessor}
+          oQueNaoFazer={aluno.alertaAtivo?.oQueNaoFazer}
         />
         
         {/* Histórico de Observações */}

@@ -36,6 +36,7 @@ interface SugestaoPayload {
   };
   prioridade?: "importante" | "normal" | "baixa";
   mensagem_professor?: string;
+  o_que_nao_fazer?: string[];
 }
 
 Deno.serve(async (req) => {
@@ -168,7 +169,8 @@ Deno.serve(async (req) => {
 
     const faseAtualId = faseAtual?.id || null;
 
-    // 6. Archive old active alerts for this student (only n8n-generated ones)
+    // 6. Archive ALL active alerts for this student (not just n8n ones)
+    // This prevents duplicate alerts from system and n8n
     const { error: archiveError } = await supabase
       .from("alertas_alunos")
       .update({
@@ -177,8 +179,7 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString(),
       })
       .eq("aluno_id", aluno.id)
-      .eq("status", "ativo")
-      .eq("motivo", "analise_n8n");
+      .eq("status", "ativo");
 
     if (archiveError) {
       console.error("Error archiving old alerts:", archiveError);
@@ -196,6 +197,7 @@ Deno.serve(async (req) => {
       padrao_identificado: payload.padrao_identificado || null,
       arquetipo: payload.arquetipo || null,
       mensagem_professor: payload.mensagem_professor || null,
+      o_que_nao_fazer: payload.o_que_nao_fazer || [],
       prioridade: payload.prioridade || "normal",
       observacao_gatilho_id: payload.observacao_gatilho_id || null,
       gerado_por: "n8n",
