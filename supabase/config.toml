@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.gerar-contas-alunos]
 verify_jwt = false
+
+[functions.receber-sugestao-n8n]
+verify_jwt = false
