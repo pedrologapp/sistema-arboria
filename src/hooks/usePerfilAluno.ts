@@ -674,9 +674,33 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
             geradoPorN8N
           };
         } else {
-          // Se não há alerta no banco, calcular estado baseado nas observações
-          const estadoCalculado = calcularEstadoBaseadoEmObservacoes(observacoes, casaCodigo, faseAtualCodigo);
-          if (estadoCalculado && temObsFaseAtual) {
+          // Se não há alerta no banco, verificar se houve resolução recente
+          // CORREÇÃO: Não calcular estado automaticamente após "Melhorou"
+          
+          // Buscar último alerta resolvido
+          const { data: alertaResolvido } = await supabase
+            .from('alertas_alunos')
+            .select('id, resolved_at')
+            .eq('aluno_id', alunoId)
+            .eq('institution_id', aluno.institution_id)
+            .eq('status', 'resolvido')
+            .order('resolved_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          // Verificar se a última observação é MAIS RECENTE que a resolução
+          // Só calcular estado se houver observação nova após a resolução
+          const ultimaObsDate = observacoes[0]?.dataHora ? new Date(observacoes[0].dataHora).getTime() : 0;
+          const resolvidoDate = alertaResolvido?.resolved_at ? new Date(alertaResolvido.resolved_at).getTime() : 0;
+          
+          // Só calcular estado baseado em observações se:
+          // 1. Não existe alerta resolvido, OU
+          // 2. Existe uma observação DEPOIS da resolução
+          const deveCalcularEstado = !alertaResolvido || ultimaObsDate > resolvidoDate;
+          
+          if (deveCalcularEstado) {
+            const estadoCalculado = calcularEstadoBaseadoEmObservacoes(observacoes, casaCodigo, faseAtualCodigo);
+            if (estadoCalculado && temObsFaseAtual) {
             const primeiroNome = (aluno.full_name || `${aluno.nome || ''} ${aluno.sobrenome || ''}`.trim() || 'Aluno').split(' ')[0];
             const ultimaObs = observacoes[0];
             const penultimaObs = observacoes[1];
@@ -748,7 +772,9 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
               alertaId: '',
               textoAcontecendo: textoGerado
             };
+            }
           }
+          // Se não deveCalcularEstado, alertaAtivo permanece null (tela limpa após "Melhorou")
         }
       }
 
