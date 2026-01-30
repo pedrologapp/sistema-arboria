@@ -395,10 +395,20 @@ const PerfilAlunoPage = () => {
       <RegistrarAcaoModal
         isOpen={modalRegistrarOpen}
         onClose={() => setModalRegistrarOpen(false)}
-        nomeAluno={primeiroNome}
+        nomeAluno={aluno.nome}
         alunoId={aluno.id}
         alertaId={aluno.alertaAtivo?.alertaId || ''}
         onSalvar={handleSalvarAcao}
+        alunoData={{
+          matricula: aluno.matriculaExterna,
+          serie: aluno.serie,
+          turma: aluno.turma,
+          casaId: aluno.casaId,
+          turmaId: aluno.turmaId,
+          segmento: aluno.segmento,
+          institutionId: aluno.institutionId,
+          faseId: aluno.faseAtualId
+        }}
       />
 
       {/* Modal de Registrar Conversa (Celebração) */}

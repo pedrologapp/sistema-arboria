@@ -100,6 +100,12 @@ export interface PerfilAlunoData {
   faseAtualCodigo?: string;
   faseAtualNome?: string;
   conversaRegistrada?: ConversaRegistrada | null;
+  // Campos adicionais para webhook N8N
+  matriculaExterna?: string;
+  segmento?: string;
+  turmaId?: string;
+  institutionId?: string;
+  faseAtualId?: string;
 }
 
 // Função para substituir variáveis nos templates
@@ -165,7 +171,9 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           turma, 
           avatar_url,
           casa_id,
-          institution_id
+          institution_id,
+          matricula_externa,
+          segmento
         `)
         .eq('id', alunoId)
         .single();
@@ -830,7 +838,13 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
         temObsFaseAtual,
         faseAtualCodigo,
         faseAtualNome,
-        conversaRegistrada
+        conversaRegistrada,
+        // Campos adicionais para webhook N8N
+        matriculaExterna: aluno.matricula_externa || undefined,
+        segmento: aluno.segmento || undefined,
+        turmaId: undefined, // turma_id vive em aluno_turma, não em profiles
+        institutionId: aluno.institution_id || undefined,
+        faseAtualId: faseAtual?.id || undefined
       };
     },
     enabled: !!alunoId && !!profile?.institution_id

@@ -12,6 +12,17 @@ interface RegistrarAcaoModalProps {
   alunoId: string;
   alertaId: string;
   onSalvar: () => void;
+  // Dados adicionais para payload N8N
+  alunoData?: {
+    matricula?: string;
+    serie?: string;
+    turma?: string;
+    casaId?: number;
+    turmaId?: string;
+    segmento?: string;
+    institutionId?: string;
+    faseId?: string;
+  };
 }
 
 const categorias = [
@@ -27,7 +38,8 @@ const RegistrarAcaoModal = ({
   nomeAluno,
   alunoId,
   alertaId,
-  onSalvar
+  onSalvar,
+  alunoData
 }: RegistrarAcaoModalProps) => {
   const { profile } = useProfessor();
   const queryClient = useQueryClient();
@@ -39,6 +51,66 @@ const RegistrarAcaoModal = ({
 
   // Validação: tudo preenchido
   const podeSubmeter = descricao.trim().length > 0 && statusAluno !== null;
+
+  // Função para enviar dados ao webhook N8N (fire-and-forget)
+  const enviarParaN8N = async () => {
+    const timestampAtual = new Date().toISOString();
+    const dataAtual = timestampAtual.split('T')[0]; // YYYY-MM-DD
+    
+    const payload = {
+      evento: 'acao_professor_registrada',
+      
+      aluno: {
+        id: alunoId,
+        nome: nomeAluno,
+        matricula: alunoData?.matricula || '',
+        serie: alunoData?.serie || '',
+        turma: alunoData?.turma || '',
+        casa_id: alunoData?.casaId || 0
+      },
+      
+      contexto: {
+        fase_id: alunoData?.faseId || '',
+        turma_id: alunoData?.turmaId || '',
+        turma_completa: `${alunoData?.serie || ''} ${alunoData?.turma || ''}`.trim(),
+        segmento: alunoData?.segmento || '',
+        institution_id: alunoData?.institutionId || profile?.institution_id || ''
+      },
+      
+      professor: {
+        id: profile?.id || '',
+        nome: profile?.full_name || ''
+      },
+      
+      acao: {
+        tipo_registro: 'acao_professor',
+        descricao: descricao.trim(),
+        causa_provavel: categoria,
+        status_aluno: statusAluno === 'melhorou' ? 'melhorou' : 'em_acompanhamento',
+        alerta_id: alertaId
+      },
+      
+      sinal: {
+        codigo: 'acao_professor',
+        nome: 'Ação do Professor',
+        valencia: 'acao'
+      },
+      
+      timestamp: timestampAtual,
+      data_observacao: dataAtual
+    };
+    
+    try {
+      await fetch('https://n8n.escolaamadeus.com/webhook-test/projetoarboria', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      console.log('Ação enviada para N8N:', payload);
+    } catch (error) {
+      console.warn('Falha ao enviar para N8N (não crítico):', error);
+    }
+  };
 
   const handleSalvar = async () => {
     if (!profile?.institution_id || !alertaId || !podeSubmeter) {
@@ -95,7 +167,10 @@ const RegistrarAcaoModal = ({
       queryClient.invalidateQueries({ queryKey: ['alertas-alunos'] });
       queryClient.invalidateQueries({ queryKey: ['perfil-aluno'] });
 
-      // 4. Limpar estado e fechar
+      // 4. Enviar para N8N (fire-and-forget, não bloqueia o fluxo)
+      enviarParaN8N();
+
+      // 5. Limpar estado e fechar
       setDescricao('');
       setCategoria('indefinido');
       setStatusAluno(null);
