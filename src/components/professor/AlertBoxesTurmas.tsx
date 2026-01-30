@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { useAlertasAlunosTurmas } from '@/hooks/useAlertasAlunosTurmas';
 import { AlertGridCard } from './AlertGridCard';
 import { AlertaDetalheModal } from './AlertaDetalheModal';
@@ -19,7 +20,8 @@ interface AlertConfig {
   colorActive: string;
 }
 
-const alertConfigs: AlertConfig[] = [
+// Cards do grid 2x2
+const gridAlertConfigs: AlertConfig[] = [
   {
     id: 'precisa_atencao',
     icon: '🔴',
@@ -43,14 +45,16 @@ const alertConfigs: AlertConfig[] = [
     icon: '⚠️',
     label: 'Fase anterior',
     colorActive: '#8B4000'
-  },
-  {
-    id: 'aguardando_explicacao',
-    icon: '💬',
-    label: 'Aguardando você',
-    colorActive: '#6B21A8'
   }
 ];
+
+// Config do card de justificativa (separado)
+const justificativaConfig: AlertConfig = {
+  id: 'aguardando_explicacao',
+  icon: '💬',
+  label: 'Precisa de justificativa',
+  colorActive: '#6B21A8'
+};
 
 export const AlertBoxesTurmas = ({ onAlunoClick }: AlertBoxesTurmasProps) => {
   const { 
@@ -125,6 +129,11 @@ export const AlertBoxesTurmas = ({ onAlunoClick }: AlertBoxesTurmasProps) => {
     );
   }
 
+  const justificativaCount = getCountByType('aguardando_explicacao');
+  const justificativaBadge = getBadgeCountByType('aguardando_explicacao');
+  const justificativaActive = justificativaCount > 0;
+  const justificativaHasBadge = justificativaBadge > 0;
+
   return (
     <>
       <div className="space-y-3">
@@ -133,9 +142,9 @@ export const AlertBoxesTurmas = ({ onAlunoClick }: AlertBoxesTurmasProps) => {
           Alertas das Turmas
         </h3>
 
-        {/* Grid 2x3 */}
+        {/* Grid 2x2 */}
         <div className="grid grid-cols-2 gap-3">
-          {alertConfigs.map(config => (
+          {gridAlertConfigs.map(config => (
             <AlertGridCard
               key={config.id}
               icon={config.icon}
@@ -147,6 +156,56 @@ export const AlertBoxesTurmas = ({ onAlunoClick }: AlertBoxesTurmasProps) => {
             />
           ))}
         </div>
+
+        {/* Card retangular largo para Justificativa */}
+        <motion.button
+          onClick={() => handleCardClick('aguardando_explicacao')}
+          disabled={!justificativaActive}
+          whileHover={justificativaActive ? { scale: 1.01 } : undefined}
+          whileTap={justificativaActive ? { scale: 0.99 } : undefined}
+          className="relative w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all"
+          style={{
+            backgroundColor: justificativaActive ? justificativaConfig.colorActive : '#2A2A2A',
+            cursor: justificativaActive ? 'pointer' : 'default'
+          }}
+        >
+          {/* Badge de notificação */}
+          {justificativaHasBadge && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center shadow-lg"
+            >
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute inset-0 bg-red-500 rounded-full opacity-50"
+              />
+              <span className="text-white text-xs font-bold relative z-10">
+                {justificativaBadge > 9 ? '9+' : justificativaBadge}
+              </span>
+            </motion.div>
+          )}
+
+          {/* Ícone */}
+          <span className="text-lg">{justificativaConfig.icon}</span>
+
+          {/* Número */}
+          <span 
+            className="text-xl font-bold"
+            style={{ color: justificativaActive ? '#FFFFFF' : '#888888' }}
+          >
+            {justificativaCount}
+          </span>
+
+          {/* Label */}
+          <span 
+            className="text-sm font-medium"
+            style={{ color: justificativaActive ? 'rgba(255,255,255,0.9)' : '#888888' }}
+          >
+            {justificativaConfig.label}
+          </span>
+        </motion.button>
       </div>
 
       {/* Modal de detalhes */}
