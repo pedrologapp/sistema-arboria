@@ -15,6 +15,7 @@ interface AcaoSugerida {
   titulo: string;
   icone: string;
   codigo: string;
+  prioridade?: 'alta' | 'media' | 'baixa';
 }
 
 interface Arquetipo {
@@ -48,6 +49,9 @@ interface AlertaAtivo {
     significado: string;
     acao_recomendada?: string;
   };
+  // Novos campos ricos do N8N
+  mensagemProfessor?: string;
+  oQueNaoFazer?: string[];
 }
 
 export interface ConversaRegistrada {
@@ -412,6 +416,7 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           const padraoCodigo = (dadosContexto?.padrao_codigo as string) || '';
           const timestampAnalise = dadosContexto?.timestamp_analise as string | undefined;
           const geradoPorIA = dadosContexto?.gerado_por === 'ia';
+          const geradoPorN8N = dadosContexto?.gerado_por === 'n8n' || alertaData.motivo === 'analise_n8n';
           
           // Formatar nome do aluno
           const nomeCompleto = aluno.full_name || 
@@ -432,9 +437,21 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           }
           
           // Buscar hipóteses dinâmicas
-          let hipoteses: { titulo: string; descricao: string }[] = [];
+          let hipoteses: { titulo: string; descricao: string; perguntas?: string[] }[] = [];
           
-          if (alertaData.tipo_alerta === 'precisa_atencao') {
+          // Se veio do N8N, priorizar dados do dados_contexto
+          if (geradoPorN8N && dadosContexto?.hipoteses) {
+            const hipotesesN8N = dadosContexto.hipoteses as Array<{
+              titulo: string;
+              descricao: string;
+              perguntas?: string[];
+            }>;
+            hipoteses = hipotesesN8N.map(h => ({
+              titulo: h.titulo,
+              descricao: h.descricao,
+              perguntas: h.perguntas || []
+            }));
+          } else if (alertaData.tipo_alerta === 'precisa_atencao') {
             // Primeiro tentar buscar por sinal
             if (sinalCodigo) {
               const { data: hipotesesSinal } = await supabase
@@ -469,7 +486,20 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           
           // Buscar ações sugeridas
           let acoesSugeridas: AcaoSugerida[] = [];
-          if (alertaData.tipo_alerta === 'precisa_atencao') {
+          
+          // Se veio do N8N, priorizar dados do dados_contexto
+          if (geradoPorN8N && dadosContexto?.acoes_sugeridas) {
+            const acoesN8N = dadosContexto.acoes_sugeridas as Array<{
+              acao: string;
+              prioridade: 'alta' | 'media' | 'baixa';
+            }>;
+            acoesSugeridas = acoesN8N.map(a => ({
+              titulo: a.acao,
+              icone: 'MessageCircle', // Default icon
+              codigo: a.acao,
+              prioridade: a.prioridade
+            }));
+          } else if (alertaData.tipo_alerta === 'precisa_atencao') {
             const { data: acoesData } = await supabase
               .from('acoes_sugeridas')
               .select('titulo, icone')
@@ -487,7 +517,22 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           
           // Buscar arquétipo para celebração
           let arquetipo: Arquetipo | undefined;
-          if (alertaData.tipo_alerta === 'celebrar' && subtipo === 'descoberta' && casaCodigo && faseAtualCodigo) {
+          
+          // Se veio do N8N com arquétipo, priorizar
+          if (geradoPorN8N && dadosContexto?.arquetipo) {
+            const arquetipoN8N = dadosContexto.arquetipo as {
+              nome_arquetipo?: string;
+              significado?: string;
+              potencializar?: string[];
+              sugestao_conversa?: string;
+            };
+            arquetipo = {
+              nome: arquetipoN8N.nome_arquetipo || '',
+              significado: arquetipoN8N.significado || '',
+              potencializar: arquetipoN8N.potencializar || [],
+              sugestao_conversa: arquetipoN8N.sugestao_conversa
+            };
+          } else if (alertaData.tipo_alerta === 'celebrar' && subtipo === 'descoberta' && casaCodigo && faseAtualCodigo) {
             const { data: arquetipoData } = await supabase
               .from('arquetipos')
               .select('nome_arquetipo, significado, potencializar, sugestao_conversa, frases_evitar, frases_preferir')
@@ -528,14 +573,14 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
             }
           }
           
-          // Buscar template de texto ou usar texto gerado pela IA
+          // Buscar template de texto ou usar texto gerado pela IA/N8N
           let motivo = alertaData.motivo;
           
-          // Priorizar texto gerado pela IA se disponível
+          // Priorizar texto gerado pela IA ou N8N se disponível
           const textoAcontecendo = dadosContexto?.texto_acontecendo as string | undefined;
           
-          if (textoAcontecendo && geradoPorIA) {
-            // Usar texto gerado pela IA diretamente
+          if (textoAcontecendo && (geradoPorIA || geradoPorN8N)) {
+            // Usar texto gerado pela IA/N8N diretamente
             motivo = textoAcontecendo;
           } else if (alertaData.tipo_alerta === 'precisa_atencao') {
             // Fallback para templates quando não há análise de IA
@@ -586,6 +631,9 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
               });
             }
           }
+          
+          // Extrair padrão identificado do N8N
+          const padraoIdentificado = dadosContexto?.padrao_identificado as { nome: string; significado: string } | undefined;
 
           alertaAtivo = {
             tipo: alertaData.tipo_alerta as AlertaAtivo['tipo'],
@@ -600,10 +648,14 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
             alertaId: alertaData.id,
             sinalCodigo,
             padraoCodigo,
-            sinalPredominante: (dadosContexto?.sinal_predominante as string) || undefined,
+            sinalPredominante: (dadosContexto?.sinal_predominante as string) || (dadosContexto?.sinal_principal as string) || undefined,
             sinalSecundario: (dadosContexto?.sinal_secundario as string) || undefined,
             quantidadeSinal: (dadosContexto?.quantidade as number) || undefined,
-            textoAcontecendo: motivo
+            textoAcontecendo: motivo,
+            padrao: padraoIdentificado,
+            // Novos campos do N8N
+            mensagemProfessor: (dadosContexto?.mensagem_professor as string) || undefined,
+            oQueNaoFazer: (dadosContexto?.o_que_nao_fazer as string[]) || undefined
           };
         } else {
           // Se não há alerta no banco, calcular estado baseado nas observações
