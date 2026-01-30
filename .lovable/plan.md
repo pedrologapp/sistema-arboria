@@ -1,157 +1,95 @@
-
-
 # Plano: Exibir Todos os Campos Ricos do N8N
 
-## Resumo do Problema
-
-Os dados enviados pelo N8N estão sendo salvos corretamente no banco, mas não estão sendo exibidos completamente na tela. Há também duplicação de alertas.
+## ✅ STATUS: IMPLEMENTADO
 
 ---
 
-## Diagnóstico Detalhado
+## Problema Resolvido
 
-### Dados Salvos vs Exibidos
-
-| Campo N8N | Salvo no Banco | Exibido na Tela |
-|-----------|----------------|-----------------|
-| `texto_acontecendo` | ✅ | ⚠️ Parcial (só início) |
-| `hipoteses` (com perguntas) | ✅ | ❌ Busca do banco local |
-| `acoes_sugeridas` (com prioridade) | ✅ | ❌ Busca do banco local |
-| `arquetipo` completo | ✅ | ⚠️ Parcial |
-| `mensagem_professor` | ✅ | ❌ Não exibido |
-| `o_que_nao_fazer` | ✅ | ❌ Não exibido |
-| `padrao_identificado` | ✅ | ❌ Não exibido |
-
-### Duplicação de Alertas
-
-Existem 2 alertas ativos para Adryan:
-1. **N8N** (motivo: `analise_n8n`) - criado às 01:10
-2. **Sistema** (motivo: `ultimas_2_atencao`) - criado às 17:51
-
-A Edge Function só arquiva alertas com `motivo = 'analise_n8n'`, mas o sistema local cria alertas separados.
+1. **Duplicação de alertas** - A Edge Function agora arquiva TODOS os alertas ativos do aluno (não só os de N8N)
+2. **Dados não exibidos** - O hook e componente agora mapeiam e exibem todos os campos ricos
 
 ---
 
-## Alterações Necessárias
+## Alterações Realizadas
 
-### Arquivo 1: `supabase/functions/receber-sugestao-n8n/index.ts`
+### 1. Edge Function (`supabase/functions/receber-sugestao-n8n/index.ts`)
+- ✅ Removido filtro `.eq("motivo", "analise_n8n")` - agora arquiva qualquer alerta ativo
+- ✅ Adicionado campo `o_que_nao_fazer` ao payload e dados_contexto
 
-Arquivar TODOS os alertas ativos do aluno, não só os de N8N:
+### 2. Hook (`src/hooks/usePerfilAluno.ts`)
+- ✅ Interface `AcaoSugerida` agora inclui `prioridade`
+- ✅ Interface `AlertaAtivo` agora inclui:
+  - `mensagemProfessor?: string`
+  - `oQueNaoFazer?: string[]`
+- ✅ Prioriza dados do N8N para:
+  - Hipóteses (com perguntas)
+  - Ações sugeridas (com prioridade)
+  - Arquétipo completo
+- ✅ Extrai `padraoIdentificado` do dados_contexto
+- ✅ Prioriza `texto_acontecendo` do N8N
 
-```typescript
-// ANTES
-.eq("motivo", "analise_n8n");
+### 3. Componente (`src/components/professor/FeedbackEstadoCard.tsx`)
+- ✅ Novas props: `mensagemProfessor`, `oQueNaoFazer`
+- ✅ Nova variável: `ehAlerta` para estados de alerta
+- ✅ Novas seções visuais na área expandida:
+  - **O Que NÃO Fazer** (fundo vermelho, ícone AlertOctagon)
+  - **Mensagem para Você** (fundo azul, ícone MessageCircle)
+- ✅ `temDetalhes` atualizado para considerar novos campos
 
-// DEPOIS
-// Sem filtro de motivo - arquiva qualquer alerta ativo
-```
+### 4. Página (`src/pages/professor/PerfilAlunoPage.tsx`)
+- ✅ Passa `mensagemProfessor` e `oQueNaoFazer` para FeedbackEstadoCard
+- ✅ Passa `prioridade` das ações sugeridas corretamente
 
-### Arquivo 2: `src/hooks/usePerfilAluno.ts`
+---
 
-Priorizar dados do N8N no `dados_contexto`:
+## Dados Agora Exibidos
 
-```typescript
-// Se veio do N8N (motivo: analise_n8n), usar dados diretos
-if (alertaData.motivo === 'analise_n8n') {
-  // Hipóteses do dados_contexto
-  hipoteses = (dadosContexto?.hipoteses || []).map(h => ({
-    titulo: h.titulo,
-    descricao: h.descricao,
-    perguntas: h.perguntas || []
-  }));
-  
-  // Ações sugeridas do dados_contexto
-  acoesSugeridas = (dadosContexto?.acoes_sugeridas || []).map(a => ({
-    titulo: a.acao,
-    icone: 'MessageCircle',
-    codigo: a.acao,
-    prioridade: a.prioridade
-  }));
-  
-  // Novos campos
-  mensagemProfessor = dadosContexto?.mensagem_professor;
-  oQueNaoFazer = dadosContexto?.o_que_nao_fazer;
-  padraoIdentificado = dadosContexto?.padrao_identificado;
+| Campo N8N | Seção na UI |
+|-----------|-------------|
+| `texto_acontecendo` | Texto principal do card |
+| `hipoteses` (com perguntas) | Ver Mais → Hipóteses (com 💬 perguntas) |
+| `acoes_sugeridas` (com prioridade) | Ver Mais → Ações Sugeridas (badges coloridos) |
+| `arquetipo` | Ver Mais → Arquétipo |
+| `padrao_identificado` | Card de Padrão |
+| `o_que_nao_fazer` | Ver Mais → O Que NÃO Fazer (nova seção) |
+| `mensagem_professor` | Ver Mais → Mensagem para Você (nova seção) |
+
+---
+
+## Como Testar
+
+1. Envie uma sugestão do N8N com todos os campos:
+```json
+{
+  "aluno_matricula": "22872026",
+  "estado": "precisa_atencao",
+  "texto_acontecendo": "Descrição detalhada...",
+  "hipoteses": [
+    {
+      "titulo": "Hipótese 1",
+      "descricao": "Descrição",
+      "perguntas": ["Pergunta para investigar?"]
+    }
+  ],
+  "acoes_sugeridas": [
+    {"acao": "Conversar com o aluno", "prioridade": "alta"},
+    {"acao": "Observar mais", "prioridade": "media"}
+  ],
+  "o_que_nao_fazer": [
+    "Expor publicamente",
+    "Pressionar por resposta"
+  ],
+  "mensagem_professor": "Você está fazendo a coisa certa..."
 }
 ```
 
-Adicionar novas propriedades na interface `AlertaAtivo`:
-- `mensagemProfessor?: string`
-- `oQueNaoFazer?: string[]`
-- `padraoIdentificado?: { nome: string; significado: string }`
-
-### Arquivo 3: `src/components/professor/FeedbackEstadoCard.tsx`
-
-Adicionar novas seções visuais:
-
-1. **Arquétipo destacado** (para alertas de atenção também)
-2. **Seção "O que não fazer"** com ícone de alerta
-3. **Mensagem para o professor** como rodapé encorajador
-4. **Padrão identificado** após as hipóteses
+2. Acesse o perfil do aluno e clique em "Ver mais" no card de alerta
+3. Verifique se todas as seções aparecem corretamente
 
 ---
 
-## Layout Visual Proposto
+## Observações
 
-```text
-┌─────────────────────────────────────────────────┐
-│ ⚠️ ALERTA ATIVO                                 │
-├─────────────────────────────────────────────────┤
-│ O QUE ESTÁ ACONTECENDO:                         │
-│ "Adryan demonstra capacidade cognitiva clara    │
-│ (3x pegou rápido), mas apresentou isolamento    │
-│ seguido de travamento..."                       │
-│                                                 │
-│ 🔍 PADRÃO IDENTIFICADO: [Nome do Padrão]        │
-│                                                 │
-│ 🏆 ARQUÉTIPO: O Mestre das Palavras             │
-│ "Domínio excepcional da linguagem..."           │
-│ 💡 Sugestão: "Use a força linguística..."       │
-│                                                 │
-│ ────────── [Clique para expandir] ──────────    │
-│                                                 │
-│ 💡 HIPÓTESES:                                   │
-│ ┌─────────────────────────────────────────────┐ │
-│ │ Conflito Relacional Recente                 │ │
-│ │ O isolamento seguido de travamento pode...  │ │
-│ │ 💬 "Alguém disse algo que te incomodou?"    │ │
-│ └─────────────────────────────────────────────┘ │
-│                                                 │
-│ ✅ AÇÕES SUGERIDAS:                             │
-│ [!] Conversa Privada de Investigação (alta)     │
-│ [!] Estratégia da Escrita Protegida (alta)      │
-│ [•] Ponte Linguística (média)                   │
-│                                                 │
-│ ❌ O QUE NÃO FAZER:                             │
-│ • Expor o comportamento publicamente            │
-│ • Pressionar por resposta imediata              │
-│                                                 │
-│ ─────────────────────────────────────────────── │
-│ 💬 MENSAGEM PARA VOCÊ:                          │
-│ "Professor(a), você fez a coisa CERTA ao        │
-│ registrar isso. Adryan não está 'piorando'..."  │
-│                                                 │
-│         [⚙️ Registrar minha ação]               │
-└─────────────────────────────────────────────────┘
-```
-
----
-
-## Arquivos a Modificar
-
-| Arquivo | Mudança |
-|---------|---------|
-| `supabase/functions/receber-sugestao-n8n/index.ts` | Arquivar TODOS os alertas ativos |
-| `src/hooks/usePerfilAluno.ts` | Priorizar dados do N8N, adicionar novos campos |
-| `src/components/professor/FeedbackEstadoCard.tsx` | Adicionar seções: padrão, o que não fazer, mensagem professor |
-| `src/pages/professor/PerfilAlunoPage.tsx` | Passar novos props para FeedbackEstadoCard |
-
----
-
-## Resumo das Mudanças
-
-1. **Edge Function**: Corrigir arquivamento para eliminar duplicatas
-2. **Hook**: Mapear todos os campos ricos do N8N
-3. **Componente**: Exibir novas seções visuais
-4. **Página**: Conectar os novos dados ao componente
-
+- O alerta duplicado de Adryan foi arquivado manualmente
+- Novos alertas do N8N vão arquivar automaticamente qualquer alerta existente
