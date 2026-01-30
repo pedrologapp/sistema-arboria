@@ -1,479 +1,768 @@
 
-# Plano: Exibição Completa das Sugestões N8N com Cards Expansíveis
+# Plano: Refatoração Completa - Card de Sugestão N8N
 
-## Resumo
+## Diagnóstico dos Erros de Build
 
-O N8N está enviando dados ricos (scripts, opções A/B, como reagir, elemento de ponte) mas o frontend não está extraindo nem renderizando esses campos. Este plano implementa a exibição completa com cards expansíveis e scripts destacados.
+O hook `usePerfilAluno.ts` tem erros de sintaxe na linha 539, onde há uma chave `}` extra fechando o bloco prematuramente:
 
----
-
-## Diagnóstico Técnico
-
-### Problema 1: Edge Function - Campos Faltando
-A Edge Function `receber-sugestao-n8n` **não aceita** os campos:
-- `como_reagir`
-- `elemento_ponte`
-- Campos ricos dentro de `acoes_sugeridas` (script, objetivo, contexto, como_escutar, por_que_funciona)
-
-### Problema 2: Hook - Extração Incompleta
-O hook `usePerfilAluno.ts` (linhas 502-512) extrai apenas:
 ```typescript
-{ acao: string; prioridade: string }
+// Linha 538
+}));
+}
+}  // <-- LINHA 539: Esta chave extra quebra o código
 ```
-Ignora: `script`, `objetivo`, `contexto`, `como_escutar`, `por_que_funciona`
 
-### Problema 3: Componente - Falta de Renderização
-O `FeedbackEstadoCard.tsx` não renderiza:
-- Cards expansíveis com scripts destacados
-- Seção "COMO REAGIR"
-- Seção "ELEMENTO DE PONTE"
-
----
-
-## Arquitetura da Solução
+## Arquitetura da Refatoração
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                          FLUXO CORRIGIDO                                 │
+│                     REFATORAÇÃO COMPLETA                                 │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│  N8N envia payload completo                                              │
-│       ↓                                                                  │
-│  Edge Function (ATUALIZAR)                                               │
-│    → Aceitar: como_reagir, elemento_ponte                                │
-│    → Salvar campos ricos de acoes_sugeridas                              │
-│       ↓                                                                  │
-│  dados_contexto (JSONB já correto)                                       │
-│       ↓                                                                  │
-│  Hook usePerfilAluno (ATUALIZAR)                                         │
-│    → Expandir interface AcaoSugerida                                     │
-│    → Extrair: como_reagir, elemento_ponte                                │
-│       ↓                                                                  │
-│  FeedbackEstadoCard (ATUALIZAR)                                          │
-│    → Props expandidas                                                    │
-│    → Cards expansíveis com script em destaque                            │
-│    → Seção COMO REAGIR                                                   │
-│    → Seção ELEMENTO DE PONTE                                             │
+│  1. CORRIGIR ERROS DE BUILD                                              │
+│     → Remover chave extra na linha 539                                   │
+│                                                                          │
+│  2. CRIAR INTERFACE TYPESCRIPT FIXA                                      │
+│     → SugestaoN8NPayload                                                 │
+│     → Contrato de dados exato                                            │
+│                                                                          │
+│  3. ATUALIZAR EDGE FUNCTION                                              │
+│     → Aceitar campos novos                                               │
+│     → tipo_recomendacao, nome_recomendacao                               │
+│     → o_que_fazer_agora, use_a_forca                                     │
+│                                                                          │
+│  4. CRIAR COMPONENTE COM SLOTS FIXOS                                     │
+│     → SugestaoN8NCard.tsx                                                │
+│     → Mapeamento direto: campo → slot                                    │
+│                                                                          │
+│  5. INTEGRAR COM FLUXO EXISTENTE                                         │
+│     → Hook extrai dados do dados_contexto                                │
+│     → Page renderiza SugestaoN8NCard quando geradoPorN8N                 │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 1. Edge Function: Aceitar Novos Campos
-
-### Arquivo: `supabase/functions/receber-sugestao-n8n/index.ts`
-
-**Adicionar à interface SugestaoPayload:**
-```typescript
-// Novos campos ricos
-como_reagir?: {
-  se_aceitar: string;
-  se_recusar: string;
-  alerta?: string;
-};
-
-elemento_ponte?: {
-  forcas: string | string[];
-  area_dificuldade: string;
-};
-```
-
-**Adicionar ao dadosContexto:**
-```typescript
-como_reagir: payload.como_reagir || null,
-elemento_ponte: payload.elemento_ponte || null,
-```
-
----
-
-## 2. Hook: Expandir Interfaces e Extração
+## 1. Corrigir Erros de Build
 
 ### Arquivo: `src/hooks/usePerfilAluno.ts`
 
-**Expandir interface AcaoSugerida (linha ~14):**
+**Problema**: Linha 539 tem uma chave extra `}` que fecha o bloco prematuramente.
+
+**Correção**: Remover a linha 539 (o `}` extra).
+
 ```typescript
-interface AcaoSugerida {
-  titulo: string;
-  icone: string;
-  codigo: string;
-  prioridade?: 'alta' | 'media' | 'baixa';
-  // Campos ricos do N8N
-  script?: string;
-  objetivo?: string;
-  contexto?: string;
-  comoEscutar?: string;
-  porQueFunciona?: string;
+// ANTES (linhas 537-540):
+}));
 }
-```
-
-**Adicionar novos campos ao AlertaAtivo (linha ~52):**
-```typescript
-// Novos campos ricos do N8N
-comoReagir?: {
-  seAceitar: string;
-  seRecusar: string;
-  alerta?: string;
-};
-elementoPonte?: {
-  forcas: string | string[];
-  areaDificuldade: string;
-};
-```
-
-**Atualizar extração de acoes_sugeridas (linha ~502-512):**
-```typescript
-if (geradoPorN8N && dadosContexto?.acoes_sugeridas) {
-  const acoesN8N = dadosContexto.acoes_sugeridas as Array<{
-    acao: string;
-    prioridade: 'alta' | 'media' | 'baixa';
-    script?: string;
-    objetivo?: string;
-    contexto?: string;
-    como_escutar?: string;
-    por_que_funciona?: string;
-  }>;
-  acoesSugeridas = acoesN8N.map(a => ({
-    titulo: a.acao,
-    icone: 'MessageCircle',
-    codigo: a.acao,
-    prioridade: a.prioridade,
-    script: a.script,
-    objetivo: a.objetivo,
-    contexto: a.contexto,
-    comoEscutar: a.como_escutar,
-    porQueFunciona: a.por_que_funciona
-  }));
+}  // <-- REMOVER ESTA LINHA
+          
+// DEPOIS (linhas 537-539):
+}));
 }
-```
-
-**Adicionar extração de novos campos (linha ~670):**
-```typescript
-// Novos campos ricos do N8N
-comoReagir: dadosContexto?.como_reagir ? {
-  seAceitar: (dadosContexto.como_reagir as any).se_aceitar,
-  seRecusar: (dadosContexto.como_reagir as any).se_recusar,
-  alerta: (dadosContexto.como_reagir as any).alerta
-} : undefined,
-elementoPonte: dadosContexto?.elemento_ponte ? {
-  forcas: (dadosContexto.elemento_ponte as any).forcas,
-  areaDificuldade: (dadosContexto.elemento_ponte as any).area_dificuldade
-} : undefined,
 ```
 
 ---
 
-## 3. Componente: Props Expandidas
+## 2. Interface TypeScript Fixa
 
-### Arquivo: `src/components/professor/FeedbackEstadoCard.tsx`
+### Criar: `src/types/sugestaoN8N.ts`
 
-**Expandir interface AcaoSugerida (linha ~27):**
 ```typescript
-interface AcaoSugerida {
-  acao: string;
-  prioridade: 'alta' | 'media' | 'baixa';
-  // Campos ricos do N8N
-  script?: string;
-  objetivo?: string;
-  contexto?: string;
-  comoEscutar?: string;
-  porQueFunciona?: string;
+// Contrato de dados exato que o N8N envia
+export interface SugestaoN8NPayload {
+  // Identificação
+  aluno_id?: string;
+  aluno_matricula?: string;
+  
+  // Estado geral
+  estado: 'precisa_atencao' | 'celebrar' | 'neutro' | 'aguardando_explicacao';
+  prioridade: 'urgente' | 'importante' | 'normal';
+  
+  // Cabeçalho da recomendação
+  tipo_recomendacao: string;        // Ex: "INVESTIGAÇÃO GENTIL"
+  nome_recomendacao: string;        // Ex: "Resgate da Confiança Linguística"
+  
+  // Elemento de ponte
+  elemento_ponte: {
+    forcas: string;                 // Ex: "Linguística"
+    area_dificuldade: string;       // Ex: "comunicação e engajamento"
+  };
+  
+  // Justificativa
+  por_que_este_tipo: string;
+  
+  // Ação principal
+  o_que_fazer_agora: {
+    objetivo: string;
+    contexto: string;
+    script_principal: string;       // FRASE EXATA para o professor dizer
+    como_escutar: string;
+  };
+  
+  // Opções alternativas
+  use_a_forca: {
+    forcas_utilizadas: string;
+    opcao_a: {
+      nome: string;
+      script: string;               // FRASE EXATA
+      por_que_funciona: string;
+    };
+    opcao_b: {
+      nome: string;
+      script: string;               // FRASE EXATA
+      por_que_funciona: string;
+    };
+  };
+  
+  // Reações
+  como_reagir: {
+    se_aceitar: string;
+    se_recusar: string;
+    alerta: string;
+  };
+  
+  // Proibições
+  o_que_nao_fazer: string[];
+  
+  // Mensagem final
+  mensagem_professor: string;
+  
+  // Padrão detectado
+  padrao_identificado: {
+    nome: string;
+    significado: string;
+  };
+  
+  // Sinal gatilho
+  sinal_principal: string;
+  sinal_codigo: string;
+}
+
+// Interface para props do componente (mapeamento direto)
+export interface SugestaoN8NCardProps {
+  // Header
+  tipoRecomendacao: string;
+  nomeRecomendacao: string;
+  prioridade: 'urgente' | 'importante' | 'normal';
+  
+  // Elemento de ponte
+  elementoPonte: {
+    forcas: string;
+    areaDificuldade: string;
+  };
+  
+  // Padrão
+  padraoIdentificado: {
+    nome: string;
+    significado: string;
+  };
+  
+  // Justificativa
+  porQueEsteTipo: string;
+  
+  // Ação principal
+  oQueFazerAgora: {
+    objetivo: string;
+    contexto: string;
+    scriptPrincipal: string;
+    comoEscutar: string;
+  };
+  
+  // Opções
+  useAForca: {
+    forcasUtilizadas: string;
+    opcaoA: {
+      nome: string;
+      script: string;
+      porQueFunciona: string;
+    };
+    opcaoB: {
+      nome: string;
+      script: string;
+      porQueFunciona: string;
+    };
+  };
+  
+  // Reações
+  comoReagir: {
+    seAceitar: string;
+    seRecusar: string;
+    alerta: string;
+  };
+  
+  // Proibições
+  oQueNaoFazer: string[];
+  
+  // Mensagem
+  mensagemProfessor: string;
+  
+  // Ações
+  onRegistrarAcao?: () => void;
 }
 ```
 
-**Adicionar novas props (linha ~50):**
+---
+
+## 3. Atualizar Edge Function
+
+### Arquivo: `supabase/functions/receber-sugestao-n8n/index.ts`
+
+**Adicionar campos à interface:**
+
 ```typescript
-comoReagir?: {
-  seAceitar: string;
-  seRecusar: string;
-  alerta?: string;
-};
-elementoPonte?: {
-  forcas: string | string[];
-  areaDificuldade: string;
+interface SugestaoPayload {
+  // ... campos existentes ...
+  
+  // NOVOS CAMPOS
+  tipo_recomendacao?: string;
+  nome_recomendacao?: string;
+  por_que_este_tipo?: string;
+  
+  o_que_fazer_agora?: {
+    objetivo: string;
+    contexto: string;
+    script_principal: string;
+    como_escutar: string;
+  };
+  
+  use_a_forca?: {
+    forcas_utilizadas: string;
+    opcao_a: {
+      nome: string;
+      script: string;
+      por_que_funciona: string;
+    };
+    opcao_b: {
+      nome: string;
+      script: string;
+      por_que_funciona: string;
+    };
+  };
+}
+```
+
+**Adicionar ao dadosContexto:**
+
+```typescript
+const dadosContexto = {
+  // ... campos existentes ...
+  
+  // NOVOS CAMPOS
+  tipo_recomendacao: payload.tipo_recomendacao || null,
+  nome_recomendacao: payload.nome_recomendacao || null,
+  por_que_este_tipo: payload.por_que_este_tipo || null,
+  o_que_fazer_agora: payload.o_que_fazer_agora || null,
+  use_a_forca: payload.use_a_forca || null,
 };
 ```
 
 ---
 
-## 4. Componente: Renderização Expandida
+## 4. Criar Componente SugestaoN8NCard
 
-### Layout Visual Proposto
+### Arquivo: `src/components/professor/SugestaoN8NCard.tsx`
 
-```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│  ⚠️ ALERTA ATIVO                                                         │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │  🔗 ELEMENTO DE PONTE                                               │ │
-│  │  Força: Linguística → Dificuldade: comunicação e engajamento       │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                                                                          │
-│  "🎯 INVESTIGAÇÃO GENTIL — Resgate da Confiança Linguística..."         │
-│  [Ler mais/menos]                                                        │
-│                                                                          │
-│  ┌ Padrão Detectado ─────────────────────────────────────────────────┐  │
-│  │ Sinais de Atenção Consecutivos                                     │  │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                                                                          │
-│  [Ver mais ▼]                                                            │
-│                                                                          │
-├─────────────────────────────────────────────────────────────────────────┤
-│  EXPANDIDO:                                                              │
-│                                                                          │
-│  ═════════════════════════════════════════════════════════════════════  │
-│  📌 O QUE FAZER AGORA                                        [ALTA] [▲] │
-│  ───────────────────────────────────────────────────────────────────── │
-│  Objetivo: Reconectar Adryan com ambiente de aprendizagem               │
-│  Contexto: Encontrar momento privado...                                  │
-│                                                                          │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │ 💬 DIGA:                                                           │ │
-│  │ "Adryan Samuel, quero te ouvir. Quer escrever três palavras..."   │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                                                                          │
-│  👂 Como escutar: ESCUTE SEM JULGAR. Observe o tom, o ritmo.            │
-│  ═════════════════════════════════════════════════════════════════════  │
-│                                                                          │
-│  🅰️ Opção A: Escrita Livre                                    [ALTA] [▼] │
-│  (clicável para expandir script)                                         │
-│                                                                          │
-│  🅱️ Opção B: Registro Privado                                [MÉDIA] [▼] │
-│  (clicável para expandir script)                                         │
-│                                                                          │
-│  ═════════════════════════════════════════════════════════════════════  │
-│  🔄 COMO REAGIR                                                          │
-│  ───────────────────────────────────────────────────────────────────── │
-│  ✅ Se aceitar: "Valeu por compartilhar. Me ajudou a entender."          │
-│  ❌ Se recusar: "Tudo bem. Quando quiser, me avisa."                     │
-│  ⚠️ NÃO INSISTA.                                                         │
-│  ═════════════════════════════════════════════════════════════════════  │
-│                                                                          │
-│  ⚠️ O QUE NÃO FAZER                                                      │
-│  ✗ Não perguntar diretamente...                                          │
-│                                                                          │
-│  💬 MENSAGEM PARA VOCÊ                                                   │
-│  "Adryan precisa de espaço e acolhimento..."                             │
-│                                                                          │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │  🎯 Registrar minha ação                                           │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+**Estrutura de Slots Fixos:**
 
-### Implementação das Novas Seções
+| Slot | Componente | Comportamento |
+|------|------------|---------------|
+| HEADER | Tipo + Nome + Badge | Sempre visível |
+| ELEMENTO DE PONTE | Força → Dificuldade | Sempre visível |
+| PADRÃO DETECTADO | Nome + Significado | Sempre visível |
+| JUSTIFICATIVA | Por que este tipo | Colapsável (fechado) |
+| AÇÃO PRINCIPAL | Objetivo + Script | Sempre aberto |
+| OPÇÃO A | Script A | Colapsável (fechado) |
+| OPÇÃO B | Script B | Colapsável (fechado) |
+| COMO REAGIR | Aceitar/Recusar/Alerta | Sempre visível |
+| O QUE NÃO FAZER | Lista de 5 itens | Sempre visível |
+| MENSAGEM | Texto final | Sempre visível |
+| AÇÃO | Botão registrar | Sempre visível |
 
-**4.1 ELEMENTO DE PONTE (após o header, antes do texto):**
+**Código do Componente:**
+
 ```tsx
-{geradoPorN8N && elementoPonte && (
-  <div className="mb-4 p-3 bg-purple-900/20 rounded-lg border border-purple-500/20">
-    <div className="flex items-center gap-2 mb-1">
-      <span className="text-purple-400 text-xs font-semibold uppercase tracking-wide">
-        🔗 Elemento de Ponte
-      </span>
-    </div>
-    <div className="flex items-center gap-2 text-sm">
-      <span className="text-white font-medium">
-        Força: {Array.isArray(elementoPonte.forcas) 
-          ? elementoPonte.forcas.join(', ') 
-          : elementoPonte.forcas}
-      </span>
-      <span className="text-purple-400">→</span>
-      <span className="text-white/80">
-        Dificuldade: {elementoPonte.areaDificuldade}
-      </span>
-    </div>
-  </div>
-)}
-```
+import { useState } from 'react';
+import { ChevronDown, ChevronUp, Target, AlertTriangle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { SugestaoN8NCardProps } from '@/types/sugestaoN8N';
 
-**4.2 CARDS DE AÇÃO EXPANSÍVEIS (substituir renderização atual):**
-```tsx
-{acoesSugeridas.map((acao, i) => {
-  const isExpanded = acoesExpandidas[i] ?? (i === 0); // Primeira aberta por padrão
-  const temConteudoRico = acao.script || acao.objetivo || acao.contexto;
+export function SugestaoN8NCard({
+  tipoRecomendacao,
+  nomeRecomendacao,
+  prioridade,
+  elementoPonte,
+  padraoIdentificado,
+  porQueEsteTipo,
+  oQueFazerAgora,
+  useAForca,
+  comoReagir,
+  oQueNaoFazer,
+  mensagemProfessor,
+  onRegistrarAcao
+}: SugestaoN8NCardProps) {
+  // Estados para colapsáveis
+  const [justificativaAberta, setJustificativaAberta] = useState(false);
+  const [opcaoAAberta, setOpcaoAAberta] = useState(false);
+  const [opcaoBAberta, setOpcaoBAberta] = useState(false);
+  
+  // Cor do badge de prioridade
+  const prioridadeConfig = {
+    urgente: { bg: 'bg-red-500', text: 'text-white' },
+    importante: { bg: 'bg-amber-500', text: 'text-black' },
+    normal: { bg: 'bg-blue-500', text: 'text-white' }
+  };
   
   return (
-    <div key={i} className={cn(
-      'rounded-lg border overflow-hidden transition-all',
-      acao.prioridade === 'alta' ? 'border-red-500/30 bg-red-900/20' :
-      acao.prioridade === 'media' ? 'border-amber-500/30 bg-amber-900/20' :
-      'border-green-500/30 bg-green-900/20'
-    )}>
-      <button
-        onClick={() => toggleAcao(i)}
-        className="w-full p-3 flex items-start gap-3 text-left hover:bg-white/5"
-      >
-        {/* Badge de prioridade */}
-        <span className={cn(
-          'text-[10px] font-semibold uppercase px-2 py-1 rounded',
-          acao.prioridade === 'alta' ? 'bg-red-500 text-white' :
-          acao.prioridade === 'media' ? 'bg-amber-500 text-black' :
-          'bg-green-500 text-white'
-        )}>
-          {acao.prioridade === 'alta' ? 'Alta' : 
-           acao.prioridade === 'media' ? 'Média' : 'Baixa'}
-        </span>
+    <div className="rounded-xl border-2 border-red-600 bg-[#7F1D1D] overflow-hidden">
+      {/* SLOT: HEADER */}
+      <div className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <AlertTriangle className="w-5 h-5 text-red-300" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-white">
+            ALERTA ATIVO
+          </span>
+          <span className={cn(
+            'ml-auto text-xs font-semibold px-2 py-0.5 rounded',
+            prioridadeConfig[prioridade].bg,
+            prioridadeConfig[prioridade].text
+          )}>
+            {prioridade.toUpperCase()}
+          </span>
+        </div>
         
-        <span className="flex-1 text-sm font-medium text-white">{acao.acao}</span>
-        
-        {temConteudoRico && (
-          <ChevronDown className={cn(
-            'w-4 h-4 text-white/40 transition-transform',
-            isExpanded && 'rotate-180'
-          )} />
-        )}
-      </button>
-      
-      {/* Conteúdo expandido */}
-      {isExpanded && temConteudoRico && (
-        <div className="px-3 pb-3 space-y-3 border-t border-white/10">
-          {/* Objetivo */}
-          {acao.objetivo && (
-            <p className="text-white/80 text-sm pt-3">
-              <strong className="text-white">Objetivo:</strong> {acao.objetivo}
+        {/* Tipo + Nome da Recomendação */}
+        {tipoRecomendacao && (
+          <div className="mb-4 p-3 bg-amber-900/30 rounded-lg border border-amber-500/30">
+            <p className="text-amber-400 text-xs uppercase tracking-wide font-semibold">
+              🎯 {tipoRecomendacao}
             </p>
-          )}
-          
-          {/* Contexto */}
-          {acao.contexto && (
-            <p className="text-white/60 text-sm">
-              <strong className="text-white/80">Contexto:</strong> {acao.contexto}
-            </p>
-          )}
-          
-          {/* SCRIPT EM DESTAQUE */}
-          {acao.script && (
-            <div className="p-3 bg-blue-900/40 rounded-lg border border-blue-500/30">
-              <p className="text-blue-400 text-xs font-semibold mb-1">💬 DIGA:</p>
-              <p className="text-white text-sm leading-relaxed italic">
-                "{acao.script}"
+            {nomeRecomendacao && (
+              <p className="text-white font-medium mt-1">
+                {nomeRecomendacao}
               </p>
+            )}
+          </div>
+        )}
+        
+        {/* SLOT: ELEMENTO DE PONTE */}
+        {elementoPonte && (
+          <div className="mb-4 p-3 bg-purple-900/20 rounded-lg border border-purple-500/20">
+            <p className="text-purple-400 text-xs font-semibold uppercase tracking-wide mb-2">
+              🔗 PONTE
+            </p>
+            <div className="flex items-center gap-2 text-sm flex-wrap">
+              <span className="text-white font-medium">
+                {elementoPonte.forcas}
+              </span>
+              <span className="text-purple-400">→</span>
+              <span className="text-white/80">
+                {elementoPonte.areaDificuldade}
+              </span>
             </div>
-          )}
-          
-          {/* Como escutar */}
-          {acao.comoEscutar && (
-            <p className="text-white/70 text-sm">
-              <span className="text-amber-400">👂</span> {acao.comoEscutar}
+          </div>
+        )}
+        
+        {/* SLOT: PADRÃO DETECTADO */}
+        {padraoIdentificado && (
+          <div className="mb-4 p-3 bg-black/30 rounded-lg border border-white/10">
+            <p className="text-xs font-semibold text-amber-400 uppercase tracking-wide mb-1">
+              📊 Padrão Detectado
             </p>
-          )}
-          
-          {/* Por que funciona */}
-          {acao.porQueFunciona && (
-            <p className="text-green-400/80 text-sm">
-              <span className="text-green-400">✓</span> Por que funciona: {acao.porQueFunciona}
+            <p className="text-white text-sm font-medium">
+              {padraoIdentificado.nome}
             </p>
-          )}
+            <p className="text-white/60 text-xs mt-1">
+              {padraoIdentificado.significado}
+            </p>
+          </div>
+        )}
+        
+        {/* SLOT: JUSTIFICATIVA (Colapsável) */}
+        {porQueEsteTipo && (
+          <div className="mb-4">
+            <button
+              onClick={() => setJustificativaAberta(!justificativaAberta)}
+              className="w-full p-3 bg-black/20 rounded-lg flex items-center justify-between hover:bg-black/30 transition-colors"
+            >
+              <span className="text-white/60 text-xs font-semibold uppercase">
+                💡 Por que este tipo
+              </span>
+              {justificativaAberta ? (
+                <ChevronUp className="w-4 h-4 text-white/40" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-white/40" />
+              )}
+            </button>
+            {justificativaAberta && (
+              <div className="mt-2 p-3 bg-black/10 rounded-lg">
+                <p className="text-white/80 text-sm leading-relaxed">
+                  {porQueEsteTipo}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      
+      {/* SLOT: AÇÃO PRINCIPAL (Sempre aberto) */}
+      {oQueFazerAgora && (
+        <div className="px-4 pb-4">
+          <div className="p-4 bg-black/30 rounded-lg border border-white/20">
+            <h4 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+              📌 O QUE FAZER AGORA
+            </h4>
+            
+            {oQueFazerAgora.objetivo && (
+              <p className="text-white/80 text-sm mb-2">
+                <strong>Objetivo:</strong> {oQueFazerAgora.objetivo}
+              </p>
+            )}
+            
+            {oQueFazerAgora.contexto && (
+              <p className="text-white/60 text-sm mb-3">
+                <strong>Contexto:</strong> {oQueFazerAgora.contexto}
+              </p>
+            )}
+            
+            {/* SCRIPT EM DESTAQUE */}
+            {oQueFazerAgora.scriptPrincipal && (
+              <div className="p-3 bg-blue-900/40 rounded-lg border border-blue-500/30 mb-3">
+                <p className="text-blue-400 text-xs font-semibold mb-1">💬 DIGA:</p>
+                <p className="text-white text-sm leading-relaxed italic">
+                  "{oQueFazerAgora.scriptPrincipal}"
+                </p>
+              </div>
+            )}
+            
+            {oQueFazerAgora.comoEscutar && (
+              <p className="text-white/70 text-sm">
+                <span className="text-amber-400">👂</span> {oQueFazerAgora.comoEscutar}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* SLOT: OPÇÃO A (Colapsável) */}
+      {useAForca?.opcaoA && (
+        <div className="px-4 pb-2">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-900/20 overflow-hidden">
+            <button
+              onClick={() => setOpcaoAAberta(!opcaoAAberta)}
+              className="w-full p-3 flex items-center justify-between hover:bg-white/5"
+            >
+              <span className="text-white text-sm font-medium">
+                🅰️ {useAForca.opcaoA.nome}
+              </span>
+              {opcaoAAberta ? (
+                <ChevronUp className="w-4 h-4 text-white/40" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-white/40" />
+              )}
+            </button>
+            {opcaoAAberta && (
+              <div className="px-3 pb-3 space-y-2 border-t border-white/10">
+                <div className="p-3 bg-blue-900/40 rounded-lg border border-blue-500/30 mt-3">
+                  <p className="text-blue-400 text-xs font-semibold mb-1">💬 SCRIPT:</p>
+                  <p className="text-white text-sm leading-relaxed italic">
+                    "{useAForca.opcaoA.script}"
+                  </p>
+                </div>
+                <p className="text-green-400/80 text-sm">
+                  <span className="text-green-400">✓</span> {useAForca.opcaoA.porQueFunciona}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* SLOT: OPÇÃO B (Colapsável) */}
+      {useAForca?.opcaoB && (
+        <div className="px-4 pb-4">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-900/20 overflow-hidden">
+            <button
+              onClick={() => setOpcaoBAberta(!opcaoBAberta)}
+              className="w-full p-3 flex items-center justify-between hover:bg-white/5"
+            >
+              <span className="text-white text-sm font-medium">
+                🅱️ {useAForca.opcaoB.nome}
+              </span>
+              {opcaoBAberta ? (
+                <ChevronUp className="w-4 h-4 text-white/40" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-white/40" />
+              )}
+            </button>
+            {opcaoBAberta && (
+              <div className="px-3 pb-3 space-y-2 border-t border-white/10">
+                <div className="p-3 bg-blue-900/40 rounded-lg border border-blue-500/30 mt-3">
+                  <p className="text-blue-400 text-xs font-semibold mb-1">💬 SCRIPT:</p>
+                  <p className="text-white text-sm leading-relaxed italic">
+                    "{useAForca.opcaoB.script}"
+                  </p>
+                </div>
+                <p className="text-green-400/80 text-sm">
+                  <span className="text-green-400">✓</span> {useAForca.opcaoB.porQueFunciona}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* SLOT: COMO REAGIR */}
+      {comoReagir && (
+        <div className="px-4 pb-4">
+          <div className="p-3 bg-emerald-900/20 rounded-lg border border-emerald-500/20">
+            <h4 className="text-sm font-semibold mb-3 text-emerald-400">
+              🔄 COMO REAGIR
+            </h4>
+            <div className="space-y-2">
+              <p className="text-sm text-white/90">
+                <span className="text-green-400 mr-2">✅</span>
+                <strong>Se aceitar:</strong> "{comoReagir.seAceitar}"
+              </p>
+              <p className="text-sm text-white/90">
+                <span className="text-red-400 mr-2">❌</span>
+                <strong>Se recusar:</strong> "{comoReagir.seRecusar}"
+              </p>
+              {comoReagir.alerta && (
+                <p className="text-sm text-amber-400 font-semibold mt-2">
+                  ⚠️ {comoReagir.alerta}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* SLOT: O QUE NÃO FAZER */}
+      {oQueNaoFazer && oQueNaoFazer.length > 0 && (
+        <div className="px-4 pb-4">
+          <div className="p-3 bg-red-900/20 rounded-lg border border-red-500/20">
+            <h4 className="text-sm font-semibold mb-2 text-red-400">
+              ⚠️ O QUE NÃO FAZER
+            </h4>
+            <ul className="space-y-1">
+              {oQueNaoFazer.map((item, i) => (
+                <li key={i} className="text-sm text-white/80 flex items-start gap-2">
+                  <span className="text-red-400 flex-shrink-0">✗</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+      
+      {/* SLOT: MENSAGEM PROFESSOR */}
+      {mensagemProfessor && (
+        <div className="px-4 pb-4">
+          <div className="p-3 bg-blue-900/20 rounded-lg border border-blue-500/20">
+            <h4 className="text-sm font-semibold mb-2 text-blue-400">
+              💬 MENSAGEM PARA VOCÊ
+            </h4>
+            <p className="text-sm text-white/90 leading-relaxed italic">
+              "{mensagemProfessor}"
+            </p>
+          </div>
+        </div>
+      )}
+      
+      {/* SLOT: BOTÃO AÇÃO */}
+      {onRegistrarAcao && (
+        <div className="px-4 pb-4">
+          <button
+            onClick={onRegistrarAcao}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 
+                       hover:from-blue-500 hover:to-blue-400 transition-all duration-200
+                       flex items-center justify-center gap-2 shadow-lg border border-blue-400/30"
+          >
+            <Target className="w-4 h-4 text-white" />
+            <span className="text-white font-semibold">Registrar minha ação</span>
+          </button>
         </div>
       )}
     </div>
   );
-})}
-```
-
-**4.3 SEÇÃO COMO REAGIR (após ações, antes de "o que não fazer"):**
-```tsx
-{geradoPorN8N && comoReagir && (
-  <div className="p-3 bg-emerald-900/20 rounded-lg border border-emerald-500/20">
-    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2 text-emerald-400">
-      🔄 Como Reagir
-    </h4>
-    <div className="space-y-2">
-      <p className="text-sm text-white/90">
-        <span className="text-green-400 mr-2">✅</span>
-        <strong>Se aceitar:</strong> "{comoReagir.seAceitar}"
-      </p>
-      <p className="text-sm text-white/90">
-        <span className="text-red-400 mr-2">❌</span>
-        <strong>Se recusar:</strong> "{comoReagir.seRecusar}"
-      </p>
-      {comoReagir.alerta && (
-        <p className="text-sm text-amber-400 font-semibold mt-2">
-          ⚠️ {comoReagir.alerta}
-        </p>
-      )}
-    </div>
-  </div>
-)}
+}
 ```
 
 ---
 
-## 5. Atualizar Passagem de Props
+## 5. Atualizar Hook para Extrair Dados
+
+### Arquivo: `src/hooks/usePerfilAluno.ts`
+
+**Adicionar campos à interface AlertaAtivo:**
+
+```typescript
+interface AlertaAtivo {
+  // ... campos existentes ...
+  
+  // Campos N8N completos
+  tipoRecomendacao?: string;
+  nomeRecomendacao?: string;
+  porQueEsteTipo?: string;
+  oQueFazerAgora?: {
+    objetivo: string;
+    contexto: string;
+    scriptPrincipal: string;
+    comoEscutar: string;
+  };
+  useAForca?: {
+    forcasUtilizadas: string;
+    opcaoA?: { nome: string; script: string; porQueFunciona: string };
+    opcaoB?: { nome: string; script: string; porQueFunciona: string };
+  };
+}
+```
+
+**Extrair dados do dados_contexto (após linha 680):**
+
+```typescript
+// Novos campos estruturados do N8N
+tipoRecomendacao: (dadosContexto?.tipo_recomendacao as string) || undefined,
+nomeRecomendacao: (dadosContexto?.nome_recomendacao as string) || undefined,
+porQueEsteTipo: (dadosContexto?.por_que_este_tipo as string) || undefined,
+oQueFazerAgora: dadosContexto?.o_que_fazer_agora ? {
+  objetivo: (dadosContexto.o_que_fazer_agora as any).objetivo,
+  contexto: (dadosContexto.o_que_fazer_agora as any).contexto,
+  scriptPrincipal: (dadosContexto.o_que_fazer_agora as any).script_principal,
+  comoEscutar: (dadosContexto.o_que_fazer_agora as any).como_escutar
+} : undefined,
+useAForca: dadosContexto?.use_a_forca ? {
+  forcasUtilizadas: (dadosContexto.use_a_forca as any).forcas_utilizadas,
+  opcaoA: (dadosContexto.use_a_forca as any).opcao_a ? {
+    nome: (dadosContexto.use_a_forca as any).opcao_a.nome,
+    script: (dadosContexto.use_a_forca as any).opcao_a.script,
+    porQueFunciona: (dadosContexto.use_a_forca as any).opcao_a.por_que_funciona
+  } : undefined,
+  opcaoB: (dadosContexto.use_a_forca as any).opcao_b ? {
+    nome: (dadosContexto.use_a_forca as any).opcao_b.nome,
+    script: (dadosContexto.use_a_forca as any).opcao_b.script,
+    porQueFunciona: (dadosContexto.use_a_forca as any).opcao_b.por_que_funciona
+  } : undefined
+} : undefined,
+```
+
+---
+
+## 6. Integrar na Página
 
 ### Arquivo: `src/pages/professor/PerfilAlunoPage.tsx`
 
-**Adicionar novas props ao FeedbackEstadoCard (linha ~339):**
+**Lógica de renderização:**
+
 ```tsx
-<FeedbackEstadoCard
-  // ... props existentes ...
-  comoReagir={aluno.alertaAtivo?.comoReagir}
-  elementoPonte={aluno.alertaAtivo?.elementoPonte}
-/>
+import { SugestaoN8NCard } from '@/components/professor/SugestaoN8NCard';
+
+// Na renderização:
+{aluno.alertaAtivo && aluno.alertaAtivo.geradoPorN8N && aluno.alertaAtivo.tipoRecomendacao ? (
+  // NOVO COMPONENTE com mapeamento direto
+  <SugestaoN8NCard
+    tipoRecomendacao={aluno.alertaAtivo.tipoRecomendacao}
+    nomeRecomendacao={aluno.alertaAtivo.nomeRecomendacao || ''}
+    prioridade={(aluno.alertaAtivo.prioridade as any) || 'normal'}
+    elementoPonte={aluno.alertaAtivo.elementoPonte ? {
+      forcas: Array.isArray(aluno.alertaAtivo.elementoPonte.forcas) 
+        ? aluno.alertaAtivo.elementoPonte.forcas.join(', ')
+        : aluno.alertaAtivo.elementoPonte.forcas,
+      areaDificuldade: aluno.alertaAtivo.elementoPonte.areaDificuldade
+    } : { forcas: '', areaDificuldade: '' }}
+    padraoIdentificado={aluno.alertaAtivo.padrao || { nome: '', significado: '' }}
+    porQueEsteTipo={aluno.alertaAtivo.porQueEsteTipo || ''}
+    oQueFazerAgora={aluno.alertaAtivo.oQueFazerAgora || {
+      objetivo: '',
+      contexto: '',
+      scriptPrincipal: '',
+      comoEscutar: ''
+    }}
+    useAForca={aluno.alertaAtivo.useAForca || {
+      forcasUtilizadas: '',
+      opcaoA: { nome: '', script: '', porQueFunciona: '' },
+      opcaoB: { nome: '', script: '', porQueFunciona: '' }
+    }}
+    comoReagir={aluno.alertaAtivo.comoReagir || {
+      seAceitar: '',
+      seRecusar: '',
+      alerta: ''
+    }}
+    oQueNaoFazer={aluno.alertaAtivo.oQueNaoFazer || []}
+    mensagemProfessor={aluno.alertaAtivo.mensagemProfessor || ''}
+    onRegistrarAcao={() => setShowRegistrarAcao(true)}
+  />
+) : aluno.alertaAtivo ? (
+  // COMPONENTE ANTIGO para alertas não-N8N
+  <FeedbackEstadoCard ... />
+) : null}
 ```
 
-### Arquivo: `src/pages/professor/PerfilAlunoPageSimplificado.tsx`
+---
 
-**Mesma atualização (paridade).**
+## 7. Arquivos a Criar/Modificar
+
+| Arquivo | Ação | Descrição |
+|---------|------|-----------|
+| `src/types/sugestaoN8N.ts` | **Criar** | Interface TypeScript fixa |
+| `src/components/professor/SugestaoN8NCard.tsx` | **Criar** | Novo componente com slots fixos |
+| `src/hooks/usePerfilAluno.ts` | **Modificar** | Corrigir erro + extrair campos |
+| `supabase/functions/receber-sugestao-n8n/index.ts` | **Modificar** | Aceitar novos campos |
+| `src/pages/professor/PerfilAlunoPage.tsx` | **Modificar** | Renderizar novo componente |
+| `src/pages/professor/PerfilAlunoPageSimplificado.tsx` | **Modificar** | Paridade |
 
 ---
 
-## 6. Estado Inicial dos Colapsáveis
+## 8. Regras de Mapeamento
 
-**Primeira ação aberta por padrão:**
-```typescript
-const [acoesExpandidas, setAcoesExpandidas] = useState<Record<number, boolean>>({
-  0: true // Primeira ação (O QUE FAZER AGORA) aberta
-});
-```
+| Campo N8N | Campo Props | Slot |
+|-----------|-------------|------|
+| `tipo_recomendacao` | `tipoRecomendacao` | HEADER |
+| `nome_recomendacao` | `nomeRecomendacao` | HEADER |
+| `prioridade` | `prioridade` | HEADER Badge |
+| `elemento_ponte.forcas` | `elementoPonte.forcas` | PONTE |
+| `elemento_ponte.area_dificuldade` | `elementoPonte.areaDificuldade` | PONTE |
+| `padrao_identificado.nome` | `padraoIdentificado.nome` | PADRÃO |
+| `por_que_este_tipo` | `porQueEsteTipo` | JUSTIFICATIVA |
+| `o_que_fazer_agora.objetivo` | `oQueFazerAgora.objetivo` | AÇÃO PRINCIPAL |
+| `o_que_fazer_agora.script_principal` | `oQueFazerAgora.scriptPrincipal` | AÇÃO PRINCIPAL (DIGA) |
+| `use_a_forca.opcao_a.script` | `useAForca.opcaoA.script` | OPÇÃO A (SCRIPT) |
+| `use_a_forca.opcao_b.script` | `useAForca.opcaoB.script` | OPÇÃO B (SCRIPT) |
+| `como_reagir.se_aceitar` | `comoReagir.seAceitar` | COMO REAGIR |
+| `como_reagir.alerta` | `comoReagir.alerta` | COMO REAGIR (⚠️) |
+| `o_que_nao_fazer[]` | `oQueNaoFazer[]` | O QUE NÃO FAZER |
+| `mensagem_professor` | `mensagemProfessor` | MENSAGEM |
 
 ---
 
-## 7. Arquivos a Modificar
+## 9. Comportamento dos Slots
 
-| Arquivo | Alterações |
-|---------|------------|
-| `supabase/functions/receber-sugestao-n8n/index.ts` | Aceitar `como_reagir`, `elemento_ponte` |
-| `src/hooks/usePerfilAluno.ts` | Expandir interfaces + extração |
-| `src/components/professor/FeedbackEstadoCard.tsx` | Props + renderização expandida |
-| `src/pages/professor/PerfilAlunoPage.tsx` | Passar novas props |
-| `src/pages/professor/PerfilAlunoPageSimplificado.tsx` | Paridade |
+| Slot | Dados Existem | Dados Ausentes |
+|------|---------------|----------------|
+| HEADER | ✅ Renderiza | ✅ Renderiza título "ALERTA ATIVO" |
+| ELEMENTO DE PONTE | ✅ Renderiza | ❌ Não renderiza |
+| PADRÃO | ✅ Renderiza | ❌ Não renderiza |
+| JUSTIFICATIVA | ✅ Colapsável | ❌ Não renderiza |
+| AÇÃO PRINCIPAL | ✅ Sempre aberto | ❌ Não renderiza |
+| OPÇÃO A | ✅ Colapsável | ❌ Não renderiza |
+| OPÇÃO B | ✅ Colapsável | ❌ Não renderiza |
+| COMO REAGIR | ✅ Renderiza | ❌ Não renderiza |
+| O QUE NÃO FAZER | ✅ Renderiza lista | ❌ Não renderiza |
+| MENSAGEM | ✅ Renderiza | ❌ Não renderiza |
+| BOTÃO AÇÃO | ✅ Renderiza | ✅ Renderiza |
 
 ---
 
-## 8. Ordem de Implementação
+## 10. Ordem de Implementação
 
-1. **Edge Function** - Aceitar novos campos
-2. **Hook** - Expandir interfaces e extração
-3. **Componente** - Props e estado de colapsáveis
-4. **Componente** - Renderização ELEMENTO DE PONTE
-5. **Componente** - Cards de ação expansíveis com scripts
-6. **Componente** - Seção COMO REAGIR
-7. **Pages** - Passar novas props
+1. **Corrigir build** - Remover `}` extra no hook (linha 539)
+2. **Criar interface** - `src/types/sugestaoN8N.ts`
+3. **Criar componente** - `SugestaoN8NCard.tsx`
+4. **Atualizar Edge Function** - Aceitar campos novos
+5. **Atualizar Hook** - Extrair campos novos
+6. **Atualizar Pages** - Renderizar novo componente
+7. **Testar** - Enviar payload de teste do N8N
 8. **Deploy** - Edge function
-
----
-
-## 9. Comportamento dos Colapsáveis
-
-| Ação | Comportamento |
-|------|---------------|
-| Primeira ação (📌) | Aberta por padrão |
-| Demais ações | Fechadas por padrão |
-| Clique | Toggle individual |
-| Múltiplas abertas | Permitido |
-
----
-
-## Detalhes Técnicos
-
-### Destaque do Script
-O script terá fundo azul (`bg-blue-900/40`) com borda (`border-blue-500/30`) para destacar visualmente a frase exata que o professor deve dizer.
-
-### Responsividade
-Todo o layout usa Tailwind e funcionará em mobile e desktop.
-
-### Fallback
-Se o N8N não enviar `como_reagir` ou `elemento_ponte`, as seções simplesmente não aparecem (graceful degradation).
