@@ -8,7 +8,8 @@ import {
   Trash2, 
   Loader2,
   Save,
-  AlertTriangle
+  AlertTriangle,
+  RotateCcw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import AdminAvatarUpload from '@/components/admin/AdminAvatarUpload';
@@ -39,6 +40,8 @@ const PerfilAlunoAdminPage = () => {
   const [hasChanges, setHasChanges] = useState(false);
   const [showConfirmReset, setShowConfirmReset] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [showConfirmResetDados, setShowConfirmResetDados] = useState(false);
+  const [confirmacaoNome, setConfirmacaoNome] = useState('');
 
   // Buscar dados do aluno
   const { data: aluno, isLoading } = useQuery({
@@ -231,6 +234,39 @@ const PerfilAlunoAdminPage = () => {
     },
     onError: (error) => {
       toast.error('Erro ao excluir: ' + error.message);
+    }
+  });
+
+  // Resetar dados do aluno (zera observações, alertas, scores)
+  const resetarDadosMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Não autenticado');
+
+      const { data, error } = await supabase.functions.invoke('reset-aluno-dados', {
+        body: { 
+          alunoId: id,
+          confirmacaoNome: confirmacaoNome.trim()
+        }
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      const { resumo } = data;
+      toast.success(
+        `Aluno resetado! ${resumo.observacoes} obs, ${resumo.alertas} alertas, ${resumo.scores_resetados} scores.`,
+        { duration: 5000 }
+      );
+      setShowConfirmResetDados(false);
+      setConfirmacaoNome('');
+      queryClient.invalidateQueries({ queryKey: ['admin-aluno-perfil', id] });
+      queryClient.invalidateQueries({ queryKey: ['admin-aluno-scores', id] });
+    },
+    onError: (error) => {
+      toast.error('Erro ao resetar: ' + error.message);
     }
   });
 
@@ -453,6 +489,19 @@ const PerfilAlunoAdminPage = () => {
             </button>
 
             <button
+              onClick={() => setShowConfirmResetDados(true)}
+              className="w-full p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl text-left hover:bg-orange-500/20 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <RotateCcw className="w-5 h-5 text-orange-500" />
+                <div>
+                  <p className="text-orange-400 font-medium">Resetar Dados</p>
+                  <p className="text-orange-400/60 text-sm">Zera observações, alertas e scores</p>
+                </div>
+              </div>
+            </button>
+
+            <button
               onClick={() => setShowConfirmDelete(true)}
               className="w-full p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-left hover:bg-red-500/20 transition-colors"
             >
@@ -553,6 +602,86 @@ const PerfilAlunoAdminPage = () => {
                 className="flex-1 p-3 bg-red-500 text-white font-medium rounded-xl"
               >
                 {excluirMutation.isPending ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmar Reset de Dados */}
+      {showConfirmResetDados && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-[#1A1A1A] rounded-2xl p-6 w-full max-w-md">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
+                <RotateCcw className="w-6 h-6 text-orange-500" />
+              </div>
+              <h3 className="text-white text-lg font-medium">Resetar Aluno</h3>
+            </div>
+            
+            <p className="text-white/60 text-sm mb-4">
+              Você está prestes a resetar:
+            </p>
+            
+            <p className="text-white font-semibold text-lg mb-4 text-center bg-white/5 p-3 rounded-lg">
+              {aluno.full_name || `${aluno.nome} ${aluno.sobrenome}`}
+            </p>
+            
+            <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3 mb-4">
+              <p className="text-orange-400 text-sm font-medium mb-2">
+                Isso irá DELETAR permanentemente:
+              </p>
+              <ul className="text-orange-400/80 text-sm space-y-1">
+                <li>• Todas as observações</li>
+                <li>• Todos os alertas/sugestões da IA</li>
+                <li>• Todas as ações registradas</li>
+                <li>• Todas as evidências de inteligência</li>
+                <li>• Histórico de scores</li>
+              </ul>
+              <p className="text-orange-400/80 text-sm mt-2">
+                Os scores serão resetados para 35 (inicial).
+              </p>
+            </div>
+            
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4">
+              <p className="text-red-400 text-sm flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                Esta ação NÃO pode ser desfeita!
+              </p>
+            </div>
+            
+            <div className="mb-4">
+              <label className="text-white/60 text-sm mb-2 block">
+                Para confirmar, digite o nome do aluno:
+              </label>
+              <input
+                type="text"
+                value={confirmacaoNome}
+                onChange={(e) => setConfirmacaoNome(e.target.value)}
+                placeholder={aluno.full_name || `${aluno.nome} ${aluno.sobrenome}`}
+                className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/30"
+              />
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowConfirmResetDados(false);
+                  setConfirmacaoNome('');
+                }}
+                className="flex-1 p-3 bg-white/10 text-white rounded-xl"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => resetarDadosMutation.mutate()}
+                disabled={
+                  resetarDadosMutation.isPending || 
+                  confirmacaoNome.toLowerCase().trim() !== (aluno.full_name || `${aluno.nome} ${aluno.sobrenome}`).toLowerCase().trim()
+                }
+                className="flex-1 p-3 bg-orange-500 text-white font-medium rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {resetarDadosMutation.isPending ? 'Resetando...' : 'Confirmar Reset'}
               </button>
             </div>
           </div>

@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.receber-sugestao-n8n]
 verify_jwt = false
+
+[functions.reset-aluno-dados]
+verify_jwt = false
