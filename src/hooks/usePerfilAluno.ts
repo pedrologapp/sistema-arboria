@@ -439,12 +439,13 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
       let alertaAtivo: AlertaAtivo | null = null;
       
       if (aluno.institution_id) {
+        // FILTRAR APENAS ALERTAS DO N8N (ignora IA interna)
         const { data: alertaData } = await supabase
           .from('alertas_alunos')
           .select('*')
           .eq('aluno_id', alunoId)
           .eq('institution_id', aluno.institution_id)
-          .in('tipo_alerta', ['precisa_atencao', 'celebrar', 'brilhando', 'melhorando', 'atencao_recente', 'bom_comeco', 'fique_de_olho'])
+          .eq('motivo', 'analise_n8n')
           .in('status', ['ativo', 'visualizado', 'em_acompanhamento'])
           .order('created_at', { ascending: false })
           .limit(1)
