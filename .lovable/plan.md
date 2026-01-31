@@ -1,261 +1,227 @@
 
 
-# Plano: Ajustar Edge Function para Receber Sugestão do N8N
+# Plano: Ajustar SugestaoN8NCard com Cores por Estado
 
-## Análise da Situação Atual
+## Diagnóstico
 
-### O que existe na tabela `alertas_alunos`:
-| Coluna | Tipo | Descrição |
-|--------|------|-----------|
-| `id` | uuid | PK |
-| `institution_id` | uuid | FK instituição |
-| `aluno_id` | uuid | FK aluno |
-| `tipo_alerta` | ENUM | precisa_atencao, celebrar, nao_esquecer, fase_anterior, aguardando_explicacao, etc. |
-| `motivo` | text | Origem: 'analise_n8n', 'analise_ia', 'ultimas_2_atencao' |
-| `status` | ENUM | ativo, visualizado, em_acompanhamento, resolvido, arquivado |
-| `fase_id` | uuid | Fase atual |
-| `fase_origem_id` | uuid | Fase de origem (para alertas de fase anterior) |
-| `dados_contexto` | jsonb | Conteúdo rico da sugestão |
-| `notificacao_ativa` | boolean | Badge visível |
+O componente `SugestaoN8NCard` **existe e está recebendo todos os dados corretamente**. Porém, ele foi criado apenas para alertas de atenção (vermelho) e **não distingue celebrações** (dourado).
 
-### Colunas que NÃO existem mas estão na especificação:
-- `turma_id` ❌ (será armazenada em dados_contexto)
-- `prioridade` ❌ (será armazenada em dados_contexto)
-
----
-
-## Mapeamento: tipo_alerta → Dashboard
-
-| `tipo_alerta` (N8N envia) | Hook filtra | Card no Dashboard |
-|---------------------------|-------------|-------------------|
-| `precisa_atencao` | linha 332 | 🔴 **Precisam de você** |
-| `celebrar` | linha 333 | ✨ **Celebre** |
-| `aguardando_explicacao` | linha 337-347 | 💬 **Precisa de justificativa** |
-| `fase_anterior` | linha 284-287 | 🕐 **Fase Anterior** |
-| `nao_esquecer` | dinâmico (14+ dias) | ⏰ **Não esqueça** |
-
----
-
-## Problema Identificado
-
-A Edge Function atual usa `payload.estado` para definir `tipo_alerta`:
-
-```typescript
-// Linha 278 da edge function atual
-tipo_alerta: payload.estado,  // ← PROBLEMA: "estado" não é igual a "tipo_alerta"
-```
-
-A especificação pede que o N8N envie `tipo_alerta` diretamente.
-
----
-
-## Solução
-
-### 1. Atualizar Interface da Edge Function
-
-Adicionar campo `tipo_alerta` explícito (usado para determinar onde aparece) enquanto `estado` continua sendo salvo em `dados_contexto`:
-
-```typescript
-interface SugestaoPayload {
-  // CAMPOS CRÍTICOS (determinam onde aparece)
-  tipo_alerta?: 'precisa_atencao' | 'celebrar' | 'aguardando_explicacao';
-  
-  // CAMPOS EXISTENTES
-  aluno_id?: string;
-  aluno_matricula?: string;
-  estado: 'precisa_atencao' | 'celebrar' | 'neutro' | 'aguardando_explicacao';
-  
-  // CAMPOS OPCIONAIS PARA FASE ANTERIOR
-  fase_id?: string | null;
-  fase_origem_id?: string | null;  // Se diferente de fase_id = vai para "Fase Anterior"
-  turma_id?: string | null;
-  
-  // ... demais campos
+### Dados no Banco (Adryan)
+```json
+{
+  "tipo_alerta": "celebrar",
+  "dados_contexto": {
+    "estado": "celebrar",
+    "tipo_recomendacao": "RECONHECIMENTO PRIVADO",
+    "nome_recomendacao": "Celebração da Liderança Linguística",
+    "o_que_fazer_agora": {
+      "objetivo": "Reforçar a confiança...",
+      "script_principal": "Adryan Samuel, percebi algo especial..."
+    },
+    "use_a_forca": { "opcao_a": {...}, "opcao_b": {...} },
+    "o_que_nao_fazer": ["Não fazer perguntas invasivas...", ...],
+    "mensagem_professor": "Momento delicado de reconhecimento..."
+  }
 }
 ```
 
-### 2. Lógica de Mapeamento
+### Problemas Atuais
+
+1. **Falta prop `estado`** na interface do componente
+2. **Cores sempre vermelhas** (linha 54 do componente: `bg-[#7F1D1D]`, `border-red-600`)
+3. **Header sempre diz "ALERTA ATIVO"** com ícone de alerta
+4. **Seção "O que não fazer" sempre aberta** (deveria ser colapsável)
+
+---
+
+## Alterações Necessárias
+
+### Arquivo 1: `src/types/sugestaoN8N.ts`
+
+Adicionar prop `estado` na interface:
 
 ```typescript
-// Determinar tipo_alerta (prioridade: campo explícito > estado)
-const tipoAlertaFinal = payload.tipo_alerta || payload.estado;
-
-// Validar que é um valor aceito
-const tiposValidos = ['precisa_atencao', 'celebrar', 'aguardando_explicacao'];
-if (!tiposValidos.includes(tipoAlertaFinal)) {
-  return new Response({ error: 'tipo_alerta inválido' });
+export interface SugestaoN8NCardProps {
+  // Estado (determina cor do card)
+  estado?: 'celebrar' | 'precisa_atencao' | 'aguardando_explicacao';
+  
+  // ... resto das props existentes
 }
 ```
 
-### 3. Salvar campos que não existem na tabela dentro de `dados_contexto`
+---
+
+### Arquivo 2: `src/components/professor/SugestaoN8NCard.tsx`
+
+#### A) Aceitar prop `estado` e definir cores dinâmicas
 
 ```typescript
-const dadosContexto = {
-  // ... campos existentes ...
-  turma_id: payload.turma_id || null,
-  prioridade: payload.prioridade || 'normal',
-  professor_id: payload.professor_id || null,
-};
+export function SugestaoN8NCard({
+  estado = 'precisa_atencao',  // ← NOVA PROP
+  tipoRecomendacao,
+  // ...resto
+}: SugestaoN8NCardProps) {
+
+  // Cores baseadas no estado
+  const corConfig = {
+    celebrar: {
+      bg: 'bg-gradient-to-br from-yellow-900/40 to-amber-900/30',
+      border: 'border-yellow-500/50',
+      headerBg: 'bg-yellow-500/20',
+      headerText: 'text-yellow-400',
+      headerLabel: 'CELEBRE!',
+      icon: Sparkles  // ícone de celebração
+    },
+    precisa_atencao: {
+      bg: 'bg-[#7F1D1D]',
+      border: 'border-red-600',
+      headerBg: 'bg-red-500/20',
+      headerText: 'text-red-300',
+      headerLabel: 'ALERTA ATIVO',
+      icon: AlertTriangle
+    },
+    aguardando_explicacao: {
+      bg: 'bg-gradient-to-br from-amber-900/40 to-orange-900/30',
+      border: 'border-amber-500/50',
+      headerBg: 'bg-amber-500/20',
+      headerText: 'text-amber-400',
+      headerLabel: 'JUSTIFIQUE',
+      icon: MessageCircleQuestion
+    }
+  };
+
+  const cor = corConfig[estado] || corConfig.precisa_atencao;
+  const IconeHeader = cor.icon;
 ```
 
-### 4. Lógica especial para "Fase Anterior"
-
-Se o N8N enviar `fase_origem_id` diferente da `fase_id` atual, o hook já vai reconhecer como alerta de fase anterior (linhas 284-287 do hook):
+#### B) Aplicar cores dinâmicas no container
 
 ```typescript
-const alertasFaseAnteriorRaw = alertasFiltrados.filter(a => 
-  a.tipo_alerta === 'fase_anterior' ||
-  (a.fase_origem_id && a.fase_origem_id !== faseAtual?.id)
-);
+// Antes (linha 54):
+<div className="rounded-xl border-2 border-red-600 bg-[#7F1D1D] overflow-hidden">
+
+// Depois:
+<div className={cn(
+  "rounded-xl border-2 overflow-hidden",
+  cor.border,
+  cor.bg
+)}>
+```
+
+#### C) Ajustar header dinâmico
+
+```typescript
+// Antes (linhas 57-68):
+<AlertTriangle className="w-5 h-5 text-red-300" />
+<span className="text-xs font-semibold uppercase tracking-wider text-white">
+  ALERTA ATIVO
+</span>
+
+// Depois:
+<IconeHeader className={cn("w-5 h-5", cor.headerText)} />
+<span className={cn("text-xs font-semibold uppercase tracking-wider", cor.headerText)}>
+  {cor.headerLabel}
+</span>
+```
+
+#### D) Tornar "O que não fazer" colapsável
+
+```typescript
+// Adicionar estado
+const [oQueNaoFazerAberto, setOQueNaoFazerAberto] = useState(false);
+
+// Substituir seção (linhas 293-309):
+{temOQueNaoFazer && (
+  <div className="px-4 pb-4">
+    <div className="rounded-lg border border-red-500/20 bg-red-900/20 overflow-hidden">
+      <button
+        onClick={() => setOQueNaoFazerAberto(!oQueNaoFazerAberto)}
+        className="w-full p-3 flex items-center justify-between hover:bg-white/5"
+      >
+        <span className="text-red-400 text-sm font-semibold">
+          O QUE NAO FAZER
+        </span>
+        {oQueNaoFazerAberto ? (
+          <ChevronUp className="w-4 h-4 text-white/40" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-white/40" />
+        )}
+      </button>
+      {oQueNaoFazerAberto && (
+        <ul className="px-3 pb-3 space-y-1 border-t border-white/10 pt-2">
+          {oQueNaoFazer!.map((item, i) => (
+            <li key={i} className="text-sm text-white/80 flex items-start gap-2">
+              <span className="text-red-400 flex-shrink-0">x</span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </div>
+)}
+```
+
+---
+
+### Arquivo 3: `src/pages/professor/PerfilAlunoPage.tsx`
+
+Passar a prop `estado` para o componente:
+
+```typescript
+// Linha 329-350 - Adicionar estado
+<SugestaoN8NCard
+  estado={aluno.alertaAtivo.tipo as 'celebrar' | 'precisa_atencao' | 'aguardando_explicacao'}
+  tipoRecomendacao={aluno.alertaAtivo.tipoRecomendacao}
+  // ...resto das props
+/>
+```
+
+---
+
+### Arquivo 4: `src/pages/professor/PerfilAlunoPageSimplificado.tsx`
+
+Mesma alteração (paridade).
+
+---
+
+## Resultado Visual Esperado
+
+### Celebrar (Dourado)
+```text
++-----------------------------------------------------+
+|  Sparkles  CELEBRE!                     [MEDIA]     |
++-----------------------------------------------------+
+|  [Tipo + Nome da Recomendacao - fundo amarelo]      |
+|  [Elemento de Ponte]                                |
+|  [Padrao Detectado]                                 |
+|  [O QUE FAZER AGORA - sempre aberto]                |
+|  [Opcao A] [v]                                      |
+|  [Opcao B] [v]                                      |
+|  [COMO REAGIR]                                      |
+|  [O QUE NAO FAZER] [v] <- colapsavel                |
+|  [MENSAGEM PARA VOCE]                               |
+|  [Registrar minha acao]                             |
++-----------------------------------------------------+
+```
+
+### Precisa Atencao (Vermelho)
+```text
++-----------------------------------------------------+
+|  AlertTriangle  ALERTA ATIVO            [URGENTE]   |
++-----------------------------------------------------+
+|  [Mesmo layout, cores vermelhas]                    |
++-----------------------------------------------------+
 ```
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Alteração |
+| Arquivo | Alteracao |
 |---------|-----------|
-| `supabase/functions/receber-sugestao-n8n/index.ts` | Aceitar `tipo_alerta`, `fase_origem_id`, `turma_id` |
-
----
-
-## Código da Edge Function Atualizada
-
-```typescript
-interface SugestaoPayload {
-  // === IDENTIFICAÇÃO ===
-  aluno_id?: string;
-  aluno_matricula?: string;
-  
-  // === CAMPOS CRÍTICOS PARA ALERTAS ===
-  tipo_alerta?: 'precisa_atencao' | 'celebrar' | 'aguardando_explicacao';
-  estado: 'precisa_atencao' | 'celebrar' | 'neutro' | 'aguardando_explicacao';
-  prioridade?: 'alta' | 'media' | 'baixa';
-  
-  // === CAMPOS DE FASE ===
-  fase_id?: string | null;
-  fase_origem_id?: string | null;
-  turma_id?: string | null;
-  
-  // === DEMAIS CAMPOS ===
-  // ... (mantém os existentes)
-}
-
-// No insert:
-const tipoAlertaFinal = payload.tipo_alerta || payload.estado;
-
-// Se estado é 'neutro', não criar alerta
-if (tipoAlertaFinal === 'neutro') {
-  return new Response({
-    success: true,
-    message: 'Estado neutro: nenhum alerta criado'
-  });
-}
-
-const { data: novoAlerta } = await supabase
-  .from("alertas_alunos")
-  .insert({
-    institution_id: aluno.institution_id,
-    aluno_id: aluno.id,
-    tipo_alerta: tipoAlertaFinal,           // ← CAMPO CRÍTICO
-    motivo: "analise_n8n",                   // ← IDENTIFICA ORIGEM
-    status: "ativo",                          // ← SEMPRE ATIVO
-    notificacao_ativa: true,                  // ← MOSTRA BADGE
-    fase_id: payload.fase_id || faseAtualId,  // ← FASE ATUAL
-    fase_origem_id: payload.fase_origem_id || null,  // ← PARA FASE ANTERIOR
-    dados_contexto: {
-      ...dadosContexto,
-      turma_id: payload.turma_id,
-      prioridade: payload.prioridade || 'normal',
-    },
-  })
-```
-
----
-
-## Resultado Esperado
-
-| N8N envia... | Aparece em... |
-|--------------|---------------|
-| `tipo_alerta: 'precisa_atencao'` | 🔴 Precisam de você |
-| `tipo_alerta: 'celebrar'` | ✨ Celebre |
-| `tipo_alerta: 'aguardando_explicacao'` | 💬 Precisa de justificativa |
-| `fase_origem_id: '<UUID diferente>'` | 🕐 Fase Anterior |
-| `estado: 'neutro'` | (não cria alerta) |
-
----
-
-## Exemplo de Payload Completo do N8N
-
-```json
-{
-  "aluno_matricula": "2024001234",
-  "tipo_alerta": "precisa_atencao",
-  "estado": "precisa_atencao",
-  "prioridade": "alta",
-  "fase_id": "uuid-fase-atual",
-  "fase_origem_id": null,
-  "turma_id": "uuid-turma",
-  
-  "tipo_recomendacao": "INVESTIGAÇÃO GENTIL",
-  "nome_recomendacao": "Resgate da Confiança",
-  "texto_acontecendo": "Adryan apresentou sinais de atenção consecutivos",
-  "por_que_este_tipo": "Os sinais indicam possível bloqueio...",
-  
-  "elemento_ponte": {
-    "forcas": "Linguística",
-    "area_dificuldade": "comunicação"
-  },
-  
-  "o_que_fazer_agora": {
-    "objetivo": "Reconectar com ambiente",
-    "contexto": "Momento privado",
-    "script_principal": "Adryan, quero te ouvir...",
-    "como_escutar": "ESCUTE SEM JULGAR"
-  },
-  
-  "use_a_forca": {
-    "forcas_utilizadas": "Linguística",
-    "opcao_a": {
-      "nome": "Escrita Livre",
-      "script": "Escreve algo que só você vai ler",
-      "por_que_funciona": "Permite expressão sem pressão"
-    },
-    "opcao_b": {
-      "nome": "Registro Privado",
-      "script": "Quer fazer um registro secreto?",
-      "por_que_funciona": "Oferece controle e espaço"
-    }
-  },
-  
-  "como_reagir": {
-    "se_aceitar": "Valeu por compartilhar",
-    "se_recusar": "Tudo bem. Quando quiser, me avisa",
-    "alerta": "NÃO INSISTA"
-  },
-  
-  "o_que_nao_fazer": [
-    "Não perguntar 'o que aconteceu?'",
-    "Não demonstrar ansiedade",
-    "Não comparar com antes",
-    "Não forçar explicações",
-    "Não fazer perguntas que sugiram problema"
-  ],
-  
-  "mensagem_professor": "Adryan precisa de espaço e acolhimento",
-  
-  "padrao_identificado": {
-    "nome": "Sinais de Atenção Consecutivos",
-    "significado": "Apresentou 'Estava pesado' e 'Conflitou'"
-  }
-}
-```
-
----
-
-## Ordem de Implementação
-
-1. **Atualizar Edge Function** - Aceitar `tipo_alerta` explícito
-2. **Testar via curl** - Enviar payload de teste
-3. **Verificar dashboard** - Confirmar que alerta aparece no card correto
+| `src/types/sugestaoN8N.ts` | Adicionar prop `estado` |
+| `src/components/professor/SugestaoN8NCard.tsx` | Cores dinamicas + colapsavel |
+| `src/pages/professor/PerfilAlunoPage.tsx` | Passar prop `estado` |
+| `src/pages/professor/PerfilAlunoPageSimplificado.tsx` | Paridade |
 
