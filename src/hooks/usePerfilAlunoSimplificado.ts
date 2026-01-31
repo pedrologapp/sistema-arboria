@@ -304,8 +304,8 @@ export const usePerfilAlunoSimplificado = (alunoId: string | undefined) => {
             }
           }
           
-          // Verificar se veio do N8N
-          const geradoPorN8N = dadosContexto?.gerado_por === 'n8n';
+          // Verificar se veio do N8N (pelo campo gerado_por OU pelo motivo analise_n8n)
+          const geradoPorN8N = dadosContexto?.gerado_por === 'n8n' || alertaData.motivo === 'analise_n8n';
           
           // Buscar ações sugeridas
           let acoesSugeridas: AcaoSugerida[] = [];
