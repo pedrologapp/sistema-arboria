@@ -2842,6 +2842,7 @@ export type Database = {
           institution_id: string
           nome: string
           sala: string | null
+          segmento: string | null
           serie: number
           turma_letra: string
           turno: string | null
@@ -2856,6 +2857,7 @@ export type Database = {
           institution_id: string
           nome: string
           sala?: string | null
+          segmento?: string | null
           serie: number
           turma_letra: string
           turno?: string | null
@@ -2870,6 +2872,7 @@ export type Database = {
           institution_id?: string
           nome?: string
           sala?: string | null
+          segmento?: string | null
           serie?: number
           turma_letra?: string
           turno?: string | null
