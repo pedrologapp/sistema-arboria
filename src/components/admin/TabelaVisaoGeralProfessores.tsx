@@ -29,10 +29,10 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
   const { data: turmasData, isLoading: loadingTurmas } = useQuery({
     queryKey: ['quadro-turmas-professores', institutionId],
     queryFn: async () => {
-      // Buscar turmas
+      // Buscar turmas com segmento
       const { data: turmas, error: turmasError } = await supabase
         .from('turmas')
-        .select('id, nome, serie, turma_letra')
+        .select('id, nome, serie, turma_letra, segmento')
         .eq('institution_id', institutionId)
         .order('serie')
         .order('turma_letra');
@@ -120,11 +120,10 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
     enabled: !!institutionId && segmentoVisao === 'fundamental2'
   });
 
-  // Filtrar turmas pelo segmento selecionado
-  const turmasFiltradas = turmasData?.filter(turma => {
-    const series = SERIES_POR_SEGMENTO[segmentoVisao];
-    return series.includes(turma.serie);
-  }) || [];
+  // Filtrar turmas pelo segmento selecionado (usando coluna segmento da tabela)
+  const turmasFiltradas = turmasData?.filter(turma => 
+    turma.segmento === segmentoVisao
+  ) || [];
 
   // Estatísticas para turmas
   const comProfessor = turmasFiltradas.filter(t => t.professor_id).length;
