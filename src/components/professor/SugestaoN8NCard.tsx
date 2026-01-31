@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Target, AlertTriangle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Target, AlertTriangle, Sparkles, MessageCircleQuestion } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SugestaoN8NCardProps } from '@/types/sugestaoN8N';
 
 export function SugestaoN8NCard({
+  estado = 'precisa_atencao',
   tipoRecomendacao,
   nomeRecomendacao,
   prioridade = 'normal',
@@ -21,6 +22,35 @@ export function SugestaoN8NCard({
   const [justificativaAberta, setJustificativaAberta] = useState(false);
   const [opcaoAAberta, setOpcaoAAberta] = useState(false);
   const [opcaoBAberta, setOpcaoBAberta] = useState(false);
+  const [oQueNaoFazerAberto, setOQueNaoFazerAberto] = useState(false);
+
+  // Configuração de cores baseadas no estado
+  const corConfig = {
+    celebrar: {
+      bg: 'bg-gradient-to-br from-yellow-900/40 to-amber-900/30',
+      border: 'border-yellow-500/50',
+      headerText: 'text-yellow-400',
+      headerLabel: 'CELEBRE!',
+      Icon: Sparkles
+    },
+    precisa_atencao: {
+      bg: 'bg-[#7F1D1D]',
+      border: 'border-red-600',
+      headerText: 'text-red-300',
+      headerLabel: 'ALERTA ATIVO',
+      Icon: AlertTriangle
+    },
+    aguardando_explicacao: {
+      bg: 'bg-gradient-to-br from-amber-900/40 to-orange-900/30',
+      border: 'border-amber-500/50',
+      headerText: 'text-amber-400',
+      headerLabel: 'JUSTIFIQUE',
+      Icon: MessageCircleQuestion
+    }
+  };
+
+  const cor = corConfig[estado] || corConfig.precisa_atencao;
+  const IconeHeader = cor.Icon;
   
   // Cor do badge de prioridade
   const prioridadeConfig = {
@@ -51,13 +81,17 @@ export function SugestaoN8NCard({
   const temOQueNaoFazer = oQueNaoFazer && oQueNaoFazer.length > 0;
 
   return (
-    <div className="rounded-xl border-2 border-red-600 bg-[#7F1D1D] overflow-hidden">
+    <div className={cn(
+      "rounded-xl border-2 overflow-hidden",
+      cor.border,
+      cor.bg
+    )}>
       {/* SLOT: HEADER */}
       <div className="p-4">
         <div className="flex items-center gap-2 mb-3">
-          <AlertTriangle className="w-5 h-5 text-red-300" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-white">
-            ALERTA ATIVO
+          <IconeHeader className={cn("w-5 h-5", cor.headerText)} />
+          <span className={cn("text-xs font-semibold uppercase tracking-wider", cor.headerText)}>
+            {cor.headerLabel}
           </span>
           <span className={cn(
             'ml-auto text-xs font-semibold px-2 py-0.5 rounded',
@@ -289,21 +323,33 @@ export function SugestaoN8NCard({
         </div>
       )}
       
-      {/* SLOT: O QUE NÃO FAZER */}
+      {/* SLOT: O QUE NÃO FAZER (Colapsável) */}
       {temOQueNaoFazer && (
         <div className="px-4 pb-4">
-          <div className="p-3 bg-red-900/20 rounded-lg border border-red-500/20">
-            <h4 className="text-sm font-semibold mb-2 text-red-400">
-              ⚠️ O QUE NÃO FAZER
-            </h4>
-            <ul className="space-y-1">
-              {oQueNaoFazer!.map((item, i) => (
-                <li key={i} className="text-sm text-white/80 flex items-start gap-2">
-                  <span className="text-red-400 flex-shrink-0">✗</span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
+          <div className="rounded-lg border border-red-500/20 bg-red-900/20 overflow-hidden">
+            <button
+              onClick={() => setOQueNaoFazerAberto(!oQueNaoFazerAberto)}
+              className="w-full p-3 flex items-center justify-between hover:bg-white/5 transition-colors"
+            >
+              <span className="text-red-400 text-sm font-semibold">
+                ⚠️ O QUE NÃO FAZER
+              </span>
+              {oQueNaoFazerAberto ? (
+                <ChevronUp className="w-4 h-4 text-white/40" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-white/40" />
+              )}
+            </button>
+            {oQueNaoFazerAberto && (
+              <ul className="px-3 pb-3 space-y-1 border-t border-white/10 pt-2">
+                {oQueNaoFazer!.map((item, i) => (
+                  <li key={i} className="text-sm text-white/80 flex items-start gap-2">
+                    <span className="text-red-400 flex-shrink-0">✗</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       )}
