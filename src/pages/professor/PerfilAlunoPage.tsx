@@ -16,6 +16,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { usePerfilAluno, type PerfilAlunoData } from '@/hooks/usePerfilAluno';
 import { FeedbackEstadoCard } from '@/components/professor/FeedbackEstadoCard';
+import { SugestaoN8NCard } from '@/components/professor/SugestaoN8NCard';
 import HistoricoObservacoes from '@/components/professor/HistoricoObservacoes';
 import RegistrarAcaoModal from '@/components/professor/RegistrarAcaoModal';
 import RegistrarConversaModal from '@/components/professor/RegistrarConversaModal';
@@ -322,45 +323,72 @@ const PerfilAlunoPage = () => {
           Observações do Professor
         </p>
         
-        {/* Card de Feedback de Estado */}
-        <FeedbackEstadoCard
-          estado={aluno.alertaAtivo?.tipo || (aluno.temObsFaseAtual ? 'aguardando' : 'aguardando')}
-          nomeAluno={primeiroNome}
-          textoAcontecendo={
-            aluno.alertaAtivo?.textoAcontecendo || 
-            (aluno.temObsFaseAtual 
-              ? `Continue observando ${primeiroNome}.`
-              : `${primeiroNome} ainda não foi observado nesta fase.`)
-          }
-          sinalPrincipal={aluno.alertaAtivo?.sinalPredominante}
-          sinalSecundario={aluno.alertaAtivo?.sinalSecundario}
-          contexto={aluno.alertaAtivo?.contexto}
-          hipoteses={aluno.alertaAtivo?.hipoteses}
-          acoesSugeridas={aluno.alertaAtivo?.acoesSugeridas?.map(a => ({
-            acao: a.titulo,
-            prioridade: a.prioridade || 'media' as const
-          }))}
-          padrao={aluno.alertaAtivo?.padrao}
-          arquetipo={aluno.alertaAtivo?.arquetipo ? {
-            nome_arquetipo: aluno.alertaAtivo.arquetipo.nome,
-            tipo: aluno.alertaAtivo.subtipo === 'descoberta' ? 'Descoberta' : 'Confirmação',
-            significado: aluno.alertaAtivo.arquetipo.significado,
-            potencializar: aluno.alertaAtivo.arquetipo.potencializar
-          } : undefined}
-          onRegistrarAcao={handleRegistrarAcao}
-          onRegistrarObservacao={handleRegistrarObservacao}
-          onRegistrarConversa={handleRegistrarConversa}
-          casaColor={aluno.casaCor}
-          casaNome={aluno.casaNome}
-          faseNome={aluno.faseAtualNome}
-          celebracaoSubtipo={aluno.alertaAtivo?.subtipo as 'descoberta' | 'confirmacao' | undefined}
-          conversaRegistrada={aluno.conversaRegistrada}
-          mensagemProfessor={aluno.alertaAtivo?.mensagemProfessor}
-          oQueNaoFazer={aluno.alertaAtivo?.oQueNaoFazer}
-          comoReagir={aluno.alertaAtivo?.comoReagir}
-          elementoPonte={aluno.alertaAtivo?.elementoPonte}
-          geradoPorN8N={aluno.alertaAtivo?.geradoPorN8N}
-        />
+        {/* Card de Feedback de Estado - Renderização condicional N8N vs Legado */}
+        {aluno.alertaAtivo?.geradoPorN8N ? (
+          // Card especializado para alertas do N8N com layout de slots fixos
+          <SugestaoN8NCard
+            tipoRecomendacao={aluno.alertaAtivo.tipoRecomendacao}
+            nomeRecomendacao={aluno.alertaAtivo.nomeRecomendacao}
+            prioridade={aluno.alertaAtivo.prioridade}
+            elementoPonte={aluno.alertaAtivo.elementoPonte ? {
+              forcas: Array.isArray(aluno.alertaAtivo.elementoPonte.forcas) 
+                ? aluno.alertaAtivo.elementoPonte.forcas.join(', ')
+                : aluno.alertaAtivo.elementoPonte.forcas,
+              areaDificuldade: aluno.alertaAtivo.elementoPonte.areaDificuldade
+            } : undefined}
+            padraoIdentificado={aluno.alertaAtivo.padrao ? {
+              nome: aluno.alertaAtivo.padrao.nome,
+              significado: aluno.alertaAtivo.padrao.significado
+            } : undefined}
+            porQueEsteTipo={aluno.alertaAtivo.porQueEsteTipo}
+            oQueFazerAgora={aluno.alertaAtivo.oQueFazerAgora}
+            useAForca={aluno.alertaAtivo.useAForca}
+            comoReagir={aluno.alertaAtivo.comoReagir}
+            oQueNaoFazer={aluno.alertaAtivo.oQueNaoFazer}
+            mensagemProfessor={aluno.alertaAtivo.mensagemProfessor}
+            onRegistrarAcao={aluno.alertaAtivo.tipo === 'celebrar' ? handleRegistrarConversa : handleRegistrarAcao}
+          />
+        ) : (
+          // Card legado para alertas internos (IA ou calculados)
+          <FeedbackEstadoCard
+            estado={aluno.alertaAtivo?.tipo || (aluno.temObsFaseAtual ? 'aguardando' : 'aguardando')}
+            nomeAluno={primeiroNome}
+            textoAcontecendo={
+              aluno.alertaAtivo?.textoAcontecendo || 
+              (aluno.temObsFaseAtual 
+                ? `Continue observando ${primeiroNome}.`
+                : `${primeiroNome} ainda não foi observado nesta fase.`)
+            }
+            sinalPrincipal={aluno.alertaAtivo?.sinalPredominante}
+            sinalSecundario={aluno.alertaAtivo?.sinalSecundario}
+            contexto={aluno.alertaAtivo?.contexto}
+            hipoteses={aluno.alertaAtivo?.hipoteses}
+            acoesSugeridas={aluno.alertaAtivo?.acoesSugeridas?.map(a => ({
+              acao: a.titulo,
+              prioridade: a.prioridade || 'media' as const
+            }))}
+            padrao={aluno.alertaAtivo?.padrao}
+            arquetipo={aluno.alertaAtivo?.arquetipo ? {
+              nome_arquetipo: aluno.alertaAtivo.arquetipo.nome,
+              tipo: aluno.alertaAtivo.subtipo === 'descoberta' ? 'Descoberta' : 'Confirmação',
+              significado: aluno.alertaAtivo.arquetipo.significado,
+              potencializar: aluno.alertaAtivo.arquetipo.potencializar
+            } : undefined}
+            onRegistrarAcao={handleRegistrarAcao}
+            onRegistrarObservacao={handleRegistrarObservacao}
+            onRegistrarConversa={handleRegistrarConversa}
+            casaColor={aluno.casaCor}
+            casaNome={aluno.casaNome}
+            faseNome={aluno.faseAtualNome}
+            celebracaoSubtipo={aluno.alertaAtivo?.subtipo as 'descoberta' | 'confirmacao' | undefined}
+            conversaRegistrada={aluno.conversaRegistrada}
+            mensagemProfessor={aluno.alertaAtivo?.mensagemProfessor}
+            oQueNaoFazer={aluno.alertaAtivo?.oQueNaoFazer}
+            comoReagir={aluno.alertaAtivo?.comoReagir}
+            elementoPonte={aluno.alertaAtivo?.elementoPonte}
+            geradoPorN8N={aluno.alertaAtivo?.geradoPorN8N}
+          />
+        )}
         
         {/* Histórico de Observações */}
         {observacoesHistorico.length > 0 && (
