@@ -7,18 +7,34 @@ const corsHeaders = {
 };
 
 interface SugestaoPayload {
+  // === IDENTIFICAÇÃO ===
   aluno_id?: string;
   aluno_matricula?: string;
   observacao_gatilho_id?: string;
+  
+  // === CAMPOS CRÍTICOS PARA ALERTAS ===
+  tipo_alerta?: 'precisa_atencao' | 'celebrar' | 'aguardando_explicacao';
   estado: "precisa_atencao" | "celebrar" | "neutro" | "aguardando_explicacao";
+  prioridade?: "urgente" | "importante" | "normal" | "alta" | "media" | "baixa";
+  
+  // === CAMPOS DE FASE ===
+  fase_id?: string | null;
+  fase_origem_id?: string | null;
+  turma_id?: string | null;
+  professor_id?: string | null;
+  institution_id?: string | null;
+  
+  // === CONTEÚDO DA SUGESTÃO ===
   texto_acontecendo: string;
   sinal_principal?: string;
   sinal_codigo?: string;
+  
   hipoteses?: Array<{
     titulo: string;
     descricao: string;
     perguntas?: string[];
   }>;
+  
   acoes_sugeridas?: Array<{
     acao: string;
     prioridade: "alta" | "media" | "baixa";
@@ -28,18 +44,22 @@ interface SugestaoPayload {
     como_escutar?: string;
     por_que_funciona?: string;
   }>;
+  
   padrao_identificado?: {
     nome: string;
     significado: string;
+    sinais?: string[];
   };
+  
   arquetipo?: {
     nome_arquetipo: string;
     tipo: "descoberta" | "confirmacao";
     significado: string;
     potencializar?: string[];
     sugestao_conversa?: string;
+    forca_principal?: string;
   };
-  prioridade?: "urgente" | "importante" | "normal";
+  
   mensagem_professor?: string;
   o_que_nao_fazer?: string[];
   
@@ -62,7 +82,7 @@ interface SugestaoPayload {
     area_dificuldade: string;
   };
   
-  // NOVOS CAMPOS ESTRUTURADOS
+  // CAMPOS ESTRUTURADOS
   tipo_recomendacao?: string;
   nome_recomendacao?: string;
   por_que_este_tipo?: string;
@@ -152,13 +172,40 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 3. Create Supabase client with service role
+    // 3. Determine tipo_alerta (priority: explicit field > estado)
+    const tipoAlertaFinal = payload.tipo_alerta || payload.estado;
+    
+    // If estado is 'neutro' and no explicit tipo_alerta, don't create alert
+    if (tipoAlertaFinal === 'neutro') {
+      console.log("Estado neutro sem tipo_alerta explícito: nenhum alerta criado");
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Estado neutro: nenhum alerta criado",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate that tipoAlertaFinal is valid for the table
+    const tiposAlertaValidos = ["precisa_atencao", "celebrar", "aguardando_explicacao"];
+    if (!tiposAlertaValidos.includes(tipoAlertaFinal)) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `tipo_alerta inválido. Valores aceitos: ${tiposAlertaValidos.join(", ")}`,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 4. Create Supabase client with service role
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 4. Fetch student data - priority: matricula > aluno_id
+    // 5. Fetch student data - priority: matricula > aluno_id
     let aluno: { id: string; institution_id: string; casa_id: number | null } | null = null;
 
     if (payload.aluno_matricula) {
@@ -208,19 +255,22 @@ Deno.serve(async (req) => {
 
     console.log("Student found:", { id: aluno.id, institution_id: aluno.institution_id });
 
-    // 5. Get current active phase for the institution
-    const { data: faseAtual } = await supabase
-      .from("fases")
-      .select("id")
-      .eq("institution_id", aluno.institution_id)
-      .eq("ativo", true)
-      .limit(1)
-      .single();
+    // 6. Get current active phase for the institution (if not provided in payload)
+    let faseAtualId = payload.fase_id || null;
+    
+    if (!faseAtualId) {
+      const { data: faseAtual } = await supabase
+        .from("fases")
+        .select("id")
+        .eq("institution_id", aluno.institution_id)
+        .eq("ativo", true)
+        .limit(1)
+        .single();
 
-    const faseAtualId = faseAtual?.id || null;
+      faseAtualId = faseAtual?.id || null;
+    }
 
-    // 6. Archive ALL active alerts for this student (not just n8n ones)
-    // This prevents duplicate alerts from system and n8n
+    // 7. Archive ALL active alerts for this student from N8N
     const { error: archiveError } = await supabase
       .from("alertas_alunos")
       .update({
@@ -229,6 +279,7 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString(),
       })
       .eq("aluno_id", aluno.id)
+      .eq("motivo", "analise_n8n")
       .eq("status", "ativo");
 
     if (archiveError) {
@@ -236,50 +287,75 @@ Deno.serve(async (req) => {
       // Continue anyway - not critical
     }
 
-    // 7. Build dados_contexto JSONB
+    // 8. Build dados_contexto JSONB
     const dadosContexto = {
+      // Estado original
       estado: payload.estado,
+      
+      // Sinal que disparou
       sinal_principal: payload.sinal_principal || null,
       sinal_codigo: payload.sinal_codigo || null,
+      
+      // Texto principal
       texto_acontecendo: payload.texto_acontecendo,
+      
+      // Conteúdo estruturado da recomendação
+      tipo_recomendacao: payload.tipo_recomendacao || null,
+      nome_recomendacao: payload.nome_recomendacao || null,
+      por_que_este_tipo: payload.por_que_este_tipo || null,
+      
+      // Elemento de ponte
+      elemento_ponte: payload.elemento_ponte || null,
+      
+      // Ação principal
+      o_que_fazer_agora: payload.o_que_fazer_agora || null,
+      
+      // Opções A e B
+      use_a_forca: payload.use_a_forca || null,
+      
+      // Como reagir
+      como_reagir: payload.como_reagir || null,
+      
+      // Proibições
+      o_que_nao_fazer: payload.o_que_nao_fazer || [],
+      
+      // Legado (compatibilidade)
       hipoteses: payload.hipoteses || [],
       acoes_sugeridas: payload.acoes_sugeridas || [],
       padrao_identificado: payload.padrao_identificado || null,
       arquetipo: payload.arquetipo || null,
       mensagem_professor: payload.mensagem_professor || null,
-      o_que_nao_fazer: payload.o_que_nao_fazer || [],
-      prioridade: payload.prioridade || "normal",
-      observacao_gatilho_id: payload.observacao_gatilho_id || null,
-      gerado_por: "n8n",
-      timestamp_analise: new Date().toISOString(),
-      // Campos específicos para contradição
+      
+      // Campos de contradição
       tipo_contradicao: payload.tipo_contradicao || null,
       perguntas_professor: payload.perguntas_professor || [],
       sugestao_anterior_resumo: payload.sugestao_anterior_resumo || null,
       observacao_nova: payload.observacao_nova || null,
       requer_resposta: payload.requer_resposta || false,
-      // Campos ricos do N8N
-      como_reagir: payload.como_reagir || null,
-      elemento_ponte: payload.elemento_ponte || null,
-      // NOVOS CAMPOS ESTRUTURADOS
-      tipo_recomendacao: payload.tipo_recomendacao || null,
-      nome_recomendacao: payload.nome_recomendacao || null,
-      por_que_este_tipo: payload.por_que_este_tipo || null,
-      o_que_fazer_agora: payload.o_que_fazer_agora || null,
-      use_a_forca: payload.use_a_forca || null,
+      
+      // Referências e contexto
+      observacao_gatilho_id: payload.observacao_gatilho_id || null,
+      turma_id: payload.turma_id || null,
+      professor_id: payload.professor_id || null,
+      prioridade: payload.prioridade || "normal",
+      
+      // Metadados
+      gerado_por: "n8n",
+      timestamp_analise: new Date().toISOString(),
     };
 
-    // 8. Insert new alert
+    // 9. Insert new alert
     const { data: novoAlerta, error: insertError } = await supabase
       .from("alertas_alunos")
       .insert({
         institution_id: aluno.institution_id,
-      aluno_id: aluno.id,
-        tipo_alerta: payload.estado,
-        motivo: "analise_n8n",
-        status: "ativo",
-        notificacao_ativa: true,
-        fase_id: faseAtualId,
+        aluno_id: aluno.id,
+        tipo_alerta: tipoAlertaFinal,           // ← CRÍTICO: determina onde aparece no dashboard
+        motivo: "analise_n8n",                   // ← CRÍTICO: identifica origem N8N
+        status: "ativo",                          // ← CRÍTICO: sempre ativo
+        notificacao_ativa: true,                  // ← Badge visível
+        fase_id: faseAtualId,                     // ← Fase atual
+        fase_origem_id: payload.fase_origem_id || null,  // ← Para "Fase Anterior"
         dados_contexto: dadosContexto,
       })
       .select("id")
@@ -300,6 +376,7 @@ Deno.serve(async (req) => {
       alerta_id: novoAlerta.id,
       aluno_id: aluno.id,
       aluno_matricula: payload.aluno_matricula,
+      tipo_alerta: tipoAlertaFinal,
       estado: payload.estado,
     });
 
@@ -307,6 +384,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         alerta_id: novoAlerta.id,
+        tipo_alerta: tipoAlertaFinal,
         message: "Sugestão recebida e salva com sucesso",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
