@@ -1,227 +1,144 @@
 
 
-# Plano: Ajustar SugestaoN8NCard com Cores por Estado
+# Plano: Corrigir Filtro de Segmento Infantil na Visão Geral
 
-## Diagnóstico
+## Problema Identificado
 
-O componente `SugestaoN8NCard` **existe e está recebendo todos os dados corretamente**. Porém, ele foi criado apenas para alertas de atenção (vermelho) e **não distingue celebrações** (dourado).
+O filtro de segmento "Infantil" na visão geral de turmas e professores **não está funcionando corretamente** porque:
 
-### Dados no Banco (Adryan)
-```json
-{
-  "tipo_alerta": "celebrar",
-  "dados_contexto": {
-    "estado": "celebrar",
-    "tipo_recomendacao": "RECONHECIMENTO PRIVADO",
-    "nome_recomendacao": "Celebração da Liderança Linguística",
-    "o_que_fazer_agora": {
-      "objetivo": "Reforçar a confiança...",
-      "script_principal": "Adryan Samuel, percebi algo especial..."
-    },
-    "use_a_forca": { "opcao_a": {...}, "opcao_b": {...} },
-    "o_que_nao_fazer": ["Não fazer perguntas invasivas...", ...],
-    "mensagem_professor": "Momento delicado de reconhecimento..."
-  }
-}
-```
+1. A tabela `turmas` **não possui uma coluna `segmento`**
+2. As séries 2, 3, 4 e 5 são compartilhadas entre **Infantil** e **Fundamental 1**
+3. O filtro atual usa apenas o número da série, causando ambiguidade
 
-### Problemas Atuais
-
-1. **Falta prop `estado`** na interface do componente
-2. **Cores sempre vermelhas** (linha 54 do componente: `bg-[#7F1D1D]`, `border-red-600`)
-3. **Header sempre diz "ALERTA ATIVO"** com ícone de alerta
-4. **Seção "O que não fazer" sempre aberta** (deveria ser colapsável)
+### Exemplo do problema:
+- "2º A" (série 2) aparece tanto no Infantil quanto no Fundamental 1
+- "5º B" (série 5) também aparece em ambos
 
 ---
 
-## Alterações Necessárias
+## Solução Proposta
 
-### Arquivo 1: `src/types/sugestaoN8N.ts`
+### Opção A: Adicionar coluna `segmento` na tabela `turmas` (Recomendado)
 
-Adicionar prop `estado` na interface:
+Criar uma nova coluna na tabela `turmas` para identificar corretamente o segmento de cada turma.
 
-```typescript
-export interface SugestaoN8NCardProps {
-  // Estado (determina cor do card)
-  estado?: 'celebrar' | 'precisa_atencao' | 'aguardando_explicacao';
-  
-  // ... resto das props existentes
-}
-```
+**Vantagens:**
+- Solução definitiva e correta
+- Permite diferenciação clara entre segmentos
+- Alinha com a lógica de outras tabelas (profiles tem segmento)
 
----
-
-### Arquivo 2: `src/components/professor/SugestaoN8NCard.tsx`
-
-#### A) Aceitar prop `estado` e definir cores dinâmicas
-
-```typescript
-export function SugestaoN8NCard({
-  estado = 'precisa_atencao',  // ← NOVA PROP
-  tipoRecomendacao,
-  // ...resto
-}: SugestaoN8NCardProps) {
-
-  // Cores baseadas no estado
-  const corConfig = {
-    celebrar: {
-      bg: 'bg-gradient-to-br from-yellow-900/40 to-amber-900/30',
-      border: 'border-yellow-500/50',
-      headerBg: 'bg-yellow-500/20',
-      headerText: 'text-yellow-400',
-      headerLabel: 'CELEBRE!',
-      icon: Sparkles  // ícone de celebração
-    },
-    precisa_atencao: {
-      bg: 'bg-[#7F1D1D]',
-      border: 'border-red-600',
-      headerBg: 'bg-red-500/20',
-      headerText: 'text-red-300',
-      headerLabel: 'ALERTA ATIVO',
-      icon: AlertTriangle
-    },
-    aguardando_explicacao: {
-      bg: 'bg-gradient-to-br from-amber-900/40 to-orange-900/30',
-      border: 'border-amber-500/50',
-      headerBg: 'bg-amber-500/20',
-      headerText: 'text-amber-400',
-      headerLabel: 'JUSTIFIQUE',
-      icon: MessageCircleQuestion
-    }
-  };
-
-  const cor = corConfig[estado] || corConfig.precisa_atencao;
-  const IconeHeader = cor.icon;
-```
-
-#### B) Aplicar cores dinâmicas no container
-
-```typescript
-// Antes (linha 54):
-<div className="rounded-xl border-2 border-red-600 bg-[#7F1D1D] overflow-hidden">
-
-// Depois:
-<div className={cn(
-  "rounded-xl border-2 overflow-hidden",
-  cor.border,
-  cor.bg
-)}>
-```
-
-#### C) Ajustar header dinâmico
-
-```typescript
-// Antes (linhas 57-68):
-<AlertTriangle className="w-5 h-5 text-red-300" />
-<span className="text-xs font-semibold uppercase tracking-wider text-white">
-  ALERTA ATIVO
-</span>
-
-// Depois:
-<IconeHeader className={cn("w-5 h-5", cor.headerText)} />
-<span className={cn("text-xs font-semibold uppercase tracking-wider", cor.headerText)}>
-  {cor.headerLabel}
-</span>
-```
-
-#### D) Tornar "O que não fazer" colapsável
-
-```typescript
-// Adicionar estado
-const [oQueNaoFazerAberto, setOQueNaoFazerAberto] = useState(false);
-
-// Substituir seção (linhas 293-309):
-{temOQueNaoFazer && (
-  <div className="px-4 pb-4">
-    <div className="rounded-lg border border-red-500/20 bg-red-900/20 overflow-hidden">
-      <button
-        onClick={() => setOQueNaoFazerAberto(!oQueNaoFazerAberto)}
-        className="w-full p-3 flex items-center justify-between hover:bg-white/5"
-      >
-        <span className="text-red-400 text-sm font-semibold">
-          O QUE NAO FAZER
-        </span>
-        {oQueNaoFazerAberto ? (
-          <ChevronUp className="w-4 h-4 text-white/40" />
-        ) : (
-          <ChevronDown className="w-4 h-4 text-white/40" />
-        )}
-      </button>
-      {oQueNaoFazerAberto && (
-        <ul className="px-3 pb-3 space-y-1 border-t border-white/10 pt-2">
-          {oQueNaoFazer!.map((item, i) => (
-            <li key={i} className="text-sm text-white/80 flex items-start gap-2">
-              <span className="text-red-400 flex-shrink-0">x</span>
-              <span>{item}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  </div>
-)}
-```
+**Alterações necessárias:**
+1. Migração SQL para adicionar coluna `segmento`
+2. Popular dados existentes (turmas 1-5 como fundamental1, 6-9 como fundamental2)
+3. Atualizar componente para usar novo campo
 
 ---
 
-### Arquivo 3: `src/pages/professor/PerfilAlunoPage.tsx`
+## Plano de Implementação
 
-Passar a prop `estado` para o componente:
+### Passo 1: Migração do Banco de Dados
+
+Adicionar coluna `segmento` na tabela `turmas`:
+
+```sql
+-- Adicionar coluna segmento
+ALTER TABLE turmas 
+ADD COLUMN segmento TEXT CHECK (segmento IN ('infantil', 'fundamental1', 'fundamental2'));
+
+-- Popular dados baseado na série atual
+-- Séries 1-5 serão fundamental1 (não há turmas do infantil cadastradas ainda)
+-- Séries 6-9 serão fundamental2
+UPDATE turmas SET segmento = 
+  CASE 
+    WHEN serie >= 6 THEN 'fundamental2'
+    ELSE 'fundamental1'
+  END
+WHERE segmento IS NULL;
+
+-- Criar índice para otimizar consultas
+CREATE INDEX idx_turmas_segmento ON turmas(segmento);
+```
+
+### Passo 2: Atualizar Query do Componente
+
+Modificar `TabelaVisaoGeralProfessores.tsx` para buscar turmas pelo segmento:
 
 ```typescript
-// Linha 329-350 - Adicionar estado
-<SugestaoN8NCard
-  estado={aluno.alertaAtivo.tipo as 'celebrar' | 'precisa_atencao' | 'aguardando_explicacao'}
-  tipoRecomendacao={aluno.alertaAtivo.tipoRecomendacao}
-  // ...resto das props
-/>
+// ANTES (linha 33-38):
+const { data: turmas } = await supabase
+  .from('turmas')
+  .select('id, nome, serie, turma_letra')
+  .eq('institution_id', institutionId)
+  .order('serie');
+
+// DEPOIS:
+const { data: turmas } = await supabase
+  .from('turmas')
+  .select('id, nome, serie, turma_letra, segmento')
+  .eq('institution_id', institutionId)
+  .order('serie');
 ```
 
----
+### Passo 3: Atualizar Lógica de Filtragem
 
-### Arquivo 4: `src/pages/professor/PerfilAlunoPageSimplificado.tsx`
+Substituir filtragem por série para filtragem por segmento:
 
-Mesma alteração (paridade).
+```typescript
+// ANTES (linhas 123-127):
+const turmasFiltradas = turmasData?.filter(turma => {
+  const series = SERIES_POR_SEGMENTO[segmentoVisao];
+  return series.includes(turma.serie);
+}) || [];
 
----
-
-## Resultado Visual Esperado
-
-### Celebrar (Dourado)
-```text
-+-----------------------------------------------------+
-|  Sparkles  CELEBRE!                     [MEDIA]     |
-+-----------------------------------------------------+
-|  [Tipo + Nome da Recomendacao - fundo amarelo]      |
-|  [Elemento de Ponte]                                |
-|  [Padrao Detectado]                                 |
-|  [O QUE FAZER AGORA - sempre aberto]                |
-|  [Opcao A] [v]                                      |
-|  [Opcao B] [v]                                      |
-|  [COMO REAGIR]                                      |
-|  [O QUE NAO FAZER] [v] <- colapsavel                |
-|  [MENSAGEM PARA VOCE]                               |
-|  [Registrar minha acao]                             |
-+-----------------------------------------------------+
+// DEPOIS:
+const turmasFiltradas = turmasData?.filter(turma => 
+  turma.segmento === segmentoVisao
+) || [];
 ```
 
-### Precisa Atencao (Vermelho)
-```text
-+-----------------------------------------------------+
-|  AlertTriangle  ALERTA ATIVO            [URGENTE]   |
-+-----------------------------------------------------+
-|  [Mesmo layout, cores vermelhas]                    |
-+-----------------------------------------------------+
-```
+### Passo 4: Remover Mapeamento Obsoleto
+
+O objeto `SERIES_POR_SEGMENTO` não será mais necessário para a filtragem principal e pode ser simplificado ou removido.
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Alteracao |
+| Arquivo | Alteração |
 |---------|-----------|
-| `src/types/sugestaoN8N.ts` | Adicionar prop `estado` |
-| `src/components/professor/SugestaoN8NCard.tsx` | Cores dinamicas + colapsavel |
-| `src/pages/professor/PerfilAlunoPage.tsx` | Passar prop `estado` |
-| `src/pages/professor/PerfilAlunoPageSimplificado.tsx` | Paridade |
+| **Migração SQL** | Adicionar coluna `segmento` na tabela `turmas` |
+| `src/components/admin/TabelaVisaoGeralProfessores.tsx` | Atualizar query e lógica de filtragem |
+
+---
+
+## Impacto em Outras Áreas
+
+A adição da coluna `segmento` na tabela `turmas` pode beneficiar outras funcionalidades:
+
+1. **Importação de turmas** - Validar segmento ao criar turmas
+2. **Gestão de professores** - Filtrar turmas disponíveis por segmento
+3. **Relatórios** - Agrupar dados por segmento corretamente
+
+---
+
+## Resultado Esperado
+
+Após a implementação:
+
+| Segmento Selecionado | Turmas Exibidas |
+|---------------------|-----------------|
+| **Infantil** | Apenas turmas com `segmento = 'infantil'` |
+| **Fund. I** | Apenas turmas com `segmento = 'fundamental1'` |
+| **Fund. II** | Mostra as 8 casas (comportamento atual mantido) |
+
+---
+
+## Observação Importante
+
+Como **não existem turmas do segmento Infantil cadastradas** atualmente no banco de dados (todas são 1º-5º ano do Fundamental ou 6º-9º ano), o admin precisará:
+
+1. Cadastrar as turmas do Infantil manualmente, ou
+2. Atualizar o segmento das turmas existentes que pertencem ao Infantil
+
+A migração definirá todas as turmas 1-5 como `fundamental1` por padrão. Se houver turmas do Infantil misturadas, o admin poderá ajustar posteriormente.
 
