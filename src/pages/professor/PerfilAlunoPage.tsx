@@ -327,6 +327,7 @@ const PerfilAlunoPage = () => {
         {aluno.alertaAtivo?.geradoPorN8N ? (
           // Card especializado para alertas do N8N com layout de slots fixos
           <SugestaoN8NCard
+            estado={aluno.alertaAtivo.tipo as 'celebrar' | 'precisa_atencao' | 'aguardando_explicacao'}
             tipoRecomendacao={aluno.alertaAtivo.tipoRecomendacao}
             nomeRecomendacao={aluno.alertaAtivo.nomeRecomendacao}
             prioridade={aluno.alertaAtivo.prioridade}

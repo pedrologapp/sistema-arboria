@@ -70,6 +70,9 @@ export interface SugestaoN8NPayload {
 
 // Interface para props do componente (mapeamento direto)
 export interface SugestaoN8NCardProps {
+  // Estado (determina cor do card)
+  estado?: 'celebrar' | 'precisa_atencao' | 'aguardando_explicacao';
+  
   // Header
   tipoRecomendacao?: string;
   nomeRecomendacao?: string;
