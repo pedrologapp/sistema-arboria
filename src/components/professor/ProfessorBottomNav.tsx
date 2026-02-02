@@ -23,7 +23,8 @@ const ProfessorBottomNav = () => {
   const totalAlertas = (badgesAtivos?.precisaAtencao || 0) + 
                        (badgesAtivos?.celebrar || 0) + 
                        (badgesAtivos?.naoEsquecer || 0) + 
-                       (badgesAtivos?.atencaoFaseAnterior || 0);
+                       (badgesAtivos?.atencaoFaseAnterior || 0) +
+                       (badgesAtivos?.aguardandoExplicacao || 0);
 
   // Query: Entregas Pendentes
   const { data: entregasPendentes = 0 } = useQuery({
