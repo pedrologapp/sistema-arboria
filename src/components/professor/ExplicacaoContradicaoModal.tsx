@@ -4,7 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { X, Send, Loader2, ClipboardList, MessageCircle } from 'lucide-react';
+import { X, Send, Loader2, ClipboardList, MessageCircle, Target } from 'lucide-react';
 import { AlertaExplicacao } from '@/hooks/useAlertasAlunos';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
@@ -15,6 +15,13 @@ interface ExplicacaoContradicaoModalProps {
   isOpen: boolean;
   onClose: () => void;
   alerta: AlertaExplicacao;
+}
+
+interface OpcaoAcao {
+  id: string;
+  icone: string;
+  titulo: string;
+  descricao: string;
 }
 
 const tipoContradicaoLabels: Record<string, string> = {
@@ -78,17 +85,115 @@ export const ExplicacaoContradicaoModal = ({
   const { profile, faseAtual } = useProfessor();
   const queryClient = useQueryClient();
   const [explicacao, setExplicacao] = useState('');
+  const [acaoSelecionada, setAcaoSelecionada] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+
+  const MIN_CHARS = 20;
 
   // Determinar se há contexto do N8N ou usar fallback
   const temContextoN8N = alerta.mensagem_professor || alerta.texto_acontecendo;
   const mensagemFallback = `Professor(a), foi detectada uma contradição entre a sugestão ativa e sua nova observação para ${alerta.aluno.nome}. Por favor, explique o que motivou essa mudança para que possamos ajustar nossas análises.`;
 
+  // Inferir valencia: tentar campo estruturado, fallback para texto
+  const inferirValencia = (): string | null => {
+    // Tentar pegar do campo estruturado
+    if (alerta.observacao_contraditoria?.valencia) {
+      return alerta.observacao_contraditoria.valencia;
+    }
+    // Fallback: inferir do texto_acontecendo
+    if (alerta.texto_acontecendo) {
+      const texto = alerta.texto_acontecendo.toLowerCase();
+      if (texto.includes('positivo') || texto.includes('evoluiu') || texto.includes('melhora')) {
+        return 'positiva';
+      }
+      if (texto.includes('negativo') || texto.includes('atenção') || texto.includes('dificuldade')) {
+        return 'negativa';
+      }
+    }
+    return null;
+  };
+
+  // Gerar opções de ação dinâmicas baseadas na valencia
+  const getOpcoesAcao = (): OpcaoAcao[] => {
+    const valencia = inferirValencia();
+    
+    if (valencia === 'positiva') {
+      // Estava em atenção → registrou positivo
+      return [
+        {
+          id: 'confirmar',
+          icone: '✅',
+          titulo: 'Confirmar nova observação',
+          descricao: 'O aluno realmente evoluiu. Atualizar a análise para refletir essa melhora.'
+        },
+        {
+          id: 'manter',
+          icone: '🔄',
+          titulo: 'Manter análise anterior',
+          descricao: 'Foi um momento pontual. O padrão anterior de atenção continua válido.'
+        },
+        {
+          id: 'descartar',
+          icone: '🗑️',
+          titulo: 'Descartar observação',
+          descricao: 'Registrei por engano. Ignorar esta observação.'
+        }
+      ];
+    } else if (valencia === 'negativa') {
+      // Estava em celebração → registrou negativo
+      return [
+        {
+          id: 'confirmar',
+          icone: '✅',
+          titulo: 'Confirmar nova observação',
+          descricao: 'O aluno realmente apresentou dificuldade. Atualizar a análise para atenção.'
+        },
+        {
+          id: 'manter',
+          icone: '🔄',
+          titulo: 'Manter análise anterior',
+          descricao: 'Foi um momento pontual. O aluno continua evoluindo bem no geral.'
+        },
+        {
+          id: 'descartar',
+          icone: '🗑️',
+          titulo: 'Descartar observação',
+          descricao: 'Registrei por engano. Ignorar esta observação.'
+        }
+      ];
+    } else {
+      // Fallback genérico
+      return [
+        {
+          id: 'confirmar',
+          icone: '✅',
+          titulo: 'Confirmar nova observação',
+          descricao: 'O que registrei agora reflete a realidade. Atualizar a análise do aluno.'
+        },
+        {
+          id: 'manter',
+          icone: '🔄',
+          titulo: 'Manter análise anterior',
+          descricao: 'Foi um momento isolado. A análise anterior continua válida.'
+        },
+        {
+          id: 'descartar',
+          icone: '🗑️',
+          titulo: 'Descartar observação',
+          descricao: 'Registrei por engano. Ignorar esta observação.'
+        }
+      ];
+    }
+  };
+
+  const opcoesAcao = getOpcoesAcao();
+  const podeEnviar = explicacao.trim().length >= MIN_CHARS && acaoSelecionada !== null;
+
   const handleEnviar = async () => {
-    if (!explicacao.trim()) {
+    if (!podeEnviar) {
       toast({
-        title: 'Explicação vazia',
-        description: 'Por favor, escreva sua explicação antes de enviar.',
+        title: 'Campos incompletos',
+        description: 'Preencha a explicação (mínimo 20 caracteres) e escolha uma ação.',
         variant: 'destructive'
       });
       return;
@@ -116,6 +221,7 @@ export const ExplicacaoContradicaoModal = ({
       // 2. Preparar payload para N8N
       const webhookPayload = {
         evento: 'explicacao_professor_enviada',
+        tipo: 'resposta_explicacao',
         aluno: {
           id: alunoData?.id || alerta.aluno.id,
           nome: alunoData ? `${alunoData.nome} ${alunoData.sobrenome}`.trim() : alerta.aluno.nome,
@@ -140,8 +246,13 @@ export const ExplicacaoContradicaoModal = ({
           sugestao_anterior_resumo: alerta.sugestao_anterior_resumo,
           observacao_nova: alerta.observacao_nova,
           resposta_professor: explicacao.trim(),
+          acao_escolhida: acaoSelecionada, // "confirmar" | "manter" | "descartar"
+          valencia: inferirValencia(),
           alerta_id: alerta.id
         },
+        // Contexto estruturado para o N8N processar
+        sugestao_anterior: alerta.sugestao_anterior || null,
+        observacao_contraditoria: alerta.observacao_contraditoria || null,
         timestamp: new Date().toISOString()
       };
 
@@ -163,7 +274,7 @@ export const ExplicacaoContradicaoModal = ({
           status: 'resolvido',
           resolved_at: new Date().toISOString(),
           resolved_by: profile.id,
-          acao_tomada: `Explicação do professor: ${explicacao.trim().substring(0, 200)}...`,
+          acao_tomada: `[${acaoSelecionada?.toUpperCase()}] ${explicacao.trim().substring(0, 200)}`,
           notificacao_ativa: false
         })
         .eq('id', alerta.id);
@@ -237,7 +348,7 @@ export const ExplicacaoContradicaoModal = ({
         <ScrollArea className="max-h-[60vh]">
           <div className="p-4 space-y-4">
             
-            {/* NOVO: Bloco "O que aconteceu" - texto_acontecendo */}
+            {/* Bloco "O que aconteceu" - texto_acontecendo */}
             {alerta.texto_acontecendo && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-amber-400/80 text-xs font-medium uppercase tracking-wider">
@@ -252,7 +363,7 @@ export const ExplicacaoContradicaoModal = ({
               </div>
             )}
 
-            {/* NOVO: Bloco "Mensagem para você" - mensagem_professor */}
+            {/* Bloco "Mensagem para você" - mensagem_professor */}
             {alerta.mensagem_professor && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-purple-400/80 text-xs font-medium uppercase tracking-wider">
@@ -291,12 +402,48 @@ export const ExplicacaoContradicaoModal = ({
                 value={explicacao}
                 onChange={(e) => setExplicacao(e.target.value)}
                 placeholder="Descreva o que aconteceu e o que você observou..."
-                className="min-h-[120px] bg-white/5 border-white/20 text-white placeholder:text-white/30 resize-none focus:border-purple-500/50"
+                className="min-h-[100px] bg-white/5 border-white/20 text-white placeholder:text-white/30 resize-none focus:border-purple-500/50"
                 disabled={isSending}
               />
-              <p className="text-white/30 text-xs">
-                Essa informação será usada para melhorar as sugestões futuras.
-              </p>
+              {explicacao.length > 0 && explicacao.length < MIN_CHARS ? (
+                <p className="text-red-400/80 text-xs">
+                  Mínimo {MIN_CHARS} caracteres ({explicacao.length}/{MIN_CHARS})
+                </p>
+              ) : (
+                <p className="text-white/30 text-xs">
+                  Essa informação será usada para melhorar as sugestões futuras.
+                </p>
+              )}
+            </div>
+
+            {/* Escolha de ação */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-white/60 text-xs font-medium uppercase tracking-wider">
+                <Target className="w-3.5 h-3.5" />
+                O que devemos fazer? <span className="text-red-400">*</span>
+              </label>
+              <div className="flex flex-col gap-2">
+                {opcoesAcao.map((opcao) => (
+                  <div
+                    key={opcao.id}
+                    onClick={() => !isSending && setAcaoSelecionada(opcao.id)}
+                    className={`
+                      p-3 rounded-lg cursor-pointer transition-all
+                      ${acaoSelecionada === opcao.id
+                        ? 'bg-purple-900/40 border-2 border-purple-500 ring-1 ring-purple-500/30'
+                        : 'bg-white/5 border border-white/10 hover:border-white/30'
+                      }
+                      ${isSending ? 'opacity-50 cursor-not-allowed' : ''}
+                    `}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{opcao.icone}</span>
+                      <span className="font-medium text-white">{opcao.titulo}</span>
+                    </div>
+                    <p className="text-sm text-white/50 mt-1 ml-7">{opcao.descricao}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </ScrollArea>
@@ -313,8 +460,8 @@ export const ExplicacaoContradicaoModal = ({
           </Button>
           <Button
             onClick={handleEnviar}
-            disabled={isSending || !explicacao.trim()}
-            className="flex-1 bg-purple-700 hover:bg-purple-600 text-white"
+            disabled={isSending || !podeEnviar}
+            className="flex-1 bg-purple-700 hover:bg-purple-600 text-white disabled:opacity-50"
           >
             {isSending ? (
               <>
