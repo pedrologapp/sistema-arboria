@@ -1,104 +1,202 @@
 
 
-# Plano: Corrigir Filtro de Segmento Infantil na Visão Geral
+# Plano: Corrigir Duplicação de Sugestões nos Cards de Alertas
 
-## Problema Identificado
+## Diagnóstico Completo
 
-O filtro de segmento "Infantil" na visão geral de turmas e professores **não está funcionando corretamente** porque:
+### Dados no Banco (Aluno Adryan - 84938726)
 
-1. A tabela `turmas` **não possui uma coluna `segmento`**
-2. As séries 2, 3, 4 e 5 são compartilhadas entre **Infantil** e **Fundamental 1**
-3. O filtro atual usa apenas o número da série, causando ambiguidade
+| ID | tipo_alerta | motivo | status | gerado_por |
+|----|-------------|--------|--------|------------|
+| 95097e37... | `aguardando_explicacao` | analise_n8n | ativo | n8n |
+| e4af66db... | `celebrar` | confirmacao | ativo | NULL |
 
-### Exemplo do problema:
-- "2º A" (série 2) aparece tanto no Infantil quanto no Fundamental 1
-- "5º B" (série 5) também aparece em ambos
+**Problema:** Dois alertas ativos para o mesmo aluno, causando contagem em 2 cards.
+
+### Causa Raiz
+
+1. **Triggers internos** criam alertas com `motivo: 'confirmacao'` (não são do N8N)
+2. **Edge Function** só arquiva alertas com `motivo: 'analise_n8n'` (linha 274-283)
+3. **Quando N8N envia `aguardando_explicacao`**, o alerta antigo de `celebrar` (confirmacao) permanece ativo
+
+### Comportamento Esperado
+
+Quando uma sugestão tem `tipo_alerta = 'aguardando_explicacao'` (justificativa pendente):
+- Deve aparecer **SOMENTE** no card "Precisa de justificativa"
+- **NÃO** deve ser contada em "Celebre", "Precisam de você", etc.
 
 ---
 
 ## Solução Proposta
 
-### Opção A: Adicionar coluna `segmento` na tabela `turmas` (Recomendado)
+### Arquivo: `src/hooks/useAlertasAlunos.ts`
 
-Criar uma nova coluna na tabela `turmas` para identificar corretamente o segmento de cada turma.
+Modificar a lógica de agrupamento para garantir **exclusão mútua** baseada na prioridade de justificativa.
 
-**Vantagens:**
-- Solução definitiva e correta
-- Permite diferenciação clara entre segmentos
-- Alinha com a lógica de outras tabelas (profiles tem segmento)
+#### Alteração 1: Identificar Alunos com Justificativa Pendente (Linha ~337)
 
-**Alterações necessárias:**
-1. Migração SQL para adicionar coluna `segmento`
-2. Popular dados existentes (turmas 1-5 como fundamental1, 6-9 como fundamental2)
-3. Atualizar componente para usar novo campo
+Antes de agrupar por tipo, criar um Set com IDs dos alunos que têm `aguardando_explicacao`:
+
+```typescript
+// 10.1 Extrair alertas de aguardando_explicacao
+const aguardandoExplicacao: AlertaExplicacao[] = alertasFaseAtual
+  .filter(a => a.tipo_alerta === 'aguardando_explicacao')
+  .map(alerta => ({ /* ... mapping */ }));
+
+// NOVO: IDs de alunos com justificativa pendente
+const alunosComJustificativaPendente = new Set(
+  aguardandoExplicacao.map(a => a.aluno.id)
+);
+```
+
+#### Alteração 2: Filtrar Outros Cards Excluindo Alunos com Justificativa (Linhas 332-335)
+
+```typescript
+// 10. Agrupar alertas da fase atual por tipo
+// EXCLUIR alunos que já estão em "aguardando_explicacao"
+const precisaAtencao = alertasFaseAtual.filter(a => 
+  a.tipo_alerta === 'precisa_atencao' && 
+  !alunosComJustificativaPendente.has(a.aluno.id)
+);
+
+const celebrarDb = alertasFaseAtual.filter(a => 
+  a.tipo_alerta === 'celebrar' && 
+  !alunosComJustificativaPendente.has(a.aluno.id)
+);
+
+const naoEsquecerDb = alertasFaseAtual.filter(a => 
+  a.tipo_alerta === 'nao_esquecer' && 
+  !alunosComJustificativaPendente.has(a.aluno.id)
+);
+```
+
+#### Alteração 3: Celebrações Dinâmicas Também Devem Ser Excluídas (Linha ~353)
+
+```typescript
+for (const aluno of alunosCasa || []) {
+  // Pular se já tem alerta de celebração no banco
+  if (alunosJaCelebrados.has(aluno.id)) continue;
+  
+  // NOVO: Pular se tem justificativa pendente
+  if (alunosComJustificativaPendente.has(aluno.id)) continue;
+  
+  // ... resto da lógica
+}
+```
+
+#### Alteração 4: "Não Esqueça" Calculado Dinamicamente (Linha ~225)
+
+```typescript
+const alunosNaoEsquecer: AlertaAluno[] = (alunosCasa || [])
+  .filter(aluno => {
+    // NOVO: Excluir alunos com justificativa pendente
+    // (precisamos mover esta filtragem para após o cálculo do aguardandoExplicacao)
+    // ... lógica existente
+  })
+```
+
+### Refatoração da Ordem de Execução
+
+Para aplicar o filtro corretamente, a ordem das operações precisa ser ajustada:
+
+```text
+ANTES:
+1. Buscar alertas do banco
+2. Separar por fase atual vs anterior
+3. Calcular "Não esqueça" dinâmico
+4. Agrupar por tipo (precisa_atencao, celebrar, etc.)
+5. Extrair aguardando_explicacao
+
+DEPOIS:
+1. Buscar alertas do banco
+2. Separar por fase atual vs anterior
+3. **Extrair aguardando_explicacao PRIMEIRO**
+4. **Criar Set de alunos com justificativa pendente**
+5. Calcular "Não esqueça" dinâmico (excluindo set)
+6. Agrupar por tipo (excluindo set)
+```
 
 ---
 
-## Plano de Implementação
+## Correção na Edge Function (Prevenção Futura)
 
-### Passo 1: Migração do Banco de Dados
+### Arquivo: `supabase/functions/receber-sugestao-n8n/index.ts`
 
-Adicionar coluna `segmento` na tabela `turmas`:
+Atualmente (linha 274-283):
+```typescript
+.eq("motivo", "analise_n8n")
+```
+
+**Problema:** Só arquiva alertas N8N, deixando alertas de triggers internos ativos.
+
+**Solução:** Quando receber `aguardando_explicacao`, arquivar TODOS os alertas ativos do aluno:
+
+```typescript
+// 7. Archive active alerts for this student
+// For 'aguardando_explicacao', archive ALL alerts (not just N8N)
+// For other types, archive only N8N alerts
+const archiveQuery = supabase
+  .from("alertas_alunos")
+  .update({
+    status: "arquivado",
+    notificacao_ativa: false,
+    updated_at: new Date().toISOString(),
+  })
+  .eq("aluno_id", aluno.id)
+  .eq("status", "ativo");
+
+// Se é justificativa, arquiva TODOS os alertas
+if (tipoAlertaFinal === 'aguardando_explicacao') {
+  await archiveQuery;
+} else {
+  // Para outros tipos, arquiva apenas os do N8N
+  await archiveQuery.eq("motivo", "analise_n8n");
+}
+```
+
+---
+
+## Correção Imediata dos Dados
+
+Para limpar a duplicação existente no banco:
 
 ```sql
--- Adicionar coluna segmento
-ALTER TABLE turmas 
-ADD COLUMN segmento TEXT CHECK (segmento IN ('infantil', 'fundamental1', 'fundamental2'));
-
--- Popular dados baseado na série atual
--- Séries 1-5 serão fundamental1 (não há turmas do infantil cadastradas ainda)
--- Séries 6-9 serão fundamental2
-UPDATE turmas SET segmento = 
-  CASE 
-    WHEN serie >= 6 THEN 'fundamental2'
-    ELSE 'fundamental1'
-  END
-WHERE segmento IS NULL;
-
--- Criar índice para otimizar consultas
-CREATE INDEX idx_turmas_segmento ON turmas(segmento);
+-- Arquivar alertas duplicados onde o aluno já tem aguardando_explicacao
+UPDATE alertas_alunos a1
+SET status = 'arquivado', 
+    notificacao_ativa = false,
+    updated_at = NOW()
+WHERE a1.status = 'ativo'
+  AND a1.tipo_alerta != 'aguardando_explicacao'
+  AND EXISTS (
+    SELECT 1 FROM alertas_alunos a2
+    WHERE a2.aluno_id = a1.aluno_id
+      AND a2.tipo_alerta = 'aguardando_explicacao'
+      AND a2.status = 'ativo'
+  );
 ```
 
-### Passo 2: Atualizar Query do Componente
+---
 
-Modificar `TabelaVisaoGeralProfessores.tsx` para buscar turmas pelo segmento:
+## Resultado Esperado
 
-```typescript
-// ANTES (linha 33-38):
-const { data: turmas } = await supabase
-  .from('turmas')
-  .select('id, nome, serie, turma_letra')
-  .eq('institution_id', institutionId)
-  .order('serie');
+### Cenário: Adryan com Justificativa Pendente
 
-// DEPOIS:
-const { data: turmas } = await supabase
-  .from('turmas')
-  .select('id, nome, serie, turma_letra, segmento')
-  .eq('institution_id', institutionId)
-  .order('serie');
+| Card | Contagem ANTES | Contagem DEPOIS |
+|------|----------------|-----------------|
+| Celebre | 1 | **0** |
+| Precisa de justificativa | 1 | **1** |
+
+### Regra de Exclusão Mútua
+
+```text
+Para cada aluno:
+  SE existe alerta ativo com tipo = 'aguardando_explicacao':
+    → Aparece APENAS em "Precisa de justificativa"
+    → IGNORADO em todos os outros cards
+  SENÃO:
+    → Aparece no card correspondente ao seu tipo
 ```
-
-### Passo 3: Atualizar Lógica de Filtragem
-
-Substituir filtragem por série para filtragem por segmento:
-
-```typescript
-// ANTES (linhas 123-127):
-const turmasFiltradas = turmasData?.filter(turma => {
-  const series = SERIES_POR_SEGMENTO[segmentoVisao];
-  return series.includes(turma.serie);
-}) || [];
-
-// DEPOIS:
-const turmasFiltradas = turmasData?.filter(turma => 
-  turma.segmento === segmentoVisao
-) || [];
-```
-
-### Passo 4: Remover Mapeamento Obsoleto
-
-O objeto `SERIES_POR_SEGMENTO` não será mais necessário para a filtragem principal e pode ser simplificado ou removido.
 
 ---
 
@@ -106,39 +204,15 @@ O objeto `SERIES_POR_SEGMENTO` não será mais necessário para a filtragem prin
 
 | Arquivo | Alteração |
 |---------|-----------|
-| **Migração SQL** | Adicionar coluna `segmento` na tabela `turmas` |
-| `src/components/admin/TabelaVisaoGeralProfessores.tsx` | Atualizar query e lógica de filtragem |
+| `src/hooks/useAlertasAlunos.ts` | Reordenar lógica e adicionar filtro de exclusão |
+| `supabase/functions/receber-sugestao-n8n/index.ts` | Arquivar todos alertas para aguardando_explicacao |
+| **SQL (Cloud View)** | Limpar duplicações existentes |
 
 ---
 
-## Impacto em Outras Áreas
+## Impacto
 
-A adição da coluna `segmento` na tabela `turmas` pode beneficiar outras funcionalidades:
-
-1. **Importação de turmas** - Validar segmento ao criar turmas
-2. **Gestão de professores** - Filtrar turmas disponíveis por segmento
-3. **Relatórios** - Agrupar dados por segmento corretamente
-
----
-
-## Resultado Esperado
-
-Após a implementação:
-
-| Segmento Selecionado | Turmas Exibidas |
-|---------------------|-----------------|
-| **Infantil** | Apenas turmas com `segmento = 'infantil'` |
-| **Fund. I** | Apenas turmas com `segmento = 'fundamental1'` |
-| **Fund. II** | Mostra as 8 casas (comportamento atual mantido) |
-
----
-
-## Observação Importante
-
-Como **não existem turmas do segmento Infantil cadastradas** atualmente no banco de dados (todas são 1º-5º ano do Fundamental ou 6º-9º ano), o admin precisará:
-
-1. Cadastrar as turmas do Infantil manualmente, ou
-2. Atualizar o segmento das turmas existentes que pertencem ao Infantil
-
-A migração definirá todas as turmas 1-5 como `fundamental1` por padrão. Se houver turmas do Infantil misturadas, o admin poderá ajustar posteriormente.
+- **Nenhuma mudança visual** - Apenas corrige contagens
+- **Backward compatible** - Lógica existente mantida para outros tipos
+- **Prevents future issues** - Edge Function passa a arquivar corretamente
 
