@@ -113,6 +113,22 @@ export const ExplicacaoContradicaoModal = ({
     return null;
   };
 
+  // Inferir tipo de contradição a partir do texto_acontecendo
+  const inferirTipoContradicao = (): string => {
+    const texto = alerta.texto_acontecendo?.toLowerCase() || '';
+    // Estava em atenção → registrou positivo
+    if ((texto.includes('atenção') || texto.includes('precisa de atenção')) && 
+        (texto.includes('positivo') || texto.includes('evoluiu') || texto.includes('melhora'))) {
+      return 'atencao_para_celebracao';
+    }
+    // Estava em celebração → registrou negativo
+    if ((texto.includes('celebr') || texto.includes('positiv') || texto.includes('evoluindo')) && 
+        (texto.includes('negativo') || texto.includes('dificuldade') || texto.includes('atenção'))) {
+      return 'celebracao_para_atencao';
+    }
+    return 'contradicao_detectada';
+  };
+
   // Gerar opções de ação dinâmicas baseadas na valencia
   const getOpcoesAcao = (): OpcaoAcao[] => {
     const valencia = inferirValencia();
@@ -211,48 +227,80 @@ export const ExplicacaoContradicaoModal = ({
     setIsSending(true);
 
     try {
-      // 1. Buscar dados adicionais do aluno para o webhook
+      // 1. Buscar dados COMPLETOS do aluno (com JOIN para casa)
       const { data: alunoData } = await supabase
         .from('profiles')
-        .select('id, nome, sobrenome, serie, turma, casa_id, matricula_externa, segmento')
+        .select(`
+          id, nome, sobrenome, serie, turma, casa_id, matricula_externa, segmento,
+          inteligencias:inteligencias!profiles_casa_id_fkey (
+            id, nome, emoji
+          )
+        `)
         .eq('id', alerta.aluno.id)
         .single();
 
-      // 2. Preparar payload para N8N
+      // 2. Extrair dados da casa
+      const casaInfo = alunoData?.inteligencias as { id: number; nome: string; emoji: string } | null;
+      
+      // 3. Inferir valencia e tipo de contradição
+      const valencia = inferirValencia();
+      const tipoContradicao = alerta.tipo_contradicao || inferirTipoContradicao();
+      
+      // 4. Montar turma completa
+      const turmaCompleta = `${alunoData?.serie || ''} ${alunoData?.turma || ''}`.trim();
+
+      // 5. Payload COMPLETO para N8N
       const webhookPayload = {
         evento: 'explicacao_professor_enviada',
         tipo: 'resposta_explicacao',
+        
         aluno: {
           id: alunoData?.id || alerta.aluno.id,
           nome: alunoData ? `${alunoData.nome} ${alunoData.sobrenome}`.trim() : alerta.aluno.nome,
           matricula: alunoData?.matricula_externa || null,
           serie: alunoData?.serie || alerta.aluno.serie,
           turma: alunoData?.turma || alerta.aluno.turma,
+          turma_completa: turmaCompleta,
           casa_id: alunoData?.casa_id || null,
+          casa_nome: casaInfo?.nome || null,
+          casa_emoji: casaInfo?.emoji || null,
           segmento: alunoData?.segmento || null
         },
+        
         contexto: {
           fase_id: faseAtual?.id || null,
+          fase_numero: faseAtual?.numero_fase || null,
+          inteligencia_fase: faseAtual?.inteligencia?.nome || null,
           institution_id: profile.institution_id
         },
+        
         professor: {
           id: profile.id,
           nome: profile.full_name || profile.nome || 'Professor'
         },
+        
         explicacao: {
           tipo_registro: 'explicacao_professor',
-          tipo_contradicao: alerta.tipo_contradicao,
-          perguntas_apresentadas: alerta.perguntas_professor,
-          sugestao_anterior_resumo: alerta.sugestao_anterior_resumo,
-          observacao_nova: alerta.observacao_nova,
+          tipo_contradicao: tipoContradicao,
+          perguntas_apresentadas: alerta.perguntas_professor?.length > 0 
+            ? alerta.perguntas_professor 
+            : null,
+          sugestao_anterior_resumo: alerta.sugestao_anterior_resumo || null,
+          observacao_nova: alerta.observacao_nova || null,
           resposta_professor: explicacao.trim(),
           acao_escolhida: acaoSelecionada, // "confirmar" | "manter" | "descartar"
-          valencia: inferirValencia(),
+          valencia: valencia,
           alerta_id: alerta.id
         },
-        // Contexto estruturado para o N8N processar
+        
+        // Contexto estruturado (quando disponível do N8N)
         sugestao_anterior: alerta.sugestao_anterior || null,
         observacao_contraditoria: alerta.observacao_contraditoria || null,
+        
+        // Contexto de texto (sempre disponível do N8N)
+        texto_acontecendo: alerta.texto_acontecendo || null,
+        mensagem_professor_original: alerta.mensagem_professor || null,
+        
         timestamp: new Date().toISOString()
       };
 
