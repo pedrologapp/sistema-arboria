@@ -32,15 +32,42 @@ const getInitials = (name: string) => {
     .toUpperCase();
 };
 
-// Renderiza texto com markdown básico (**texto** -> negrito)
-const renderizarTextoFormatado = (texto: string): ReactNode[] => {
-  const partes = texto.split(/(\*\*[^*]+\*\*)/g);
-  return partes.map((parte, i) => {
-    if (parte.startsWith('**') && parte.endsWith('**')) {
-      return <strong key={i} className="text-white font-semibold">{parte.slice(2, -2)}</strong>;
-    }
-    return <span key={i}>{parte}</span>;
-  });
+// Renderiza texto com markdown básico:
+// - **texto** -> negrito
+// - \n -> quebra de parágrafo
+const renderizarTextoFormatado = (texto: string): ReactNode => {
+  // Separar por quebras de linha
+  const linhas = texto.split('\n');
+  
+  return (
+    <>
+      {linhas.map((linha, lineIndex) => {
+        // Linha vazia = espaçamento
+        if (linha.trim() === '') {
+          return <div key={lineIndex} className="h-2" />;
+        }
+        
+        // Processar negritos dentro da linha
+        const partes = linha.split(/(\*\*[^*]+\*\*)/g);
+        const conteudo = partes.map((parte, i) => {
+          if (parte.startsWith('**') && parte.endsWith('**')) {
+            return (
+              <strong key={i} className="text-white font-semibold">
+                {parte.slice(2, -2)}
+              </strong>
+            );
+          }
+          return <span key={i}>{parte}</span>;
+        });
+        
+        return (
+          <div key={lineIndex} className="mb-1">
+            {conteudo}
+          </div>
+        );
+      })}
+    </>
+  );
 };
 
 export const ExplicacaoContradicaoModal = ({
@@ -218,9 +245,9 @@ export const ExplicacaoContradicaoModal = ({
                   O que aconteceu
                 </div>
                 <div className="bg-amber-900/20 rounded-lg p-3 border border-amber-600/30">
-                  <p className="text-amber-100/90 text-sm leading-relaxed whitespace-pre-line">
+                  <div className="text-amber-100/90 text-sm leading-relaxed">
                     {renderizarTextoFormatado(alerta.texto_acontecendo)}
-                  </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -233,9 +260,9 @@ export const ExplicacaoContradicaoModal = ({
                   Mensagem para você
                 </div>
                 <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-600/40">
-                  <p className="text-purple-100/90 text-sm leading-relaxed whitespace-pre-line">
+                  <div className="text-purple-100/90 text-sm leading-relaxed">
                     {renderizarTextoFormatado(alerta.mensagem_professor)}
-                  </p>
+                  </div>
                 </div>
               </div>
             )}
