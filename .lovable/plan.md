@@ -1,356 +1,249 @@
 
 
-# Plano: Modal Genérico de Explicação com Opções de Ação Dinâmicas
+# Plano: Corrigir Payload do Webhook de Explicação do Professor
 
-## Visão Geral
+## Diagnóstico
 
-O modal de "Explicação necessária" será expandido para incluir **3 opções de ação** que o professor deve escolher além de escrever a explicação. As descrições das opções se adaptam dinamicamente baseadas na **direção da contradição** (positiva vs negativa).
+### Estrutura Real do `dados_contexto` no Banco
 
----
+Baseado na query do banco, o N8N envia:
 
-## Estrutura de Dados
-
-### Campos no `dados_contexto` do N8N
-
-O N8N atualmente envia:
 ```json
 {
-  "texto_acontecendo": "**O QUE HAVIA ANTES:**\n...",
-  "mensagem_professor": "Professor(a), você registrou...",
+  "estado": "aguardando_explicacao",
+  "gerado_por": "n8n",
   "prioridade": "urgente",
   "requer_resposta": true,
-  // Campos que precisam ser adicionados ao payload N8N:
-  "observacao_contraditoria": { "sinal": "Conectou", "valencia": "positiva" },
-  "sugestao_anterior": { "estado": "Atenção", "icone": "🔴" }
+  "mensagem_professor": "Professor(a), você registrou...",
+  "texto_acontecendo": "**O QUE HAVIA ANTES:**\nAdryan...",
+  "timestamp_analise": "2026-02-02T14:56:06.220Z",
+  
+  // CAMPOS QUE ESTÃO NULL NO BANCO:
+  "tipo_contradicao": null,
+  "sugestao_anterior_resumo": null,
+  "observacao_nova": null,
+  "perguntas_professor": [],
+  "observacao_gatilho_id": null
 }
 ```
 
-### Lógica de Fallback para Valencia
+### Problema Identificado
 
-Como o N8N pode não enviar `observacao_contraditoria`, o modal tentará inferir a valencia a partir do `texto_acontecendo`:
-- Se contiver "sinal POSITIVO" → valencia = "positiva"
-- Se contiver "sinal de atenção" / "NEGATIVO" → valencia = "negativa"
-- Caso contrário → fallback genérico
+O payload atual tenta usar campos que estão vazios/null no banco:
+
+| Campo no Payload | Valor Atual | Motivo |
+|------------------|-------------|--------|
+| `explicacao.tipo_contradicao` | `""` | N8N não envia este campo estruturado |
+| `explicacao.perguntas_apresentadas` | `[]` | N8N não envia array de perguntas |
+| `explicacao.sugestao_anterior_resumo` | `""` | N8N não envia este campo |
+| `explicacao.observacao_nova` | `""` | N8N não envia este campo |
+| `sugestao_anterior` | `null` | N8N não envia objeto estruturado |
+| `observacao_contraditoria` | `null` | N8N não envia objeto estruturado |
+| `aluno.casa_nome` | `undefined` | Não estava sendo buscado |
 
 ---
 
-## Arquivos a Modificar
+## Solução
+
+### 1. Melhorar Query de Dados do Aluno
+
+O modal já faz uma query para buscar dados do aluno, mas não inclui o JOIN com `inteligencias` para pegar `casa_nome`:
+
+**De:**
+```typescript
+const { data: alunoData } = await supabase
+  .from('profiles')
+  .select('id, nome, sobrenome, serie, turma, casa_id, matricula_externa, segmento')
+  .eq('id', alerta.aluno.id)
+  .single();
+```
+
+**Para:**
+```typescript
+const { data: alunoData } = await supabase
+  .from('profiles')
+  .select(`
+    id, nome, sobrenome, serie, turma, casa_id, matricula_externa, segmento,
+    inteligencias:inteligencias!profiles_casa_id_fkey (
+      id, nome, emoji
+    )
+  `)
+  .eq('id', alerta.aluno.id)
+  .single();
+```
+
+### 2. Inferir `tipo_contradicao` do Texto
+
+Como o N8N não envia `tipo_contradicao` estruturado, inferir a partir do `texto_acontecendo`:
+
+```typescript
+const inferirTipoContradicao = (): string => {
+  const texto = alerta.texto_acontecendo?.toLowerCase() || '';
+  // Estava em atenção → registrou positivo
+  if (texto.includes('atenção') && texto.includes('positivo')) {
+    return 'atencao_para_celebracao';
+  }
+  // Estava em celebração → registrou negativo
+  if ((texto.includes('celebr') || texto.includes('positiv')) && 
+      (texto.includes('negativo') || texto.includes('dificuldade'))) {
+    return 'celebracao_para_atencao';
+  }
+  return 'contradicao_detectada';
+};
+```
+
+### 3. Montar Payload Completo
+
+**Arquivo:** `src/components/professor/ExplicacaoContradicaoModal.tsx`
+
+```typescript
+const handleEnviar = async () => {
+  // 1. Buscar dados COMPLETOS do aluno (com JOIN para casa)
+  const { data: alunoData } = await supabase
+    .from('profiles')
+    .select(`
+      id, nome, sobrenome, serie, turma, casa_id, matricula_externa, segmento,
+      inteligencias:inteligencias!profiles_casa_id_fkey (id, nome, emoji)
+    `)
+    .eq('id', alerta.aluno.id)
+    .single();
+
+  // 2. Extrair dados da casa
+  const casaInfo = alunoData?.inteligencias as { id: number; nome: string; emoji: string } | null;
+  
+  // 3. Inferir valencia e tipo de contradição
+  const valencia = inferirValencia();
+  const tipoContradicao = alerta.tipo_contradicao || inferirTipoContradicao();
+  
+  // 4. Montar turma completa
+  const turmaCompleta = `${alunoData?.serie || ''} ${alunoData?.turma || ''}`.trim();
+
+  // 5. Payload COMPLETO
+  const webhookPayload = {
+    evento: 'explicacao_professor_enviada',
+    tipo: 'resposta_explicacao',
+    
+    aluno: {
+      id: alunoData?.id || alerta.aluno.id,
+      nome: alunoData ? `${alunoData.nome} ${alunoData.sobrenome}`.trim() : alerta.aluno.nome,
+      matricula: alunoData?.matricula_externa || null,
+      serie: alunoData?.serie || alerta.aluno.serie,
+      turma: alunoData?.turma || alerta.aluno.turma,
+      turma_completa: turmaCompleta,
+      casa_id: alunoData?.casa_id || null,
+      casa_nome: casaInfo?.nome || null,
+      casa_emoji: casaInfo?.emoji || null,
+      segmento: alunoData?.segmento || null
+    },
+    
+    contexto: {
+      fase_id: faseAtual?.id || null,
+      fase_numero: faseAtual?.numero_fase || null,
+      inteligencia_fase: faseAtual?.inteligencia?.nome || null,
+      institution_id: profile.institution_id
+    },
+    
+    professor: {
+      id: profile.id,
+      nome: profile.full_name || profile.nome || 'Professor'
+    },
+    
+    explicacao: {
+      tipo_registro: 'explicacao_professor',
+      tipo_contradicao: tipoContradicao,
+      perguntas_apresentadas: alerta.perguntas_professor?.length > 0 
+        ? alerta.perguntas_professor 
+        : null,
+      sugestao_anterior_resumo: alerta.sugestao_anterior_resumo || null,
+      observacao_nova: alerta.observacao_nova || null,
+      resposta_professor: explicacao.trim(),
+      acao_escolhida: acaoSelecionada,
+      valencia: valencia,
+      alerta_id: alerta.id
+    },
+    
+    // Contexto estruturado (quando disponível do N8N)
+    sugestao_anterior: alerta.sugestao_anterior || null,
+    observacao_contraditoria: alerta.observacao_contraditoria || null,
+    
+    // Contexto de texto (sempre disponível do N8N)
+    texto_acontecendo: alerta.texto_acontecendo || null,
+    mensagem_professor_original: alerta.mensagem_professor || null,
+    
+    timestamp: new Date().toISOString()
+  };
+};
+```
+
+---
+
+## Resultado Esperado
+
+**Payload Anterior (incompleto):**
+```json
+{
+  "aluno": { "id": "...", "nome": "Adryan", "casa_id": 1 },
+  "explicacao": { "tipo_contradicao": "", "valencia": "positiva" },
+  "sugestao_anterior": null,
+  "observacao_contraditoria": null
+}
+```
+
+**Payload Corrigido (completo):**
+```json
+{
+  "aluno": {
+    "id": "84938726-...",
+    "nome": "Adryan Samuel da Silva Dantas",
+    "matricula": "22872026",
+    "serie": "6º Ano",
+    "turma": "A",
+    "turma_completa": "6º Ano A",
+    "casa_id": 1,
+    "casa_nome": "Linguística",
+    "casa_emoji": "📝",
+    "segmento": "fundamental2"
+  },
+  "contexto": {
+    "fase_id": "9e1574c5-...",
+    "fase_numero": 5,
+    "inteligencia_fase": "Linguística",
+    "institution_id": "902876e9-..."
+  },
+  "explicacao": {
+    "tipo_registro": "explicacao_professor",
+    "tipo_contradicao": "atencao_para_celebracao",
+    "resposta_professor": "Adryan melhorou...",
+    "acao_escolhida": "confirmar",
+    "valencia": "positiva",
+    "alerta_id": "95097e37-..."
+  },
+  "texto_acontecendo": "**O QUE HAVIA ANTES:** Adryan...",
+  "mensagem_professor_original": "Professor(a), você registrou...",
+  "timestamp": "2026-02-02T16:59:58.771Z"
+}
+```
+
+---
+
+## Arquivo a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/hooks/useAlertasAlunos.ts` | Adicionar campos `observacao_contraditoria` e `sugestao_anterior` à interface e mapeamento |
-| `src/components/professor/ExplicacaoContradicaoModal.tsx` | Adicionar seção de escolha de ação, validações, e atualizar payload do webhook |
+| `src/components/professor/ExplicacaoContradicaoModal.tsx` | Melhorar query do aluno com JOIN, adicionar função `inferirTipoContradicao`, expandir payload do webhook |
 
 ---
 
-## Implementação Detalhada
+## Campos Adicionados ao Payload
 
-### 1. Interface `AlertaExplicacao` (useAlertasAlunos.ts)
-
-```typescript
-export interface AlertaExplicacao {
-  id: string;
-  aluno: { id: string; nome: string; avatarUrl?: string; serie: string; turma: string; };
-  tipo_contradicao: string;
-  perguntas_professor: string[];
-  sugestao_anterior_resumo: string;
-  observacao_nova: string;
-  created_at: string;
-  // Campos do N8N
-  mensagem_professor: string;
-  texto_acontecendo: string;
-  // NOVOS CAMPOS:
-  observacao_contraditoria: { sinal: string; valencia: string } | null;
-  sugestao_anterior: { estado: string; icone: string } | null;
-}
-```
-
-### 2. Mapeamento no Hook
-
-```typescript
-observacao_contraditoria: (alerta.dados_contexto?.observacao_contraditoria as { sinal: string; valencia: string }) || null,
-sugestao_anterior: (alerta.dados_contexto?.sugestao_anterior as { estado: string; icone: string }) || null
-```
-
-### 3. Lógica do Modal (ExplicacaoContradicaoModal.tsx)
-
-#### 3.1 Estado para ação selecionada
-
-```typescript
-const [acaoSelecionada, setAcaoSelecionada] = useState<string | null>(null);
-```
-
-#### 3.2 Inferir valencia do texto (fallback)
-
-```typescript
-const inferirValencia = (): string | null => {
-  // Tentar pegar do campo estruturado
-  if (alerta.observacao_contraditoria?.valencia) {
-    return alerta.observacao_contraditoria.valencia;
-  }
-  // Fallback: inferir do texto_acontecendo
-  const texto = alerta.texto_acontecendo.toLowerCase();
-  if (texto.includes('positivo') || texto.includes('evoluiu')) return 'positiva';
-  if (texto.includes('negativo') || texto.includes('atenção')) return 'negativa';
-  return null;
-};
-```
-
-#### 3.3 Descrições dinâmicas das ações
-
-```typescript
-const getOpcoesAcao = () => {
-  const valencia = inferirValencia();
-  
-  if (valencia === 'positiva') {
-    // Estava em atenção → registrou positivo
-    return [
-      {
-        id: 'confirmar',
-        icone: '✅',
-        titulo: 'Confirmar nova observação',
-        descricao: 'O aluno realmente evoluiu. Atualizar a análise para refletir essa melhora.'
-      },
-      {
-        id: 'manter',
-        icone: '🔄',
-        titulo: 'Manter análise anterior',
-        descricao: 'Foi um momento pontual. O padrão anterior de atenção continua válido.'
-      },
-      {
-        id: 'descartar',
-        icone: '🗑️',
-        titulo: 'Descartar observação',
-        descricao: 'Registrei por engano. Ignorar esta observação.'
-      }
-    ];
-  } else if (valencia === 'negativa') {
-    // Estava em celebração → registrou negativo
-    return [
-      {
-        id: 'confirmar',
-        icone: '✅',
-        titulo: 'Confirmar nova observação',
-        descricao: 'O aluno realmente apresentou dificuldade. Atualizar a análise para atenção.'
-      },
-      {
-        id: 'manter',
-        icone: '🔄',
-        titulo: 'Manter análise anterior',
-        descricao: 'Foi um momento pontual. O aluno continua evoluindo bem no geral.'
-      },
-      {
-        id: 'descartar',
-        icone: '🗑️',
-        titulo: 'Descartar observação',
-        descricao: 'Registrei por engano. Ignorar esta observação.'
-      }
-    ];
-  } else {
-    // Fallback genérico
-    return [
-      {
-        id: 'confirmar',
-        icone: '✅',
-        titulo: 'Confirmar nova observação',
-        descricao: 'O que registrei agora reflete a realidade. Atualizar a análise do aluno.'
-      },
-      {
-        id: 'manter',
-        icone: '🔄',
-        titulo: 'Manter análise anterior',
-        descricao: 'Foi um momento isolado. A análise anterior continua válida.'
-      },
-      {
-        id: 'descartar',
-        icone: '🗑️',
-        titulo: 'Descartar observação',
-        descricao: 'Registrei por engano. Ignorar esta observação.'
-      }
-    ];
-  }
-};
-```
-
-#### 3.4 Validações
-
-- Mínimo de 20 caracteres na explicação
-- Ação obrigatória (uma das 3 deve estar selecionada)
-
-```typescript
-const podeEnviar = explicacao.trim().length >= 20 && acaoSelecionada !== null;
-```
-
-#### 3.5 JSX da Seção de Ações
-
-```tsx
-{/* Escolha de ação - NOVA SEÇÃO */}
-<div className="space-y-2">
-  <label className="flex items-center gap-2 text-white/60 text-xs font-medium uppercase tracking-wider">
-    🎯 O que devemos fazer? <span className="text-red-400">*</span>
-  </label>
-  <div className="flex flex-col gap-2">
-    {opcoesAcao.map((opcao) => (
-      <div
-        key={opcao.id}
-        onClick={() => !isSending && setAcaoSelecionada(opcao.id)}
-        className={`
-          p-3 rounded-lg cursor-pointer transition-all
-          ${acaoSelecionada === opcao.id
-            ? 'bg-purple-900/40 border-2 border-purple-500 ring-1 ring-purple-500/30'
-            : 'bg-white/5 border border-white/10 hover:border-white/30'
-          }
-          ${isSending ? 'opacity-50 cursor-not-allowed' : ''}
-        `}
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{opcao.icone}</span>
-          <span className="font-medium text-white">{opcao.titulo}</span>
-        </div>
-        <p className="text-sm text-white/50 mt-1 ml-7">{opcao.descricao}</p>
-      </div>
-    ))}
-  </div>
-</div>
-```
-
-#### 3.6 Atualização do Payload do Webhook
-
-```typescript
-const webhookPayload = {
-  evento: 'explicacao_professor_enviada',
-  tipo: 'resposta_explicacao',
-  
-  aluno: { ... },
-  contexto: { ... },
-  professor: { ... },
-  
-  explicacao: {
-    tipo_registro: 'explicacao_professor',
-    tipo_contradicao: alerta.tipo_contradicao,
-    resposta_professor: explicacao.trim(),
-    acao_escolhida: acaoSelecionada, // "confirmar" | "manter" | "descartar"
-    valencia: inferirValencia(),
-    alerta_id: alerta.id
-  },
-  
-  // Contexto para o N8N processar
-  sugestao_anterior: alerta.sugestao_anterior || null,
-  observacao_contraditoria: alerta.observacao_contraditoria || null,
-  
-  timestamp: new Date().toISOString()
-};
-```
-
----
-
-## Layout Visual Final
-
-```
-┌─────────────────────────────────────────────────┐
-│  [AS]  💬 Explicação necessária             [X] │
-│        Adryan Samuel da Silva Dantas            │
-│        [Contradição detectada]                  │
-├─────────────────────────────────────────────────┤
-│                                                 │
-│  📋 O QUE ACONTECEU                             │
-│  ┌───────────────────────────────────────────┐  │
-│  │ **O QUE HAVIA ANTES:** ...               │  │
-│  │ **O QUE VOCÊ REGISTROU AGORA:** ...      │  │
-│  │ **POR QUE ISSO É IMPORTANTE:** ...       │  │
-│  └───────────────────────────────────────────┘  │
-│                                                 │
-│  💬 MENSAGEM PARA VOCÊ                          │
-│  ┌───────────────────────────────────────────┐  │
-│  │ Professor(a), você registrou...          │  │
-│  │ 1. O que motivou você a registrar...     │  │
-│  │ 2. O que aconteceu com o aluno...        │  │
-│  │ 3. Detalhe o que aconteceu...            │  │
-│  └───────────────────────────────────────────┘  │
-│                                                 │
-│  💬 SUA EXPLICAÇÃO *                            │
-│  ┌───────────────────────────────────────────┐  │
-│  │ Descreva o que aconteceu...              │  │
-│  └───────────────────────────────────────────┘  │
-│  Mínimo 20 caracteres (15/20)                   │
-│                                                 │
-│  🎯 O QUE DEVEMOS FAZER? *                      │
-│                                                 │
-│  ┌───────────────────────────────────────────┐  │
-│  │ ✅ Confirmar nova observação (selected)   │  │
-│  │    O aluno realmente evoluiu...          │  │
-│  └───────────────────────────────────────────┘  │
-│  ┌───────────────────────────────────────────┐  │
-│  │ 🔄 Manter análise anterior               │  │
-│  │    Foi um momento pontual...             │  │
-│  └───────────────────────────────────────────┘  │
-│  ┌───────────────────────────────────────────┐  │
-│  │ 🗑️ Descartar observação                   │  │
-│  │    Registrei por engano...               │  │
-│  └───────────────────────────────────────────┘  │
-│                                                 │
-│     [Cancelar]        [✈ Enviar explicação]     │
-└─────────────────────────────────────────────────┘
-```
-
----
-
-## Payload Enviado ao N8N
-
-```json
-{
-  "evento": "explicacao_professor_enviada",
-  "tipo": "resposta_explicacao",
-  
-  "aluno": {
-    "id": "uuid-do-aluno",
-    "nome": "Adryan Samuel da Silva Dantas",
-    "matricula": "2287.2026",
-    "serie": "6º Ano",
-    "turma": "B"
-  },
-  
-  "professor": {
-    "id": "uuid-do-professor",
-    "nome": "Professora Julia"
-  },
-  
-  "explicacao": {
-    "tipo_registro": "explicacao_professor",
-    "resposta_professor": "O aluno começou a interagir mais depois...",
-    "acao_escolhida": "confirmar",
-    "valencia": "positiva",
-    "alerta_id": "uuid-do-alerta"
-  },
-  
-  "sugestao_anterior": null,
-  "observacao_contraditoria": null,
-  
-  "contexto": {
-    "fase_id": "uuid-fase",
-    "institution_id": "uuid-institution"
-  },
-  
-  "timestamp": "2026-02-03T14:30:00.000Z"
-}
-```
-
----
-
-## Fluxo de Validação
-
-1. **Explicação**: Mínimo 20 caracteres (contador visível)
-2. **Ação**: Uma das 3 opções deve estar selecionada
-3. **Botão "Enviar"**: Desabilitado até ambas condições serem satisfeitas
-
----
-
-## Resumo das Alterações
-
-| Componente | Alteração |
-|------------|-----------|
-| **Interface** | +2 campos: `observacao_contraditoria`, `sugestao_anterior` |
-| **Hook** | Mapear novos campos do `dados_contexto` |
-| **Modal** | +Estado `acaoSelecionada`, +Função `inferirValencia`, +Função `getOpcoesAcao`, +Seção de ações no JSX, +Validação mínimo 20 chars, +Ação no payload |
-| **Webhook** | Campo `acao_escolhida` adicionado ao payload |
+| Campo | Fonte | Descrição |
+|-------|-------|-----------|
+| `aluno.turma_completa` | Calculado | "6º Ano A" |
+| `aluno.casa_nome` | JOIN inteligencias | "Linguística" |
+| `aluno.casa_emoji` | JOIN inteligencias | "📝" |
+| `contexto.fase_numero` | ProfessorContext | 5 |
+| `contexto.inteligencia_fase` | ProfessorContext | "Linguística" |
+| `explicacao.tipo_contradicao` | Inferido do texto | "atencao_para_celebracao" |
+| `texto_acontecendo` | dados_contexto N8N | Texto formatado |
+| `mensagem_professor_original` | dados_contexto N8N | Perguntas do N8N |
 
