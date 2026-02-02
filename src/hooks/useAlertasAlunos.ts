@@ -328,12 +328,7 @@ export const useAlertasAlunos = () => {
         };
       });
 
-      // 10. Agrupar alertas da fase atual por tipo
-      const precisaAtencao = alertasFaseAtual.filter(a => a.tipo_alerta === 'precisa_atencao');
-      const celebrarDb = alertasFaseAtual.filter(a => a.tipo_alerta === 'celebrar');
-      const naoEsquecerDb = alertasFaseAtual.filter(a => a.tipo_alerta === 'nao_esquecer');
-      
-      // 10.1 Extrair alertas de aguardando_explicacao
+      // 10. PRIMEIRO: Extrair alertas de aguardando_explicacao e criar Set de exclusão
       const aguardandoExplicacao: AlertaExplicacao[] = alertasFaseAtual
         .filter(a => a.tipo_alerta === 'aguardando_explicacao')
         .map(alerta => ({
@@ -346,13 +341,36 @@ export const useAlertasAlunos = () => {
           created_at: alerta.created_at
         }));
       
-      // 10.2 Calcular celebrações dinâmicas (2 positivos consecutivos)
+      // 10.1 Criar Set de alunos com justificativa pendente para EXCLUSÃO MÚTUA
+      const alunosComJustificativaPendente = new Set(
+        aguardandoExplicacao.map(a => a.aluno.id)
+      );
+      
+      // 10.2 Agrupar alertas da fase atual por tipo, EXCLUINDO alunos com justificativa pendente
+      const precisaAtencao = alertasFaseAtual.filter(a => 
+        a.tipo_alerta === 'precisa_atencao' && 
+        !alunosComJustificativaPendente.has(a.aluno.id)
+      );
+      const celebrarDb = alertasFaseAtual.filter(a => 
+        a.tipo_alerta === 'celebrar' && 
+        !alunosComJustificativaPendente.has(a.aluno.id)
+      );
+      const naoEsquecerDb = alertasFaseAtual.filter(a => 
+        a.tipo_alerta === 'nao_esquecer' && 
+        !alunosComJustificativaPendente.has(a.aluno.id)
+      );
+      
+      // 10.3 Calcular celebrações dinâmicas (2 positivos consecutivos)
+      // EXCLUINDO alunos com justificativa pendente
       const celebracoesDinamicas: AlertaAluno[] = [];
       const alunosJaCelebrados = new Set(celebrarDb.map(c => c.aluno.id));
       
       for (const aluno of alunosCasa || []) {
         // Pular se já tem alerta de celebração no banco
         if (alunosJaCelebrados.has(aluno.id)) continue;
+        
+        // Pular se tem justificativa pendente
+        if (alunosComJustificativaPendente.has(aluno.id)) continue;
         
         const obsData = observacoesFaseAtual[aluno.id];
         if (!obsData || obsData.observacoes.length < 2) continue;
@@ -381,26 +399,37 @@ export const useAlertasAlunos = () => {
       // Combinar celebrações do banco + dinâmicas
       const celebrar = [...celebrarDb, ...celebracoesDinamicas];
       
+      // 10.4 Filtrar nao_esquecer calculados excluindo alunos com justificativa pendente
+      const alunosNaoEsquecerFiltrados = alunosNaoEsquecer.filter(
+        a => !alunosComJustificativaPendente.has(a.aluno.id)
+      );
+      
       // Combinar nao_esquecer do banco + calculados dinamicamente
-      const naoEsquecer = [...naoEsquecerDb, ...alunosNaoEsquecer];
+      const naoEsquecer = [...naoEsquecerDb, ...alunosNaoEsquecerFiltrados];
 
       // 11. Calcular badges ativos (contagem de alertas com notificacao_ativa = true)
+      // EXCLUINDO alunos com justificativa pendente dos outros badges
       const alertasComBadge = (alertasDb || []).filter(a => a.notificacao_ativa === true);
+      
       const badgesPrecisa = alertasComBadge.filter(a => 
         a.tipo_alerta === 'precisa_atencao' && 
-        (!a.fase_origem_id || a.fase_origem_id === faseAtual?.id)
+        (!a.fase_origem_id || a.fase_origem_id === faseAtual?.id) &&
+        !alunosComJustificativaPendente.has(a.aluno?.id || '')
       ).length;
       const badgesCelebrarDb = alertasComBadge.filter(a => 
         a.tipo_alerta === 'celebrar' && 
-        (!a.fase_origem_id || a.fase_origem_id === faseAtual?.id)
+        (!a.fase_origem_id || a.fase_origem_id === faseAtual?.id) &&
+        !alunosComJustificativaPendente.has(a.aluno?.id || '')
       ).length;
       const badgesCelebrar = badgesCelebrarDb + celebracoesDinamicas.length;
       const badgesNaoEsquecer = alertasComBadge.filter(a => 
         a.tipo_alerta === 'nao_esquecer' && 
-        (!a.fase_origem_id || a.fase_origem_id === faseAtual?.id)
+        (!a.fase_origem_id || a.fase_origem_id === faseAtual?.id) &&
+        !alunosComJustificativaPendente.has(a.aluno?.id || '')
       ).length;
       const badgesFaseAnterior = alertasComBadge.filter(a => 
-        a.fase_origem_id && a.fase_origem_id !== faseAtual?.id
+        a.fase_origem_id && a.fase_origem_id !== faseAtual?.id &&
+        !alunosComJustificativaPendente.has(a.aluno?.id || '')
       ).length;
       const badgesExplicacao = alertasComBadge.filter(a => 
         a.tipo_alerta === 'aguardando_explicacao'

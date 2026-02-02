@@ -270,17 +270,37 @@ Deno.serve(async (req) => {
       faseAtualId = faseAtual?.id || null;
     }
 
-    // 7. Archive ALL active alerts for this student from N8N
-    const { error: archiveError } = await supabase
-      .from("alertas_alunos")
-      .update({
-        status: "arquivado",
-        notificacao_ativa: false,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("aluno_id", aluno.id)
-      .eq("motivo", "analise_n8n")
-      .eq("status", "ativo");
+    // 7. Archive active alerts for this student
+    // For 'aguardando_explicacao', archive ALL alerts (not just N8N) to prevent duplications
+    // For other types, archive only N8N alerts
+    let archiveError;
+    
+    if (tipoAlertaFinal === 'aguardando_explicacao') {
+      // Arquiva TODOS os alertas ativos do aluno (justificativa tem prioridade máxima)
+      const result = await supabase
+        .from("alertas_alunos")
+        .update({
+          status: "arquivado",
+          notificacao_ativa: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("aluno_id", aluno.id)
+        .eq("status", "ativo");
+      archiveError = result.error;
+    } else {
+      // Para outros tipos, arquiva apenas alertas do N8N
+      const result = await supabase
+        .from("alertas_alunos")
+        .update({
+          status: "arquivado",
+          notificacao_ativa: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("aluno_id", aluno.id)
+        .eq("motivo", "analise_n8n")
+        .eq("status", "ativo");
+      archiveError = result.error;
+    }
 
     if (archiveError) {
       console.error("Error archiving old alerts:", archiveError);
