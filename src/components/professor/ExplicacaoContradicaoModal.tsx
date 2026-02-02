@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, ReactNode } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { X, Send, Loader2, ClipboardList, FileText, HelpCircle } from 'lucide-react';
+import { X, Send, Loader2, ClipboardList, MessageCircle } from 'lucide-react';
 import { AlertaExplicacao } from '@/hooks/useAlertasAlunos';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
@@ -32,6 +32,17 @@ const getInitials = (name: string) => {
     .toUpperCase();
 };
 
+// Renderiza texto com markdown básico (**texto** -> negrito)
+const renderizarTextoFormatado = (texto: string): ReactNode[] => {
+  const partes = texto.split(/(\*\*[^*]+\*\*)/g);
+  return partes.map((parte, i) => {
+    if (parte.startsWith('**') && parte.endsWith('**')) {
+      return <strong key={i} className="text-white font-semibold">{parte.slice(2, -2)}</strong>;
+    }
+    return <span key={i}>{parte}</span>;
+  });
+};
+
 export const ExplicacaoContradicaoModal = ({
   isOpen,
   onClose,
@@ -41,6 +52,10 @@ export const ExplicacaoContradicaoModal = ({
   const queryClient = useQueryClient();
   const [explicacao, setExplicacao] = useState('');
   const [isSending, setIsSending] = useState(false);
+
+  // Determinar se há contexto do N8N ou usar fallback
+  const temContextoN8N = alerta.mensagem_professor || alerta.texto_acontecendo;
+  const mensagemFallback = `Professor(a), foi detectada uma contradição entre a sugestão ativa e sua nova observação para ${alerta.aluno.nome}. Por favor, explique o que motivou essa mudança para que possamos ajustar nossas análises.`;
 
   const handleEnviar = async () => {
     if (!explicacao.trim()) {
@@ -194,52 +209,48 @@ export const ExplicacaoContradicaoModal = ({
 
         <ScrollArea className="max-h-[60vh]">
           <div className="p-4 space-y-4">
-            {/* Sugestão anterior */}
-            {alerta.sugestao_anterior_resumo && (
+            
+            {/* NOVO: Bloco "O que aconteceu" - texto_acontecendo */}
+            {alerta.texto_acontecendo && (
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-white/60 text-xs font-medium uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-amber-400/80 text-xs font-medium uppercase tracking-wider">
                   <ClipboardList className="w-3.5 h-3.5" />
-                  O que estava acontecendo
+                  O que aconteceu
                 </div>
-                <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                  <p className="text-white/80 text-sm leading-relaxed">
-                    {alerta.sugestao_anterior_resumo}
+                <div className="bg-amber-900/20 rounded-lg p-3 border border-amber-600/30">
+                  <p className="text-amber-100/90 text-sm leading-relaxed whitespace-pre-line">
+                    {renderizarTextoFormatado(alerta.texto_acontecendo)}
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Nova observação */}
-            {alerta.observacao_nova && (
+            {/* NOVO: Bloco "Mensagem para você" - mensagem_professor */}
+            {alerta.mensagem_professor && (
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-white/60 text-xs font-medium uppercase tracking-wider">
-                  <FileText className="w-3.5 h-3.5" />
-                  O que você registrou
+                <div className="flex items-center gap-2 text-purple-400/80 text-xs font-medium uppercase tracking-wider">
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  Mensagem para você
                 </div>
-                <div className="bg-amber-900/20 rounded-lg p-3 border border-amber-700/30">
-                  <p className="text-amber-200/90 text-sm leading-relaxed">
-                    {alerta.observacao_nova}
+                <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-600/40">
+                  <p className="text-purple-100/90 text-sm leading-relaxed whitespace-pre-line">
+                    {renderizarTextoFormatado(alerta.mensagem_professor)}
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Perguntas para reflexão */}
-            {alerta.perguntas_professor.length > 0 && (
+            {/* FALLBACK: Se não houver contexto do N8N */}
+            {!temContextoN8N && (
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-white/60 text-xs font-medium uppercase tracking-wider">
-                  <HelpCircle className="w-3.5 h-3.5" />
-                  Perguntas para reflexão
+                <div className="flex items-center gap-2 text-purple-400/80 text-xs font-medium uppercase tracking-wider">
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  Mensagem para você
                 </div>
-                <div className="bg-purple-900/20 rounded-lg p-3 border border-purple-700/30">
-                  <ul className="space-y-2">
-                    {alerta.perguntas_professor.map((pergunta, idx) => (
-                      <li key={idx} className="text-purple-200/90 text-sm flex items-start gap-2">
-                        <span className="text-purple-400 mt-0.5">•</span>
-                        {pergunta}
-                      </li>
-                    ))}
-                  </ul>
+                <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-600/40">
+                  <p className="text-purple-100/90 text-sm leading-relaxed">
+                    {mensagemFallback}
+                  </p>
                 </div>
               </div>
             )}

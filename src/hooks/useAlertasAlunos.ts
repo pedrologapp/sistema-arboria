@@ -47,6 +47,9 @@ export interface AlertaExplicacao {
   sugestao_anterior_resumo: string;
   observacao_nova: string;
   created_at: string;
+  // Campos do N8N
+  mensagem_professor: string;
+  texto_acontecendo: string;
 }
 
 export interface AlunoSimples {
@@ -338,7 +341,10 @@ export const useAlertasAlunos = () => {
           perguntas_professor: (alerta.dados_contexto?.perguntas_professor as string[]) || [],
           sugestao_anterior_resumo: (alerta.dados_contexto?.sugestao_anterior_resumo as string) || '',
           observacao_nova: (alerta.dados_contexto?.observacao_nova as string) || '',
-          created_at: alerta.created_at
+          created_at: alerta.created_at,
+          // Campos do N8N
+          mensagem_professor: (alerta.dados_contexto?.mensagem_professor as string) || '',
+          texto_acontecendo: (alerta.dados_contexto?.texto_acontecendo as string) || ''
         }));
       
       // 10.1 Criar Set de alunos com justificativa pendente para EXCLUSÃO MÚTUA
