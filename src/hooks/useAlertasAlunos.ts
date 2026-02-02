@@ -50,6 +50,9 @@ export interface AlertaExplicacao {
   // Campos do N8N
   mensagem_professor: string;
   texto_acontecendo: string;
+  // Campos estruturados para opções de ação
+  observacao_contraditoria: { sinal: string; valencia: string } | null;
+  sugestao_anterior: { estado: string; icone: string } | null;
 }
 
 export interface AlunoSimples {
@@ -344,7 +347,10 @@ export const useAlertasAlunos = () => {
           created_at: alerta.created_at,
           // Campos do N8N
           mensagem_professor: (alerta.dados_contexto?.mensagem_professor as string) || '',
-          texto_acontecendo: (alerta.dados_contexto?.texto_acontecendo as string) || ''
+          texto_acontecendo: (alerta.dados_contexto?.texto_acontecendo as string) || '',
+          // Campos estruturados para opções de ação
+          observacao_contraditoria: (alerta.dados_contexto?.observacao_contraditoria as { sinal: string; valencia: string }) || null,
+          sugestao_anterior: (alerta.dados_contexto?.sugestao_anterior as { estado: string; icone: string }) || null
         }));
       
       // 10.1 Criar Set de alunos com justificativa pendente para EXCLUSÃO MÚTUA
