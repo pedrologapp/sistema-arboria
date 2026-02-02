@@ -42,7 +42,8 @@ const ProfessorDashboard = () => {
   const totalAlertas = (badgesAtivos?.precisaAtencao || 0) + 
                        (badgesAtivos?.celebrar || 0) + 
                        (badgesAtivos?.naoEsquecer || 0) + 
-                       (badgesAtivos?.atencaoFaseAnterior || 0);
+                       (badgesAtivos?.atencaoFaseAnterior || 0) +
+                       (badgesAtivos?.aguardandoExplicacao || 0);
 
   // Query: Missões Ativas
   const { data: missoesAtivas } = useQuery({
