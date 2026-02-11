@@ -152,8 +152,24 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
           setInstitutionName(institutionData?.name || null);
         }
 
-        // 4. Fetch fase atual
-        const { data: faseData, error: faseError } = await supabase
+        // 4. Fetch fase atual - filtrar pela serie das turmas vinculadas
+        // First get the teacher's series from turmas
+        let serieDosProfessor: number | null = null;
+        if (profileData.segmento === 'infantil' || profileData.segmento === 'fundamental1') {
+          const { data: turmasData } = await supabase
+            .from('professor_turma')
+            .select('turmas!inner(serie)')
+            .eq('professor_id', user.id)
+            .eq('ativo', true)
+            .limit(1);
+          
+          if (turmasData && turmasData.length > 0) {
+            const turma = turmasData[0].turmas as unknown as { serie: number };
+            serieDosProfessor = turma.serie;
+          }
+        }
+
+        let faseQuery = supabase
           .from('fases')
           .select(`
             id,
@@ -172,8 +188,17 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
             )
           `)
           .eq('institution_id', profileData.institution_id)
-          .eq('ativo', true)
-          .maybeSingle();
+          .eq('ativo', true);
+
+        // Filter by serie if professor has turmas
+        if (serieDosProfessor != null) {
+          faseQuery = faseQuery.eq('serie', serieDosProfessor);
+        }
+        if (profileData.segmento) {
+          faseQuery = faseQuery.eq('segmento', profileData.segmento);
+        }
+
+        const { data: faseData, error: faseError } = await faseQuery.maybeSingle();
 
         if (faseError) {
           console.error('Error fetching fase atual:', faseError);
