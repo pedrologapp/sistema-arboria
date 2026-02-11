@@ -26,7 +26,17 @@ interface LocationState {
   };
   anoLetivo: number;
   segmento: Segmento;
+  serie: number;
 }
+
+const SERIES_LABELS: Record<number, string> = {
+  1: '1º ANO', 2: '2º ANO', 3: '3º ANO', 4: '4º ANO', 5: '5º ANO',
+  6: '6º ANO', 7: '7º ANO', 8: '8º ANO', 9: '9º ANO',
+};
+// Infantil uses special labels
+const SERIES_LABELS_INFANTIL: Record<number, string> = {
+  2: 'Maternal II', 3: 'Maternal III', 4: 'Grupo IV', 5: 'Grupo V',
+};
 
 const FaseNovaPage = () => {
   const navigate = useNavigate();
@@ -56,7 +66,10 @@ const FaseNovaPage = () => {
     );
   }
 
-  const { inteligencia, anoLetivo, segmento } = state;
+  const { inteligencia, anoLetivo, segmento, serie } = state;
+  const serieLabel = segmento === 'infantil' 
+    ? SERIES_LABELS_INFANTIL[serie] || `Série ${serie}`
+    : SERIES_LABELS[serie] || `Série ${serie}`;
 
   const criarMutation = useMutation({
     mutationFn: async () => {
@@ -73,13 +86,14 @@ const FaseNovaPage = () => {
         throw new Error('Instituição não encontrada');
       }
 
-      // Buscar próximo número de fase para este segmento
+      // Buscar próximo número de fase para este segmento + serie
       const { data: fasesExistentes } = await supabase
         .from('fases')
         .select('numero_fase')
         .eq('institution_id', profile.institution_id)
         .eq('ano_letivo', anoLetivo)
         .eq('segmento', segmento)
+        .eq('serie', serie)
         .order('numero_fase', { ascending: false })
         .limit(1);
 
@@ -98,6 +112,7 @@ const FaseNovaPage = () => {
           data_inicio: dataInicio,
           data_fim: dataFim,
           segmento: segmento,
+          serie: serie,
           ativo: false,
           semana_atual: 1
         })
@@ -156,7 +171,7 @@ const FaseNovaPage = () => {
               Nova Fase: {inteligencia.nome}
             </h1>
             <p className="text-white/60 text-sm">
-              {segmentoLabels[segmento]} • {anoLetivo}
+              {serieLabel} • {segmentoLabels[segmento]} • {anoLetivo}
             </p>
           </div>
         </div>
@@ -167,7 +182,7 @@ const FaseNovaPage = () => {
         {/* Info do segmento */}
         <div className="p-3 bg-white/5 border border-white/10 rounded-xl">
           <p className="text-white/60 text-sm">
-            Esta fase será criada para o segmento <strong className="text-white">{segmentoLabels[segmento]}</strong>
+            Esta fase será criada para <strong className="text-white">{serieLabel}</strong> ({segmentoLabels[segmento]})
           </p>
         </div>
 

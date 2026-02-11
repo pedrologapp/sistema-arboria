@@ -1283,6 +1283,7 @@ export type Database = {
           numero_fase: number
           segmento: string
           semana_atual: number | null
+          serie: number | null
           updated_at: string | null
         }
         Insert: {
@@ -1297,6 +1298,7 @@ export type Database = {
           numero_fase: number
           segmento?: string
           semana_atual?: number | null
+          serie?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -1311,6 +1313,7 @@ export type Database = {
           numero_fase?: number
           segmento?: string
           semana_atual?: number | null
+          serie?: number | null
           updated_at?: string | null
         }
         Relationships: [

@@ -51,6 +51,8 @@ const FaseDetalhesPage = () => {
           inteligencia_id,
           institution_id,
           ano_letivo,
+          segmento,
+          serie,
           inteligencias (
             id,
             nome,
@@ -69,11 +71,11 @@ const FaseDetalhesPage = () => {
     enabled: !!id
   });
 
-  // Buscar fase atualmente ativa (para detectar conflito)
+  // Buscar fase atualmente ativa (para detectar conflito) - filtrar por segmento E serie
   const { data: faseAtivaAtual } = useQuery({
-    queryKey: ['fase-ativa', fase?.institution_id, fase?.ano_letivo],
+    queryKey: ['fase-ativa', fase?.institution_id, fase?.ano_letivo, fase?.segmento, fase?.serie],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('fases')
         .select(`
           id, 
@@ -83,9 +85,16 @@ const FaseDetalhesPage = () => {
         .eq('institution_id', fase?.institution_id)
         .eq('ano_letivo', fase?.ano_letivo)
         .eq('ativo', true)
-        .neq('id', id)
-        .maybeSingle();
+        .neq('id', id!);
 
+      if (fase?.segmento) {
+        query = query.eq('segmento', fase.segmento);
+      }
+      if (fase?.serie != null) {
+        query = query.eq('serie', fase.serie);
+      }
+
+      const { data, error } = await query.maybeSingle();
       if (error) throw error;
       return data;
     },

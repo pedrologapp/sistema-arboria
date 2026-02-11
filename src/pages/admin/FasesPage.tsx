@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronRight, AlertCircle, CalendarDays } from 'lucide-react';
+import { ChevronRight, AlertCircle, CalendarDays, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { cn } from '@/lib/utils';
@@ -45,6 +45,7 @@ interface FaseDB {
   semana_atual: number | null;
   inteligencia_id: number;
   segmento: string;
+  serie: number | null;
 }
 
 interface FaseComStatus {
@@ -60,9 +61,32 @@ interface FaseComStatus {
   missoesCount: number;
   configurada: boolean;
   segmento: Segmento;
+  serie: number | null;
 }
 
 const TOTAL_MISSOES_ESPERADO = 36;
+
+const SERIES_POR_SEGMENTO: Record<Segmento, { numero: number; label: string }[]> = {
+  infantil: [
+    { numero: 2, label: 'Maternal II' },
+    { numero: 3, label: 'Maternal III' },
+    { numero: 4, label: 'Grupo IV' },
+    { numero: 5, label: 'Grupo V' },
+  ],
+  fundamental1: [
+    { numero: 1, label: '1º ANO' },
+    { numero: 2, label: '2º ANO' },
+    { numero: 3, label: '3º ANO' },
+    { numero: 4, label: '4º ANO' },
+    { numero: 5, label: '5º ANO' },
+  ],
+  fundamental2: [
+    { numero: 6, label: '6º ANO' },
+    { numero: 7, label: '7º ANO' },
+    { numero: 8, label: '8º ANO' },
+    { numero: 9, label: '9º ANO' },
+  ],
+};
 
 const statusConfig: Record<FaseStatus, { 
   label: string; 
@@ -119,6 +143,7 @@ const FasesPage = () => {
   const { user } = useAuth();
   const [anoLetivo, setAnoLetivo] = useState(new Date().getFullYear());
   const [segmentoAtivo, setSegmentoAtivo] = useState<Segmento>('fundamental2');
+  const [serieSelecionada, setSerieSelecionada] = useState<number | null>(null);
   const [showCalendario, setShowCalendario] = useState(false);
 
   // Buscar institution_id do admin
@@ -154,26 +179,16 @@ const FasesPage = () => {
   const { data: fases, isLoading: isLoadingFases } = useQuery({
     queryKey: ['fases-admin', profile?.institution_id, anoLetivo],
     queryFn: async () => {
-      if (!profile?.institution_id) {
-        console.log('⚠️ FasesPage: institution_id não definido no perfil');
-        return [];
-      }
-      
-      console.log('🔍 Buscando fases:', { institution_id: profile.institution_id, ano_letivo: anoLetivo });
+      if (!profile?.institution_id) return [];
       
       const { data, error } = await supabase
         .from('fases')
-        .select('id, numero_fase, data_inicio, data_fim, ativo, semana_atual, inteligencia_id, segmento')
+        .select('id, numero_fase, data_inicio, data_fim, ativo, semana_atual, inteligencia_id, segmento, serie')
         .eq('institution_id', profile.institution_id)
         .eq('ano_letivo', anoLetivo)
         .order('numero_fase');
 
-      if (error) {
-        console.error('❌ Erro ao buscar fases:', error);
-        throw error;
-      }
-      
-      console.log('✅ Fases encontradas:', data?.length);
+      if (error) throw error;
       return (data as FaseDB[]) || [];
     },
     enabled: !!profile?.institution_id,
@@ -204,31 +219,24 @@ const FasesPage = () => {
     enabled: !!fases?.length,
   });
 
-  // Determinar status de cada fase (usando timezone Brasil)
+  // Determinar status de cada fase
   const getStatusFase = (fase: FaseDB, todasFases: FaseDB[]): FaseStatus => {
     const hoje = inicioDoDiaBrasil();
-
-    // Se fase.ativo === true → 'em_andamento'
     if (fase.ativo) return 'em_andamento';
 
-    // Usar parseDataLocal para evitar bug de timezone
     const fim = parseDataLocal(fase.data_fim);
     const fimDia = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate(), 23, 59, 59, 999);
-
-    // Se data_fim < hoje → 'concluida'
     if (fimDia < hoje) return 'concluida';
 
-    // Filtrar fases do mesmo segmento para determinar ordem
-    const fasesSegmento = todasFases.filter(f => f.segmento === fase.segmento);
+    // Filtrar fases do mesmo segmento E serie
+    const fasesSegmento = todasFases.filter(f => f.segmento === fase.segmento && f.serie === fase.serie);
     const fasesOrdenadas = [...fasesSegmento].sort((a, b) => a.numero_fase - b.numero_fase);
     const faseAtiva = fasesOrdenadas.find(f => f.ativo);
     
     if (!faseAtiva) {
-      // Se não há fase ativa, a primeira futura é 'proxima'
       const primeiraFutura = fasesOrdenadas.find(f => parseDataLocal(f.data_inicio) > hoje);
       if (primeiraFutura?.id === fase.id) return 'proxima';
     } else {
-      // A fase logo após a ativa é 'proxima'
       const indexAtiva = fasesOrdenadas.findIndex(f => f.ativo);
       if (indexAtiva >= 0 && fasesOrdenadas[indexAtiva + 1]?.id === fase.id) {
         return 'proxima';
@@ -238,14 +246,12 @@ const FasesPage = () => {
     return 'bloqueada';
   };
 
-  // Gerar fases completas para um segmento específico
-  const gerarFasesSegmento = (segmento: Segmento): FaseComStatus[] => {
+  // Gerar fases completas para um segmento + serie específico
+  const gerarFasesSegmentoSerie = (segmento: Segmento, serie: number): FaseComStatus[] => {
     return (inteligencias || []).map((intel, index) => {
-      // Procurar se existe fase configurada no banco para esta inteligência E segmento
-      const faseDB = fases?.find(f => f.inteligencia_id === intel.id && f.segmento === segmento);
+      const faseDB = fases?.find(f => f.inteligencia_id === intel.id && f.segmento === segmento && f.serie === serie);
 
       if (faseDB) {
-        // Fase existe no banco - usar dados reais
         return {
           id: faseDB.id,
           inteligenciaId: intel.id,
@@ -259,11 +265,11 @@ const FasesPage = () => {
           missoesCount: missoesPorFase?.[faseDB.id] || 0,
           configurada: true,
           segmento,
+          serie,
         };
       } else {
-        // Fase NÃO existe no banco - mostrar como não configurada
         return {
-          id: `temp-${segmento}-${intel.id}`,
+          id: `temp-${segmento}-${serie}-${intel.id}`,
           inteligenciaId: intel.id,
           numero_fase: index + 1,
           data_inicio: null,
@@ -275,29 +281,26 @@ const FasesPage = () => {
           missoesCount: 0,
           configurada: false,
           segmento,
+          serie,
         };
       }
     }).sort((a, b) => a.numero_fase - b.numero_fase);
   };
 
-  // Gerar fases para cada segmento
-  const fasesInfantil = gerarFasesSegmento('infantil');
-  const fasesFundamental1 = gerarFasesSegmento('fundamental1');
-  const fasesFundamental2 = gerarFasesSegmento('fundamental2');
-
-  // Encontrar fase atual do segmento ativo
-  const getFaseAtualSegmento = (fasesSegmento: FaseComStatus[]) => {
-    return fasesSegmento.find(f => f.status === 'em_andamento' && f.configurada);
+  // Contar fases configuradas por serie
+  const contarFasesSerie = (segmento: Segmento, serie: number) => {
+    const count = fases?.filter(f => f.segmento === segmento && f.serie === serie).length || 0;
+    const temAtiva = fases?.some(f => f.segmento === segmento && f.serie === serie && f.ativo) || false;
+    return { count, temAtiva };
   };
 
-  // Formatar período (usando timezone Brasil) - formato "dd MMM"
+  // Formatar período
   const formatPeriodo = (dataInicio: string, dataFim: string) => {
     const inicio = formatarDataBrasil(dataInicio, 'dd MMM');
     const fim = formatarDataBrasil(dataFim, 'dd MMM');
     return `${inicio} - ${fim}`;
   };
 
-  // Cor da barra de progresso
   const getProgressColor = (count: number, total: number) => {
     const percent = (count / total) * 100;
     if (percent >= 80) return 'bg-green-500';
@@ -305,17 +308,72 @@ const FasesPage = () => {
     return 'bg-red-500';
   };
 
-  // Anos disponíveis para seleção
   const anosDisponiveis = [2025, 2026, 2027];
-
   const isLoading = isLoadingInteligencias || isLoadingFases || !profile;
 
-  // Renderizar lista de fases
-  const renderFasesList = (fasesSegmento: FaseComStatus[], segmento: Segmento) => {
-    const faseAtual = getFaseAtualSegmento(fasesSegmento);
+  // Handler para trocar segmento (reseta serie)
+  const handleSegmentoChange = (seg: string) => {
+    setSegmentoAtivo(seg as Segmento);
+    setSerieSelecionada(null);
+  };
+
+  // Renderizar grid de séries
+  const renderSeriesGrid = (segmento: Segmento) => {
+    const series = SERIES_POR_SEGMENTO[segmento];
+    
+    return (
+      <div className="grid grid-cols-2 gap-3">
+        {series.map((s) => {
+          const { count, temAtiva } = contarFasesSerie(segmento, s.numero);
+          
+          return (
+            <button
+              key={s.numero}
+              onClick={() => setSerieSelecionada(s.numero)}
+              className={cn(
+                "p-4 rounded-xl border text-left transition-all hover:bg-white/5",
+                temAtiva 
+                  ? "border-green-500/30 bg-green-500/5" 
+                  : "border-white/10 bg-white/5"
+              )}
+            >
+              <h3 className="text-white font-semibold text-base mb-1">
+                {s.label}
+              </h3>
+              <p className="text-white/40 text-sm">
+                {count} de 8 fases
+              </p>
+              {temAtiva && (
+                <span className="inline-block mt-2 text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded">
+                  Fase ativa
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Renderizar lista de fases (para uma serie selecionada)
+  const renderFasesList = (segmento: Segmento, serie: number) => {
+    const fasesSegmento = gerarFasesSegmentoSerie(segmento, serie);
+    const faseAtual = fasesSegmento.find(f => f.status === 'em_andamento' && f.configurada);
+    const serieLabel = SERIES_POR_SEGMENTO[segmento].find(s => s.numero === serie)?.label || '';
 
     return (
       <div className="space-y-2">
+        {/* Botão Voltar para séries */}
+        <button
+          onClick={() => setSerieSelecionada(null)}
+          className="flex items-center gap-2 text-white/60 hover:text-white mb-3 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm">Voltar para séries</span>
+        </button>
+
+        <h2 className="text-white font-semibold text-lg mb-3">{serieLabel}</h2>
+
         {/* Indicador de fase atual */}
         {faseAtual && (
           <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
@@ -349,7 +407,7 @@ const FasesPage = () => {
                   navigate(`/admin/fases/${fase.id}`);
                 } else {
                   navigate(`/admin/fases/nova`, {
-                    state: { inteligencia: fase.inteligencia, anoLetivo, segmento }
+                    state: { inteligencia: fase.inteligencia, anoLetivo, segmento, serie }
                   });
                 }
               }}
@@ -364,12 +422,10 @@ const FasesPage = () => {
               )}
             >
               <div className="flex items-start gap-3">
-                {/* Número da fase */}
                 <span className="text-sm font-semibold text-gray-500 w-5 pt-2.5">
                   {fase.numero_fase}
                 </span>
 
-                {/* Brasão */}
                 <CasaBrasao
                   brasaoUrl={fase.inteligencia.brasao_url}
                   emoji={fase.inteligencia.emoji}
@@ -381,9 +437,7 @@ const FasesPage = () => {
                   )}
                 />
 
-                {/* Conteúdo */}
                 <div className="flex-1 min-w-0">
-                  {/* Linha 1: Nome + Status badge */}
                   <div className="flex items-center justify-between gap-2">
                     <span className={cn(
                       "font-medium truncate",
@@ -402,7 +456,6 @@ const FasesPage = () => {
                     </span>
                   </div>
 
-                  {/* Linha 2: Período */}
                   {fase.configurada && fase.data_inicio && fase.data_fim ? (
                     <span className="text-sm text-white/40 block mt-0.5">
                       {formatPeriodo(fase.data_inicio, fase.data_fim)}
@@ -413,14 +466,12 @@ const FasesPage = () => {
                     </span>
                   )}
 
-                  {/* Linha 3: Semana (só para fase ativa) */}
                   {fase.status === 'em_andamento' && (
                     <span className="text-xs text-green-400 block mt-1">
                       Semana {semanaAtual} de 4
                     </span>
                   )}
 
-                  {/* Linha 4: Barra de progresso de missões */}
                   {fase.configurada && (
                     <div className="flex items-center gap-2 mt-2">
                       <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
@@ -439,7 +490,6 @@ const FasesPage = () => {
                   )}
                 </div>
 
-                {/* Seta */}
                 <ChevronRight className="w-5 h-5 text-white/20 mt-2.5 shrink-0" />
               </div>
             </button>
@@ -449,7 +499,14 @@ const FasesPage = () => {
     );
   };
 
-  // Tratamento quando institution_id não está configurado
+  // Renderizar conteúdo do segmento (séries ou fases)
+  const renderSegmentoContent = (segmento: Segmento) => {
+    if (serieSelecionada !== null) {
+      return renderFasesList(segmento, serieSelecionada);
+    }
+    return renderSeriesGrid(segmento);
+  };
+
   if (profile && !profile.institution_id) {
     return (
       <div className="min-h-screen bg-[#0A0A0A] px-4 py-6">
@@ -491,7 +548,6 @@ const FasesPage = () => {
           <h1 className="text-2xl font-bold text-white mb-1">Fases</h1>
           
           <div className="flex items-center justify-between mt-4">
-            {/* Seletor de ano compacto */}
             <Select
               value={anoLetivo.toString()}
               onValueChange={(value) => setAnoLetivo(Number(value))}
@@ -512,7 +568,6 @@ const FasesPage = () => {
               </SelectContent>
             </Select>
 
-            {/* Botão Ver Calendário */}
             <Button
               variant="outline"
               size="sm"
@@ -526,7 +581,7 @@ const FasesPage = () => {
         </div>
 
         {/* Tabs por Segmento */}
-        <Tabs value={segmentoAtivo} onValueChange={(v) => setSegmentoAtivo(v as Segmento)}>
+        <Tabs value={segmentoAtivo} onValueChange={handleSegmentoChange}>
           <TabsList className="w-full bg-[#1E293B] border border-white/10 mb-4">
             <TabsTrigger 
               value="infantil" 
@@ -549,15 +604,15 @@ const FasesPage = () => {
           </TabsList>
 
           <TabsContent value="infantil">
-            {renderFasesList(fasesInfantil, 'infantil')}
+            {renderSegmentoContent('infantil')}
           </TabsContent>
 
           <TabsContent value="fundamental1">
-            {renderFasesList(fasesFundamental1, 'fundamental1')}
+            {renderSegmentoContent('fundamental1')}
           </TabsContent>
 
           <TabsContent value="fundamental2">
-            {renderFasesList(fasesFundamental2, 'fundamental2')}
+            {renderSegmentoContent('fundamental2')}
           </TabsContent>
         </Tabs>
 
@@ -566,10 +621,8 @@ const FasesPage = () => {
           isOpen={showCalendario}
           onClose={() => setShowCalendario(false)}
           fases={(() => {
-            // Obter fases do segmento ativo no formato esperado
-            const fasesSegmento = segmentoAtivo === 'infantil' ? fasesInfantil :
-                                  segmentoAtivo === 'fundamental1' ? fasesFundamental1 :
-                                  fasesFundamental2;
+            if (serieSelecionada === null) return [];
+            const fasesSegmento = gerarFasesSegmentoSerie(segmentoAtivo, serieSelecionada);
             return fasesSegmento
               .filter(f => f.configurada)
               .map(f => ({
