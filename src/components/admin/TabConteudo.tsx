@@ -281,7 +281,96 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
         </p>
       </div>
 
-      {/* Lista de Semanas */}
+      {/* Conteúdo Geral da Fase */}
+      <div className="space-y-4">
+        {(() => {
+          const conteudoGeral = getConteudoSemana(0);
+          return (
+            <div className="bg-[#1E293B] rounded-xl p-4 space-y-3">
+              <div>
+                <p className="text-white font-medium text-sm">
+                  Conteúdo Geral da Fase
+                </p>
+                <p className="text-white/40 text-xs">
+                  Material introdutório e orientações gerais
+                </p>
+              </div>
+
+              {conteudoGeral ? (
+                <div className="bg-white/5 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-5 h-5 text-white/50" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-medium truncate">
+                        {conteudoGeral.arquivo_nome}
+                      </p>
+                      {conteudoGeral.arquivo_tamanho && (
+                        <p className="text-white/40 text-xs mt-0.5">
+                          {formatarTamanho(conteudoGeral.arquivo_tamanho)}
+                        </p>
+                      )}
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white/60 transition-colors">
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-[#1E293B] border-white/10 min-w-[160px]">
+                        <DropdownMenuItem onClick={() => copiarLink(conteudoGeral.arquivo_url)} className="text-white/70 hover:text-white hover:bg-white/10 cursor-pointer">
+                          <Copy className="w-4 h-4 mr-2" />
+                          Copiar link
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => abrirModal(0, conteudoGeral)} className="text-white/70 hover:text-white hover:bg-white/10 cursor-pointer">
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Substituir
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-white/10" />
+                        <DropdownMenuItem onClick={() => removerMutation.mutate(conteudoGeral.id)} className="text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer">
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Remover
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <a href={conteudoGeral.arquivo_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-4 py-2 border border-white/20 rounded-lg text-white/70 text-sm hover:bg-white/5 hover:text-white transition-colors">
+                      <Eye className="w-4 h-4" />
+                      Visualizar
+                    </a>
+                    <button onClick={() => baixarPDF(conteudoGeral.arquivo_url, conteudoGeral.arquivo_nome)} className="flex items-center gap-1.5 px-4 py-2 border border-white/20 rounded-lg text-white/70 text-sm hover:bg-white/5 hover:text-white transition-colors">
+                      <Download className="w-4 h-4" />
+                      Baixar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => abrirModal(0)} className="w-full p-8 border-2 border-dashed border-white/15 rounded-xl hover:border-white/30 hover:bg-white/[0.02] transition-colors group">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                      <Upload className="w-5 h-5 text-white/30 group-hover:text-white/50" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-white/50 text-sm group-hover:text-white/70">Clique para adicionar PDF</p>
+                      <p className="text-white/30 text-xs mt-1">Material geral da fase</p>
+                    </div>
+                  </div>
+                </button>
+              )}
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Material por Semana */}
+      <div className="space-y-1 mt-2">
+        <h2 className="text-white font-semibold text-sm uppercase tracking-wider">
+          Material por Semana
+        </h2>
+      </div>
+
       <div className="space-y-4">
         {semanas.map((semana) => {
           const conteudo = getConteudoSemana(semana.numero);
@@ -414,7 +503,7 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
             {/* Header Modal */}
             <div className="flex items-center justify-between p-4 border-b border-white/10">
               <h3 className="text-white font-semibold">
-                Adicionar Conteúdo — Semana {semanaAtual}
+                {semanaAtual === 0 ? 'Adicionar Conteúdo Geral' : `Adicionar Conteúdo — Semana ${semanaAtual}`}
               </h3>
               <button onClick={fecharModal} className="text-white/40 hover:text-white">
                 <X className="w-5 h-5" />
