@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,12 +33,28 @@ const PessoasPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [tabAtiva, setTabAtiva] = useState<TabType>('alunos');
-  const [busca, setBusca] = useState('');
-  const [filtroSegmento, setFiltroSegmento] = useState('');
-  const [filtroSerie, setFiltroSerie] = useState('');
-  const [filtroTurma, setFiltroTurma] = useState('');
-  const [filtroCasa, setFiltroCasa] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const tabAtiva = (searchParams.get('tab') as TabType) || 'alunos';
+  const busca = searchParams.get('busca') || '';
+  const filtroSegmento = searchParams.get('segmento') || '';
+  const filtroSerie = searchParams.get('serie') || '';
+  const filtroTurma = searchParams.get('turma') || '';
+  const filtroCasa = searchParams.get('casa') || '';
+
+  const updateParam = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (value) params.set(key, value);
+    else params.delete(key);
+    setSearchParams(params, { replace: true });
+  };
+
+  const setTabAtiva = (tab: TabType) => updateParam('tab', tab === 'alunos' ? '' : tab);
+  const setBusca = (v: string) => updateParam('busca', v);
+  const setFiltroSegmento = (v: string) => updateParam('segmento', v);
+  const setFiltroSerie = (v: string) => updateParam('serie', v);
+  const setFiltroTurma = (v: string) => updateParam('turma', v);
+  const setFiltroCasa = (v: string) => updateParam('casa', v);
   const [modalImportarAberto, setModalImportarAberto] = useState(false);
   const [modalAdicionarAberto, setModalAdicionarAberto] = useState(false);
   const [modalExcluirMassaAberto, setModalExcluirMassaAberto] = useState(false);
