@@ -1,31 +1,41 @@
 
 
-# Corrigir Constraint de Unicidade da Tabela Fases
+# Preservar Filtros ao Navegar na Pagina de Pessoas
 
 ## Problema
 
-A constraint atual e `UNIQUE (institution_id, ano_letivo, numero_fase)`, ou seja, so permite um `numero_fase = 1` por ano em toda a instituicao. Com a nova estrutura de series independentes, cada serie precisa ter seu proprio conjunto de fases (1 a 8).
+Os filtros (segmento, serie, turma, casa, busca) sao armazenados em `useState`, que reseta toda vez que o componente e remontado -- ou seja, ao navegar para o perfil de um aluno e voltar, todos os filtros voltam ao estado inicial.
 
 ## Solucao
 
-Atualizar a constraint para incluir `segmento` e `serie`:
-
-```text
-Antes:  UNIQUE (institution_id, ano_letivo, numero_fase)
-Depois: UNIQUE (institution_id, ano_letivo, segmento, serie, numero_fase)
-```
+Usar **URL search params** para persistir os filtros. Ao aplicar um filtro, a URL sera atualizada (ex: `/admin/pessoas?segmento=fundamental2&serie=6`). Ao voltar da pagina do aluno, os filtros serao restaurados automaticamente a partir da URL.
 
 ## Alteracoes
 
-### 1. Migracao SQL
+### Arquivo: `src/pages/admin/PessoasPage.tsx`
 
-```sql
-ALTER TABLE public.fases DROP CONSTRAINT fases_institution_id_ano_letivo_numero_fase_key;
-ALTER TABLE public.fases ADD CONSTRAINT fases_institution_id_ano_letivo_segmento_serie_numero_fase_key 
-  UNIQUE (institution_id, ano_letivo, segmento, serie, numero_fase);
+1. Importar `useSearchParams` do `react-router-dom`
+2. Substituir os 5 estados de filtro (`filtroSegmento`, `filtroSerie`, `filtroTurma`, `filtroCasa`, `busca`) por valores lidos dos search params
+3. Criar funcoes setter que atualizam os search params (com `replace: true` para nao poluir o historico)
+4. O `tabAtiva` tambem sera persistido na URL para manter a aba selecionada
+
+Exemplo da logica:
+
+```typescript
+const [searchParams, setSearchParams] = useSearchParams();
+
+const tabAtiva = (searchParams.get('tab') as TabType) || 'alunos';
+const filtroSegmento = searchParams.get('segmento') || '';
+const filtroSerie = searchParams.get('serie') || '';
+// ...
+
+const updateParam = (key: string, value: string) => {
+  const params = new URLSearchParams(searchParams);
+  if (value) params.set(key, value);
+  else params.delete(key);
+  setSearchParams(params, { replace: true });
+};
 ```
 
-### 2. Nenhuma alteracao de codigo necessaria
-
-O codigo em `FaseNovaPage.tsx` ja filtra por `segmento` e `serie` ao calcular o proximo `numero_fase`, entao a logica esta correta. Apenas a constraint do banco precisa ser ajustada.
+Nenhuma outra pagina precisa ser alterada -- o `navigate(-1)` ou botao voltar do browser ja restaura a URL com os parametros.
 
