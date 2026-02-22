@@ -1,41 +1,21 @@
 
 
-# Preservar Filtros ao Navegar na Pagina de Pessoas
+# Corrigir Constraint de Semana na Tabela fase_conteudos
 
 ## Problema
 
-Os filtros (segmento, serie, turma, casa, busca) sao armazenados em `useState`, que reseta toda vez que o componente e remontado -- ou seja, ao navegar para o perfil de um aluno e voltar, todos os filtros voltam ao estado inicial.
+A tabela `fase_conteudos` tem um CHECK constraint (`fase_conteudos_semana_check`) que provavelmente so permite valores de 1 a 4 no campo `semana`. O "Conteudo Geral" usa `semana = 0`, que e rejeitado por essa constraint.
 
 ## Solucao
 
-Usar **URL search params** para persistir os filtros. Ao aplicar um filtro, a URL sera atualizada (ex: `/admin/pessoas?segmento=fundamental2&serie=6`). Ao voltar da pagina do aluno, os filtros serao restaurados automaticamente a partir da URL.
+Remover a constraint existente e criar uma nova que aceite valores de 0 a 4:
 
-## Alteracoes
-
-### Arquivo: `src/pages/admin/PessoasPage.tsx`
-
-1. Importar `useSearchParams` do `react-router-dom`
-2. Substituir os 5 estados de filtro (`filtroSegmento`, `filtroSerie`, `filtroTurma`, `filtroCasa`, `busca`) por valores lidos dos search params
-3. Criar funcoes setter que atualizam os search params (com `replace: true` para nao poluir o historico)
-4. O `tabAtiva` tambem sera persistido na URL para manter a aba selecionada
-
-Exemplo da logica:
-
-```typescript
-const [searchParams, setSearchParams] = useSearchParams();
-
-const tabAtiva = (searchParams.get('tab') as TabType) || 'alunos';
-const filtroSegmento = searchParams.get('segmento') || '';
-const filtroSerie = searchParams.get('serie') || '';
-// ...
-
-const updateParam = (key: string, value: string) => {
-  const params = new URLSearchParams(searchParams);
-  if (value) params.set(key, value);
-  else params.delete(key);
-  setSearchParams(params, { replace: true });
-};
+```sql
+ALTER TABLE public.fase_conteudos DROP CONSTRAINT fase_conteudos_semana_check;
+ALTER TABLE public.fase_conteudos ADD CONSTRAINT fase_conteudos_semana_check CHECK (semana >= 0 AND semana <= 4);
 ```
 
-Nenhuma outra pagina precisa ser alterada -- o `navigate(-1)` ou botao voltar do browser ja restaura a URL com os parametros.
+## Nenhuma alteracao de codigo necessaria
+
+O componente `TabConteudo.tsx` ja usa `semana = 0` corretamente. Apenas a constraint do banco precisa ser ajustada.
 
