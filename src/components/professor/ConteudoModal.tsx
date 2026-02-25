@@ -1,8 +1,11 @@
-import { X, FileText, ExternalLink, BookOpen, TreePine, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, FileText, ExternalLink, BookOpen, TreePine, Calendar, ChevronDown, Loader2 } from 'lucide-react';
 import AnimatedTextCycle from '@/components/ui/animated-text-cycle';
+import { supabase } from '@/integrations/supabase/client';
 
 interface FaseAtual {
   inteligencia?: {
+    id?: number;
     nome?: string;
   };
 }
@@ -13,28 +16,98 @@ interface ConteudoModalProps {
   faseAtual: FaseAtual | null;
 }
 
+interface ConteudoItem {
+  id: string;
+  semana: number;
+  titulo: string | null;
+  descricao: string | null;
+  arquivo_url: string;
+  arquivo_nome: string;
+}
+
 const pilares = ['Consciência', 'Integralidade', 'Necessidade', 'Acreditar'];
 
-// Cores variadas para cada semana
+const series = [
+  { num: 6, label: '6º ano', emoji: '📘' },
+  { num: 7, label: '7º ano', emoji: '📗' },
+  { num: 8, label: '8º ano', emoji: '📙' },
+  { num: 9, label: '9º ano', emoji: '📕' },
+];
+
 const coresSemana = [
   { bg: 'bg-blue-500/20', text: 'text-blue-400', glow: 'hover:shadow-blue-500/20' },
   { bg: 'bg-purple-500/20', text: 'text-purple-400', glow: 'hover:shadow-purple-500/20' },
   { bg: 'bg-emerald-500/20', text: 'text-emerald-400', glow: 'hover:shadow-emerald-500/20' },
   { bg: 'bg-orange-500/20', text: 'text-orange-400', glow: 'hover:shadow-orange-500/20' },
+  { bg: 'bg-pink-500/20', text: 'text-pink-400', glow: 'hover:shadow-pink-500/20' },
 ];
 
 const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
+  const [serieAberta, setSerieAberta] = useState<number | null>(null);
+  const [conteudos, setConteudos] = useState<Record<number, ConteudoItem[]>>({});
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !faseAtual?.inteligencia?.id) return;
+    
+    const fetchConteudos = async () => {
+      setLoading(true);
+      try {
+        // Buscar fases ativas para essa inteligência, segmento fundamental2, séries 6-9
+        const { data: fasesData } = await supabase
+          .from('fases')
+          .select('id, serie')
+          .eq('inteligencia_id', faseAtual.inteligencia!.id!)
+          .eq('segmento', 'fundamental2')
+          .eq('ativo', true)
+          .in('serie', [6, 7, 8, 9]);
+
+        if (!fasesData || fasesData.length === 0) {
+          setConteudos({});
+          setLoading(false);
+          return;
+        }
+
+        const faseIds = fasesData.map(f => f.id);
+        const faseSerieMap: Record<string, number> = {};
+        fasesData.forEach(f => { if (f.serie) faseSerieMap[f.id] = f.serie; });
+
+        const { data: conteudosData } = await supabase
+          .from('fase_conteudos')
+          .select('id, semana, titulo, descricao, arquivo_url, arquivo_nome, fase_id')
+          .in('fase_id', faseIds)
+          .order('semana', { ascending: true });
+
+        // Agrupar por série
+        const agrupado: Record<number, ConteudoItem[]> = {};
+        conteudosData?.forEach(c => {
+          const serie = faseSerieMap[(c as any).fase_id];
+          if (serie) {
+            if (!agrupado[serie]) agrupado[serie] = [];
+            agrupado[serie].push(c);
+          }
+        });
+
+        setConteudos(agrupado);
+      } catch (err) {
+        console.error('Erro ao buscar conteúdos:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchConteudos();
+  }, [isOpen, faseAtual?.inteligencia?.id]);
+
   if (!isOpen) return null;
 
-  const materiais = [
-    { semana: 1, titulo: 'Material da primeira semana', url: '/pdfs/semana-1.pdf' },
-    { semana: 2, titulo: 'Material da segunda semana', url: '/pdfs/semana-2.pdf' },
-    { semana: 3, titulo: 'Material da terceira semana', url: '/pdfs/semana-3.pdf' },
-    { semana: 4, titulo: 'Material da quarta semana', url: '/pdfs/semana-4.pdf' },
-  ];
+  const toggleSerie = (serie: number) => {
+    setSerieAberta(prev => prev === serie ? null : serie);
+  };
 
-  const handleOpenPdf = (url: string) => {
-    window.open(url, '_blank');
+  const getLabelSemana = (semana: number) => {
+    if (semana === 0) return 'Conteúdo Geral';
+    return `Semana ${semana}`;
   };
 
   return (
@@ -74,7 +147,6 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
             </p>
             
             <div className="relative overflow-hidden rounded-xl p-6 bg-gradient-to-br from-white/[0.08] to-white/[0.02] backdrop-blur-sm border border-white/10">
-              {/* Glow decorativo no fundo */}
               <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
               <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
               
@@ -87,7 +159,6 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
               
               <div className="relative flex justify-center min-h-[40px] items-center">
                 <div className="relative">
-                  {/* Glow atrás do texto */}
                   <div className="absolute inset-0 blur-xl bg-emerald-500/30 scale-150" />
                   <AnimatedTextCycle
                     words={pilares}
@@ -99,43 +170,81 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
             </div>
           </div>
 
-          {/* Materiais por Semana */}
+          {/* Materiais por Série */}
           <div>
             <p className="text-white/50 text-xs uppercase tracking-widest mb-3 flex items-center gap-2 font-medium">
-              <Calendar className="w-4 h-4" /> Materiais por Semana
+              <Calendar className="w-4 h-4" /> Materiais por Série
             </p>
-            
-            <div className="space-y-2">
-              {materiais.map((material, index) => {
-                const cor = coresSemana[index % coresSemana.length];
-                return (
-                  <button
-                    key={material.semana}
-                    onClick={() => handleOpenPdf(material.url)}
-                    className={`w-full p-4 rounded-xl text-left flex items-center gap-3
-                      bg-gradient-to-r from-white/[0.06] to-white/[0.02]
-                      backdrop-blur-sm border border-white/10
-                      hover:scale-[1.02] hover:border-white/20
-                      hover:shadow-lg ${cor.glow}
-                      transition-all duration-300 ease-out
-                      active:scale-[0.98]`}
-                  >
-                    <div className={`w-10 h-10 rounded-lg ${cor.bg} flex items-center justify-center shadow-lg`}>
-                      <FileText className={`w-5 h-5 ${cor.text}`} />
+
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 text-white/40 animate-spin" />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {series.map((serie) => {
+                  const itens = conteudos[serie.num] || [];
+                  const isOpen = serieAberta === serie.num;
+
+                  return (
+                    <div key={serie.num} className="rounded-xl border border-white/10 overflow-hidden">
+                      <button
+                        onClick={() => toggleSerie(serie.num)}
+                        className={`w-full p-4 text-left flex items-center gap-3
+                          bg-gradient-to-r from-white/[0.06] to-white/[0.02]
+                          hover:from-white/[0.10] hover:to-white/[0.04]
+                          transition-all duration-300 ease-out`}
+                      >
+                        <span className="text-lg">{serie.emoji}</span>
+                        <span className="flex-1 text-white font-semibold">{serie.label}</span>
+                        {itens.length > 0 && (
+                          <span className="text-white/30 text-xs mr-2">{itens.length} {itens.length === 1 ? 'arquivo' : 'arquivos'}</span>
+                        )}
+                        <ChevronDown className={`w-4 h-4 text-white/40 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {isOpen && (
+                        <div className="border-t border-white/5 p-2 space-y-1">
+                          {itens.length === 0 ? (
+                            <p className="text-white/30 text-sm text-center py-4 font-light">
+                              Nenhum material disponível
+                            </p>
+                          ) : (
+                            itens.map((item, idx) => {
+                              const cor = coresSemana[item.semana % coresSemana.length];
+                              return (
+                                <button
+                                  key={item.id}
+                                  onClick={() => window.open(item.arquivo_url, '_blank')}
+                                  className={`w-full p-3 rounded-lg text-left flex items-center gap-3
+                                    bg-white/[0.03] hover:bg-white/[0.07]
+                                    hover:scale-[1.01]
+                                    transition-all duration-200 ease-out
+                                    active:scale-[0.99]`}
+                                >
+                                  <div className={`w-8 h-8 rounded-lg ${cor.bg} flex items-center justify-center`}>
+                                    <FileText className={`w-4 h-4 ${cor.text}`} />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-white font-medium text-sm">
+                                      {getLabelSemana(item.semana)}
+                                    </p>
+                                    {item.titulo && (
+                                      <p className="text-white/40 text-xs truncate">{item.titulo}</p>
+                                    )}
+                                  </div>
+                                  <ExternalLink className="w-3.5 h-3.5 text-white/25 shrink-0" />
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div className="flex-1">
-                      <p className="text-white font-semibold">
-                        Semana {material.semana}
-                      </p>
-                      <p className="text-white/50 text-sm font-light">
-                        {material.titulo}
-                      </p>
-                    </div>
-                    <ExternalLink className="w-4 h-4 text-white/30" />
-                  </button>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
