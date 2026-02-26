@@ -2846,7 +2846,7 @@ export type Database = {
           nome: string
           sala: string | null
           segmento: string | null
-          serie: number
+          serie: string
           turma_letra: string
           turno: string | null
           updated_at: string | null
@@ -2861,7 +2861,7 @@ export type Database = {
           nome: string
           sala?: string | null
           segmento?: string | null
-          serie: number
+          serie: string
           turma_letra: string
           turno?: string | null
           updated_at?: string | null
@@ -2876,7 +2876,7 @@ export type Database = {
           nome?: string
           sala?: string | null
           segmento?: string | null
-          serie?: number
+          serie?: string
           turma_letra?: string
           turno?: string | null
           updated_at?: string | null
@@ -3107,15 +3107,26 @@ export type Database = {
         Args: { p_aluno_id: string }
         Returns: undefined
       }
-      ensure_turma_exists: {
-        Args: {
-          p_ano_letivo: number
-          p_institution_id: string
-          p_serie: string
-          p_turma_letra: string
-        }
-        Returns: string
-      }
+      ensure_turma_exists:
+        | {
+            Args: {
+              p_ano_letivo: number
+              p_institution_id: string
+              p_serie: string
+              p_turma_letra: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_ano_letivo: number
+              p_institution_id: string
+              p_segmento?: string
+              p_serie: string
+              p_turma_letra: string
+            }
+            Returns: string
+          }
       fechar_fase: {
         Args: { p_fase_id: string }
         Returns: {

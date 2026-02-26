@@ -33,7 +33,7 @@ interface ProfessorCasa {
 interface Turma {
   id: string;
   nome: string;
-  serie: number;
+  serie: string;
   turma_letra: string;
 }
 
@@ -45,10 +45,10 @@ const segmentoLabels: Record<Segmento, string> = {
   fundamental2: 'Fundamental 2',
 };
 
-const SERIES_POR_SEGMENTO: Record<Segmento, number[]> = {
-  infantil: [2, 3, 4, 5],
-  fundamental1: [1, 2, 3, 4, 5],
-  fundamental2: [6, 7, 8, 9],
+const SERIES_POR_SEGMENTO: Record<Segmento, string[]> = {
+  infantil: ['2', '3', '4', '5'],
+  fundamental1: ['1', '2', '3', '4', '5'],
+  fundamental2: ['6', '7', '8', '9'],
 };
 
 const PerfilProfessorAdminPage = () => {

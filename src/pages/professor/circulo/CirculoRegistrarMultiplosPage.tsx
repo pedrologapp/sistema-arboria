@@ -99,12 +99,11 @@ const CirculoRegistrarMultiplosPage = () => {
     setSaving(true);
     try {
       // Buscar turma_id
-      const serieNum = parseInt(serieParam || '6');
       const { data: turmaData } = await supabase
         .from('turmas')
         .select('id')
         .eq('institution_id', profile.institution_id!)
-        .eq('serie', serieNum)
+        .eq('serie', serieParam || '6')
         .ilike('turma_letra', turmaParam || 'A')
         .maybeSingle();
 
@@ -168,12 +167,11 @@ const CirculoRegistrarMultiplosPage = () => {
     setSaving(true);
     try {
       // Buscar turma_id
-      const serieNum = parseInt(serieParam || '6');
       const { data: turmaData } = await supabase
         .from('turmas')
         .select('id')
         .eq('institution_id', profile.institution_id!)
-        .eq('serie', serieNum)
+        .eq('serie', serieParam || '6')
         .ilike('turma_letra', turmaParam || 'A')
         .maybeSingle();
 

@@ -107,12 +107,11 @@ const CirculoRegistrarPage = () => {
     setSaving(true);
     try {
       // Buscar turma_id
-      const serieNum = parseInt(aluno.serie?.replace(/\D/g, '') || '6');
       const { data: turmaData } = await supabase
         .from('turmas')
         .select('id')
         .eq('institution_id', profile.institution_id!)
-        .eq('serie', serieNum)
+        .eq('serie', aluno.serie || '6')
         .ilike('turma_letra', aluno.turma || 'A')
         .maybeSingle();
 
@@ -178,12 +177,11 @@ const CirculoRegistrarPage = () => {
     setSaving(true);
     try {
       // Buscar turma_id
-      const serieNum = parseInt(aluno.serie?.replace(/\D/g, '') || '6');
       const { data: turmaData } = await supabase
         .from('turmas')
         .select('id')
         .eq('institution_id', profile.institution_id!)
-        .eq('serie', serieNum)
+        .eq('serie', aluno.serie || '6')
         .ilike('turma_letra', aluno.turma || 'A')
         .maybeSingle();
 

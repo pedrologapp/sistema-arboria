@@ -10,11 +10,7 @@ interface TabelaVisaoGeralProps {
   institutionId: string;
 }
 
-const SERIES_POR_SEGMENTO: Record<Segmento, number[]> = {
-  infantil: [2, 3, 4, 5],
-  fundamental1: [1, 2, 3, 4, 5],
-  fundamental2: [6, 7, 8, 9],
-};
+// Not used anymore - filtering uses turma.segmento directly
 
 const SEGMENTO_LABELS: Record<Segmento, string> = {
   infantil: 'Infantil',
