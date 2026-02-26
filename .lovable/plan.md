@@ -1,85 +1,42 @@
 
 
-# Reestruturar Modal de Conteudo com Divisao por Serie (6o ao 9o ano)
+# Associar Conteúdos do Professor à Sua Casa Mentor
 
-## Problema Atual
+## Problema
 
-O `ConteudoModal` que abre ao clicar em "Conteudo" no Home do professor mostra materiais hardcoded (semanas 1-4 com URLs estaticas). Nao busca dados reais do banco (`fase_conteudos`) e nao divide por serie.
+O `ConteudoModal` atualmente busca conteúdos baseado na inteligência da **fase ativa** (`faseAtual.inteligencia.id`). Isso significa que se a fase ativa é "Linguística", todos os professores veem conteúdos de Linguística — mesmo o professor mentor da Intrapessoal.
 
-## Solucao
+O correto é: cada professor deve ver apenas os PDFs da **sua casa mentor**. O professor da Intrapessoal deve ver os conteúdos da Intrapessoal.
 
-Reescrever o `ConteudoModal` para:
-1. Mostrar as 4 series (6o, 7o, 8o, 9o ano) como cards clicaveis
-2. Ao clicar numa serie, expandir (accordion) mostrando o conteudo real do banco: Conteudo Geral (semana 0) + Semanas 1-4
-3. Buscar dados da tabela `fase_conteudos` via join com `fases` para a fase ativa do professor
+## Solução
 
-## Estrutura Visual do Modal
+Alterar o `ConteudoModal` para usar a inteligência da **casa do professor** (`casaMentor.id`) em vez da inteligência da fase ativa.
 
-```text
-┌──────────────────────────────┐
-│ 📖 Conteúdo                  │
-│ Materiais da fase atual      │
-├──────────────────────────────┤
-│                              │
-│ ┌─ Essência do Arboria ────┐ │
-│ │  (manter como está)      │ │
-│ └──────────────────────────┘ │
-│                              │
-│ MATERIAIS POR SÉRIE          │
-│                              │
-│ ┌──────────────────────────┐ │
-│ │ 📘 6º ano            ▼  │ │
-│ ├──────────────────────────┤ │
-│ │  📄 Conteúdo Geral       │ │
-│ │  📄 Semana 1             │ │
-│ │  📄 Semana 2             │ │
-│ └──────────────────────────┘ │
-│                              │
-│ ┌──────────────────────────┐ │
-│ │ 📗 7º ano            ▶  │ │
-│ └──────────────────────────┘ │
-│                              │
-│ ┌──────────────────────────┐ │
-│ │ 📙 8º ano            ▶  │ │
-│ └──────────────────────────┘ │
-│                              │
-│ ┌──────────────────────────┐ │
-│ │ 📕 9º ano            ▶  │ │
-│ └──────────────────────────┘ │
-│                              │
-├──────────────────────────────┤
-│         [ Fechar ]           │
-└──────────────────────────────┘
-```
-
-## Alteracoes Tecnicas
+## Alterações
 
 ### Arquivo: `src/components/professor/ConteudoModal.tsx`
 
-1. **Adicionar dependencias**: `useState`, `useQuery`, `supabase`, `useAuth`, `Loader2`, `ChevronDown`, `Download`
-2. **Buscar fase ativa**: Query na tabela `fases` onde `ativo = true` e `institution_id` do professor
-3. **Buscar conteudos por serie**: Para cada serie (6-9), query em `fase_conteudos` via join com `fases` (filtrando pela inteligencia da fase ativa e pela serie)
-4. **State de serie expandida**: `serieAberta` para controlar qual accordion esta aberto
-5. **Remover materiais hardcoded**: Substituir pela lista real vinda do banco
-6. **Manter secao "Essencia do Arboria"** intacta
-7. **Cada item de conteudo**: Ao clicar, abre o PDF em nova aba (usando `arquivo_url`)
+1. Importar `useProfessor` do contexto
+2. Dentro do componente, obter `casaMentor` via `useProfessor()`
+3. Substituir `faseAtual.inteligencia.id` por `casaMentor.id` na query de fases
+4. Atualizar o header do modal para mostrar o nome da casa do professor em vez da fase atual
+5. Remover o filtro `ativo = true` da query de fases — o professor precisa ver os conteúdos independente de a fase estar ativa ou não, pois os PDFs são associados às fases da sua inteligência
 
-### Props do modal (sem alteracao)
-
-A interface `ConteudoModalProps` permanece igual. A `faseAtual` ja traz a inteligencia necessaria para filtrar os conteudos.
-
-### Logica de busca
+Lógica atualizada da query:
 
 ```typescript
-// Buscar fase ativa para obter inteligencia_id
-// Depois buscar fase_conteudos onde:
-//   fase.inteligencia_id = faseAtual.inteligencia.id
-//   fase.serie IN (6, 7, 8, 9)
-//   fase.segmento = 'fundamental2'
-// Agrupando resultados por serie
+const { casaMentor } = useProfessor();
+
+// Buscar fases da inteligência do professor (sua casa mentor)
+const { data: fasesData } = await supabase
+  .from('fases')
+  .select('id, serie')
+  .eq('inteligencia_id', casaMentor.id)  // ← casa do professor
+  .eq('segmento', 'fundamental2')
+  .in('serie', [6, 7, 8, 9]);
 ```
 
-### Nenhuma alteracao nos dashboards
+### Nenhuma alteração nos dashboards
 
-`ProfessorDashboard.tsx` e `ProfessorDashboardSimplificado.tsx` continuam chamando `ConteudoModal` da mesma forma.
+Os arquivos `ProfessorDashboard.tsx` e `ProfessorDashboardSimplificado.tsx` continuam passando `faseAtual` normalmente. A prop `faseAtual` pode até ser removida no futuro, mas por ora o modal simplesmente ignora a inteligência dela e usa `casaMentor` internamente.
 
