@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, FileText, ExternalLink, BookOpen, TreePine, Calendar, ChevronDown, Loader2 } from 'lucide-react';
 import AnimatedTextCycle from '@/components/ui/animated-text-cycle';
 import { supabase } from '@/integrations/supabase/client';
+import { useProfessor } from '@/contexts/ProfessorContext';
 
 interface FaseAtual {
   inteligencia?: {
@@ -43,12 +44,13 @@ const coresSemana = [
 ];
 
 const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
+  const { casaMentor } = useProfessor();
   const [serieAberta, setSerieAberta] = useState<number | null>(null);
   const [conteudos, setConteudos] = useState<Record<number, ConteudoItem[]>>({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!isOpen || !faseAtual?.inteligencia?.id) return;
+    if (!isOpen || !casaMentor?.id) return;
     
     const fetchConteudos = async () => {
       setLoading(true);
@@ -57,9 +59,8 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
         const { data: fasesData } = await supabase
           .from('fases')
           .select('id, serie')
-          .eq('inteligencia_id', faseAtual.inteligencia!.id!)
+          .eq('inteligencia_id', casaMentor!.id)
           .eq('segmento', 'fundamental2')
-          .eq('ativo', true)
           .in('serie', [6, 7, 8, 9]);
 
         if (!fasesData || fasesData.length === 0) {
@@ -97,7 +98,7 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
     };
 
     fetchConteudos();
-  }, [isOpen, faseAtual?.inteligencia?.id]);
+  }, [isOpen, casaMentor?.id]);
 
   if (!isOpen) return null;
 
@@ -126,7 +127,7 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
               <BookOpen className="w-4 h-4" /> Conteúdo
             </h3>
             <p className="text-white/50 text-xs mt-0.5 font-light">
-              Materiais da {faseAtual?.inteligencia?.nome || 'fase atual'}
+              Materiais da {casaMentor?.nome || 'sua casa'}
             </p>
           </div>
           <button 
