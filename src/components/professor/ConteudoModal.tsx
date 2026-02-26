@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, FileText, ExternalLink, BookOpen, TreePine, Calendar, ChevronDown, Loader2 } from 'lucide-react';
+import { X, FileText, ExternalLink, Download, BookOpen, TreePine, Calendar, ChevronDown, Loader2 } from 'lucide-react';
 import AnimatedTextCycle from '@/components/ui/animated-text-cycle';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
@@ -101,6 +101,22 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
   }, [isOpen, casaMentor?.id]);
 
   if (!isOpen) return null;
+
+  const handleDownload = async (url: string, nome: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = nome;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (err) {
+      console.error('Erro ao baixar:', err);
+      window.open(url, '_blank');
+    }
+  };
 
   const toggleSerie = (serie: number) => {
     setSerieAberta(prev => prev === serie ? null : serie);
@@ -234,7 +250,16 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
                                       <p className="text-white/40 text-xs truncate">{item.titulo}</p>
                                     )}
                                   </div>
-                                  <ExternalLink className="w-3.5 h-3.5 text-white/25 shrink-0" />
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      onClick={(e) => handleDownload(item.arquivo_url, item.arquivo_nome, e)}
+                                      className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-white/10 transition-colors"
+                                      title="Baixar arquivo"
+                                    >
+                                      <Download className="w-3.5 h-3.5 text-white/40 hover:text-white/70" />
+                                    </button>
+                                    <ExternalLink className="w-3.5 h-3.5 text-white/25" />
+                                  </div>
                                 </button>
                               );
                             })
