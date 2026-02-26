@@ -33,6 +33,7 @@ interface Cargo {
   cargo: string;
   aluno_name: string;
   aluno_serie: string | null;
+  aluno_turma: string | null;
 }
 
 const SERIES = ['6', '7', '8', '9'];
@@ -54,7 +55,7 @@ const CasasPage = () => {
       supabase.from('inteligencias').select('*').order('ordem'),
       supabase.from('profiles').select('id, casa_id, serie, turma, full_name').not('casa_id', 'is', null),
       supabase.from('professor_casa').select('casa_id, professor_id, profiles!professor_casa_professor_id_fkey(full_name)').eq('ativo', true),
-      supabase.from('cargos_casa').select('casa_id, cargo, aluno_id, profiles!cargos_casa_aluno_id_fkey(full_name, serie)').eq('ativo', true),
+      supabase.from('cargos_casa').select('casa_id, cargo, aluno_id, profiles!cargos_casa_aluno_id_fkey(full_name, serie, turma)').eq('ativo', true),
     ]);
 
     if (resInt.data) setInteligencias(resInt.data);
@@ -74,6 +75,7 @@ const CasasPage = () => {
           cargo: c.cargo,
           aluno_name: c.profiles?.full_name || 'Sem nome',
           aluno_serie: c.profiles?.serie || null,
+          aluno_turma: c.profiles?.turma || null,
         }))
       );
     }
@@ -92,6 +94,16 @@ const CasasPage = () => {
 
   const getCargosForCasaSerie = (casaId: number, serie: string) =>
     cargos.filter((c) => c.casa_id === casaId && extractSerieNum(c.aluno_serie) === serie);
+
+  const getCargosForCasaSerieTurma = (casaId: number, serie: string, turmaLetra: string) =>
+    cargos.filter((c) => c.casa_id === casaId && extractSerieNum(c.aluno_serie) === serie && (c.aluno_turma || '').toUpperCase() === turmaLetra.toUpperCase());
+
+  // Get unique turma letters for coordinators of a casa+serie
+  const getTurmaLetrasForCasaSerie = (casaId: number, serie: string): string[] => {
+    const ms = getMembrosForCasaSerie(casaId, serie);
+    const turmas = [...new Set(ms.map((m) => (m.turma || '').toUpperCase()).filter(Boolean))].sort();
+    return turmas.length > 0 ? turmas : [''];
+  };
 
   const getMembrosForCasaSerie = (casaId: number, serie: string) =>
     getMembrosForCasa(casaId).filter((m) => extractSerieNum(m.serie) === serie);
@@ -148,35 +160,47 @@ const CasasPage = () => {
                   </div>
                 </div>
 
-                {/* Cargos por série */}
-                <div className="px-4 py-3 space-y-2">
+                {/* Cargos por série e turma */}
+                <div className="px-4 py-3 space-y-1">
                   {SERIES.map((serie) => {
-                    const cargosSerie = getCargosForCasaSerie(casa.id, serie);
-                    const coord = cargosSerie.find((c) => c.cargo === 'coordenador');
-                    const lider = cargosSerie.find((c) => c.cargo === 'líder');
-                    const membrosCount = getMembrosForCasaSerie(casa.id, serie).length;
+                    const turmaLetras = getTurmaLetrasForCasaSerie(casa.id, serie);
+                    
+                    return turmaLetras.map((turmaLetra) => {
+                      const cargosT = turmaLetra 
+                        ? getCargosForCasaSerieTurma(casa.id, serie, turmaLetra) 
+                        : getCargosForCasaSerie(casa.id, serie);
+                      const coord = cargosT.find((c) => c.cargo === 'coordenador');
+                      const membrosCount = turmaLetra
+                        ? getMembrosForCasaSerieTurma(casa.id, serie, turmaLetra).length
+                        : getMembrosForCasaSerie(casa.id, serie).length;
+                      const label = turmaLetra ? `${serie}º ${turmaLetra}` : `${serie}º`;
 
-                    return (
-                      <div key={serie} className="text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="text-white/30 w-6 font-medium">{serie}º</span>
-                          <Star className="w-3 h-3 text-blue-400 flex-shrink-0" />
-                          <span className="text-white/70 truncate">
-                            {coord ? coord.aluno_name : <span className="text-white/25 italic">(vago)</span>}
-                          </span>
-                          <span className="text-white/20 ml-auto text-[10px]">{membrosCount}</span>
-                        </div>
-                        {serie === '9' && (
-                          <div className="flex items-center gap-2 mt-1 ml-6">
-                            <Crown className="w-3 h-3 text-yellow-400 flex-shrink-0" />
+                      return (
+                        <div key={`${serie}-${turmaLetra}`} className="text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="text-white/30 w-8 font-medium">{label}</span>
+                            <Star className="w-3 h-3 text-blue-400 flex-shrink-0" />
                             <span className="text-white/70 truncate">
-                              {lider ? lider.aluno_name : <span className="text-white/25 italic">(vago)</span>}
+                              {coord ? coord.aluno_name : <span className="text-white/25 italic">(vago)</span>}
                             </span>
+                            <span className="text-white/20 ml-auto text-[10px]">{membrosCount}</span>
                           </div>
-                        )}
+                        </div>
+                      );
+                    });
+                  })}
+                  {/* Líder do 9º ano (único por casa) */}
+                  {(() => {
+                    const lider = getCargosForCasaSerie(casa.id, '9').find((c) => c.cargo === 'líder');
+                    return (
+                      <div className="flex items-center gap-2 mt-1 ml-8 text-xs">
+                        <Crown className="w-3 h-3 text-yellow-400 flex-shrink-0" />
+                        <span className="text-white/70 truncate">
+                          {lider ? lider.aluno_name : <span className="text-white/25 italic">(vago)</span>}
+                        </span>
                       </div>
                     );
-                  })}
+                  })()}
                 </div>
 
                 {/* Accordion para membros */}
