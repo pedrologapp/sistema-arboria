@@ -37,6 +37,7 @@ const PerfilAlunoAdminPage = () => {
   const [turma, setTurma] = useState('');
   const [casaId, setCasaId] = useState<number | null>(null);
   const [scores, setScores] = useState<Record<number, number>>({});
+  const [funcao, setFuncao] = useState<string>('membro');
   const [hasChanges, setHasChanges] = useState(false);
   const [showConfirmReset, setShowConfirmReset] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
@@ -88,6 +89,23 @@ const PerfilAlunoAdminPage = () => {
     }
   });
 
+  // Buscar cargo ativo do aluno
+  const { data: cargoAtivo } = useQuery({
+    queryKey: ['admin-aluno-cargo', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cargos_casa')
+        .select('cargo')
+        .eq('aluno_id', id)
+        .eq('ativo', true)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data?.cargo || 'membro';
+    },
+    enabled: !!id
+  });
+
   // Buscar scores de inteligência do aluno
   const { data: inteligenciaScores } = useQuery({
     queryKey: ['admin-aluno-scores', id],
@@ -131,6 +149,12 @@ const PerfilAlunoAdminPage = () => {
     }
   }, [inteligenciaScores]);
 
+  useEffect(() => {
+    if (cargoAtivo) {
+      setFuncao(cargoAtivo);
+    }
+  }, [cargoAtivo]);
+
   // Atualizar score de inteligência
   const handleScoreChange = (intId: number, valor: string) => {
     const num = Math.min(100, Math.max(0, parseInt(valor) || 0));
@@ -160,8 +184,35 @@ const PerfilAlunoAdminPage = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      // 2. Atualizar scores de inteligência
+      // 2. Salvar cargo/função
       const anoLetivo = new Date().getFullYear();
+      if (funcao === 'membro') {
+        await supabase
+          .from('cargos_casa')
+          .delete()
+          .eq('aluno_id', id)
+          .eq('ativo', true);
+      } else if (casaId && aluno?.institution_id) {
+        // Deletar cargos antigos e inserir novo
+        await supabase
+          .from('cargos_casa')
+          .delete()
+          .eq('aluno_id', id)
+          .eq('ativo', true);
+
+        await supabase
+          .from('cargos_casa')
+          .insert({
+            aluno_id: id!,
+            casa_id: casaId,
+            cargo: funcao,
+            institution_id: aluno.institution_id,
+            ano_letivo: anoLetivo,
+            ativo: true
+          });
+      }
+
+      // 3. Atualizar scores de inteligência
       for (const [intId, scoreAtual] of Object.entries(scores)) {
         const { error: scoreError } = await supabase
           .from('inteligencia_scores')
@@ -186,6 +237,7 @@ const PerfilAlunoAdminPage = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-aluno-perfil', id] });
       queryClient.invalidateQueries({ queryKey: ['admin-aluno-scores', id] });
       queryClient.invalidateQueries({ queryKey: ['admin-alunos'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-aluno-cargo', id] });
     },
     onError: (error) => {
       toast.error('Erro ao salvar: ' + error.message);
@@ -279,7 +331,8 @@ const PerfilAlunoAdminPage = () => {
         serie !== (aluno.serie || '') ||
         turma !== (aluno.turma || '') ||
         casaId !== aluno.casa_id ||
-        (userEmail && email !== userEmail);
+        (userEmail && email !== userEmail) ||
+        funcao !== (cargoAtivo || 'membro');
       
       // Check scores changes
       if (inteligenciaScores) {
@@ -291,7 +344,7 @@ const PerfilAlunoAdminPage = () => {
         setHasChanges(mudou);
       }
     }
-  }, [nome, sobrenome, serie, turma, casaId, email, aluno, userEmail, scores, inteligenciaScores]);
+  }, [nome, sobrenome, serie, turma, casaId, email, aluno, userEmail, scores, inteligenciaScores, funcao, cargoAtivo]);
 
   if (isLoading) {
     return (
@@ -423,12 +476,25 @@ const PerfilAlunoAdminPage = () => {
               >
                 <option value="">Sem casa</option>
                 {casas?.map(c => (
-                  <option key={c.id} value={c.id}>{c.nome}</option>
-                ))}
+              <option key={c.id} value={c.id}>{c.nome}</option>
+                 ))}
+               </select>
+             </div>
+
+            <div>
+              <label className="text-white/60 text-sm mb-1 block">Função</label>
+              <select
+                value={funcao}
+                onChange={(e) => { setFuncao(e.target.value); setHasChanges(true); }}
+                className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm"
+              >
+                <option value="membro">Membro</option>
+                <option value="coordenador">Coordenador</option>
+                <option value="lider">Líder</option>
               </select>
             </div>
-          </div>
-        </div>
+           </div>
+         </div>
 
         {/* Inteligências */}
         <div className="bg-white/5 border border-white/10 rounded-xl p-4">

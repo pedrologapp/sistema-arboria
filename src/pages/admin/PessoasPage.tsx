@@ -41,6 +41,7 @@ const PessoasPage = () => {
   const filtroSerie = searchParams.get('serie') || '';
   const filtroTurma = searchParams.get('turma') || '';
   const filtroCasa = searchParams.get('casa') || '';
+  const filtroFuncao = searchParams.get('funcao') || '';
 
   const updateParam = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams);
@@ -55,6 +56,7 @@ const PessoasPage = () => {
   const setFiltroSerie = (v: string) => updateParam('serie', v);
   const setFiltroTurma = (v: string) => updateParam('turma', v);
   const setFiltroCasa = (v: string) => updateParam('casa', v);
+  const setFiltroFuncao = (v: string) => updateParam('funcao', v);
   const [modalImportarAberto, setModalImportarAberto] = useState(false);
   const [modalAdicionarAberto, setModalAdicionarAberto] = useState(false);
   const [modalExcluirMassaAberto, setModalExcluirMassaAberto] = useState(false);
@@ -105,7 +107,7 @@ const PessoasPage = () => {
         .order('full_name');
       
       if (profileError) throw profileError;
-      if (!allProfiles || allProfiles.length === 0) return { alunos: [], semConta: 0, segmentos: [] };
+      if (!allProfiles || allProfiles.length === 0) return { alunos: [], semConta: 0, segmentos: [], cargosMap: {} };
       
       // 2. Buscar todos os user_roles com role = 'user' (sem filtro de ID)
       const { data: roleUsers, error: roleError } = await supabase
@@ -130,8 +132,18 @@ const PessoasPage = () => {
           .filter(a => a.conta_criada === false && a.segmento)
           .map(a => a.segmento)
       )].filter(Boolean) as string[];
+
+      // 7. Buscar cargos ativos da instituição
+      const { data: cargos } = await supabase
+        .from('cargos_casa')
+        .select('aluno_id, cargo')
+        .eq('institution_id', institutionId)
+        .eq('ativo', true);
+
+      const cargosMap: Record<string, string> = {};
+      cargos?.forEach(c => { cargosMap[c.aluno_id] = c.cargo; });
       
-      return { alunos: alunosList, semConta, segmentos };
+      return { alunos: alunosList, semConta, segmentos, cargosMap };
     },
     enabled: !!institutionId
   });
@@ -139,6 +151,7 @@ const PessoasPage = () => {
   const alunos = alunosData?.alunos || [];
   const alunosSemConta = alunosData?.semConta || 0;
   const segmentosDisponiveis = alunosData?.segmentos || [];
+  const cargosMap = alunosData?.cargosMap || {};
 
   // Buscar professores (role = 'professor')
   const { data: professores, isLoading: loadingProfessores } = useQuery({
@@ -235,8 +248,10 @@ const PessoasPage = () => {
       const matchSerie = !filtroSerie || aluno.serie === filtroSerie;
       const matchTurma = !filtroTurma || aluno.turma === filtroTurma;
       const matchCasa = !filtroCasa || aluno.casa_id === Number(filtroCasa);
+      const alunoCargo = cargosMap[aluno.id] || 'membro';
+      const matchFuncao = !filtroFuncao || alunoCargo === filtroFuncao;
       
-      return matchBusca && matchSegmento && matchSerie && matchTurma && matchCasa;
+      return matchBusca && matchSegmento && matchSerie && matchTurma && matchCasa && matchFuncao;
     })
     ?.sort((a, b) => {
       // Primeiro por serie
@@ -355,6 +370,17 @@ const PessoasPage = () => {
                   <option key={c.id} value={c.id}>{c.nome}</option>
                 ))}
               </select>
+
+              <select
+                value={filtroFuncao}
+                onChange={(e) => setFiltroFuncao(e.target.value)}
+                className="p-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm min-w-[110px]"
+              >
+                <option value="">Função</option>
+                <option value="membro">Membro</option>
+                <option value="coordenador">Coordenador</option>
+                <option value="lider">Líder</option>
+              </select>
             </div>
 
             {/* Busca */}
@@ -408,15 +434,25 @@ const PessoasPage = () => {
                         </div>
                       )}
                       
-                      {/* Nome + Segmento + Série/Turma inline */}
-                      <div className="flex-1 min-w-0 flex items-center gap-2">
-                        <span className="text-white text-sm font-medium truncate min-w-[80px] max-w-[60%]">
-                          {aluno.full_name || `${aluno.nome} ${aluno.sobrenome}`}
-                        </span>
-                        <span className="text-white/40 text-xs truncate">
-                          {aluno.segmento && `${aluno.segmento} · `}{aluno.serie?.replace(' ano', '')} {aluno.turma}
-                        </span>
-                      </div>
+                       {/* Nome + Segmento + Série/Turma + Badge inline */}
+                       <div className="flex-1 min-w-0 flex items-center gap-2">
+                         <span className="text-white text-sm font-medium truncate min-w-[80px] max-w-[60%]">
+                           {aluno.full_name || `${aluno.nome} ${aluno.sobrenome}`}
+                         </span>
+                         {cargosMap[aluno.id] === 'lider' && (
+                           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-semibold whitespace-nowrap">
+                             👑 Líder
+                           </span>
+                         )}
+                         {cargosMap[aluno.id] === 'coordenador' && (
+                           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-semibold whitespace-nowrap">
+                             ⭐ Coord.
+                           </span>
+                         )}
+                         <span className="text-white/40 text-xs truncate">
+                           {aluno.segmento && `${aluno.segmento} · `}{aluno.serie?.replace(' ano', '')} {aluno.turma}
+                         </span>
+                       </div>
                       
                       {/* Casa */}
                       <span className="text-white/50 text-xs w-24 text-right truncate">
