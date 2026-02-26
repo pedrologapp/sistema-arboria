@@ -129,8 +129,8 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
   ) || [];
 
   // Estatísticas para turmas
-  const comProfessor = turmasFiltradas.filter(t => t.professores.length > 0).length;
-  const semProfessor = turmasFiltradas.filter(t => t.professores.length === 0).length;
+  const comProfessor = turmasFiltradas.filter(t => (t.professores?.length ?? 0) > 0).length;
+  const semProfessor = turmasFiltradas.filter(t => (t.professores?.length ?? 0) === 0).length;
 
   // Estatísticas para casas (F2)
   const casasComMentor = casasData?.filter(c => c.professor_id).length || 0;
