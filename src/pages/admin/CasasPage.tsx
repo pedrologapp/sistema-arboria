@@ -19,6 +19,7 @@ interface Membro {
   id: string;
   casa_id: number;
   serie: string | null;
+  turma: string | null;
   full_name: string | null;
 }
 
@@ -51,7 +52,7 @@ const CasasPage = () => {
     setLoading(true);
     const [resInt, resMembros, resMentores, resCargos] = await Promise.all([
       supabase.from('inteligencias').select('*').order('ordem'),
-      supabase.from('profiles').select('id, casa_id, serie, full_name').not('casa_id', 'is', null),
+      supabase.from('profiles').select('id, casa_id, serie, turma, full_name').not('casa_id', 'is', null),
       supabase.from('professor_casa').select('casa_id, professor_id, profiles!professor_casa_professor_id_fkey(full_name)').eq('ativo', true),
       supabase.from('cargos_casa').select('casa_id, cargo, aluno_id, profiles!cargos_casa_aluno_id_fkey(full_name, serie)').eq('ativo', true),
     ]);
@@ -94,6 +95,16 @@ const CasasPage = () => {
 
   const getMembrosForCasaSerie = (casaId: number, serie: string) =>
     getMembrosForCasa(casaId).filter((m) => extractSerieNum(m.serie) === serie);
+
+  // Get unique turma letters for a casa+serie combo
+  const getTurmasForCasaSerie = (casaId: number, serie: string): string[] => {
+    const ms = getMembrosForCasaSerie(casaId, serie);
+    const turmas = [...new Set(ms.map((m) => m.turma || '').filter(Boolean))].sort();
+    return turmas.length > 0 ? turmas : [''];
+  };
+
+  const getMembrosForCasaSerieTurma = (casaId: number, serie: string, turma: string) =>
+    getMembrosForCasaSerie(casaId, serie).filter((m) => (m.turma || '') === turma);
 
   if (loading) {
     return (
@@ -176,40 +187,44 @@ const CasasPage = () => {
                     </AccordionTrigger>
                     <AccordionContent className="px-4 pb-3">
                       {SERIES.map((serie) => {
-                        const membrosS = getMembrosForCasaSerie(casa.id, serie);
-                        if (membrosS.length === 0) return null;
-                        return (
-                          <div key={serie} className="mb-3">
-                            <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">
-                              {serie}º ano ({membrosS.length})
-                            </p>
-                            <div className="space-y-0.5">
-                              {membrosS
-                                .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''))
-                                .map((m) => {
-                                  const cargoAluno = cargos.find(
-                                    (c) => c.casa_id === casa.id && c.aluno_name === m.full_name
-                                  );
-                                  return (
-                                    <div key={m.id} className="flex items-center gap-2 text-xs text-white/60">
-                                      <UserCircle className="w-3 h-3 text-white/20 flex-shrink-0" />
-                                      <span className="truncate">{m.full_name}</span>
-                                      {cargoAluno?.cargo === 'coordenador' && (
-                                        <Badge className="text-[9px] px-1.5 py-0 bg-blue-500/20 text-blue-300 border-blue-500/30">
-                                          ⭐ Coord.
-                                        </Badge>
-                                      )}
-                                      {cargoAluno?.cargo === 'líder' && (
-                                        <Badge className="text-[9px] px-1.5 py-0 bg-yellow-500/20 text-yellow-300 border-yellow-500/30">
-                                          👑 Líder
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  );
-                                })}
+                        const turmasLetras = getTurmasForCasaSerie(casa.id, serie);
+                        return turmasLetras.map((turmaLetra) => {
+                          const membrosS = getMembrosForCasaSerieTurma(casa.id, serie, turmaLetra);
+                          if (membrosS.length === 0) return null;
+                          const label = turmaLetra ? `${serie}º ${turmaLetra}` : `${serie}º ano`;
+                          return (
+                            <div key={`${serie}-${turmaLetra}`} className="mb-3">
+                              <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">
+                                {label} ({membrosS.length})
+                              </p>
+                              <div className="space-y-0.5">
+                                {membrosS
+                                  .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''))
+                                  .map((m) => {
+                                    const cargoAluno = cargos.find(
+                                      (c) => c.casa_id === casa.id && c.aluno_name === m.full_name
+                                    );
+                                    return (
+                                      <div key={m.id} className="flex items-center gap-2 text-xs text-white/60">
+                                        <UserCircle className="w-3 h-3 text-white/20 flex-shrink-0" />
+                                        <span className="truncate">{m.full_name}</span>
+                                        {cargoAluno?.cargo === 'coordenador' && (
+                                          <Badge className="text-[9px] px-1.5 py-0 bg-blue-500/20 text-blue-300 border-blue-500/30">
+                                            ⭐ Coord.
+                                          </Badge>
+                                        )}
+                                        {cargoAluno?.cargo === 'líder' && (
+                                          <Badge className="text-[9px] px-1.5 py-0 bg-yellow-500/20 text-yellow-300 border-yellow-500/30">
+                                            👑 Líder
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                              </div>
                             </div>
-                          </div>
-                        );
+                          );
+                        });
                       })}
                       {casaMembros.length === 0 && (
                         <p className="text-xs text-white/25 italic">Nenhum membro nesta casa</p>
