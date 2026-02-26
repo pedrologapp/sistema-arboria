@@ -1,36 +1,54 @@
 
 
-# Turmas do Infantil + Turmas no Painel de Casas
+# Corrigir Turmas do Infantil + Coordenadores por Turma
 
-## Problemas identificados
+## Diagnóstico
 
-1. **Turmas do infantil não existem no banco** — a inserção anterior não foi efetivada. A tabela `turmas` só tem `fundamental1` e `fundamental2`.
-2. **Painel de Casas** — mostra membros agrupados por série (6º, 7º...) mas não diferencia turmas A e B.
+1. **`turmas.serie` é `smallint`** — impossível armazenar "Grupo IV", "Maternal(3)" etc. Por isso as turmas do infantil nunca foram inseridas.
+2. **Profiles do infantil** usam serie como texto: `Maternalzinho(2)`, `Maternal(3)`, `Grupo IV`, `Grupo V`.
+3. **CasasPage** mostra coordenadores por série, não por turma A/B.
 
 ## Alterações
 
-### 1. Migração: inserir turmas do infantil
+### 1. Migração: mudar `turmas.serie` de `smallint` para `text`
 
-```sql
-INSERT INTO turmas (institution_id, nome, serie, turma_letra, segmento, ano_letivo)
-VALUES
-  ('902876e9-b263-4c01-9013-aeef7b6d24e1', 'Maternal II A', 2, 'A', 'infantil', 2025),
-  ('902876e9-b263-4c01-9013-aeef7b6d24e1', 'Maternal II B', 2, 'B', 'infantil', 2025),
-  ('902876e9-b263-4c01-9013-aeef7b6d24e1', 'Maternal III A', 3, 'A', 'infantil', 2025),
-  ('902876e9-b263-4c01-9013-aeef7b6d24e1', 'Maternal III B', 3, 'B', 'infantil', 2025),
-  ('902876e9-b263-4c01-9013-aeef7b6d24e1', 'Grupo IV A', 4, 'A', 'infantil', 2025),
-  ('902876e9-b263-4c01-9013-aeef7b6d24e1', 'Grupo IV B', 4, 'B', 'infantil', 2025),
-  ('902876e9-b263-4c01-9013-aeef7b6d24e1', 'Grupo V A', 5, 'A', 'infantil', 2025),
-  ('902876e9-b263-4c01-9013-aeef7b6d24e1', 'Grupo V B', 5, 'B', 'infantil', 2025);
-```
+- `ALTER TABLE turmas ALTER COLUMN serie TYPE text USING serie::text;`
+- Valores existentes do fundamental (1, 2, ..., 9) ficam como texto "1", "2", ..., "9" — sem impacto funcional.
 
-### 2. `src/pages/admin/CasasPage.tsx` — mostrar turma (A/B) nos membros
+### 2. Inserir turmas do infantil (via insert tool)
 
-- Buscar `turma_letra` dos alunos via `aluno_turma` (ou do campo `serie` se já contém a letra)
-- No accordion de membros, agrupar por série E turma: "6º A", "6º B" em vez de só "6º ano"
-- Buscar vínculos `aluno_turma` para mapear cada aluno à sua turma_letra
+8 registros com serie correspondendo ao que está em `profiles.serie`:
 
-### 3. Nenhuma alteração no `TabelaVisaoGeralProfessores.tsx`
+| nome | serie | turma_letra | segmento |
+|---|---|---|---|
+| Maternalzinho A | Maternalzinho(2) | A | infantil |
+| Maternalzinho B | Maternalzinho(2) | B | infantil |
+| Maternal III A | Maternal(3) | A | infantil |
+| Maternal III B | Maternal(3) | B | infantil |
+| Grupo IV A | Grupo IV | A | infantil |
+| Grupo IV B | Grupo IV | B | infantil |
+| Grupo V A | Grupo V | A | infantil |
+| Grupo V B | Grupo V | B | infantil |
 
-O componente já filtra por `turma.segmento === segmentoVisao`. Com as turmas inseridas no banco, o infantil passará a aparecer automaticamente.
+### 3. Atualizar função `ensure_turma_exists`
+
+- Parar de extrair número da serie — receber e comparar como texto
+- Adicionar parâmetro `p_segmento` para diferenciar infantil de fundamental1
+- Ajustar a query de busca: `WHERE serie = p_serie AND segmento = p_segmento`
+
+### 4. Atualizar função `sync_profile_to_aluno_turma`
+
+- Passar `profiles.serie` diretamente (texto) em vez de extrair número
+- Passar `profiles.segmento` para a função `ensure_turma_exists`
+
+### 5. Atualizar `TabelaVisaoGeralProfessores.tsx`
+
+- Remover `SERIES_POR_SEGMENTO` (não é mais necessário — filtragem já usa `turma.segmento`)
+- A tabela já exibe `turma.nome` — funcionará automaticamente com as turmas inseridas
+
+### 6. Atualizar `CasasPage.tsx` — coordenadores por turma A/B
+
+- Na seção de cargos, iterar por série **E** turma
+- Cada linha mostra: `6º A ⭐ Coordenador | 6º B ⭐ Coordenador`
+- Buscar turma do aluno junto com o cargo (via `profiles.turma`)
 
