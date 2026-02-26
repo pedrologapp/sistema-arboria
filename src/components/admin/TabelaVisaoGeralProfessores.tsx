@@ -59,13 +59,16 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
         professorMap = new Map(professores?.map(p => [p.id, p.full_name || '']) || []);
       }
 
-      // Mapear turmas com professores
+      // Mapear turmas com TODOS os professores (múltiplos vínculos)
       const turmasComProfessor = turmas?.map(turma => {
-        const vinculo = vinculos?.find(v => v.turma_id === turma.id);
+        const vinculosTurma = vinculos?.filter(v => v.turma_id === turma.id) || [];
+        const professores = vinculosTurma.map(v => ({
+          id: v.professor_id,
+          nome: professorMap.get(v.professor_id) || 'Sem nome'
+        }));
         return {
           ...turma,
-          professor_id: vinculo?.professor_id || null,
-          professor_nome: vinculo ? professorMap.get(vinculo.professor_id) || null : null
+          professores,
         };
       }) || [];
 
@@ -126,8 +129,8 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
   ) || [];
 
   // Estatísticas para turmas
-  const comProfessor = turmasFiltradas.filter(t => t.professor_id).length;
-  const semProfessor = turmasFiltradas.filter(t => !t.professor_id).length;
+  const comProfessor = turmasFiltradas.filter(t => t.professores.length > 0).length;
+  const semProfessor = turmasFiltradas.filter(t => t.professores.length === 0).length;
 
   // Estatísticas para casas (F2)
   const casasComMentor = casasData?.filter(c => c.professor_id).length || 0;
@@ -191,13 +194,15 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
                             {turma.nome}
                           </TableCell>
                           <TableCell className="text-white/80 text-sm">
-                            {turma.professor_nome || '-'}
+                            {turma.professores.length > 0
+                              ? turma.professores.map(p => p.nome).join(', ')
+                              : '-'}
                           </TableCell>
                           <TableCell className="text-center">
-                            {turma.professor_id ? (
+                            {turma.professores.length > 0 ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">
                                 <CheckCircle className="w-3 h-3" />
-                                Atribuído
+                                {turma.professores.length} prof.
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full">
