@@ -1,35 +1,38 @@
 
 
-# Adicionar Botão de Download nos Arquivos do ConteudoModal
+# Adicionar Função (Cargo) na Gestão de Alunos do Admin
 
-## Alteração
+## Contexto
 
-### Arquivo: `src/components/professor/ConteudoModal.tsx`
+A tabela `cargos_casa` já existe no banco com os campos necessários (`aluno_id`, `casa_id`, `cargo`, `institution_id`, `ano_letivo`, `ativo`). Está vazia. Não precisa de migração.
 
-1. Importar o ícone `Download` do lucide-react
-2. Em cada item de conteúdo (linha 217-238), adicionar um botão de download ao lado do ícone de link externo
-3. O botão de download vai usar `fetch` + `blob` para forçar o download do arquivo em vez de apenas abrir em nova aba
-4. Separar a ação de "abrir" (clique no card) da ação de "baixar" (clique no ícone de download)
+## Alterações
 
-### Lógica de download
+### 1. `src/pages/admin/PerfilAlunoAdminPage.tsx`
 
-```typescript
-const handleDownload = async (url: string, nome: string) => {
-  const response = await fetch(url);
-  const blob = await response.blob();
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = nome;
-  a.click();
-  URL.revokeObjectURL(a.href);
-};
+- Adicionar state `funcao` com valor atual do cargo do aluno
+- Query para buscar o cargo ativo do aluno na tabela `cargos_casa`
+- Adicionar select com opções: `membro` (default), `coordenador`, `líder`
+- Na mutation `salvar`, fazer upsert na `cargos_casa` ao salvar:
+  - Se `funcao = 'membro'`: deletar registro existente (membro é o default, não precisa de registro)
+  - Se `funcao = 'coordenador'` ou `'líder'`: upsert com `cargo`, `casa_id`, `institution_id`, `ano_letivo`
+
+### 2. `src/pages/admin/PessoasPage.tsx`
+
+- Na query `admin-alunos`, buscar também os cargos ativos da `cargos_casa` para a instituição
+- Adicionar filtro de "Função" nos dropdowns (Membro / Coordenador / Líder)
+- Exibir o cargo ao lado do nome do aluno na lista (badge colorido para coordenador/líder)
+- Alunos sem registro em `cargos_casa` são considerados "membro" por padrão
+
+### 3. Visual dos badges na lista
+
+```text
+Nome do Aluno  [👑 Líder]     6º A   Intrapessoal
+Nome do Aluno  [⭐ Coord.]   7º B   Musical
+Nome do Aluno                 8º A   Espacial     ← membro (sem badge)
 ```
 
-### Visual
+### Nenhuma migração necessária
 
-Cada item terá dois ícones à direita:
-- `ExternalLink` — abre em nova aba (comportamento atual do clique no card)
-- `Download` — faz download direto do arquivo
-
-Ambos serão botões separados para evitar conflito de ações.
+A tabela `cargos_casa` já tem a estrutura perfeita e as RLS policies necessárias (admin pode gerenciar, leitura pública na instituição).
 
