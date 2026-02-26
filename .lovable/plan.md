@@ -1,38 +1,36 @@
 
 
-# Corrigir Visão Geral: Turmas do Infantil + Múltiplos Professores
+# Turmas do Infantil + Turmas no Painel de Casas
 
-## Problema
+## Problemas identificados
 
-1. **Turmas do infantil não existem** no banco. Só existem turmas com `segmento='fundamental1'` (séries 1-5) e `segmento='fundamental2'` (séries 6-9). Nenhuma turma com `segmento='infantil'`.
-2. **O código só mostra 1 professor por turma** (usa `.find()` que retorna o primeiro vínculo). Para o infantil, precisa mostrar múltiplos professores.
+1. **Turmas do infantil não existem no banco** — a inserção anterior não foi efetivada. A tabela `turmas` só tem `fundamental1` e `fundamental2`.
+2. **Painel de Casas** — mostra membros agrupados por série (6º, 7º...) mas não diferencia turmas A e B.
 
 ## Alterações
 
-### 1. Criar turmas do Infantil no banco (migração)
+### 1. Migração: inserir turmas do infantil
 
-Inserir as turmas do infantil com `segmento='infantil'`:
-- Maternal II (serie=2, turmas A e B)
-- Maternal III (serie=3, turmas A e B)  
-- Grupo IV (serie=4, turmas A e B)
-- Grupo V (serie=5, turmas A e B)
-
-Usando a `institution_id` existente: `902876e9-b263-4c01-9013-aeef7b6d24e1`
-
-### 2. `src/components/admin/TabelaVisaoGeralProfessores.tsx`
-
-- Na query, usar `.filter()` em vez de `.find()` para coletar **todos** os vínculos de professores por turma
-- Mapear cada turma com um array `professores: {id, nome}[]` em vez de um único `professor_id`/`professor_nome`
-- Na coluna "Professor" da tabela, renderizar a lista de nomes separados por vírgula (ou badges)
-- Para o segmento infantil, mostrar indicador visual de quantos professores estão vinculados
-- Ajustar estatísticas: "turma atribuída" = tem pelo menos 1 professor
-
-### Visual esperado
-
-```text
-Turma             Professores              Status
-Maternal II A     Ana Silva, João Santos   ✅ 2 prof.
-Maternal III B    -                        ❌ Sem professor
-Grupo IV A        Maria Lima               ✅ 1 prof.
+```sql
+INSERT INTO turmas (institution_id, nome, serie, turma_letra, segmento, ano_letivo)
+VALUES
+  ('902876e9-b263-4c01-9013-aeef7b6d24e1', 'Maternal II A', 2, 'A', 'infantil', 2025),
+  ('902876e9-b263-4c01-9013-aeef7b6d24e1', 'Maternal II B', 2, 'B', 'infantil', 2025),
+  ('902876e9-b263-4c01-9013-aeef7b6d24e1', 'Maternal III A', 3, 'A', 'infantil', 2025),
+  ('902876e9-b263-4c01-9013-aeef7b6d24e1', 'Maternal III B', 3, 'B', 'infantil', 2025),
+  ('902876e9-b263-4c01-9013-aeef7b6d24e1', 'Grupo IV A', 4, 'A', 'infantil', 2025),
+  ('902876e9-b263-4c01-9013-aeef7b6d24e1', 'Grupo IV B', 4, 'B', 'infantil', 2025),
+  ('902876e9-b263-4c01-9013-aeef7b6d24e1', 'Grupo V A', 5, 'A', 'infantil', 2025),
+  ('902876e9-b263-4c01-9013-aeef7b6d24e1', 'Grupo V B', 5, 'B', 'infantil', 2025);
 ```
+
+### 2. `src/pages/admin/CasasPage.tsx` — mostrar turma (A/B) nos membros
+
+- Buscar `turma_letra` dos alunos via `aluno_turma` (ou do campo `serie` se já contém a letra)
+- No accordion de membros, agrupar por série E turma: "6º A", "6º B" em vez de só "6º ano"
+- Buscar vínculos `aluno_turma` para mapear cada aluno à sua turma_letra
+
+### 3. Nenhuma alteração no `TabelaVisaoGeralProfessores.tsx`
+
+O componente já filtra por `turma.segmento === segmentoVisao`. Com as turmas inseridas no banco, o infantil passará a aparecer automaticamente.
 
