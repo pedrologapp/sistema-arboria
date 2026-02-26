@@ -1,69 +1,38 @@
 
 
-# Painel de Casas — Visão Geral com Membros e Cargos
+# Corrigir Visão Geral: Turmas do Infantil + Múltiplos Professores
 
-## Objetivo
+## Problema
 
-Substituir o placeholder "Em breve" da `CasasPage` por uma visão geral funcional das 8 casas, mostrando para cada casa: o professor mentor, a contagem de alunos por série, e os coordenadores/líderes designados.
-
-## Dados disponíveis
-
-- **`inteligencias`**: 8 casas com id, nome, cor_hex, emoji
-- **`profiles`**: alunos com casa_id e serie
-- **`professor_casa`**: professor mentor de cada casa
-- **`cargos_casa`**: coordenadores e líderes (tabela existe, atualmente vazia — será populada via PerfilAlunoAdminPage)
+1. **Turmas do infantil não existem** no banco. Só existem turmas com `segmento='fundamental1'` (séries 1-5) e `segmento='fundamental2'` (séries 6-9). Nenhuma turma com `segmento='infantil'`.
+2. **O código só mostra 1 professor por turma** (usa `.find()` que retorna o primeiro vínculo). Para o infantil, precisa mostrar múltiplos professores.
 
 ## Alterações
 
-### Arquivo: `src/pages/admin/CasasPage.tsx` (reescrever completo)
+### 1. Criar turmas do Infantil no banco (migração)
 
-1. Buscar as 8 inteligências da tabela `inteligencias`
-2. Buscar todos os alunos com `casa_id` (profiles) para contar membros por casa/série
-3. Buscar professores mentores da `professor_casa` (ativo = true) com join em profiles para nome
-4. Buscar cargos ativos da `cargos_casa` com join em profiles para nome e série
+Inserir as turmas do infantil com `segmento='infantil'`:
+- Maternal II (serie=2, turmas A e B)
+- Maternal III (serie=3, turmas A e B)  
+- Grupo IV (serie=4, turmas A e B)
+- Grupo V (serie=5, turmas A e B)
 
-5. Renderizar um grid de 8 cards (um por casa), cada card com:
-   - Header colorido com emoji + nome da casa + cor da inteligência
-   - Nome do professor mentor (ou "Sem mentor")
-   - Total de membros
-   - Seção de cargos por série (6º, 7º, 8º → 1 coordenador; 9º → 1 coordenador + 1 líder)
-   - Badge visual para coordenador e líder
+Usando a `institution_id` existente: `902876e9-b263-4c01-9013-aeef7b6d24e1`
 
-6. Ao clicar em um card, expandir (accordion) para ver a lista de membros agrupados por série
+### 2. `src/components/admin/TabelaVisaoGeralProfessores.tsx`
 
-### Visual esperado (mobile-first)
+- Na query, usar `.filter()` em vez de `.find()` para coletar **todos** os vínculos de professores por turma
+- Mapear cada turma com um array `professores: {id, nome}[]` em vez de um único `professor_id`/`professor_nome`
+- Na coluna "Professor" da tabela, renderizar a lista de nomes separados por vírgula (ou badges)
+- Para o segmento infantil, mostrar indicador visual de quantos professores estão vinculados
+- Ajustar estatísticas: "turma atribuída" = tem pelo menos 1 professor
+
+### Visual esperado
 
 ```text
-┌─────────────────────────────┐
-│ 🧘 Intrapessoal             │
-│ Mentor: Oceni Arboria       │
-│ 2 membros                   │
-│                             │
-│ 6º: Coord. — João Silva     │
-│ 7º: Coord. — (vago)         │
-│ 8º: Coord. — (vago)         │
-│ 9º: Coord. — (vago)         │
-│     Líder  — (vago)         │
-└─────────────────────────────┘
+Turma             Professores              Status
+Maternal II A     Ana Silva, João Santos   ✅ 2 prof.
+Maternal III B    -                        ❌ Sem professor
+Grupo IV A        Maria Lima               ✅ 1 prof.
 ```
-
-### Queries necessárias (todas via supabase client, RLS já cobre admin)
-
-```typescript
-// 1. Inteligências
-supabase.from('inteligencias').select('*').order('ordem')
-
-// 2. Contagem de membros por casa
-supabase.from('profiles').select('id, casa_id, serie, full_name').not('casa_id', 'is', null)
-
-// 3. Mentores
-supabase.from('professor_casa').select('casa_id, professor_id, profiles!professor_casa_professor_id_fkey(full_name)').eq('ativo', true)
-
-// 4. Cargos
-supabase.from('cargos_casa').select('casa_id, cargo, aluno_id, profiles!cargos_casa_aluno_id_fkey(full_name, serie)').eq('ativo', true)
-```
-
-### Nenhuma migração necessária
-
-Todas as tabelas e políticas RLS já existem.
 
