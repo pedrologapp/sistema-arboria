@@ -48,7 +48,7 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [titulo, setTitulo] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [uploading, setUploading] = useState(false);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Calcular semanas
@@ -89,67 +89,108 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
     enabled: !!faseId
   });
 
+  // Helper: upload com timeout
+  const uploadComTimeout = (fileName: string, file: File, timeoutMs = 30000): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error('Tempo esgotado no upload. Verifique sua conexão e tente novamente.'));
+      }, timeoutMs);
+
+      supabase.storage
+        .from('fase-conteudos')
+        .upload(fileName, file, { upsert: true })
+        .then(({ error }) => {
+          clearTimeout(timer);
+          if (error) reject(new Error(`Falha no upload do arquivo: ${error.message}`));
+          else resolve();
+        })
+        .catch((err) => {
+          clearTimeout(timer);
+          reject(new Error(`Falha no upload: ${err?.message || 'erro de rede'}`));
+        });
+    });
+  };
+
   // Upload de arquivo
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!arquivo) throw new Error('Nenhum arquivo selecionado');
 
-      setUploading(true);
-
-      // 1. Upload para o Storage
+      const t0 = performance.now();
       const fileExt = arquivo.name.split('.').pop();
       const fileName = `${faseId}/semana-${semanaAtual}/${Date.now()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('fase-conteudos')
-        .upload(fileName, arquivo, { upsert: true });
+      // Etapa 1: Upload para o Storage (com timeout)
+      console.log('[upload-conteudo] etapa 1: upload do arquivo', arquivo.name, `(${(arquivo.size / 1024 / 1024).toFixed(1)}MB)`);
+      try {
+        await uploadComTimeout(fileName, arquivo);
+      } catch (err: any) {
+        console.error('[upload-conteudo] etapa 1 falhou:', err.message, `(${((performance.now() - t0) / 1000).toFixed(1)}s)`);
+        throw err;
+      }
+      console.log('[upload-conteudo] etapa 1 ok', `(${((performance.now() - t0) / 1000).toFixed(1)}s)`);
 
-      if (uploadError) throw uploadError;
-
-      // 2. Obter URL pública
+      // Etapa 2: Obter URL pública
+      console.log('[upload-conteudo] etapa 2: obter URL pública');
       const { data: urlData } = supabase.storage
         .from('fase-conteudos')
         .getPublicUrl(fileName);
 
-      // 3. Verificar se já existe conteúdo para esta semana
-      const { data: existente } = await supabase
-        .from('fase_conteudos')
-        .select('id')
-        .eq('fase_id', faseId)
-        .eq('semana', semanaAtual)
-        .maybeSingle();
-
-      // 4. Inserir ou atualizar no banco
-      if (existente) {
-        const { error: updateError } = await supabase
-          .from('fase_conteudos')
-          .update({
-            titulo: titulo || null,
-            descricao: descricao || null,
-            arquivo_nome: arquivo.name,
-            arquivo_url: urlData.publicUrl,
-            arquivo_tamanho: arquivo.size,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existente.id);
-
-        if (updateError) throw updateError;
-      } else {
-        const { error: insertError } = await supabase
-          .from('fase_conteudos')
-          .insert({
-            fase_id: faseId,
-            institution_id: institutionId,
-            semana: semanaAtual,
-            titulo: titulo || null,
-            descricao: descricao || null,
-            arquivo_nome: arquivo.name,
-            arquivo_url: urlData.publicUrl,
-            arquivo_tamanho: arquivo.size
-          });
-
-        if (insertError) throw insertError;
+      if (!urlData?.publicUrl) {
+        // Rollback: remover arquivo órfão
+        await supabase.storage.from('fase-conteudos').remove([fileName]);
+        throw new Error('Falha ao obter URL pública do arquivo');
       }
+      console.log('[upload-conteudo] etapa 2 ok');
+
+      // Etapa 3: Salvar metadados no banco
+      console.log('[upload-conteudo] etapa 3: salvar no banco');
+      try {
+        const { data: existente } = await supabase
+          .from('fase_conteudos')
+          .select('id')
+          .eq('fase_id', faseId)
+          .eq('semana', semanaAtual)
+          .maybeSingle();
+
+        if (existente) {
+          const { error: updateError } = await supabase
+            .from('fase_conteudos')
+            .update({
+              titulo: titulo || null,
+              descricao: descricao || null,
+              arquivo_nome: arquivo.name,
+              arquivo_url: urlData.publicUrl,
+              arquivo_tamanho: arquivo.size,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existente.id);
+
+          if (updateError) throw updateError;
+        } else {
+          const { error: insertError } = await supabase
+            .from('fase_conteudos')
+            .insert({
+              fase_id: faseId,
+              institution_id: institutionId,
+              semana: semanaAtual,
+              titulo: titulo || null,
+              descricao: descricao || null,
+              arquivo_nome: arquivo.name,
+              arquivo_url: urlData.publicUrl,
+              arquivo_tamanho: arquivo.size
+            });
+
+          if (insertError) throw insertError;
+        }
+      } catch (dbErr: any) {
+        // Rollback: remover arquivo órfão do storage
+        console.error('[upload-conteudo] etapa 3 falhou, removendo arquivo órfão');
+        await supabase.storage.from('fase-conteudos').remove([fileName]);
+        throw new Error(`Falha ao salvar metadados: ${dbErr.message}`);
+      }
+
+      console.log('[upload-conteudo] concluído com sucesso', `(${((performance.now() - t0) / 1000).toFixed(1)}s total)`);
     },
     onSuccess: () => {
       toast.success('Conteúdo salvo com sucesso');
@@ -158,9 +199,6 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
     },
     onError: (error) => {
       toast.error('Erro ao salvar: ' + error.message);
-    },
-    onSettled: () => {
-      setUploading(false);
     }
   });
 
@@ -595,10 +633,10 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
               </button>
               <button
                 onClick={() => uploadMutation.mutate()}
-                disabled={!arquivo || uploading}
+                disabled={!arquivo || uploadMutation.isPending}
                 className="flex-1 p-3 bg-white text-black font-medium rounded-xl hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {uploading ? (
+                {uploadMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Enviando...
