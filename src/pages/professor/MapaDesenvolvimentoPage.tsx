@@ -160,8 +160,8 @@ const MapaDesenvolvimentoPage = () => {
       if (error) throw error;
 
       // Webhook fire-and-forget
-      const webhookUrl = import.meta.env.VITE_WEBHOOK_MAPA_URL;
-      if (webhookUrl) {
+      const webhookUrl = 'https://webhook.escolaamadeus.com/webhook/projetoarboria';
+      {
         const turmaInfo = turmasVinculadas?.find(t => t.id === selectedTurmaId);
         const resumo = { total_alunos: alunos.length, surpreendeu: 0, foi_bem: 0, teve_dificuldades: 0, atencao: 0 };
         const alocacoesPayload = Object.entries(alocacoes).map(([aluno_id, quadrante]) => {
