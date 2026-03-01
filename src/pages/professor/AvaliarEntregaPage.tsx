@@ -60,7 +60,7 @@ const AvaliarEntregaPage = () => {
     enabled: !!id
   });
 
-  // Buscar arquivos da entrega
+  // Buscar arquivos da entrega (com URLs assinadas)
   const { data: arquivos } = useQuery({
     queryKey: ['entrega-arquivos', id],
     queryFn: async () => {
@@ -68,7 +68,22 @@ const AvaliarEntregaPage = () => {
         .from('entrega_arquivos')
         .select('*')
         .eq('entrega_id', id!);
-      return data || [];
+      
+      if (!data || data.length === 0) return [];
+
+      // Generate fresh signed URLs from nome_storage
+      const withSignedUrls = await Promise.all(
+        data.map(async (arquivo) => {
+          if (arquivo.nome_storage) {
+            const { data: signedUrlData } = await supabase.storage
+              .from('entregas')
+              .createSignedUrl(arquivo.nome_storage, 3600); // 1 hour
+            return { ...arquivo, url: signedUrlData?.signedUrl || arquivo.url };
+          }
+          return arquivo;
+        })
+      );
+      return withSignedUrls;
     },
     enabled: !!id
   });

@@ -32,13 +32,17 @@ export const useAnalisarObservacoes = () => {
 
   return useMutation({
     mutationFn: async ({ alunoId }: AnalisarObservacoesParams): Promise<AnaliseResult> => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Usuário não autenticado');
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analisar-observacoes`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({ aluno_id: alunoId }),
         }
