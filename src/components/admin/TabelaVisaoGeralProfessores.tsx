@@ -199,19 +199,19 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
                             {turma.nome}
                           </TableCell>
                           <TableCell className="text-white/80 text-sm">
-                            {turma.regentes.length > 0
+                            {(turma.regentes?.length ?? 0) > 0
                               ? turma.regentes.map(p => p.nome).join(', ')
                               : '-'}
                           </TableCell>
                           {segmentoVisao === 'infantil' && (
                             <TableCell className="text-white/80 text-sm">
-                              {turma.auxiliares.length > 0
+                              {(turma.auxiliares?.length ?? 0) > 0
                                 ? turma.auxiliares.map(p => p.nome).join(', ')
                                 : '-'}
                             </TableCell>
                           )}
                           <TableCell className="text-center">
-                            {turma.regentes.length > 0 ? (
+                            {(turma.regentes?.length ?? 0) > 0 ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">
                                 <CheckCircle className="w-3 h-3" />
                                 OK
