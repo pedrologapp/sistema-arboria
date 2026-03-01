@@ -1,8 +1,37 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 type Segmento = 'infantil' | 'fundamental1' | 'fundamental2';
+
+/**
+ * Converte nome de série (texto) para número equivalente usado na tabela fases.
+ * Ex: "Grupo V" → 5, "Maternal II" → 2, "1º Ano" → 1
+ */
+const converterSerieTextoParaNumero = (serieTexto: string): number | null => {
+  if (!serieTexto) return null;
+  const texto = serieTexto.trim().toLowerCase();
+
+  // Mapa de algarismos romanos
+  const romanos: Record<string, number> = {
+    'i': 1, 'ii': 2, 'iii': 3, 'iv': 4, 'v': 5,
+    'vi': 6, 'vii': 7, 'viii': 8, 'ix': 9
+  };
+
+  // Tentar extrair romano no final: "Grupo V" → "v" → 5
+  const matchRomano = texto.match(/\b(ix|viii|vii|vi|iv|iii|ii|v|i)\s*$/);
+  if (matchRomano) {
+    return romanos[matchRomano[1]] ?? null;
+  }
+
+  // Tentar extrair número arábico: "1º Ano" → 1, "5º ano" → 5
+  const matchNumero = texto.match(/(\d+)/);
+  if (matchNumero) {
+    return parseInt(matchNumero[1], 10);
+  }
+
+  return null;
+};
 
 interface Profile {
   id: string;
@@ -164,8 +193,10 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
             .limit(1);
           
           if (turmasData && turmasData.length > 0) {
-            const turma = turmasData[0].turmas as unknown as { serie: number };
-            serieDosProfessor = turma.serie;
+            const turma = turmasData[0].turmas as unknown as { serie: string };
+            // turmas.serie é TEXT ("Grupo V"), fases.serie é SMALLINT (5)
+            serieDosProfessor = converterSerieTextoParaNumero(turma.serie);
+            console.log('[ProfessorContext] serie texto:', turma.serie, '→ número:', serieDosProfessor);
           }
         }
 
@@ -273,6 +304,32 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
   useEffect(() => {
     fetchProfessorData();
   }, [fetchProfessorData]);
+
+  // Realtime: recarregar quando fases mudam (admin ativa/desativa)
+  useEffect(() => {
+    if (!profile?.institution_id) return;
+
+    const channel = supabase
+      .channel('professor-fases-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'fases',
+          filter: `institution_id=eq.${profile.institution_id}`,
+        },
+        (payload) => {
+          console.log('[ProfessorContext] fase alterada via realtime:', payload.eventType);
+          fetchProfessorData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.institution_id, fetchProfessorData]);
 
   const casaColor = casaMentor?.cor_hex || '#6366f1';
 
