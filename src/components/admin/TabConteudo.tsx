@@ -89,26 +89,64 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
     enabled: !!faseId
   });
 
-  // Helper: upload com timeout
-  const uploadComTimeout = (fileName: string, file: File, timeoutMs = 30000): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        reject(new Error('Tempo esgotado no upload. Verifique sua conexão e tente novamente.'));
-      }, timeoutMs);
+  // Helper: upload com timeout + retry (evita promessas penduradas)
+  const uploadComTimeout = async (fileName: string, file: File, timeoutMs = 90000): Promise<void> => {
+    const maxTentativas = 2;
+    let ultimoErro: Error | null = null;
 
-      supabase.storage
-        .from('fase-conteudos')
-        .upload(fileName, file, { upsert: true })
-        .then(({ error }) => {
-          clearTimeout(timer);
-          if (error) reject(new Error(`Falha no upload do arquivo: ${error.message}`));
-          else resolve();
-        })
-        .catch((err) => {
-          clearTimeout(timer);
-          reject(new Error(`Falha no upload: ${err?.message || 'erro de rede'}`));
-        });
-    });
+    const caminhoCodificado = fileName
+      .split('/')
+      .map((parte) => encodeURIComponent(parte))
+      .join('/');
+
+    for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          throw new Error('Sessão expirada. Faça login novamente e tente enviar.');
+        }
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/fase-conteudos/${caminhoCodificado}`,
+          {
+            method: 'POST',
+            headers: {
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${session.access_token}`,
+              'x-upsert': 'true',
+              'content-type': file.type || 'application/pdf',
+            },
+            body: file,
+            signal: controller.signal,
+          }
+        );
+
+        if (!response.ok) {
+          const erroTexto = await response.text();
+          throw new Error(`Falha no upload (${response.status}): ${erroTexto || response.statusText}`);
+        }
+
+        clearTimeout(timer);
+        return;
+      } catch (err: any) {
+        clearTimeout(timer);
+
+        if (controller.signal.aborted) {
+          ultimoErro = new Error('Tempo esgotado no upload. Verifique sua conexão e tente novamente.');
+        } else {
+          ultimoErro = new Error(`Falha no upload: ${err?.message || 'erro de rede'}`);
+        }
+
+        if (tentativa < maxTentativas) {
+          console.warn(`[upload-conteudo] retry de upload (${tentativa}/${maxTentativas - 1})`);
+        }
+      }
+    }
+
+    throw ultimoErro || new Error('Falha no upload do arquivo');
   };
 
   // Upload de arquivo
