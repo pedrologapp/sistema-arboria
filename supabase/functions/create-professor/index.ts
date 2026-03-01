@@ -62,6 +62,7 @@ Deno.serve(async (req) => {
       segmento,
       casa_id, // Opcional - só obrigatório para fundamental2
       turma_ids, // NOVO: Array de UUIDs - obrigatório para infantil/fundamental1
+      eh_regente = true, // Opcional: false = auxiliar (infantil)
       ano_letivo = 2025 
     } = await req.json()
 
@@ -184,7 +185,7 @@ Deno.serve(async (req) => {
         turma_id,
         institution_id,
         ano_letivo,
-        eh_regente: true,
+        eh_regente: !!eh_regente,
         ativo: true
       }))
 

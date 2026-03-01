@@ -38,7 +38,7 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
       // Buscar vínculos professor_turma ativos (sem JOIN)
       const { data: vinculos } = await supabase
         .from('professor_turma')
-        .select('turma_id, professor_id')
+        .select('turma_id, professor_id, eh_regente')
         .eq('institution_id', institutionId)
         .eq('ativo', true);
 
@@ -58,13 +58,17 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
       // Mapear turmas com TODOS os professores (múltiplos vínculos)
       const turmasComProfessor = turmas?.map(turma => {
         const vinculosTurma = vinculos?.filter(v => v.turma_id === turma.id) || [];
-        const professores = vinculosTurma.map(v => ({
-          id: v.professor_id,
-          nome: professorMap.get(v.professor_id) || 'Sem nome'
-        }));
+        const regentes = vinculosTurma
+          .filter(v => v.eh_regente !== false)
+          .map(v => ({ id: v.professor_id, nome: professorMap.get(v.professor_id) || 'Sem nome' }));
+        const auxiliares = vinculosTurma
+          .filter(v => v.eh_regente === false)
+          .map(v => ({ id: v.professor_id, nome: professorMap.get(v.professor_id) || 'Sem nome' }));
         return {
           ...turma,
-          professores,
+          professores: [...regentes, ...auxiliares],
+          regentes,
+          auxiliares,
         };
       }) || [];
 
@@ -125,8 +129,10 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
   ) || [];
 
   // Estatísticas para turmas
-  const comProfessor = turmasFiltradas.filter(t => (t.professores?.length ?? 0) > 0).length;
-  const semProfessor = turmasFiltradas.filter(t => (t.professores?.length ?? 0) === 0).length;
+  const comProfessor = turmasFiltradas.filter(t => (t.regentes?.length ?? 0) > 0).length;
+  const semProfessor = turmasFiltradas.filter(t => (t.regentes?.length ?? 0) === 0).length;
+  const comAuxiliar = turmasFiltradas.filter(t => (t.auxiliares?.length ?? 0) > 0).length;
+  const semAuxiliar = turmasFiltradas.filter(t => (t.auxiliares?.length ?? 0) === 0).length;
 
   // Estatísticas para casas (F2)
   const casasComMentor = casasData?.filter(c => c.professor_id).length || 0;
@@ -172,14 +178,17 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
                   <TableHeader>
                     <TableRow className="border-white/10 hover:bg-transparent">
                       <TableHead className="text-white/60 text-xs uppercase">Turma</TableHead>
-                      <TableHead className="text-white/60 text-xs uppercase">Professor</TableHead>
+                      <TableHead className="text-white/60 text-xs uppercase">Regente</TableHead>
+                      {segmentoVisao === 'infantil' && (
+                        <TableHead className="text-white/60 text-xs uppercase">Auxiliar</TableHead>
+                      )}
                       <TableHead className="text-white/60 text-xs uppercase text-center">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {turmasFiltradas.length === 0 ? (
                       <TableRow className="border-white/10">
-                        <TableCell colSpan={3} className="text-center text-white/40 py-8">
+                        <TableCell colSpan={segmentoVisao === 'infantil' ? 4 : 3} className="text-center text-white/40 py-8">
                           Nenhuma turma cadastrada para este segmento
                         </TableCell>
                       </TableRow>
@@ -190,20 +199,27 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
                             {turma.nome}
                           </TableCell>
                           <TableCell className="text-white/80 text-sm">
-                            {turma.professores.length > 0
-                              ? turma.professores.map(p => p.nome).join(', ')
+                            {turma.regentes.length > 0
+                              ? turma.regentes.map(p => p.nome).join(', ')
                               : '-'}
                           </TableCell>
+                          {segmentoVisao === 'infantil' && (
+                            <TableCell className="text-white/80 text-sm">
+                              {turma.auxiliares.length > 0
+                                ? turma.auxiliares.map(p => p.nome).join(', ')
+                                : '-'}
+                            </TableCell>
+                          )}
                           <TableCell className="text-center">
-                            {turma.professores.length > 0 ? (
+                            {turma.regentes.length > 0 ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">
                                 <CheckCircle className="w-3 h-3" />
-                                {turma.professores.length} prof.
+                                OK
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full">
                                 <AlertCircle className="w-3 h-3" />
-                                Sem professor
+                                Sem regente
                               </span>
                             )}
                           </TableCell>
@@ -215,15 +231,27 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
               </div>
 
               {/* Resumo */}
-              <div className="mt-4 flex gap-4 text-sm">
+              <div className="mt-4 flex flex-wrap gap-4 text-sm">
                 <span className="text-green-400 flex items-center gap-1">
                   <CheckCircle className="w-4 h-4" />
-                  {comProfessor} turmas atribuídas
+                  {comProfessor} com regente
                 </span>
                 <span className="text-red-400 flex items-center gap-1">
                   <AlertCircle className="w-4 h-4" />
-                  {semProfessor} turmas sem professor
+                  {semProfessor} sem regente
                 </span>
+                {segmentoVisao === 'infantil' && (
+                  <>
+                    <span className="text-green-400 flex items-center gap-1">
+                      <CheckCircle className="w-4 h-4" />
+                      {comAuxiliar} com auxiliar
+                    </span>
+                    <span className="text-amber-400 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {semAuxiliar} sem auxiliar
+                    </span>
+                  </>
+                )}
               </div>
             </>
           )}
