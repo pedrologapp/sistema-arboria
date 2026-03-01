@@ -18,11 +18,6 @@ const segmentoLabels: Record<Segmento, string> = {
   fundamental2: 'Fundamental 2',
 };
 
-const SERIES_POR_SEGMENTO: Record<Segmento, string[]> = {
-  infantil: ['2', '3', '4', '5'],
-  fundamental1: ['1', '2', '3', '4', '5'],
-  fundamental2: ['6', '7', '8', '9'],
-};
 
 const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarUsuarioProps) => {
   const queryClient = useQueryClient();
@@ -54,13 +49,11 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
   const { data: turmasDisponiveis } = useQuery({
     queryKey: ['turmas-por-segmento', segmento, institutionId],
     queryFn: async () => {
-      const series = SERIES_POR_SEGMENTO[segmento] || [];
-      
       const { data } = await supabase
         .from('turmas')
         .select('id, nome, serie, turma_letra')
         .eq('institution_id', institutionId)
-        .in('serie', series)
+        .eq('segmento', segmento)
         .order('serie')
         .order('turma_letra');
       
