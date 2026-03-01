@@ -4,7 +4,7 @@ import { ClipboardList, Users, Settings, BookOpen, ChevronRight, CalendarDays } 
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import ConteudoModal from '@/components/professor/ConteudoModal';
+
 import BannerFaseInfo from '@/components/professor/BannerFaseInfo';
 import { AlertBoxesTurmas } from '@/components/professor/AlertBoxesTurmas';
 import CalendarioFasesModal, { FaseComDatas } from '@/components/professor/CalendarioFasesModal';
@@ -34,7 +34,7 @@ const getGenero = (nome: string): 'masculino' | 'feminino' => {
 const ProfessorDashboardSimplificado = () => {
   const { profile, faseAtual, turmasVinculadas, segmento } = useProfessor();
   const navigate = useNavigate();
-  const [showConteudoModal, setShowConteudoModal] = useState(false);
+  
   const [showCalendarioModal, setShowCalendarioModal] = useState(false);
   
   // Cor fixa para professores sem casa
@@ -97,10 +97,10 @@ const ProfessorDashboardSimplificado = () => {
     { 
       icon: <BookOpen size={24} />, 
       label: 'Conteúdo', 
-      path: null,
+      path: '/professor/conteudo',
       description: 'Materiais e essência Arboria',
-      isModal: true,
-      modalType: 'conteudo'
+      isModal: false,
+      modalType: null
     },
     { 
       icon: <CalendarDays size={24} />, 
@@ -116,9 +116,7 @@ const ProfessorDashboardSimplificado = () => {
 
   const handleActionClick = (action: typeof quickActions[0]) => {
     if (action.isModal) {
-      if (action.modalType === 'conteudo') {
-        setShowConteudoModal(true);
-      } else if (action.modalType === 'calendario') {
+      if (action.modalType === 'calendario') {
         setShowCalendarioModal(true);
       }
     } else if (action.path) {
@@ -250,13 +248,6 @@ const ProfessorDashboardSimplificado = () => {
           ))}
         </div>
       </div>
-
-      {/* Modal de Conteúdo */}
-      <ConteudoModal
-        isOpen={showConteudoModal}
-        onClose={() => setShowConteudoModal(false)}
-        faseAtual={faseAtual}
-      />
 
       {/* Modal de Calendário */}
       <CalendarioFasesModal
