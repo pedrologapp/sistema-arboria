@@ -1,20 +1,28 @@
 
-# Corrigir turmas vinculadas do Infantil no modal de adicionar professor
 
-## Problema
-A query de turmas disponíveis usa `SERIES_POR_SEGMENTO` que tem `['2', '3', '4', '5']` para infantil, mas as turmas do infantil têm série como texto (`'Maternalzinho(2)'`, `'Maternal(3)'`, `'Grupo IV'`, `'Grupo V'`). Resultado: nenhuma turma aparece.
+# Adicionar Professoras Auxiliares no Infantil
 
-## Solução
-Em `ModalAdicionarUsuario.tsx`, trocar a query para filtrar por `segmento` em vez de `.in('serie', series)`:
+## Contexto
+A tabela `professor_turma` já possui a coluna `eh_regente` (boolean). Atualmente todos os professores são cadastrados como `eh_regente = true`. A ideia é usar essa mesma coluna para diferenciar: `eh_regente = true` = professora titular, `eh_regente = false` = professora auxiliar.
 
-```ts
-const { data } = await supabase
-  .from('turmas')
-  .select('id, nome, serie, turma_letra')
-  .eq('institution_id', institutionId)
-  .eq('segmento', segmento)   // ← filtrar pelo segmento direto
-  .order('serie')
-  .order('turma_letra');
-```
+## Alterações
 
-Remover o `SERIES_POR_SEGMENTO` que já não é mais necessário (ou mantê-lo apenas para o campo de séries do aluno, se ainda usado).
+### 1. `TabelaVisaoGeralProfessores.tsx` — Nova coluna "Auxiliar"
+- Buscar `eh_regente` junto com os vínculos em `professor_turma`
+- Na tabela do Infantil, adicionar coluna "Auxiliar" ao lado de "Professor"
+- Separar professores regentes dos auxiliares na exibição
+- Atualizar resumo: "X turmas com auxiliar / Y sem auxiliar"
+
+### 2. `ModalAdicionarUsuario.tsx` — Opção "Tipo de vínculo"
+- Quando segmento = `infantil`, exibir um toggle/select "Regente" vs "Auxiliar"
+- Se auxiliar, enviar `eh_regente: false` no body da requisição
+
+### 3. `create-professor` edge function — Aceitar `eh_regente`
+- Receber parâmetro opcional `eh_regente` (default `true`)
+- Usar esse valor ao inserir em `professor_turma`
+
+### 4. `PerfilProfessorAdminPage.tsx` — Exibir tipo no perfil
+- Ao adicionar turma ao professor existente, permitir escolher se é regente ou auxiliar
+
+Nenhuma migração de banco necessária — a coluna `eh_regente` já existe em `professor_turma`.
+
