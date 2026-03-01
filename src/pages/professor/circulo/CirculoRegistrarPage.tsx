@@ -106,34 +106,51 @@ const CirculoRegistrarPage = () => {
 
     setSaving(true);
     try {
-      // Buscar turma_id
-      const { data: turmaData } = await supabase
-        .from('turmas')
-        .select('id')
-        .eq('institution_id', profile.institution_id!)
-        .eq('serie', aluno.serie || '6')
-        .ilike('turma_letra', aluno.turma || 'A')
+      // Buscar turma_id via aluno_turma (funciona para todos os segmentos)
+      let turmaId: string | null = null;
+
+      const { data: alunoTurmaData } = await supabase
+        .from('aluno_turma')
+        .select('turma_id')
+        .eq('aluno_id', aluno.id)
+        .eq('ativo', true)
+        .limit(1)
         .maybeSingle();
 
-      if (!turmaData?.id) {
+      if (alunoTurmaData?.turma_id) {
+        turmaId = alunoTurmaData.turma_id;
+      } else {
+        // Fallback: buscar por serie/turma na tabela turmas
+        const { data: turmaData } = await supabase
+          .from('turmas')
+          .select('id')
+          .eq('institution_id', profile.institution_id!)
+          .eq('serie', aluno.serie || '6')
+          .ilike('turma_letra', aluno.turma || 'A')
+          .maybeSingle();
+        turmaId = turmaData?.id || null;
+      }
+
+      if (!turmaId) {
         toast.error('Turma não encontrada');
         setSaving(false);
         return;
       }
 
       const faseInteligenciaId = faseAtual.inteligencia?.id;
-      const alunoInteligenciaId = aluno.casa_id;
+      // Para alunos sem casa (Infantil/F1), usar inteligência da fase
+      const alunoInteligenciaId = aluno.casa_id || faseInteligenciaId;
 
-      // Inserir observação (foi_cross_im é calculado automaticamente pelo banco)
       const { error } = await supabase.from('observacoes').insert({
         institution_id: profile.institution_id!,
         aluno_id: aluno.id,
         professor_id: profile.id,
-        turma_id: turmaData.id,
+        turma_id: turmaId,
         fase_id: faseAtual.id,
         sinal_id: selectedSinal.id,
         inteligencia_fase: faseInteligenciaId!,
         inteligencia_expressa: alunoInteligenciaId!,
+        foi_cross_im: false,
         intensidade: 'normal',
         observacao_texto: nota || null,
         data_observacao: new Date().toISOString().split('T')[0]
@@ -145,7 +162,6 @@ const CirculoRegistrarPage = () => {
       setModalOpen(false);
       setSelectedSinal(null);
       
-      // Voltar para onde veio
       if (serieParam && turmaParam) {
         navigate(`/professor/circulo/serie/${serieParam}/turma/${turmaParam}`);
       } else {
@@ -165,7 +181,6 @@ const CirculoRegistrarPage = () => {
       return;
     }
 
-    // Buscar o sinal correto (outro_positivo ou outro_atencao)
     const codigoSinal = tipoPersonalizado === 'positivo' ? 'outro_positivo' : 'outro_atencao';
     const sinalOutro = sinais?.find(s => s.codigo === codigoSinal);
 
@@ -176,36 +191,51 @@ const CirculoRegistrarPage = () => {
 
     setSaving(true);
     try {
-      // Buscar turma_id
-      const { data: turmaData } = await supabase
-        .from('turmas')
-        .select('id')
-        .eq('institution_id', profile.institution_id!)
-        .eq('serie', aluno.serie || '6')
-        .ilike('turma_letra', aluno.turma || 'A')
+      // Buscar turma_id via aluno_turma
+      let turmaId: string | null = null;
+
+      const { data: alunoTurmaData } = await supabase
+        .from('aluno_turma')
+        .select('turma_id')
+        .eq('aluno_id', aluno.id)
+        .eq('ativo', true)
+        .limit(1)
         .maybeSingle();
 
-      if (!turmaData?.id) {
+      if (alunoTurmaData?.turma_id) {
+        turmaId = alunoTurmaData.turma_id;
+      } else {
+        const { data: turmaData } = await supabase
+          .from('turmas')
+          .select('id')
+          .eq('institution_id', profile.institution_id!)
+          .eq('serie', aluno.serie || '6')
+          .ilike('turma_letra', aluno.turma || 'A')
+          .maybeSingle();
+        turmaId = turmaData?.id || null;
+      }
+
+      if (!turmaId) {
         toast.error('Turma não encontrada');
         setSaving(false);
         return;
       }
 
       const faseInteligenciaId = faseAtual.inteligencia?.id;
-      const alunoInteligenciaId = aluno.casa_id;
+      const alunoInteligenciaId = aluno.casa_id || faseInteligenciaId;
 
-      // Inserir observação personalizada
       const { error } = await supabase.from('observacoes').insert({
         institution_id: profile.institution_id!,
         aluno_id: aluno.id,
         professor_id: profile.id,
-        turma_id: turmaData.id,
+        turma_id: turmaId,
         fase_id: faseAtual.id,
         sinal_id: sinalOutro.id,
         inteligencia_fase: faseInteligenciaId!,
         inteligencia_expressa: alunoInteligenciaId!,
+        foi_cross_im: false,
         intensidade: 'normal',
-        observacao_texto: texto, // Texto obrigatório aqui
+        observacao_texto: texto,
         data_observacao: new Date().toISOString().split('T')[0]
       });
 
@@ -214,7 +244,6 @@ const CirculoRegistrarPage = () => {
       toast.success('Observação personalizada registrada!');
       setModalPersonalizadoOpen(false);
       
-      // Voltar para onde veio
       if (serieParam && turmaParam) {
         navigate(`/professor/circulo/serie/${serieParam}/turma/${turmaParam}`);
       } else {

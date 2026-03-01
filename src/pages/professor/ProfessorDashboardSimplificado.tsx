@@ -187,9 +187,8 @@ const ProfessorDashboardSimplificado = () => {
                 }}
               >
                 <div className="text-xl font-bold text-white mb-1">
-                  {turma.serie}º {turma.turma_letra}
+                  {turma.nome}
                 </div>
-                <div className="text-xs text-white/50">{turma.nome}</div>
               </button>
             ))}
           </div>
@@ -199,7 +198,7 @@ const ProfessorDashboardSimplificado = () => {
       {/* Alertas das Turmas */}
       {turmasVinculadas && turmasVinculadas.length > 0 && (
         <AlertBoxesTurmas 
-          onAlunoClick={(alunoId) => navigate(`/professor/aluno/${alunoId}`)} 
+          onAlunoClick={(alunoId) => navigate(`/professor/alunos/${alunoId}`)} 
         />
       )}
 
