@@ -1,30 +1,38 @@
 
 
-# Plano: Ajustar nomes dos alunos e posição do botão Salvar
+# Correção: Upload de Conteúdo Falhando (Failed to Fetch)
 
-## Mudanças
+## Problema
 
-### 1. Nome + Primeira letra do sobrenome nos chips
+O bucket `fase-conteudos` no storage tem apenas uma policy de SELECT (leitura publica). Nao existe nenhuma policy de INSERT, entao nenhum usuario consegue fazer upload - nem admin.
 
-**Onde**: Query de alunos (linha 58) e mapeamento (linhas 62-69)
+## Solução
 
-- Alterar o select para incluir `sobrenome` do profiles
-- No mapeamento, gerar `nome` como "Nome S." (primeiro nome + inicial do sobrenome com ponto)
-- Adicionar campo `nomeCompleto` ao `AlunoSimples` para o long-press
+Criar uma migration adicionando uma policy de INSERT para admins no bucket `fase-conteudos`:
 
-### 2. Long press mostra nome completo
+```sql
+CREATE POLICY "Admin pode fazer upload de conteudo de fase"
+  ON storage.objects FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'fase-conteudos' 
+    AND has_role(auth.uid(), 'admin'::app_role)
+  );
+```
 
-**Onde**: Componente `AlunoChip` (linhas 196-213)
+Tambem adicionar policies de UPDATE e DELETE para que admins possam substituir e remover arquivos:
 
-- Adicionar `title={aluno.nomeCompleto}` no botão (tooltip nativo em desktop)
-- Implementar long-press com state + `onTouchStart`/`onTouchEnd` com timeout de ~500ms
-- Ao segurar, mostrar um pequeno tooltip/toast temporário com o nome completo
+```sql
+CREATE POLICY "Admin pode atualizar conteudo de fase"
+  ON storage.objects FOR UPDATE
+  TO authenticated
+  USING (bucket_id = 'fase-conteudos' AND has_role(auth.uid(), 'admin'::app_role));
 
-### 3. Botão Salvar inline (não fixo)
+CREATE POLICY "Admin pode deletar conteudo de fase"
+  ON storage.objects FOR DELETE
+  TO authenticated
+  USING (bucket_id = 'fase-conteudos' AND has_role(auth.uid(), 'admin'::app_role));
+```
 
-**Onde**: Botão Salvar (linhas 378-396)
-
-- Remover `fixed bottom-20 left-0 right-0` e `z-40`
-- Tornar o botão um elemento normal no fluxo da página, logo abaixo da seção de alunos não posicionados
-- Remover o `pb-36` extra do container principal (reduzir para `pb-24` para o bottom nav)
+Uma unica migration resolve tudo. Nenhuma alteracao de codigo necessaria.
 
