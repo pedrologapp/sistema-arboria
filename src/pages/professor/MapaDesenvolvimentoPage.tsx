@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +15,7 @@ type Quadrante = 'surpreendeu' | 'foi_bem' | 'teve_dificuldades' | 'atencao';
 interface AlunoSimples {
   id: string;
   nome: string;
+  nomeCompleto: string;
   avatar_url: string | null;
 }
 
@@ -55,15 +56,19 @@ const MapaDesenvolvimentoPage = () => {
       if (!selectedTurmaId) return [];
       const { data, error } = await supabase
         .from('aluno_turma')
-        .select('aluno_id, profiles!aluno_turma_aluno_id_fkey(id, full_name, nome, avatar_url)')
+        .select('aluno_id, profiles!aluno_turma_aluno_id_fkey(id, full_name, nome, sobrenome, avatar_url)')
         .eq('turma_id', selectedTurmaId)
         .eq('ativo', true);
       if (error) throw error;
       return (data || []).map(at => {
-        const p = at.profiles as unknown as { id: string; full_name: string | null; nome: string | null; avatar_url: string | null };
+        const p = at.profiles as unknown as { id: string; full_name: string | null; nome: string | null; sobrenome: string | null; avatar_url: string | null };
+        const primeiro = p.nome || p.full_name?.split(' ')[0] || 'Aluno';
+        const sobrenome = p.sobrenome || (p.full_name ? p.full_name.split(' ').slice(1).join(' ') : '');
+        const inicialSobrenome = sobrenome ? ` ${sobrenome.charAt(0).toUpperCase()}.` : '';
         return {
           id: p.id,
-          nome: p.nome || p.full_name?.split(' ')[0] || 'Aluno',
+          nome: `${primeiro}${inicialSobrenome}`,
+          nomeCompleto: p.full_name || `${primeiro} ${sobrenome}`.trim(),
           avatar_url: p.avatar_url
         } as AlunoSimples;
       }).sort((a, b) => a.nome.localeCompare(b.nome));
@@ -193,27 +198,60 @@ const MapaDesenvolvimentoPage = () => {
 
   const getInitials = (nome: string) => nome.slice(0, 2).toUpperCase();
 
-  const AlunoChip = ({ aluno, onClick, small }: { aluno: AlunoSimples; onClick: () => void; small?: boolean }) => (
-    <motion.button
-      layout
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.8 }}
-      transition={{ duration: 0.2 }}
-      onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-full bg-white/10 border border-white/10 
-        hover:bg-white/15 active:scale-95 transition-all ${small ? 'px-2 py-1' : 'px-3 py-1.5'}`}
-    >
-      <Avatar className={small ? 'h-5 w-5' : 'h-6 w-6'}>
-        <AvatarImage src={aluno.avatar_url || undefined} />
-        <AvatarFallback className="text-[8px] bg-white/20 text-white">{getInitials(aluno.nome)}</AvatarFallback>
-      </Avatar>
-      <span className={`text-white font-medium ${small ? 'text-[10px]' : 'text-xs'}`}>{aluno.nome}</span>
-    </motion.button>
-  );
+  const AlunoChip = ({ aluno, onClick, small }: { aluno: AlunoSimples; onClick: () => void; small?: boolean }) => {
+    const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [showFullName, setShowFullName] = React.useState(false);
+
+    const handleTouchStart = () => {
+      longPressTimer.current = setTimeout(() => {
+        setShowFullName(true);
+        setTimeout(() => setShowFullName(false), 2000);
+      }, 500);
+    };
+    const handleTouchEnd = () => {
+      if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    };
+
+    return (
+      <div className="relative">
+        <motion.button
+          layout
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          transition={{ duration: 0.2 }}
+          onClick={onClick}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
+          title={aluno.nomeCompleto}
+          className={`flex items-center gap-1.5 rounded-full bg-white/10 border border-white/10 
+            hover:bg-white/15 active:scale-95 transition-all ${small ? 'px-2 py-1' : 'px-3 py-1.5'}`}
+        >
+          <Avatar className={small ? 'h-5 w-5' : 'h-6 w-6'}>
+            <AvatarImage src={aluno.avatar_url || undefined} />
+            <AvatarFallback className="text-[8px] bg-white/20 text-white">{getInitials(aluno.nome)}</AvatarFallback>
+          </Avatar>
+          <span className={`text-white font-medium ${small ? 'text-[10px]' : 'text-xs'}`}>{aluno.nome}</span>
+        </motion.button>
+        <AnimatePresence>
+          {showFullName && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-black/90 text-white text-[10px] whitespace-nowrap z-50 pointer-events-none"
+            >
+              {aluno.nomeCompleto}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
 
   return (
-    <div className="p-4 pb-36 space-y-4">
+    <div className="p-4 pb-24 space-y-4">
       {/* Header */}
       <div className="text-center">
         <h1 className="text-xl font-bold text-white">Mapa de Desenvolvimento</h1>
@@ -377,22 +415,18 @@ const MapaDesenvolvimentoPage = () => {
 
       {/* Botão Salvar */}
       {canEdit && (
-        <div className="fixed bottom-20 left-0 right-0 px-4 z-40">
-          <div className="max-w-lg mx-auto">
-            <Button
-              onClick={() => saveMutation.mutate()}
-              disabled={!todosAlocados || saveMutation.isPending}
-              className="w-full py-6 text-base font-semibold rounded-xl shadow-lg"
-              size="lg"
-            >
-              {saveMutation.isPending 
-                ? 'Salvando...' 
-                : hasSavedData 
-                  ? `Atualizar Semana ${selectedSemana}` 
-                  : `Salvar Semana ${selectedSemana}`}
-            </Button>
-          </div>
-        </div>
+        <Button
+          onClick={() => saveMutation.mutate()}
+          disabled={!todosAlocados || saveMutation.isPending}
+          className="w-full py-6 text-base font-semibold rounded-xl shadow-lg"
+          size="lg"
+        >
+          {saveMutation.isPending 
+            ? 'Salvando...' 
+            : hasSavedData 
+              ? `Atualizar Semana ${selectedSemana}` 
+              : `Salvar Semana ${selectedSemana}`}
+        </Button>
       )}
     </div>
   );
