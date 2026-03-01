@@ -253,9 +253,22 @@ const MissaoDetalhePage = () => {
           .select('*')
           .eq('entrega_id', entregaData.id);
 
+        // Generate signed URLs for private bucket
+        const arquivosComUrl = await Promise.all(
+          (arquivosData || []).map(async (arq) => {
+            if (arq.nome_storage) {
+              const { data: signedUrlData } = await supabase.storage
+                .from('entregas')
+                .createSignedUrl(arq.nome_storage, 3600);
+              return { ...arq, url: signedUrlData?.signedUrl || arq.url };
+            }
+            return arq;
+          })
+        );
+
         setEntrega({
           ...entregaData,
-          arquivos: arquivosData || []
+          arquivos: arquivosComUrl
         });
         
         // Se a entrega foi aprovada e ainda não foi visualizada, marcar como visualizada
@@ -433,10 +446,12 @@ const MissaoDetalhePage = () => {
           continue;
         }
 
-        // Obter URL pública (se bucket for público) ou URL assinada
-        const { data: urlData } = supabase.storage
+        // Gerar URL assinada (bucket privado)
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
           .from('entregas')
-          .getPublicUrl(filePath);
+          .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 year
+
+        const fileUrl = signedUrlData?.signedUrl || '';
 
         // 3. Registrar arquivo
         await supabase
@@ -445,7 +460,7 @@ const MissaoDetalhePage = () => {
             entrega_id: novaEntrega.id,
             nome_original: arquivo.file.name,
             nome_storage: filePath,
-            url: urlData.publicUrl,
+            url: fileUrl,
             tamanho_bytes: arquivo.file.size,
             tipo_arquivo: arquivo.file.type
           });
