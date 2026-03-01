@@ -29,6 +29,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
   const [casaId, setCasaId] = useState('');
   const [segmento, setSegmento] = useState<Segmento>('fundamental2');
   const [turmasSelecionadas, setTurmasSelecionadas] = useState<string[]>([]);
+  const [ehRegente, setEhRegente] = useState(true);
   const [senhaGerada, setSenhaGerada] = useState<string | null>(null);
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [criando, setCriando] = useState(false);
@@ -115,6 +116,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
         // Para infantil/fundamental1, turmas são obrigatórias
         if (segmento !== 'fundamental2' && turmasSelecionadas.length > 0) {
           body.turma_ids = turmasSelecionadas;
+          body.eh_regente = ehRegente;
         }
       } else if (tipo === 'admin') {
         body.role = 'admin';
@@ -367,6 +369,40 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
                   </select>
                   <p className="text-xs text-white/40 mt-1">
                     Professores do Fundamental 2 são mentores de uma casa específica
+                  </p>
+                </div>
+              )}
+
+              {/* Tipo de vínculo - só para infantil */}
+              {segmento === 'infantil' && (
+                <div>
+                  <label className="block text-sm text-white/60 mb-1.5">Tipo de Vínculo</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEhRegente(true)}
+                      className={`flex-1 p-3 rounded-xl border text-sm font-medium transition-colors ${
+                        ehRegente
+                          ? 'bg-white/20 border-white text-white'
+                          : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
+                      }`}
+                    >
+                      👩‍🏫 Regente
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEhRegente(false)}
+                      className={`flex-1 p-3 rounded-xl border text-sm font-medium transition-colors ${
+                        !ehRegente
+                          ? 'bg-white/20 border-white text-white'
+                          : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
+                      }`}
+                    >
+                      🤝 Auxiliar
+                    </button>
+                  </div>
+                  <p className="text-xs text-white/40 mt-1">
+                    {ehRegente ? 'Professora titular da turma' : 'Professora auxiliar de apoio'}
                   </p>
                 </div>
               )}
