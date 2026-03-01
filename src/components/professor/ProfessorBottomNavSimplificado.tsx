@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Sparkles, BookOpen, Users } from 'lucide-react';
+import { Home, LayoutGrid, Sparkles, BookOpen, Users } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 
 interface NavItemConfig {
@@ -19,7 +19,8 @@ const ProfessorBottomNavSimplificado = () => {
 
   const navItems: NavItemConfig[] = [
     { id: 'home', icon: <Home size={20} />, label: 'Home', path: '/professor' },
-    { id: 'circulo', icon: <Sparkles size={20} />, label: 'Círculo', path: '/professor/circulo' },
+    { id: 'mapa', icon: <LayoutGrid size={20} />, label: 'Mapa', path: '/professor/mapa' },
+    { id: 'observar', icon: <Sparkles size={20} />, label: 'Observar', path: '/professor/circulo' },
     { id: 'conteudo', icon: <BookOpen size={20} />, label: 'Conteúdo', path: '/professor/conteudo' },
     { id: 'alunos', icon: <Users size={20} />, label: 'Alunos', path: '/professor/alunos' },
   ];
@@ -28,9 +29,10 @@ const ProfessorBottomNavSimplificado = () => {
     const currentPath = location.pathname;
     
     if (currentPath === '/professor') return 0;
-    if (currentPath.startsWith('/professor/circulo')) return 1;
-    if (currentPath.startsWith('/professor/conteudo')) return 2;
-    if (currentPath.startsWith('/professor/alunos')) return 3;
+    if (currentPath.startsWith('/professor/mapa')) return 1;
+    if (currentPath.startsWith('/professor/circulo')) return 2;
+    if (currentPath.startsWith('/professor/conteudo')) return 3;
+    if (currentPath.startsWith('/professor/alunos')) return 4;
     
     return 0;
   };
