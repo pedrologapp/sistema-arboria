@@ -1,41 +1,80 @@
 
 
-# Problema: Alunos do Infantil sem vínculo com turmas
+# Revisão Completa do Painel do Professor (Infantil) — Problemas Encontrados
 
-## Diagnóstico
+## Resumo dos Problemas Críticos
 
-A professora Auriete está corretamente vinculada às turmas **Grupo V A** e **Grupo V B** via `professor_turma`. Porém, **nenhum aluno do Infantil** está vinculado a turmas na tabela `aluno_turma` — são **0 registros** para todos os 92 alunos do segmento:
+Encontrei **5 problemas**, sendo **3 críticos** que impedirão o uso correto do sistema.
 
-| Série | Turma | Alunos | Vinculados |
-|-------|-------|--------|------------|
-| Maternalzinho(2) | A | 4 | 0 |
-| Maternalzinho(2) | B | 9 | 0 |
-| Maternal(3) | A | 6 | 0 |
-| Maternal(3) | B | 13 | 0 |
-| Grupo IV | A | 7 | 0 |
-| Grupo IV | B | 17 | 0 |
-| Grupo V | A | 15 | 0 |
-| Grupo V | B | 21 | 0 |
+---
 
-Os alunos têm `serie` e `turma` preenchidos no `profiles`, mas falta o registro correspondente em `aluno_turma` que liga cada aluno à sua turma. Como o sistema de professores do Infantil usa `aluno_turma` + `professor_turma` para determinar quais alunos cada professor vê, nenhum aluno aparece.
+## Problema 1 — CRÍTICO: Observação falha ao salvar (CirculoRegistrarPage)
 
-## Solução
+**Arquivo**: `src/pages/professor/circulo/CirculoRegistrarPage.tsx` (linhas 101-160)
 
-Inserir os registros em `aluno_turma` para todos os 92 alunos do Infantil, fazendo o match entre `profiles.serie` + `profiles.turma` e `turmas.serie` + `turmas.turma_letra`:
+A página de registrar observação usa `aluno.casa_id` como `inteligencia_expressa` (NOT NULL no banco). Alunos do Infantil **não têm casa** (`casa_id = null`), então o INSERT vai falhar com erro de constraint.
 
-```sql
-INSERT INTO aluno_turma (aluno_id, turma_id, ano_letivo, ativo)
-SELECT p.id, t.id, 2025, true
-FROM profiles p
-JOIN user_roles ur ON ur.user_id = p.id AND ur.role = 'user'
-JOIN turmas t ON t.serie = p.serie 
-  AND t.turma_letra = p.turma
-  AND t.institution_id = p.institution_id
-  AND t.segmento = 'infantil'
-WHERE p.segmento = 'infantil'
-  AND p.institution_id = '902876e9-b263-4c01-9013-aeef7b6d24e1'
-ON CONFLICT DO NOTHING;
-```
+Além disso, a busca da turma faz `eq('serie', aluno.serie)` passando valores como `"Grupo V"`, mas a tabela `turmas` tem `serie = "Grupo V"` — isso funciona. Porém o fallback `aluno.serie || '6'` é incorreto para Infantil.
 
-Isso é uma operação de dados (INSERT), sem mudanças de schema. Após a inserção, a professora Auriete (e todos os demais professores do Infantil) verão automaticamente seus alunos.
+**Solução**: Para Infantil, usar `inteligencia_fase` como valor de `inteligencia_expressa` (já que não há casa). Buscar `turma_id` via `aluno_turma` em vez de tentar fazer match por texto.
+
+---
+
+## Problema 2 — CRÍTICO: Rota inexistente no Dashboard (link quebrado)
+
+**Arquivo**: `src/pages/professor/ProfessorDashboardSimplificado.tsx` (linha 202)
+
+O `AlertBoxesTurmas` navega para `/professor/aluno/${alunoId}` — mas essa rota **não existe**. A rota correta é `/professor/alunos/${alunoId}`.
+
+**Solução**: Corrigir para `/professor/alunos/${alunoId}`.
+
+---
+
+## Problema 3 — CRÍTICO: Exibição errada da série no Dashboard
+
+**Arquivo**: `src/pages/professor/ProfessorDashboardSimplificado.tsx` (linha 190)
+
+O card de turma mostra `{turma.serie}º {turma.turma_letra}`, mas `turma.serie` é texto como `"Grupo V"`, resultando em **"Grupo Vº A"** — incorreto.
+
+**Solução**: Exibir `{turma.nome}` ou formatar condicionalmente: se o segmento é infantil, mostrar `{turma.nome}` diretamente em vez de `{turma.serie}º {turma.turma_letra}`.
+
+---
+
+## Problema 4 — MENOR: CirculoTurmaDirectPage header mostra série errada
+
+**Arquivo**: `src/pages/professor/circulo/CirculoTurmaDirectPage.tsx` (linha 94)
+
+Similar ao problema 3: mostra `{turmaInfo.serie}º Ano {turmaInfo.turma_letra}` — para Infantil resulta em "Grupo Vº Ano A".
+
+**Solução**: Usar `turmaInfo.nome` quando segmento é infantil.
+
+---
+
+## Problema 5 — MENOR: Falta Maternal 3 na lista de séries do CirculoPage
+
+**Arquivo**: `src/pages/professor/CirculoPage.tsx` (linhas 6-10)
+
+A constante `SERIES_POR_SEGMENTO.infantil` lista Maternal 2, Grupo IV e Grupo V — falta **Maternal 3**. Porém esse código só é usado como fallback (quando não há turmas vinculadas), então impacto é baixo.
+
+---
+
+## Funcionalidades que estão OK
+
+- Login e autenticação do professor (ProfessorProtectedRoute)
+- Layout simplificado (header + bottom nav)
+- Navegação do bottom nav (Home, Círculo, Conteúdo, Alunos)
+- Listagem de alunos (AlunosPageSimplificado) — usa `aluno_turma` corretamente
+- Perfil do aluno simplificado (sem missões/casa)
+- Página de configurações e logout
+- Página de conteúdo
+- Vinculação de dados via `aluno_turma` (92 alunos corretos)
+- Fluxo Círculo → Turma → Alunos (CirculoPage → CirculoTurmaDirectPage)
+- RLS policies para acesso por turma
+
+## Plano de Correção
+
+1. **CirculoRegistrarPage**: Adaptar para Infantil — usar `inteligencia_fase` como fallback para `inteligencia_expressa`, e buscar `turma_id` via `aluno_turma` ao invés de match por texto
+2. **ProfessorDashboardSimplificado**: Corrigir rota `/professor/aluno/` → `/professor/alunos/` e corrigir exibição de série
+3. **CirculoTurmaDirectPage**: Corrigir exibição de série para Infantil
+4. **CirculoPage**: Adicionar Maternal 3 à lista de séries do Infantil
 
