@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useProfessor } from '@/contexts/ProfessorContext';
-import { ClipboardList, Users, Settings, BookOpen, ChevronRight, CalendarDays } from 'lucide-react';
+import { LayoutGrid, ClipboardList, Users, Settings, BookOpen, ChevronRight, CalendarDays } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -78,6 +78,14 @@ const ProfessorDashboardSimplificado = () => {
   });
 
   const quickActions = [
+    { 
+      icon: <LayoutGrid size={24} />, 
+      label: 'Mapa de Desenvolvimento', 
+      path: '/professor/mapa',
+      description: 'Visão rápida semanal dos alunos',
+      isModal: false,
+      modalType: null
+    },
     { 
       icon: <ClipboardList size={24} />, 
       label: 'Fazer Observação', 

@@ -1784,6 +1784,109 @@ export type Database = {
         }
         Relationships: []
       }
+      mapa_desenvolvimento: {
+        Row: {
+          aluno_id: string
+          created_at: string | null
+          fase_id: string
+          id: string
+          institution_id: string
+          professor_id: string
+          quadrante: string
+          semana_numero: number
+          turma_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string | null
+          fase_id: string
+          id?: string
+          institution_id: string
+          professor_id: string
+          quadrante: string
+          semana_numero: number
+          turma_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string | null
+          fase_id?: string
+          id?: string
+          institution_id?: string
+          professor_id?: string
+          quadrante?: string
+          semana_numero?: number
+          turma_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mapa_desenvolvimento_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mapa_desenvolvimento_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
+            foreignKeyName: "mapa_desenvolvimento_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estados_alunos"
+            referencedColumns: ["aluno_id"]
+          },
+          {
+            foreignKeyName: "mapa_desenvolvimento_fase_id_fkey"
+            columns: ["fase_id"]
+            isOneToOne: false
+            referencedRelation: "fases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mapa_desenvolvimento_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mapa_desenvolvimento_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mapa_desenvolvimento_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_alunos_por_casa"
+            referencedColumns: ["aluno_id"]
+          },
+          {
+            foreignKeyName: "mapa_desenvolvimento_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estados_alunos"
+            referencedColumns: ["aluno_id"]
+          },
+          {
+            foreignKeyName: "mapa_desenvolvimento_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mensagens_canal: {
         Row: {
           autor_id: string
