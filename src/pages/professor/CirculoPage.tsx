@@ -5,6 +5,7 @@ import { useProfessor } from '@/contexts/ProfessorContext';
 const SERIES_POR_SEGMENTO = {
   infantil: [
     { numero: 2, label: 'MATERNAL 2' },
+    { numero: 3, label: 'MATERNAL 3' },
     { numero: 4, label: 'GRUPO IV' },
     { numero: 5, label: 'GRUPO V' },
   ],

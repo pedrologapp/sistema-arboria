@@ -91,7 +91,7 @@ const CirculoTurmaDirectPage = () => {
             <ChevronLeft className="w-5 h-5 text-white" />
           </button>
           <h1 className="text-xl font-bold text-white">
-            {turmaInfo ? `${turmaInfo.serie}º Ano ${turmaInfo.turma_letra}` : 'Turma'}
+            {turmaInfo?.nome || 'Turma'}
           </h1>
         </div>
         
