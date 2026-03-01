@@ -1,44 +1,41 @@
 
-Objetivo: corrigir o travamento em “Enviando...” no upload de conteúdo da fase (rota `/admin/fases/:id`), sem depender de tentativa manual repetida.
 
-Diagnóstico rápido
-- O backend já está com permissões de upload para o bucket de conteúdos.
-- A conta logada está com role admin.
-- O problema atual é de fluxo no frontend: o upload entra em estado pendente e a UI fica presa em “Enviando...” quando a promessa não finaliza (ou demora indefinidamente).
+# Diagnóstico: "Nenhuma fase ativa" para Professora Auriete
 
-Do I know what the issue is?
-- Sim: o ponto frágil está no `TabConteudo.tsx`, no fluxo assíncrono de upload (`storage -> url -> upsert/insert`), sem proteção contra timeout/hang de rede.
+## Problema Raiz
 
-Plano de implementação (conciso)
-1) Fortalecer o fluxo de upload em `src/components/admin/TabConteudo.tsx`
-- Quebrar em etapas com mensagens de erro específicas:
-  - etapa 1: upload do arquivo
-  - etapa 2: obter URL pública
-  - etapa 3: insert/update em `fase_conteudos`
-- Em cada etapa, lançar erro claro (ex.: “Falha no upload do arquivo”, “Falha ao salvar metadados”).
+Incompatibilidade de tipo entre `turmas.serie` (TEXT: `"Grupo V"`) e `fases.serie` (SMALLINT: `5`).
 
-2) Adicionar timeout defensivo para não travar indefinidamente
-- Encapsular a chamada de upload com timeout (ex.: 25–30s).
-- Se estourar tempo: abortar operação, liberar botão e mostrar toast de timeout com instrução de tentar novamente.
+No `ProfessorContext.tsx`, o fluxo para professores do segmento infantil/fundamental1 é:
+1. Busca a série da turma vinculada → obtém `"Grupo V"` (texto)
+2. Tenta usar esse valor para filtrar `fases` com `.eq('serie', serieDosProfessor)` → compara `"Grupo V"` com `5` → **nenhum resultado**
+3. Resultado: `faseAtual = null` → dashboard mostra "Nenhuma fase ativa"
 
-3) Garantir limpeza de estado 100% das vezes
-- Centralizar loading no estado da mutation (`isPending`) ou garantir `finally` único.
-- Impedir que o modal fique travado se houver erro silencioso.
-- Reabilitar botão e manter dados do formulário para retry rápido.
+## Detalhes Técnicos
 
-4) Rollback se upload subir mas banco falhar
-- Se arquivo subir e falhar no `fase_conteudos`, tentar remover o arquivo recém-enviado para evitar órfãos.
+- `turmas.serie` é `TEXT` (ex: `"Grupo V"`, `"Maternal II"`, `"1º Ano"`)
+- `fases.serie` é `SMALLINT` (ex: `5`, `2`, `1`)
+- O código em `ProfessorContext.tsx` (linha 157-169) trata `turma.serie` como `number`, mas o valor real é texto
+- Precisa de uma função de conversão que extraia o número de strings como `"Grupo V"` → `5`, `"Maternal II"` → `2`, `"1º Ano"` → `1`
 
-5) Melhorar observabilidade para depuração real
-- Log estruturado por etapa no console (`[upload-conteudo] etapa x`), incluindo duração.
-- Assim, se voltar a acontecer, conseguimos isolar imediatamente se foi rede, storage ou banco.
+## Solução
 
-Validação após implementação
-- Testar upload de PDF (4MB) no “Conteúdo Geral” da fase corporal.
-- Confirmar 3 cenários:
-  1. sucesso: sai de “Enviando...”, fecha modal e item aparece na lista;
-  2. falha simulada: botão destrava e mostra erro útil;
-  3. timeout: operação cancela e permite nova tentativa sem recarregar página.
+### 1. Corrigir `ProfessorContext.tsx` — converter serie texto para número
 
-Arquivos envolvidos
-- `src/components/admin/TabConteudo.tsx` (principal correção).
+Adicionar uma função helper que converta nomes de série para o número correspondente (usando a mesma lógica que já existe em outros lugares do sistema, como `get_missoes_do_aluno`). Depois, usar esse número para filtrar as fases.
+
+Lógica de conversão:
+- `"Grupo V"` → extrair algarismo romano ou número → `5`
+- `"Maternal II"` → `2`
+- `"1º Ano"` → `1`
+- Fallback: tentar extrair qualquer dígito da string
+
+### 2. Segundo problema: falta de atualização em tempo real
+
+Quando o admin ativa uma fase, o professor só vê a mudança se recarregar a página, pois `ProfessorContext` só busca dados uma vez (no mount). 
+
+Solução: adicionar um listener de realtime na tabela `fases` para que mudanças (ativação/desativação) disparem um `refreshData()` automaticamente no contexto do professor.
+
+### Arquivos a editar
+- `src/contexts/ProfessorContext.tsx` (converter serie texto→número + adicionar realtime listener)
+
