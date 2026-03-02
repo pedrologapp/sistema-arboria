@@ -8,6 +8,8 @@ export interface AlunoComStatus {
   serie: string;
   turma: string;
   avatarUrl?: string;
+  casaNome: string | null;
+  casaId: number | null;
   status: 'destaque' | 'regular' | 'risco';
   percentualEntregas: number;
   mediaNotas: number;
@@ -24,12 +26,8 @@ export const useAlunosCasa = () => {
         return [];
       }
 
-      console.log('=== DEBUG useAlunosCasa ===');
-      console.log('casaMentor.id:', casaMentor.id);
-      console.log('institution_id:', profile.institution_id);
-
-      // 1. Buscar alunos da casa
-      // A RLS de profiles já garante que só retornará alunos que o professor pode ver
+      // 1. Buscar TODOS os alunos da instituição (sem filtro por casa_id)
+      // Filtramos por segmento fundamental2 e que tenham serie preenchida (são alunos)
       const { data: alunos, error: alunosError } = await supabase
         .from('profiles')
         .select(`
@@ -39,35 +37,39 @@ export const useAlunosCasa = () => {
           sobrenome,
           serie,
           turma,
-          avatar_url
+          avatar_url,
+          casa_id
         `)
-        .eq('casa_id', casaMentor.id)
-        .eq('institution_id', profile.institution_id);
-
-      console.log('Alunos encontrados:', alunos?.length || 0);
-      console.log('Erro:', alunosError);
+        .eq('institution_id', profile.institution_id)
+        .not('serie', 'is', null);
 
       if (alunosError) {
         console.error('Erro ao buscar alunos:', alunosError);
         throw alunosError;
       }
 
-      // Usar diretamente os alunos retornados (RLS já filtrou)
       const alunosValidos = alunos || [];
 
       if (alunosValidos.length === 0) {
         return [];
       }
 
-      // 2. Buscar total de missões liberadas para a casa
+      // 2. Buscar nomes das casas (inteligências)
+      const { data: casas } = await supabase
+        .from('inteligencias')
+        .select('id, nome');
+
+      const casaMap = new Map<number, string>();
+      casas?.forEach(c => casaMap.set(c.id, c.nome));
+
+      // 3. Buscar total de missões liberadas
       const { count: totalMissoes } = await supabase
         .from('missoes')
         .select('*', { count: 'exact', head: true })
         .eq('institution_id', profile.institution_id)
-        .eq('status', 'liberada')
-        .or(`casa_id.eq.${casaMentor.id},casa_id.is.null`);
+        .eq('status', 'liberada');
 
-      // 3. Buscar entregas de todos os alunos
+      // 4. Buscar entregas de todos os alunos
       const alunoIdsArray = alunosValidos.map(a => a.id);
       
       const { data: entregas } = await supabase
@@ -75,24 +77,21 @@ export const useAlunosCasa = () => {
         .select('aluno_id, nota, status')
         .in('aluno_id', alunoIdsArray);
 
-      // 4. Buscar pontos de todos os alunos
+      // 5. Buscar pontos de todos os alunos
       const { data: pontos } = await supabase
         .from('pontos_gerais')
         .select('aluno_id, pontos')
         .in('aluno_id', alunoIdsArray);
 
-      // 5. Calcular métricas para cada aluno
+      // 6. Calcular métricas para cada aluno
       const alunosComStatus: AlunoComStatus[] = alunosValidos.map(aluno => {
-        // Entregas do aluno
         const entregasAluno = entregas?.filter(e => e.aluno_id === aluno.id) || [];
         const totalEntregas = entregasAluno.length;
         
-        // Percentual de entregas
         const percentualEntregas = totalMissoes && totalMissoes > 0 
           ? Math.min(100, (totalEntregas / totalMissoes) * 100)
           : 0;
         
-        // Média das notas (apenas entregas aprovadas com nota)
         const notasValidas = entregasAluno
           .filter(e => e.nota !== null && e.status === 'aprovada')
           .map(e => e.nota as number);
@@ -101,11 +100,9 @@ export const useAlunosCasa = () => {
           ? notasValidas.reduce((a, b) => a + b, 0) / notasValidas.length 
           : 0;
 
-        // Pontos totais
         const pontosAluno = pontos?.filter(p => p.aluno_id === aluno.id) || [];
         const pontosTotais = pontosAluno.reduce((sum, p) => sum + (p.pontos || 0), 0);
 
-        // Determinar status
         let status: 'destaque' | 'regular' | 'risco' = 'regular';
         
         if (percentualEntregas >= 80 && mediaNotas >= 7) {
@@ -114,7 +111,6 @@ export const useAlunosCasa = () => {
           status = 'risco';
         }
 
-        // Nome formatado
         const nomeCompleto = aluno.full_name || 
           [aluno.nome, aluno.sobrenome].filter(Boolean).join(' ') || 
           'Sem nome';
@@ -125,6 +121,8 @@ export const useAlunosCasa = () => {
           serie: aluno.serie || '6º',
           turma: aluno.turma || 'A',
           avatarUrl: aluno.avatar_url || undefined,
+          casaId: aluno.casa_id,
+          casaNome: aluno.casa_id ? (casaMap.get(aluno.casa_id) || null) : null,
           status,
           percentualEntregas: Math.round(percentualEntregas),
           mediaNotas: Math.round(mediaNotas * 10) / 10,
@@ -132,13 +130,12 @@ export const useAlunosCasa = () => {
         };
       });
 
-      // 6. Ordenar: Em risco primeiro, depois Regular, depois Destaque
+      // 7. Ordenar: Em risco primeiro, depois Regular, depois Destaque
       return alunosComStatus.sort((a, b) => {
         const ordem = { risco: 0, regular: 1, destaque: 2 };
         if (ordem[a.status] !== ordem[b.status]) {
           return ordem[a.status] - ordem[b.status];
         }
-        // Dentro do mesmo status, ordenar por nome
         return a.nome.localeCompare(b.nome);
       });
     },

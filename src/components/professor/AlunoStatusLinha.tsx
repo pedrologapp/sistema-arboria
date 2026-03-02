@@ -11,13 +11,13 @@ interface AlunoStatusLinhaProps {
 const getStatusColor = (status: AlunoComStatus['status']) => {
   switch (status) {
     case 'destaque':
-      return '#22C55E'; // Verde
+      return '#22C55E';
     case 'risco':
-      return '#EF4444'; // Vermelho
+      return '#EF4444';
     case 'regular':
-      return '#EAB308'; // Amarelo
+      return '#EAB308';
     default:
-      return '#6B7280'; // Cinza
+      return '#6B7280';
   }
 };
 
@@ -58,13 +58,18 @@ export const AlunoStatusLinha = ({ posicao, aluno, onClick, casaColor }: AlunoSt
         />
       </div>
       
-      {/* Nome + Série/Turma (em linha) */}
-      <div className="flex-1 flex items-center gap-2 min-w-0">
-        <span className="text-white text-sm font-medium truncate">
-          {aluno.nome}
-        </span>
-        <span className="text-white/40 text-xs flex-shrink-0">
-          {aluno.serie}{aluno.turma}
+      {/* Nome + Série/Turma + Casa */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-white text-sm font-medium truncate">
+            {aluno.nome}
+          </span>
+          <span className="text-white/40 text-xs flex-shrink-0">
+            {aluno.serie}{aluno.turma}
+          </span>
+        </div>
+        <span className={`text-[11px] ${aluno.casaNome ? 'text-white/40' : 'text-white/25 italic'}`}>
+          {aluno.casaNome || 'Não designado'}
         </span>
       </div>
       
