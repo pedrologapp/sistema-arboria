@@ -19,38 +19,47 @@ const CirculoTurmaPage = () => {
   const serieTexto = `${serieNumero}º ano`;
 
   const { data: turmas, isLoading } = useQuery({
-    queryKey: ['circulo-turmas', profile?.institution_id, casaMentor?.id, serieNumero],
+    queryKey: ['circulo-turmas', profile?.institution_id, serieNumero],
     queryFn: async () => {
-      if (!profile?.institution_id || !casaMentor?.id) return [];
+      if (!profile?.institution_id) return [];
 
-      // Buscar alunos da casa do professor, filtrando por série
-      const { data: alunos, error } = await supabase
-        .from('profiles')
-        .select('turma')
+      // Buscar turmas F2 da instituição via tabela turmas
+      const { data: turmasData, error } = await supabase
+        .from('turmas')
+        .select('id, turma_letra')
         .eq('institution_id', profile.institution_id)
-        .eq('casa_id', casaMentor.id)
-        .ilike('serie', `${serieNumero}%`);
+        .eq('serie', `${serieNumero}`)
+        .eq('segmento', 'fundamental2')
+        .eq('ativo', true);
 
       if (error) throw error;
 
-      // Agrupar por turma e contar
-      const turmaMap = new Map<string, number>();
-      alunos?.forEach((aluno) => {
-        if (aluno.turma) {
-          const turmaUpper = aluno.turma.toUpperCase();
-          turmaMap.set(turmaUpper, (turmaMap.get(turmaUpper) || 0) + 1);
-        }
+      // Buscar contagem de alunos por turma via aluno_turma
+      const turmaIds = (turmasData || []).map(t => t.id);
+      if (turmaIds.length === 0) return [];
+
+      const { data: alunoTurmaData, error: atError } = await supabase
+        .from('aluno_turma')
+        .select('turma_id')
+        .in('turma_id', turmaIds)
+        .eq('ativo', true);
+
+      if (atError) throw atError;
+
+      // Contar alunos por turma
+      const turmaCountMap = new Map<string, number>();
+      (alunoTurmaData || []).forEach(at => {
+        turmaCountMap.set(at.turma_id, (turmaCountMap.get(at.turma_id) || 0) + 1);
       });
 
-      // Converter para array ordenado
-      const result: TurmaComContagem[] = [];
-      turmaMap.forEach((count, turma_letra) => {
-        result.push({ turma_letra, count });
-      });
+      const result: TurmaComContagem[] = (turmasData || []).map(t => ({
+        turma_letra: t.turma_letra,
+        count: turmaCountMap.get(t.id) || 0
+      }));
 
       return result.sort((a, b) => a.turma_letra.localeCompare(b.turma_letra));
     },
-    enabled: !!profile?.institution_id && !!casaMentor?.id
+    enabled: !!profile?.institution_id
   });
 
   const handleTurmaClick = (turmaLetra: string) => {

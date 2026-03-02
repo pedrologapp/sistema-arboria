@@ -29,23 +29,54 @@ const CirculoAlunosPage = () => {
   const [alunosSelecionados, setAlunosSelecionados] = useState<Aluno[]>([]);
 
   const { data: alunos, isLoading } = useQuery({
-    queryKey: ['circulo-alunos', profile?.institution_id, casaMentor?.id, serieNumero, turmaLetra],
+    queryKey: ['circulo-alunos', profile?.institution_id, serieNumero, turmaLetra],
     queryFn: async () => {
-      if (!profile?.institution_id || !casaMentor?.id) return [];
+      if (!profile?.institution_id) return [];
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, nome, avatar_url, casa_id')
+      // Buscar turma_id correspondente
+      const { data: turmaData, error: turmaError } = await supabase
+        .from('turmas')
+        .select('id')
         .eq('institution_id', profile.institution_id)
-        .eq('casa_id', casaMentor.id)
-        .ilike('serie', `${serieNumero}%`)
-        .ilike('turma', turmaLetra)
-        .order('full_name');
+        .eq('serie', `${serieNumero}`)
+        .eq('turma_letra', turmaLetra)
+        .eq('segmento', 'fundamental2')
+        .eq('ativo', true)
+        .maybeSingle();
+
+      if (turmaError) throw turmaError;
+      if (!turmaData) return [];
+
+      // Buscar alunos via aluno_turma (sem filtro por casa_id)
+      const { data, error } = await supabase
+        .from('aluno_turma')
+        .select(`
+          aluno_id,
+          profiles!inner (
+            id,
+            full_name,
+            nome,
+            avatar_url,
+            casa_id
+          )
+        `)
+        .eq('turma_id', turmaData.id)
+        .eq('ativo', true);
 
       if (error) throw error;
-      return data as Aluno[];
+
+      return (data || []).map(at => {
+        const p = at.profiles as any;
+        return {
+          id: p.id,
+          full_name: p.full_name,
+          nome: p.nome,
+          avatar_url: p.avatar_url,
+          casa_id: p.casa_id,
+        } as Aluno;
+      }).sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
     },
-    enabled: !!profile?.institution_id && !!casaMentor?.id
+    enabled: !!profile?.institution_id
   });
 
   const handleAlunoClick = (aluno: Aluno) => {
