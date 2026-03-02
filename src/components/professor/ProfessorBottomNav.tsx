@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, ClipboardList, PenLine, Sparkles, Users } from 'lucide-react';
+import { Home, ClipboardList, PenLine, Sparkles, Users, LayoutGrid } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -59,11 +59,12 @@ const ProfessorBottomNav = () => {
   });
 
   const navItems: NavItemConfig[] = [
-    { id: 'home', icon: <Home size={20} />, label: 'Home', path: '/professor' },
-    { id: 'missoes', icon: <ClipboardList size={20} />, label: 'Missões', path: '/professor/missoes' },
-    { id: 'avaliar', icon: <PenLine size={20} />, label: 'Avaliar', path: '/professor/entregas', badge: entregasPendentes >= 1 ? entregasPendentes : undefined },
-    { id: 'circulo', icon: <Sparkles size={20} />, label: 'Círculo', path: '/professor/circulo' },
-    { id: 'alunos', icon: <Users size={20} />, label: 'Alunos', path: '/professor/alunos', badge: totalAlertas > 0 ? totalAlertas : undefined },
+    { id: 'home', icon: <Home size={18} />, label: 'Home', path: '/professor' },
+    { id: 'missoes', icon: <ClipboardList size={18} />, label: 'Missões', path: '/professor/missoes' },
+    { id: 'avaliar', icon: <PenLine size={18} />, label: 'Avaliar', path: '/professor/entregas', badge: entregasPendentes >= 1 ? entregasPendentes : undefined },
+    { id: 'circulo', icon: <Sparkles size={18} />, label: 'Observar', path: '/professor/circulo' },
+    { id: 'mapa', icon: <LayoutGrid size={18} />, label: 'Mapa', path: '/professor/mapa' },
+    { id: 'alunos', icon: <Users size={18} />, label: 'Alunos', path: '/professor/alunos', badge: totalAlertas > 0 ? totalAlertas : undefined },
   ];
 
   const getActiveIndex = (): number => {
@@ -73,7 +74,8 @@ const ProfessorBottomNav = () => {
     if (currentPath.startsWith('/professor/missoes')) return 1;
     if (currentPath.startsWith('/professor/entregas')) return 2;
     if (currentPath.startsWith('/professor/circulo')) return 3;
-    if (currentPath.startsWith('/professor/alunos')) return 4;
+    if (currentPath.startsWith('/professor/mapa')) return 4;
+    if (currentPath.startsWith('/professor/alunos')) return 5;
     
     return 0;
   };
@@ -108,7 +110,7 @@ const ProfessorBottomNav = () => {
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item)}
-                className="relative flex flex-col items-center gap-1 px-3 py-1 transition-all duration-200"
+                className="relative flex flex-col items-center gap-0.5 px-2 py-1 transition-all duration-200"
                 style={{
                   color: isActive ? casaColor : 'rgba(255, 255, 255, 0.5)'
                 }}

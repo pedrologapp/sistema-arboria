@@ -26,9 +26,22 @@ const QUADRANTES: { key: Quadrante; label: string; emoji: string; icon: React.Re
   { key: 'atencao', label: 'Atenção', emoji: '🔴', icon: <AlertCircle size={16} />, bgColor: 'rgba(244, 67, 54, 0.15)', borderColor: '#F44336', textColor: '#F44336' },
 ];
 
+const SERIES_F2 = [
+  { value: '6', label: '6º Ano' },
+  { value: '7', label: '7º Ano' },
+  { value: '8', label: '8º Ano' },
+  { value: '9', label: '9º Ano' },
+];
+
 const MapaDesenvolvimentoPage = () => {
-  const { profile, faseAtual, turmasVinculadas } = useProfessor();
+  const { profile, faseAtual, turmasVinculadas, segmento, casaMentor } = useProfessor();
   const queryClient = useQueryClient();
+
+  const isF2 = segmento === 'fundamental2';
+
+  // F2-specific state
+  const [selectedSerieF2, setSelectedSerieF2] = useState<string>('');
+  const [selectedTurmaF2, setSelectedTurmaF2] = useState<string>('');
 
   const [selectedTurmaId, setSelectedTurmaId] = useState<string>('');
   const [selectedSemana, setSelectedSemana] = useState<number>(faseAtual?.semana_atual || 1);
@@ -36,55 +49,124 @@ const MapaDesenvolvimentoPage = () => {
   const [drawerAluno, setDrawerAluno] = useState<AlunoSimples | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Set default turma
+  // F2: Fetch turmas by selected série
+  const { data: turmasF2 = [] } = useQuery({
+    queryKey: ['mapa-turmas-f2', selectedSerieF2, profile?.institution_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('turmas')
+        .select('id, nome, turma_letra, serie, segmento')
+        .eq('institution_id', profile?.institution_id!)
+        .eq('serie', selectedSerieF2)
+        .eq('segmento', 'fundamental2')
+        .eq('ativo', true)
+        .order('turma_letra');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: isF2 && !!selectedSerieF2 && !!profile?.institution_id
+  });
+
+  // When F2 turma selected, set it as active
   useEffect(() => {
-    if (turmasVinculadas && turmasVinculadas.length > 0 && !selectedTurmaId) {
+    if (isF2 && selectedTurmaF2) {
+      setSelectedTurmaId(selectedTurmaF2);
+    }
+  }, [isF2, selectedTurmaF2]);
+
+  // Reset turma when série changes
+  useEffect(() => {
+    if (isF2) {
+      setSelectedTurmaF2('');
+      setSelectedTurmaId('');
+    }
+  }, [isF2, selectedSerieF2]);
+
+  // Set default turma for infantil/F1
+  useEffect(() => {
+    if (!isF2 && turmasVinculadas && turmasVinculadas.length > 0 && !selectedTurmaId) {
       setSelectedTurmaId(turmasVinculadas[0].id);
     }
-  }, [turmasVinculadas, selectedTurmaId]);
+  }, [isF2, turmasVinculadas, selectedTurmaId]);
 
-  const semanaAtual = faseAtual?.semana_atual || 1;
+  // F2: Fetch fase for selected série
+  const { data: faseF2 } = useQuery({
+    queryKey: ['mapa-fase-f2', selectedSerieF2, profile?.institution_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('fases')
+        .select(`id, numero_fase, semana_atual, data_inicio, data_fim,
+          inteligencias!fases_inteligencia_id_fkey (id, nome, codigo, cor_hex, emoji, brasao_url, descricao)`)
+        .eq('institution_id', profile?.institution_id!)
+        .eq('segmento', 'fundamental2')
+        .eq('serie', parseInt(selectedSerieF2))
+        .eq('ativo', true)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        id: data.id,
+        numero_fase: data.numero_fase,
+        semana_atual: data.semana_atual,
+        data_inicio: data.data_inicio,
+        data_fim: data.data_fim,
+        inteligencia: data.inteligencias as any
+      };
+    },
+    enabled: isF2 && !!selectedSerieF2 && !!profile?.institution_id
+  });
+
+  // Use F2-specific fase or context fase
+  const activeFase = isF2 ? faseF2 : faseAtual;
+  const semanaAtual = activeFase?.semana_atual || 1;
   const isSemanaPassada = selectedSemana < semanaAtual;
   const isSemanaFutura = selectedSemana > semanaAtual;
   const canEdit = !isSemanaFutura && (!isSemanaPassada || (isSemanaPassada && selectedSemana === semanaAtual - 1 && isEditing));
   
 
-  // Fetch alunos da turma
+  // Fetch alunos da turma (F2: filter by casa_id)
   const { data: alunos = [] } = useQuery({
-    queryKey: ['mapa-alunos', selectedTurmaId],
+    queryKey: ['mapa-alunos', selectedTurmaId, isF2 ? casaMentor?.id : null],
     queryFn: async () => {
       if (!selectedTurmaId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from('aluno_turma')
-        .select('aluno_id, profiles!aluno_turma_aluno_id_fkey(id, full_name, nome, sobrenome, avatar_url)')
+        .select('aluno_id, profiles!aluno_turma_aluno_id_fkey(id, full_name, nome, sobrenome, avatar_url, casa_id)')
         .eq('turma_id', selectedTurmaId)
         .eq('ativo', true);
+
+      const { data, error } = await query;
       if (error) throw error;
-      return (data || []).map(at => {
-        const p = at.profiles as unknown as { id: string; full_name: string | null; nome: string | null; sobrenome: string | null; avatar_url: string | null };
-        const primeiro = p.nome || p.full_name?.split(' ')[0] || 'Aluno';
-        const sobrenome = p.sobrenome || (p.full_name ? p.full_name.split(' ').slice(1).join(' ') : '');
-        const inicialSobrenome = sobrenome ? ` ${sobrenome.charAt(0).toUpperCase()}.` : '';
-        return {
-          id: p.id,
-          nome: `${primeiro}${inicialSobrenome}`,
-          nomeCompleto: p.full_name || `${primeiro} ${sobrenome}`.trim(),
-          avatar_url: p.avatar_url
-        } as AlunoSimples;
-      }).sort((a, b) => a.nome.localeCompare(b.nome));
+
+      return (data || [])
+        .map(at => {
+          const p = at.profiles as unknown as { id: string; full_name: string | null; nome: string | null; sobrenome: string | null; avatar_url: string | null; casa_id: number | null };
+          // F2: filter by casa_id of the mentor
+          if (isF2 && casaMentor && p.casa_id !== casaMentor.id) return null;
+          const primeiro = p.nome || p.full_name?.split(' ')[0] || 'Aluno';
+          const sobrenome = p.sobrenome || (p.full_name ? p.full_name.split(' ').slice(1).join(' ') : '');
+          const inicialSobrenome = sobrenome ? ` ${sobrenome.charAt(0).toUpperCase()}.` : '';
+          return {
+            id: p.id,
+            nome: `${primeiro}${inicialSobrenome}`,
+            nomeCompleto: p.full_name || `${primeiro} ${sobrenome}`.trim(),
+            avatar_url: p.avatar_url
+          } as AlunoSimples;
+        })
+        .filter(Boolean) as AlunoSimples[];
     },
     enabled: !!selectedTurmaId
   });
 
   // Fetch alocações existentes
   const { data: savedAlocacoes } = useQuery({
-    queryKey: ['mapa-alocacoes', faseAtual?.id, selectedSemana, selectedTurmaId],
+    queryKey: ['mapa-alocacoes', activeFase?.id, selectedSemana, selectedTurmaId],
     queryFn: async () => {
-      if (!faseAtual?.id || !selectedTurmaId) return {};
+      if (!activeFase?.id || !selectedTurmaId) return {};
       const { data, error } = await supabase
         .from('mapa_desenvolvimento')
         .select('aluno_id, quadrante')
-        .eq('fase_id', faseAtual.id)
+        .eq('fase_id', activeFase.id)
         .eq('semana_numero', selectedSemana)
         .eq('turma_id', selectedTurmaId);
       if (error) throw error;
@@ -92,7 +174,7 @@ const MapaDesenvolvimentoPage = () => {
       (data || []).forEach(r => { map[r.aluno_id] = r.quadrante as Quadrante; });
       return map;
     },
-    enabled: !!faseAtual?.id && !!selectedTurmaId
+    enabled: !!activeFase?.id && !!selectedTurmaId
   });
 
   // Update local state when saved data changes
@@ -139,7 +221,7 @@ const MapaDesenvolvimentoPage = () => {
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!faseAtual?.id || !selectedTurmaId || !profile?.id || !profile?.institution_id) {
+      if (!activeFase?.id || !selectedTurmaId || !profile?.id || !profile?.institution_id) {
         throw new Error('Dados incompletos');
       }
 
@@ -147,7 +229,7 @@ const MapaDesenvolvimentoPage = () => {
         aluno_id,
         turma_id: selectedTurmaId,
         professor_id: profile.id,
-        fase_id: faseAtual.id,
+        fase_id: activeFase.id,
         semana_numero: selectedSemana,
         institution_id: profile.institution_id!,
         quadrante
@@ -178,7 +260,7 @@ const MapaDesenvolvimentoPage = () => {
             timestamp: new Date().toISOString(),
             professor: { id: profile.id, nome: profile.full_name || profile.nome },
             turma: { id: selectedTurmaId, nome: turmaInfo?.nome || '' },
-            fase: { id: faseAtual.id, numero: faseAtual.numero_fase, inteligencia: faseAtual.inteligencia?.nome || '' },
+            fase: { id: activeFase.id, numero: activeFase.numero_fase, inteligencia: activeFase.inteligencia?.nome || '' },
             semana_numero: selectedSemana,
             alocacoes: alocacoesPayload,
             resumo
@@ -255,15 +337,41 @@ const MapaDesenvolvimentoPage = () => {
       {/* Header */}
       <div className="text-center">
         <h1 className="text-xl font-bold text-white">Mapa de Desenvolvimento</h1>
-        {faseAtual && (
+        {activeFase && (
           <p className="text-sm text-white/50 mt-1">
-            Fase {faseAtual.numero_fase} — <span style={{ color: faseAtual.inteligencia?.cor_hex || '#fff' }}>{faseAtual.inteligencia?.nome}</span> | Semana {selectedSemana}
+            Fase {activeFase.numero_fase} — <span style={{ color: activeFase.inteligencia?.cor_hex || '#fff' }}>{activeFase.inteligencia?.nome}</span> | Semana {selectedSemana}
           </p>
         )}
       </div>
 
-      {/* Seletor de turma */}
-      {turmasVinculadas && turmasVinculadas.length > 1 && (
+      {/* Seletores F2: Série → Turma */}
+      {isF2 && (
+        <div className="flex gap-2">
+          <Select value={selectedSerieF2} onValueChange={setSelectedSerieF2}>
+            <SelectTrigger className="bg-white/5 border-white/10 text-white flex-1">
+              <SelectValue placeholder="Série" />
+            </SelectTrigger>
+            <SelectContent>
+              {SERIES_F2.map(s => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={selectedTurmaF2} onValueChange={setSelectedTurmaF2} disabled={!selectedSerieF2 || turmasF2.length === 0}>
+            <SelectTrigger className="bg-white/5 border-white/10 text-white flex-1">
+              <SelectValue placeholder="Turma" />
+            </SelectTrigger>
+            <SelectContent>
+              {turmasF2.map(t => (
+                <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Seletor de turma (infantil/F1) */}
+      {!isF2 && turmasVinculadas && turmasVinculadas.length > 1 && (
         <Select value={selectedTurmaId} onValueChange={setSelectedTurmaId}>
           <SelectTrigger className="bg-white/5 border-white/10 text-white">
             <SelectValue placeholder="Selecione a turma" />
