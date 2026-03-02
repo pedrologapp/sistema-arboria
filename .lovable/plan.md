@@ -1,30 +1,104 @@
 
 
-## Diagnóstico: Por que os alunos não aparecem
+## Plano: Visibilidade completa de alunos F2 (Mapa, Observar, Entregas)
 
-### Causa raiz
-O hook `useAlunosCasa` (usado pelo `AlunosPage`) filtra com `.eq('casa_id', casaMentor.id)`. A professora Oceni é mentora da **Casa 8 (Intrapessoal)**, mas dos 159 alunos do F2, apenas **4 têm casa atribuída** (todos na Linguística). Os outros **155 estão com `casa_id = NULL`**. Resultado: 0 alunos aparecem para Oceni.
+### Problema identificado — 2 camadas
 
-A RLS do banco **não** é o problema — a policy "Usuários veem perfis da mesma instituição" já permite que professores vejam todos os perfis. O filtro restritivo está no código frontend.
+**Camada 1 — Frontend (filtros no código)**:
+- `MapaDesenvolvimentoPage.tsx` linha 151: filtra `if (isF2 && casaMentor && p.casa_id !== casaMentor.id) return null` — exclui alunos sem casa ou de outra casa
+- `CirculoAlunosPage.tsx` linha 40: `.eq('casa_id', casaMentor.id)` — só busca alunos da casa do mentor
+- `CirculoTurmaPage.tsx` linha 31: `.eq('casa_id', casaMentor.id)` — idem
+
+**Camada 2 — RLS no banco (bloqueio silencioso)**:
+- **`aluno_turma`**: A policy "Professores veem aluno_turma da sua casa" exige `casa_id` match. Professores F2 **não têm** entradas em `professor_turma`, então a outra policy também não funciona. Resultado: alunos com `casa_id = NULL` são invisíveis.
+- **`entregas`**: A policy "Professor vê entregas da sua casa" exige `p.casa_id = pc.casa_id`. Alunos sem casa → entregas invisíveis.
+- **`observacoes`**: A policy "Professor vê observações da sua casa" → mesmo problema. Professor não consegue nem criar observações para alunos sem casa.
 
 ### Solução
 
-Como você quer que o professor F2 veja **todos os alunos** (todas as casas + sem casa), vamos:
+#### 1. Novas RLS policies (3 tabelas)
+Adicionar policies que permitam professores que são mentores (`professor_casa`) ver todos os dados da mesma instituição:
 
-#### 1. Modificar `useAlunosCasa` — remover filtro por `casa_id`
-- Remover `.eq('casa_id', casaMentor.id)` da query de perfis
-- Em vez disso, buscar alunos via tabela `aluno_turma` (que tem todos os alunos matriculados no F2), ou filtrar por `segmento = 'fundamental2'` na mesma instituição
-- Adicionar campo `casaNome` ao tipo `AlunoComStatus` (nome da casa ou `null`)
+**`aluno_turma`** — nova policy SELECT:
+```sql
+-- Mentores veem aluno_turma de turmas da sua instituição
+CREATE POLICY "Mentores veem aluno_turma da instituição"
+ON aluno_turma FOR SELECT TO authenticated
+USING (
+  has_role(auth.uid(), 'professor'::app_role)
+  AND EXISTS (
+    SELECT 1 FROM turmas t
+    WHERE t.id = aluno_turma.turma_id
+    AND t.institution_id = get_user_institution_id()
+  )
+  AND EXISTS (
+    SELECT 1 FROM professor_casa pc
+    WHERE pc.professor_id = auth.uid() AND pc.ativo = true
+  )
+);
+```
 
-#### 2. Mostrar a casa de cada aluno na lista
-- No `AlunoStatusLinha` ou diretamente no `AlunosPage`, exibir o nome da casa ao lado do aluno
-- Se `casa_id` for `null`, mostrar "Não designado" em cinza
-- Se tiver casa, mostrar o nome (ex: "Linguística", "Intrapessoal")
+**`entregas`** — nova policy SELECT + UPDATE:
+```sql
+-- Mentores veem entregas da instituição
+CREATE POLICY "Mentores veem entregas da instituição"
+ON entregas FOR SELECT TO authenticated
+USING (
+  has_role(auth.uid(), 'professor'::app_role)
+  AND EXISTS (
+    SELECT 1 FROM missoes m
+    WHERE m.id = entregas.missao_id
+    AND m.institution_id = get_user_institution_id()
+  )
+  AND EXISTS (
+    SELECT 1 FROM professor_casa pc
+    WHERE pc.professor_id = auth.uid() AND pc.ativo = true
+  )
+);
 
-#### 3. Filtros existentes continuam funcionando
-- Os filtros de Série (6º-9º) e Turma (A-C) já filtram no frontend e continuarão funcionando normalmente com a lista completa
+-- Mentores podem avaliar entregas da instituição  
+CREATE POLICY "Mentores podem avaliar entregas da instituição"
+ON entregas FOR UPDATE TO authenticated
+USING (
+  has_role(auth.uid(), 'professor'::app_role)
+  AND EXISTS (
+    SELECT 1 FROM missoes m
+    WHERE m.id = entregas.missao_id
+    AND m.institution_id = get_user_institution_id()
+  )
+  AND EXISTS (
+    SELECT 1 FROM professor_casa pc
+    WHERE pc.professor_id = auth.uid() AND pc.ativo = true
+  )
+);
+```
+
+**`observacoes`** — nova policy SELECT:
+```sql
+CREATE POLICY "Mentores veem observações da instituição"
+ON observacoes FOR SELECT TO authenticated
+USING (
+  has_role(auth.uid(), 'professor'::app_role)
+  AND institution_id = get_user_institution_id()
+  AND EXISTS (
+    SELECT 1 FROM professor_casa pc
+    WHERE pc.professor_id = auth.uid() AND pc.ativo = true
+  )
+);
+```
+
+#### 2. Frontend — remover filtros por casa_id (3 arquivos)
+
+- **`MapaDesenvolvimentoPage.tsx`**: Remover linha 151 (`if (isF2 && casaMentor && p.casa_id !== casaMentor.id) return null`)
+- **`CirculoAlunosPage.tsx`**: Remover `.eq('casa_id', casaMentor.id)` e buscar alunos via `aluno_turma` (como já funciona no `CirculoTurmaDirectPage`)
+- **`CirculoTurmaPage.tsx`**: Remover `.eq('casa_id', casaMentor.id)` e buscar turmas da instituição F2 diretamente da tabela `turmas`
+
+#### 3. Entregas — verificação
+O `EntregasPage.tsx` não filtra por `casa_id` no frontend (usa missões + entregas). Com a nova RLS, passará a funcionar automaticamente para alunos sem casa.
 
 ### Arquivos a editar
-- `src/hooks/useAlunosCasa.ts` — remover filtro por casa, buscar via `aluno_turma` com join em turmas F2, adicionar `casaNome`
-- `src/components/professor/AlunoStatusLinha.tsx` — exibir nome da casa (ou "Não designado")
+- `src/pages/professor/MapaDesenvolvimentoPage.tsx`
+- `src/pages/professor/circulo/CirculoAlunosPage.tsx`
+- `src/pages/professor/circulo/CirculoTurmaPage.tsx`
+- 1 migração SQL (6 policies novas)
 
