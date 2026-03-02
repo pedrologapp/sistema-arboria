@@ -74,13 +74,19 @@ const MapaDesenvolvimentoPage = () => {
     }
   }, [isF2, selectedTurmaF2]);
 
-  // Reset turma when série changes
+  // Reset turma when série changes; auto-select if only one
   useEffect(() => {
     if (isF2) {
       setSelectedTurmaF2('');
       setSelectedTurmaId('');
     }
   }, [isF2, selectedSerieF2]);
+
+  useEffect(() => {
+    if (isF2 && turmasF2.length === 1 && !selectedTurmaF2) {
+      setSelectedTurmaF2(turmasF2[0].id);
+    }
+  }, [isF2, turmasF2, selectedTurmaF2]);
 
   // Set default turma for infantil/F1
   useEffect(() => {
@@ -344,29 +350,45 @@ const MapaDesenvolvimentoPage = () => {
         )}
       </div>
 
-      {/* Seletores F2: Série → Turma */}
+      {/* Seletores F2: Série → Turma (pills mobile-friendly) */}
       {isF2 && (
-        <div className="flex gap-2">
-          <Select value={selectedSerieF2} onValueChange={setSelectedSerieF2}>
-            <SelectTrigger className="bg-white/5 border-white/10 text-white flex-1">
-              <SelectValue placeholder="Série" />
-            </SelectTrigger>
-            <SelectContent>
+        <div className="space-y-3">
+          <div>
+            <span className="text-[10px] font-medium text-white/40 uppercase tracking-widest mb-1.5 block">Série</span>
+            <div className="flex gap-2 justify-center">
               {SERIES_F2.map(s => (
-                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                <button
+                  key={s.value}
+                  onClick={() => setSelectedSerieF2(s.value)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all
+                    ${s.value === selectedSerieF2
+                      ? 'bg-primary text-primary-foreground shadow-lg'
+                      : 'bg-white/10 text-white/60 hover:bg-white/15'}`}
+                >
+                  {s.label}
+                </button>
               ))}
-            </SelectContent>
-          </Select>
-          <Select value={selectedTurmaF2} onValueChange={setSelectedTurmaF2} disabled={!selectedSerieF2 || turmasF2.length === 0}>
-            <SelectTrigger className="bg-white/5 border-white/10 text-white flex-1">
-              <SelectValue placeholder="Turma" />
-            </SelectTrigger>
-            <SelectContent>
-              {turmasF2.map(t => (
-                <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            </div>
+          </div>
+          {selectedSerieF2 && turmasF2.length > 0 && (
+            <div>
+              <span className="text-[10px] font-medium text-white/40 uppercase tracking-widest mb-1.5 block">Turma</span>
+              <div className="flex gap-2 justify-center flex-wrap">
+                {turmasF2.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedTurmaF2(t.id)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all
+                      ${t.id === selectedTurmaF2
+                        ? 'bg-primary text-primary-foreground shadow-lg'
+                        : 'bg-white/10 text-white/60 hover:bg-white/15'}`}
+                  >
+                    {t.nome}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
