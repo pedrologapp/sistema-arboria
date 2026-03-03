@@ -135,9 +135,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // Use local sign-out to guarantee session cleanup even when backend session is already invalid/expired
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
+    if (error) {
+      console.error('Sign out error:', error);
+    }
+
+    setSession(null);
+    setUser(null);
     setIsAdmin(false);
-    setAdminCheckComplete(false);
+    setAdminCheckComplete(true);
   };
 
   const value = {
