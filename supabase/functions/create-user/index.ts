@@ -61,7 +61,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { email, nome, sobrenome, institutionId, role, serie, turma, casa, turma_id, segmento, casa_id } = await req.json();
+    const { email, nome, sobrenome, institutionId, institution_id, role, serie, turma, casa, turma_id, segmento, casa_id } = await req.json();
+    const resolvedInstitutionId = institutionId || institution_id || null;
 
     if (!email || !nome || !sobrenome) {
       return new Response(JSON.stringify({ error: 'Email, nome e sobrenome são obrigatórios' }), {
@@ -79,11 +80,11 @@ Deno.serve(async (req: Request) => {
 
     // Fetch institution name
     let institutionName = 'Não definida';
-    if (institutionId) {
+    if (resolvedInstitutionId) {
       const { data: institution } = await supabaseAdmin
         .from('institutions')
         .select('name')
-        .eq('id', institutionId)
+        .eq('id', resolvedInstitutionId)
         .single();
       if (institution) institutionName = institution.name;
     }
@@ -96,7 +97,7 @@ Deno.serve(async (req: Request) => {
         nome: nome.trim(),
         sobrenome: sobrenome.trim(),
         full_name: fullName,
-        institution_id: institutionId || null,
+        institution_id: resolvedInstitutionId,
         serie: serie || null,
         turma: turma || null,
         casa: resolvedCasaId,
@@ -124,7 +125,7 @@ Deno.serve(async (req: Request) => {
       nome: nome.trim(),
       sobrenome: sobrenome.trim(),
       full_name: fullName,
-      institution_id: institutionId || null,
+      institution_id: resolvedInstitutionId,
       institution: institutionName !== 'Não definida' ? institutionName : null,
       serie: serie || null,
       turma: turma || null,
