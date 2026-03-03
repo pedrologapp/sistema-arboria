@@ -18,6 +18,11 @@ const segmentoLabels: Record<Segmento, string> = {
   fundamental2: 'Fundamental 2',
 };
 
+const seriesPorSegmento: Record<Segmento, string[]> = {
+  infantil: ['Maternalzinho(2)', 'Maternal(3)', 'Grupo IV', 'Grupo V'],
+  fundamental1: ['1º ano', '2º ano', '3º ano', '4º ano', '5º ano'],
+  fundamental2: ['6º ano', '7º ano', '8º ano', '9º ano'],
+};
 
 const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarUsuarioProps) => {
   const queryClient = useQueryClient();
@@ -46,13 +51,13 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
     }
   });
 
-  // Buscar turmas disponíveis para o segmento (para professores de Infantil/F1)
+  // Buscar turmas disponíveis para o segmento
   const { data: turmasDisponiveis } = useQuery({
     queryKey: ['turmas-por-segmento', segmento, institutionId],
     queryFn: async () => {
       const { data } = await supabase
         .from('turmas')
-        .select('id, nome, serie, turma_letra')
+        .select('id, nome, serie, turma_letra, segmento')
         .eq('institution_id', institutionId)
         .eq('segmento', segmento)
         .order('serie')
@@ -60,7 +65,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
       
       return data || [];
     },
-    enabled: tipo === 'professor' && segmento !== 'fundamental2'
+    enabled: (tipo === 'professor' && segmento !== 'fundamental2') || tipo === 'aluno'
   });
 
   const toggleTurma = (turmaId: string) => {
@@ -71,9 +76,8 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
     );
   };
 
-  // Séries disponíveis
-  const series = ['6º ano', '7º ano', '8º ano', '9º ano'];
-  const turmas = ['A', 'B', 'C', 'D'];
+  const series = seriesPorSegmento[segmento];
+  const turmasLetras = ['A', 'B', 'C', 'D'];
 
   // Gerar senha baseada no sobrenome
   const gerarSenha = (sobrenome: string): string => {
@@ -105,8 +109,18 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
       if (tipo === 'aluno') {
         body.serie = serie;
         body.turma = turma;
-        body.casa_id = parseInt(casaId);
+        body.segmento = segmento;
+        if (segmento === 'fundamental2' && casaId) {
+          body.casa_id = parseInt(casaId);
+        }
         body.role = 'user';
+        // Find matching turma_id from turmasDisponiveis
+        const matchingTurma = turmasDisponiveis?.find(
+          t => t.serie === serie && t.turma_letra === turma
+        );
+        if (matchingTurma) {
+          body.turma_id = matchingTurma.id;
+        }
       } else if (tipo === 'professor') {
         body.segmento = segmento;
         // Para fundamental2, casa é obrigatória
@@ -154,12 +168,13 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
 
   const isFormValid = () => {
     if (!nome.trim() || !sobrenome.trim() || !email.trim()) return false;
-    if (tipo === 'aluno' && (!serie || !turma || !casaId)) return false;
+    if (tipo === 'aluno') {
+      if (!serie || !turma) return false;
+      if (segmento === 'fundamental2' && !casaId) return false;
+    }
     if (tipo === 'professor') {
       if (!segmento) return false;
-      // Para fundamental2, casa é obrigatória
       if (segmento === 'fundamental2' && !casaId) return false;
-      // Para infantil/fundamental1, pelo menos uma turma é obrigatória
       if (segmento !== 'fundamental2' && turmasSelecionadas.length === 0) return false;
     }
     return true;
@@ -282,6 +297,26 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
 
           {tipo === 'aluno' && (
             <>
+              {/* Segmento selector */}
+              <div>
+                <label className="block text-sm text-white/60 mb-1.5">Segmento</label>
+                <select
+                  value={segmento}
+                  onChange={(e) => {
+                    const newSeg = e.target.value as Segmento;
+                    setSegmento(newSeg);
+                    setSerie('');
+                    setTurma('');
+                    setCasaId('');
+                  }}
+                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white"
+                >
+                  {Object.entries(segmentoLabels).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm text-white/60 mb-1.5">Série</label>
@@ -304,26 +339,29 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
                     className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white"
                   >
                     <option value="">Selecione</option>
-                    {turmas.map(t => (
+                    {turmasLetras.map(t => (
                       <option key={t} value={t}>{t}</option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm text-white/60 mb-1.5">Casa</label>
-                <select
-                  value={casaId}
-                  onChange={(e) => setCasaId(e.target.value)}
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white"
-                >
-                  <option value="">Selecione a casa</option>
-                  {casas?.map(c => (
-                    <option key={c.id} value={c.id}>{c.emoji} {c.nome}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Casa - only for F2 */}
+              {segmento === 'fundamental2' && (
+                <div>
+                  <label className="block text-sm text-white/60 mb-1.5">Casa</label>
+                  <select
+                    value={casaId}
+                    onChange={(e) => setCasaId(e.target.value)}
+                    className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white"
+                  >
+                    <option value="">Selecione a casa</option>
+                    {casas?.map(c => (
+                      <option key={c.id} value={c.id}>{c.emoji} {c.nome}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </>
           )}
 
