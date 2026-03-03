@@ -24,13 +24,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    const token = authHeader.replace('Bearer ', '');
+
     // Create a Supabase client with the user's JWT to verify they're an admin
     const supabaseClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: authHeader } }
     });
 
     // Get the current user
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError || !user) {
       console.error('Auth error:', userError);
       return new Response(
