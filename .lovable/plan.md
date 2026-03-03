@@ -1,104 +1,31 @@
 
 
-## Plano: Visibilidade completa de alunos F2 (Mapa, Observar, Entregas)
+## Adicionar aluna Ruamma ao Maternal III A
 
-### Problema identificado — 2 camadas
+### Problema
+O modal "Adicionar Aluno" atualmente só suporta séries do Fundamental 2 (6º-9º ano). Não há opção para cadastrar alunos do segmento Infantil (Maternal III, Grupo IV, etc.).
 
-**Camada 1 — Frontend (filtros no código)**:
-- `MapaDesenvolvimentoPage.tsx` linha 151: filtra `if (isF2 && casaMentor && p.casa_id !== casaMentor.id) return null` — exclui alunos sem casa ou de outra casa
-- `CirculoAlunosPage.tsx` linha 40: `.eq('casa_id', casaMentor.id)` — só busca alunos da casa do mentor
-- `CirculoTurmaPage.tsx` linha 31: `.eq('casa_id', casaMentor.id)` — idem
+### Solução em 2 partes
 
-**Camada 2 — RLS no banco (bloqueio silencioso)**:
-- **`aluno_turma`**: A policy "Professores veem aluno_turma da sua casa" exige `casa_id` match. Professores F2 **não têm** entradas em `professor_turma`, então a outra policy também não funciona. Resultado: alunos com `casa_id = NULL` são invisíveis.
-- **`entregas`**: A policy "Professor vê entregas da sua casa" exige `p.casa_id = pc.casa_id`. Alunos sem casa → entregas invisíveis.
-- **`observacoes`**: A policy "Professor vê observações da sua casa" → mesmo problema. Professor não consegue nem criar observações para alunos sem casa.
+#### 1. Cadastrar a aluna imediatamente
+Usar a edge function `create-user` para criar a conta e depois inserir o vínculo na tabela `aluno_turma` com a turma "Maternal III A" (`turma_id: 9f9bfa20-3a49-4b21-af5d-0b060710e43a`).
 
-### Solução
+- **Nome**: Ruamma Nicole
+- **Sobrenome**: Silva do Nascimento Souza
+- **Email**: gerado automaticamente (ex: `ruamma.souza.xxx@aluno.arboria.com`)
+- **Senha**: `souza123` (baseada no sobrenome significativo)
+- **Série/Turma**: Maternal III / A
+- **Segmento**: infantil
 
-#### 1. Novas RLS policies (3 tabelas)
-Adicionar policies que permitam professores que são mentores (`professor_casa`) ver todos os dados da mesma instituição:
-
-**`aluno_turma`** — nova policy SELECT:
-```sql
--- Mentores veem aluno_turma de turmas da sua instituição
-CREATE POLICY "Mentores veem aluno_turma da instituição"
-ON aluno_turma FOR SELECT TO authenticated
-USING (
-  has_role(auth.uid(), 'professor'::app_role)
-  AND EXISTS (
-    SELECT 1 FROM turmas t
-    WHERE t.id = aluno_turma.turma_id
-    AND t.institution_id = get_user_institution_id()
-  )
-  AND EXISTS (
-    SELECT 1 FROM professor_casa pc
-    WHERE pc.professor_id = auth.uid() AND pc.ativo = true
-  )
-);
-```
-
-**`entregas`** — nova policy SELECT + UPDATE:
-```sql
--- Mentores veem entregas da instituição
-CREATE POLICY "Mentores veem entregas da instituição"
-ON entregas FOR SELECT TO authenticated
-USING (
-  has_role(auth.uid(), 'professor'::app_role)
-  AND EXISTS (
-    SELECT 1 FROM missoes m
-    WHERE m.id = entregas.missao_id
-    AND m.institution_id = get_user_institution_id()
-  )
-  AND EXISTS (
-    SELECT 1 FROM professor_casa pc
-    WHERE pc.professor_id = auth.uid() AND pc.ativo = true
-  )
-);
-
--- Mentores podem avaliar entregas da instituição  
-CREATE POLICY "Mentores podem avaliar entregas da instituição"
-ON entregas FOR UPDATE TO authenticated
-USING (
-  has_role(auth.uid(), 'professor'::app_role)
-  AND EXISTS (
-    SELECT 1 FROM missoes m
-    WHERE m.id = entregas.missao_id
-    AND m.institution_id = get_user_institution_id()
-  )
-  AND EXISTS (
-    SELECT 1 FROM professor_casa pc
-    WHERE pc.professor_id = auth.uid() AND pc.ativo = true
-  )
-);
-```
-
-**`observacoes`** — nova policy SELECT:
-```sql
-CREATE POLICY "Mentores veem observações da instituição"
-ON observacoes FOR SELECT TO authenticated
-USING (
-  has_role(auth.uid(), 'professor'::app_role)
-  AND institution_id = get_user_institution_id()
-  AND EXISTS (
-    SELECT 1 FROM professor_casa pc
-    WHERE pc.professor_id = auth.uid() AND pc.ativo = true
-  )
-);
-```
-
-#### 2. Frontend — remover filtros por casa_id (3 arquivos)
-
-- **`MapaDesenvolvimentoPage.tsx`**: Remover linha 151 (`if (isF2 && casaMentor && p.casa_id !== casaMentor.id) return null`)
-- **`CirculoAlunosPage.tsx`**: Remover `.eq('casa_id', casaMentor.id)` e buscar alunos via `aluno_turma` (como já funciona no `CirculoTurmaDirectPage`)
-- **`CirculoTurmaPage.tsx`**: Remover `.eq('casa_id', casaMentor.id)` e buscar turmas da instituição F2 diretamente da tabela `turmas`
-
-#### 3. Entregas — verificação
-O `EntregasPage.tsx` não filtra por `casa_id` no frontend (usa missões + entregas). Com a nova RLS, passará a funcionar automaticamente para alunos sem casa.
+#### 2. Atualizar o modal para suportar todos os segmentos
+Modificar `ModalAdicionarUsuario.tsx` para que, ao cadastrar alunos:
+- Adicionar seletor de **segmento** (Infantil, Fundamental 1, Fundamental 2)
+- As opções de **série** mudam conforme o segmento selecionado (Maternalzinho, Maternal III, Grupo IV, Grupo V para Infantil; 1º-5º para F1; 6º-9º para F2)
+- Turma continua sendo A/B/C/D
+- Remover campo "Casa" para alunos que não são F2
+- Após criar o usuário, inserir automaticamente o registro em `aluno_turma` vinculando à turma correta
 
 ### Arquivos a editar
-- `src/pages/professor/MapaDesenvolvimentoPage.tsx`
-- `src/pages/professor/circulo/CirculoAlunosPage.tsx`
-- `src/pages/professor/circulo/CirculoTurmaPage.tsx`
-- 1 migração SQL (6 policies novas)
+- `src/components/admin/ModalAdicionarUsuario.tsx` — adicionar seletor de segmento e séries dinâmicas
+- `supabase/functions/create-user/index.ts` — aceitar `turma_id` e criar vínculo `aluno_turma` automaticamente
 
