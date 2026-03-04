@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Activity, RefreshCw, Eye } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
