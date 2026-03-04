@@ -499,7 +499,7 @@ const MapaDesenvolvimentoPage = () => {
                       key={aluno.id} 
                       aluno={aluno} 
                       small 
-                      onClick={() => canEdit ? setDrawerAluno(aluno) : undefined} 
+                      onClick={() => (canEdit && !isReadOnly) ? setDrawerAluno(aluno) : undefined} 
                     />
                   ))}
                 </AnimatePresence>
