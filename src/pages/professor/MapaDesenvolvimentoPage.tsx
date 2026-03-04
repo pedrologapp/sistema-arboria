@@ -48,6 +48,7 @@ const MapaDesenvolvimentoPage = () => {
   const [alocacoes, setAlocacoes] = useState<Record<string, Quadrante>>({});
   const [drawerAluno, setDrawerAluno] = useState<AlunoSimples | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [savedSuccess, setSavedSuccess] = useState(false);
 
   // F2: Fetch turmas by selected série
   const { data: turmasF2 = [] } = useQuery({
@@ -182,14 +183,25 @@ const MapaDesenvolvimentoPage = () => {
     enabled: !!activeFase?.id && !!selectedTurmaId
   });
 
+  // Reset alocacoes when turma/semana changes
+  useEffect(() => {
+    setAlocacoes({});
+    setSavedSuccess(false);
+    setIsEditing(false);
+  }, [selectedTurmaId, selectedSemana]);
+
   // Update local state when saved data changes
   useEffect(() => {
     if (savedAlocacoes) {
       setAlocacoes(savedAlocacoes);
+      if (Object.keys(savedAlocacoes).length > 0) {
+        setSavedSuccess(true);
+      }
     }
   }, [savedAlocacoes]);
 
   const hasSavedData = savedAlocacoes && Object.keys(savedAlocacoes).length > 0;
+  const isReadOnly = savedSuccess && hasSavedData && !isEditing;
 
   const alunosNaoAlocados = useMemo(() => 
     alunos.filter(a => !alocacoes[a.id]),
@@ -276,6 +288,7 @@ const MapaDesenvolvimentoPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mapa-alocacoes'] });
       setIsEditing(false);
+      setSavedSuccess(true);
       toast({ title: `Semana ${selectedSemana} salva com sucesso! ✅` });
     },
     onError: (err) => {
@@ -424,8 +437,29 @@ const MapaDesenvolvimentoPage = () => {
         ))}
       </div>
 
-      {/* Banner visualização */}
-      {isSemanaPassada && !isEditing && hasSavedData && (
+      {/* Banner visualização / sucesso */}
+      {isReadOnly && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+          <CheckCircle size={16} className="text-green-400 flex-shrink-0" />
+          <div className="flex-1">
+            <span className="text-xs text-green-300 font-medium">
+              ✅ Semana {selectedSemana} salva
+            </span>
+            <div className="flex gap-3 mt-1 text-[10px] text-green-300/70">
+              {QUADRANTES.map(q => (
+                <span key={q.key}>{q.emoji} {alunosPorQuadrante[q.key].length}</span>
+              ))}
+            </div>
+          </div>
+          <button 
+            onClick={() => setIsEditing(true)} 
+            className="text-xs text-green-400 underline flex-shrink-0"
+          >
+            Editar
+          </button>
+        </div>
+      )}
+      {isSemanaPassada && !isReadOnly && !isEditing && hasSavedData && (
         <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
           <Info size={16} className="text-blue-400 flex-shrink-0" />
           <span className="text-xs text-blue-300">
@@ -476,7 +510,7 @@ const MapaDesenvolvimentoPage = () => {
       </div>
 
       {/* Alunos não alocados */}
-      {canEdit && (
+      {canEdit && !isReadOnly && (
         <div className="space-y-2">
           <h3 className="text-xs font-medium text-white/50 uppercase tracking-widest">
             Alunos não posicionados ({alunosNaoAlocados.length})
@@ -543,7 +577,7 @@ const MapaDesenvolvimentoPage = () => {
       </Drawer>
 
       {/* Botão Salvar */}
-      {canEdit && (
+      {canEdit && !isReadOnly && (
         <Button
           onClick={() => saveMutation.mutate()}
           disabled={!todosAlocados || saveMutation.isPending}
