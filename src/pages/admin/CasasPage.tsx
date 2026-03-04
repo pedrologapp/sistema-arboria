@@ -191,7 +191,7 @@ const CasasPage = () => {
                   })}
                   {/* Líder do 9º ano (único por casa) */}
                   {(() => {
-                    const lider = getCargosForCasaSerie(casa.id, '9').find((c) => c.cargo === 'líder');
+                    const lider = getCargosForCasaSerie(casa.id, '9').find((c) => c.cargo === 'lider');
                     return (
                       <div className="flex items-center gap-2 mt-1 ml-8 text-xs">
                         <Crown className="w-3 h-3 text-yellow-400 flex-shrink-0" />
@@ -237,7 +237,7 @@ const CasasPage = () => {
                                             ⭐ Coord.
                                           </Badge>
                                         )}
-                                        {cargoAluno?.cargo === 'líder' && (
+                                        {cargoAluno?.cargo === 'lider' && (
                                           <Badge className="text-[9px] px-1.5 py-0 bg-yellow-500/20 text-yellow-300 border-yellow-500/30">
                                             👑 Líder
                                           </Badge>
