@@ -81,10 +81,7 @@ const MonitorPage = () => {
     queryFn: async () => {
       let query = supabase
         .from('observacoes')
-        .select(`
-          id, created_at, sinal_id, observacao_texto, foi_cross_im,
-          aluno_id, professor_id, inteligencia_fase
-        `)
+        .select('id, created_at, sinal_id, observacao_texto, foi_cross_im, aluno_id, professor_id')
         .eq('institution_id', institutionId!)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -94,34 +91,49 @@ const MonitorPage = () => {
         query = query.gte('created_at', filterDate);
       }
 
-      const { data, error } = await query;
+      const { data: obsData, error } = await query;
       if (error) throw error;
+      if (!obsData || obsData.length === 0) return [];
 
-      // Now fetch casa info for each unique casa_id
-      const casaIds = [...new Set((data || []).map((o: any) => o.aluno?.casa_id).filter(Boolean))];
+      const alunoIds = [...new Set(obsData.map(o => o.aluno_id))];
+      const professorIds = [...new Set(obsData.map(o => o.professor_id))];
+      const sinalIds = [...new Set(obsData.map(o => o.sinal_id))];
+
+      const [alunosRes, professoresRes, sinaisRes] = await Promise.all([
+        supabase.from('profiles').select('id, full_name, avatar_url, casa_id').in('id', alunoIds),
+        supabase.from('profiles').select('id, full_name, avatar_url').in('id', professorIds),
+        supabase.from('sinais').select('id, emoji, label_pt, valencia').in('id', sinalIds),
+      ]);
+
+      const alunosMap: Record<string, any> = {};
+      (alunosRes.data || []).forEach(a => { alunosMap[a.id] = a; });
+      const profsMap: Record<string, any> = {};
+      (professoresRes.data || []).forEach(p => { profsMap[p.id] = p; });
+      const sinaisMap: Record<number, any> = {};
+      (sinaisRes.data || []).forEach((s: any) => { sinaisMap[s.id] = s; });
+
+      const casaIds = [...new Set(Object.values(alunosMap).map((a: any) => a.casa_id).filter(Boolean))];
       let casasMap: Record<number, any> = {};
       if (casaIds.length > 0) {
         const { data: casas } = await supabase
           .from('inteligencias')
           .select('id, nome, emoji, cor_hex, brasao_url')
           .in('id', casaIds);
-        if (casas) {
-          casas.forEach((c: any) => {
-            casasMap[c.id] = { nome: c.nome, emoji: c.emoji, cor_hex: c.cor_hex, brasao_url: c.brasao_url };
-          });
-        }
+        (casas || []).forEach((c: any) => {
+          casasMap[c.id] = { nome: c.nome, emoji: c.emoji, cor_hex: c.cor_hex, brasao_url: c.brasao_url };
+        });
       }
 
-      return (data || []).map((o: any) => ({
+      return obsData.map(o => ({
         id: o.id,
         created_at: o.created_at,
         sinal_id: o.sinal_id,
         observacao_texto: o.observacao_texto,
         foi_cross_im: o.foi_cross_im,
-        aluno: o.aluno,
-        professor: o.professor,
-        sinal: o.sinal,
-        casa: o.aluno?.casa_id ? casasMap[o.aluno.casa_id] || null : null,
+        aluno: alunosMap[o.aluno_id] || { id: o.aluno_id, full_name: 'Aluno', avatar_url: null, casa_id: null },
+        professor: profsMap[o.professor_id] || { id: o.professor_id, full_name: 'Professor', avatar_url: null },
+        sinal: sinaisMap[o.sinal_id] || { emoji: '❓', label_pt: 'Desconhecido', valencia: '' },
+        casa: alunosMap[o.aluno_id]?.casa_id ? casasMap[alunosMap[o.aluno_id].casa_id] || null : null,
       })) as ObservacaoFeed[];
     },
     enabled: !!institutionId,
