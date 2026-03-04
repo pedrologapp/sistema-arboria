@@ -83,9 +83,7 @@ const MonitorPage = () => {
         .from('observacoes')
         .select(`
           id, created_at, sinal_id, observacao_texto, foi_cross_im,
-          aluno:profiles!entregas_aluno_id_fkey(id, full_name, avatar_url, casa_id),
-          professor:profiles!acoes_professor_professor_id_fkey(id, full_name, avatar_url),
-          sinal:sinais!inner(emoji, label_pt, valencia)
+          aluno_id, professor_id, inteligencia_fase
         `)
         .eq('institution_id', institutionId!)
         .order('created_at', { ascending: false })
