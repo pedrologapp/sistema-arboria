@@ -150,7 +150,6 @@ const CirculoRegistrarPage = () => {
         sinal_id: selectedSinal.id,
         inteligencia_fase: faseInteligenciaId!,
         inteligencia_expressa: alunoInteligenciaId!,
-        foi_cross_im: false,
         intensidade: 'normal',
         observacao_texto: nota || null,
         data_observacao: new Date().toISOString().split('T')[0]
@@ -233,7 +232,6 @@ const CirculoRegistrarPage = () => {
         sinal_id: sinalOutro.id,
         inteligencia_fase: faseInteligenciaId!,
         inteligencia_expressa: alunoInteligenciaId!,
-        foi_cross_im: false,
         intensidade: 'normal',
         observacao_texto: texto,
         data_observacao: new Date().toISOString().split('T')[0]
