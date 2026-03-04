@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import ConfirmarObservacaoModal from '@/components/professor/circulo/ConfirmarObservacaoModal';
 import { ObservacaoPersonalizadaModal } from '@/components/professor/circulo/ObservacaoPersonalizadaModal';
+import { BannerObservarVsMapa } from '@/components/professor/circulo/BannerObservarVsMapa';
 
 interface Sinal {
   id: number;
@@ -295,6 +296,9 @@ const CirculoRegistrarPage = () => {
         </button>
         <h1 className="text-xl font-bold text-white">Observar</h1>
       </div>
+
+      {/* Banner de orientação */}
+      <BannerObservarVsMapa />
 
       {/* Seção POSITIVO */}
       <div className="space-y-3">
