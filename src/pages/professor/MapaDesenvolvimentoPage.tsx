@@ -147,7 +147,8 @@ const MapaDesenvolvimentoPage = () => {
 
       return (data || [])
         .map(at => {
-          const p = at.profiles as unknown as { id: string; full_name: string | null; nome: string | null; sobrenome: string | null; avatar_url: string | null; casa_id: number | null };
+          const p = at.profiles as unknown as { id: string; full_name: string | null; nome: string | null; sobrenome: string | null; avatar_url: string | null; casa_id: number | null } | null;
+          if (!p) return null;
           // F2: show all students regardless of casa_id
           const primeiro = p.nome || p.full_name?.split(' ')[0] || 'Aluno';
           const sobrenome = p.sobrenome || (p.full_name ? p.full_name.split(' ').slice(1).join(' ') : '');
