@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { Sparkles, CheckCircle, AlertTriangle, AlertCircle, X, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BannerObservarVsMapa } from '@/components/professor/circulo/BannerObservarVsMapa';
 
 type Quadrante = 'surpreendeu' | 'foi_bem' | 'teve_dificuldades' | 'atencao';
 
