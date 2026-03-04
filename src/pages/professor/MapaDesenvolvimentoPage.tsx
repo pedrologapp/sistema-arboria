@@ -363,6 +363,8 @@ const MapaDesenvolvimentoPage = () => {
         )}
       </div>
 
+      <BannerObservarVsMapa />
+
       {/* Seletores F2: Série → Turma (pills mobile-friendly) */}
       {isF2 && (
         <div className="space-y-3">
