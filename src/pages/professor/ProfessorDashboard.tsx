@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useProfessor } from '@/contexts/ProfessorContext';
-import { ClipboardList, PenLine, Users, Settings, BookOpen, ChevronRight } from 'lucide-react';
+import { ClipboardList, PenLine, Users, Settings, BookOpen, ChevronRight, Calendar } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -229,6 +230,45 @@ const ProfessorDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Card Fase Atual */}
+      {faseAtual && faseAtual.inteligencia ? (
+        <div 
+          className="flex items-center gap-4 p-4 rounded-xl
+            bg-[rgba(26,26,30,0.85)] backdrop-blur-xl
+            border border-white/10"
+          style={{ boxShadow: `0 8px 24px -8px ${faseAtual.inteligencia.cor_hex || casaColor}20` }}
+        >
+          <div 
+            className="p-2.5 rounded-lg shrink-0"
+            style={{ backgroundColor: `${faseAtual.inteligencia.cor_hex || casaColor}20` }}
+          >
+            <Calendar size={20} style={{ color: faseAtual.inteligencia.cor_hex || casaColor }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-semibold text-sm truncate">
+              {faseAtual.inteligencia.emoji && <span className="mr-1">{faseAtual.inteligencia.emoji}</span>}
+              Fase {faseAtual.numero_fase} — {faseAtual.inteligencia.nome}
+            </p>
+            <p className="text-white/50 text-xs font-light">
+              {faseAtual.semana_atual 
+                ? `Semana ${faseAtual.semana_atual} de 4`
+                : 'Semana não definida'}
+            </p>
+          </div>
+          <div className="w-16 shrink-0">
+            <Progress 
+              value={((faseAtual.semana_atual || 0) / 4) * 100} 
+              className="h-2 bg-white/10"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10">
+          <Calendar size={18} className="text-white/30" />
+          <p className="text-white/40 text-sm">Nenhuma fase ativa no momento</p>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="space-y-3">
