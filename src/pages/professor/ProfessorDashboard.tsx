@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useProfessor } from '@/contexts/ProfessorContext';
-import { ClipboardList, PenLine, Users, Settings, BookOpen, ChevronRight } from 'lucide-react';
+import { ClipboardList, PenLine, Users, Settings, BookOpen, ChevronRight, Calendar } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
