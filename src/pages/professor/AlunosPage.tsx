@@ -179,6 +179,7 @@ const AlunosPage = () => {
       .filter(aluno => {
         if (serieFiltro && !aluno.serie.startsWith(serieFiltro)) return false;
         if (turmaFiltro && aluno.turma !== turmaFiltro) return false;
+        if (casaFiltro && aluno.casaNome !== casaFiltro) return false;
         if (busca && !aluno.nome.toLowerCase().includes(busca.toLowerCase())) return false;
         return true;
       })
@@ -189,7 +190,7 @@ const AlunosPage = () => {
         }
         return a.nome.localeCompare(b.nome);
       });
-  }, [alunos, serieFiltro, turmaFiltro, busca]);
+  }, [alunos, serieFiltro, turmaFiltro, casaFiltro, busca]);
 
   const handleChatClick = () => {
     navigate('/professor/chat');
@@ -211,19 +212,11 @@ const AlunosPage = () => {
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
             <Users className="w-5 h-5" style={{ color: casaColor }} strokeWidth={1.5} />
-            Alunos da Casa
+            Alunos
           </h1>
-          {casaMentor && (
-            <p className="text-sm text-white/50 font-light flex items-center gap-1.5 mt-1">
-              <CasaBrasao 
-                brasaoUrl={casaMentor.brasao_url}
-                emoji={casaMentor.emoji}
-                nome={casaMentor.nome}
-                size="mini"
-              />
-              Casa {casaMentor.nome} • {alunos?.length || 0} alunos
-            </p>
-          )}
+          <p className="text-sm text-white/50 font-light mt-1">
+            {alunos?.length || 0} alunos
+          </p>
         </div>
       </div>
 
@@ -250,11 +243,11 @@ const AlunosPage = () => {
         />
       )}
 
-      {/* Título do Ranking */}
+      {/* Título Lista de Alunos */}
       <div className="flex items-center gap-2 pt-2">
-        <Trophy className="w-4 h-4 text-yellow-500" strokeWidth={1.5} />
+        <Users className="w-4 h-4 text-white/40" strokeWidth={1.5} />
         <span className="text-white/40 text-xs uppercase tracking-wider font-medium">
-          Ranking de Pontos
+          Lista de Alunos
         </span>
       </div>
 
@@ -323,6 +316,40 @@ const AlunosPage = () => {
                 style={turmaFiltro === turma ? { backgroundColor: casaColor } : undefined}
               >
                 {turma}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Casa */}
+        <div className="flex items-center gap-3">
+          <span className="text-white/40 text-xs uppercase tracking-wider w-12 flex-shrink-0">
+            Casa
+          </span>
+          <div className="flex gap-1.5 flex-wrap">
+            <button
+              onClick={() => setCasaFiltro(null)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                casaFiltro === null
+                  ? 'text-white'
+                  : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70'
+              }`}
+              style={casaFiltro === null ? { backgroundColor: casaColor } : undefined}
+            >
+              Todas
+            </button>
+            {casas?.map(casa => (
+              <button
+                key={casa.id}
+                onClick={() => setCasaFiltro(casa.nome)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  casaFiltro === casa.nome
+                    ? 'text-white'
+                    : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70'
+                }`}
+                style={casaFiltro === casa.nome ? { backgroundColor: casaColor } : undefined}
+              >
+                {casa.emoji} {casa.nome}
               </button>
             ))}
           </div>
