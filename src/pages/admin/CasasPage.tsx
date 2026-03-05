@@ -45,6 +45,8 @@ const CasasPage = () => {
   const [mentores, setMentores] = useState<Mentor[]>([]);
   const [cargos, setCargos] = useState<Cargo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [serieFiltro, setSerieFiltro] = useState('');
+  const [turmaFiltro, setTurmaFiltro] = useState('');
 
   useEffect(() => {
     fetchData();
