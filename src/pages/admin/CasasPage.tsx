@@ -91,7 +91,35 @@ const CasasPage = () => {
     return match ? match[1] : null;
   };
 
-  const getMembrosForCasa = (casaId: number) => membros.filter((m) => m.casa_id === casaId);
+  // Derived: available series and turmas for filters
+  const seriesDisponiveis = useMemo(() => {
+    const set = new Set<string>();
+    membros.forEach((m) => {
+      const s = extractSerieNum(m.serie);
+      if (s) set.add(s);
+    });
+    return [...set].sort();
+  }, [membros]);
+
+  const turmasDisponiveis = useMemo(() => {
+    let filtered = membros;
+    if (serieFiltro) filtered = filtered.filter((m) => extractSerieNum(m.serie) === serieFiltro);
+    const set = new Set<string>();
+    filtered.forEach((m) => {
+      if (m.turma) set.add(m.turma.toUpperCase());
+    });
+    return [...set].sort();
+  }, [membros, serieFiltro]);
+
+  // Filtered SERIES list for card display
+  const seriesParaExibir = serieFiltro ? [serieFiltro] : SERIES;
+
+  const getMembrosForCasa = (casaId: number) => {
+    let ms = membros.filter((m) => m.casa_id === casaId);
+    if (serieFiltro) ms = ms.filter((m) => extractSerieNum(m.serie) === serieFiltro);
+    if (turmaFiltro) ms = ms.filter((m) => (m.turma || '').toUpperCase() === turmaFiltro);
+    return ms;
+  };
 
   const getMentorForCasa = (casaId: number) => mentores.find((m) => m.casa_id === casaId);
 
