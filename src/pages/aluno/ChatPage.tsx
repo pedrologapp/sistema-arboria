@@ -250,6 +250,14 @@ const ChatPage = () => {
     }).length;
   }, [membrosCasa]);
 
+  // Verificar se o aluno é líder
+  const isLider = useMemo(() => {
+    if (!profile?.id) return false;
+    const meu = membrosCasa?.find(m => m.id === profile.id);
+    const cargoAtivo = meu?.cargos_casa?.find((c: { ativo: boolean; cargo: string }) => c.ativo && c.cargo === 'lider');
+    return !!cargoAtivo;
+  }, [membrosCasa, profile?.id]);
+
   // Agrupar membros por cargo
   const { lideranca, membrosComuns } = useMemo(() => {
     const lideranca = membrosCasa.filter(m => {
