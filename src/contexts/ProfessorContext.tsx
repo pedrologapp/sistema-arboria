@@ -228,7 +228,7 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
           faseQuery = faseQuery.eq('segmento', profileData.segmento);
         }
 
-        const { data: faseData, error: faseError } = await faseQuery.maybeSingle();
+        const { data: faseData, error: faseError } = await faseQuery.order('numero_fase', { ascending: true }).limit(1).maybeSingle();
 
         if (faseError) {
           console.error('Error fetching fase atual:', faseError);
