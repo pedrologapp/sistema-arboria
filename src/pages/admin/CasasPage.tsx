@@ -269,8 +269,9 @@ const CasasPage = () => {
                       Ver todos os membros
                     </AccordionTrigger>
                     <AccordionContent className="px-4 pb-3">
-                      {SERIES.map((serie) => {
-                        const turmasLetras = getTurmasForCasaSerie(casa.id, serie);
+                      {seriesParaExibir.map((serie) => {
+                        let turmasLetras = getTurmasForCasaSerie(casa.id, serie);
+                        if (turmaFiltro) turmasLetras = turmasLetras.filter((t) => t.toUpperCase() === turmaFiltro);
                         return turmasLetras.map((turmaLetra) => {
                           const membrosS = getMembrosForCasaSerieTurma(casa.id, serie, turmaLetra);
                           if (membrosS.length === 0) return null;
