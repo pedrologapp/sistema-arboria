@@ -23,12 +23,26 @@ const AlunosPage = () => {
   // Estados de filtro
   const [serieFiltro, setSerieFiltro] = useState<string | null>(null);
   const [turmaFiltro, setTurmaFiltro] = useState<string | null>(null);
+  const [casaFiltro, setCasaFiltro] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
 
   // Séries e turmas FIXAS
   const seriesDisponiveis = ['6º', '7º', '8º', '9º'];
   const turmasDisponiveis = ['A', 'B', 'C'];
+
+  // Buscar lista de casas (inteligências)
+  const { data: casas } = useQuery({
+    queryKey: ['inteligencias-filtro'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('inteligencias')
+        .select('id, nome, emoji')
+        .order('ordem');
+      if (error) throw error;
+      return data || [];
+    }
+  });
 
   // Buscar canais da casa mentor para badge de notificação
   const { data: canais } = useQuery({
