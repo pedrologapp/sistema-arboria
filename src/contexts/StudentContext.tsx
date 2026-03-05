@@ -149,8 +149,8 @@ export const StudentProvider = ({ children }: StudentProviderProps) => {
           setInstitutionName(instData.name);
         }
 
-        // 3.5. Fetch fase atual
-        const { data: faseData } = await supabase
+        // 3.5. Fetch fase atual (filtrada por segmento e série do aluno)
+        let faseQuery = supabase
           .from('fases')
           .select(`
             id,
@@ -167,7 +167,20 @@ export const StudentProvider = ({ children }: StudentProviderProps) => {
             )
           `)
           .eq('institution_id', profileData.institution_id)
-          .eq('ativo', true)
+          .eq('ativo', true);
+
+        // Filtrar por segmento do aluno
+        if (profileData.serie) {
+          // Extrair número da série para filtro
+          const serieNum = parseInt(profileData.serie);
+          if (!isNaN(serieNum)) {
+            faseQuery = faseQuery.eq('serie', serieNum);
+          }
+        }
+
+        const { data: faseData } = await faseQuery
+          .order('numero_fase')
+          .limit(1)
           .maybeSingle();
 
         if (faseData) {
