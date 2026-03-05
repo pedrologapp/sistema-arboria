@@ -31,6 +31,8 @@ interface Fase {
   semana_atual: number | null;
   ativo: boolean;
   inteligencia_id: number;
+  data_inicio: string;
+  data_fim: string;
 }
 
 interface ItemFase {
@@ -53,6 +55,10 @@ const MissoesPage = () => {
 
     try {
       setError(null);
+
+      // Extrair número da série do aluno (ex: "6º ano" → 6)
+      const serieNum = profile.serie ? parseInt(String(profile.serie).replace(/\D/g, ''), 10) : null;
+      const segmento = profile.segmento || 'fundamental2';
       
       const { data: inteligencias, error: intError } = await supabase
         .from('inteligencias')
@@ -61,48 +67,46 @@ const MissoesPage = () => {
 
       if (intError) throw intError;
 
-      // PRIMEIRO: Buscar a fase ativa para descobrir o ano letivo correto
-      const { data: faseAtiva } = await supabase
-        .from('fases')
-        .select('ano_letivo')
+      // Buscar ano letivo das settings ou fallback
+      const { data: settings } = await supabase
+        .from('institution_settings')
+        .select('ano_letivo_atual')
         .eq('institution_id', profile.institution_id)
-        .eq('ativo', true)
         .single();
+      const anoLetivoAtual = settings?.ano_letivo_atual || new Date().getFullYear();
 
-      // Usar o ano da fase ativa, ou fallback para settings/ano atual
-      let anoLetivoAtual = faseAtiva?.ano_letivo;
+      // Buscar fases filtradas por série e segmento do aluno
+      let query = supabase
+        .from('fases')
+        .select('id, numero_fase, semana_atual, ativo, inteligencia_id, data_inicio, data_fim')
+        .eq('institution_id', profile.institution_id)
+        .eq('ano_letivo', anoLetivoAtual)
+        .eq('segmento', segmento);
 
-      if (!anoLetivoAtual) {
-        const { data: settings } = await supabase
-          .from('institution_settings')
-          .select('ano_letivo_atual')
-          .eq('institution_id', profile.institution_id)
-          .single();
-        anoLetivoAtual = settings?.ano_letivo_atual || new Date().getFullYear();
+      if (serieNum) {
+        query = query.eq('serie', serieNum);
       }
 
-      // Agora buscar TODAS as fases do ano correto
-      const { data: fases, error: fasesError } = await supabase
-        .from('fases')
-        .select('id, numero_fase, semana_atual, ativo, inteligencia_id')
-        .eq('institution_id', profile.institution_id)
-        .eq('ano_letivo', anoLetivoAtual);
+      const { data: fases, error: fasesError } = await query;
 
       if (fasesError) throw fasesError;
 
-      // Mapear FASES (não inteligências) para garantir ordem correta por numero_fase
-      const faseAtivaEncontrada = fases?.find(f => f.ativo);
+      // Determinar status pela data atual
+      const hoje = new Date();
+      hoje.setHours(12, 0, 0, 0);
       
       const itensLista: ItemFase[] = (fases || []).map(fase => {
         const inteligencia = inteligencias?.find(i => i.id === fase.inteligencia_id);
-        
         if (!inteligencia) return null;
+        
+        const inicio = new Date(fase.data_inicio + 'T12:00:00');
+        const fim = new Date(fase.data_fim + 'T12:00:00');
         
         let status: 'futura' | 'atual' | 'passada' = 'futura';
         
-        if (fase.ativo) {
+        if (hoje >= inicio && hoje <= fim) {
           status = 'atual';
-        } else if (faseAtivaEncontrada && fase.numero_fase < faseAtivaEncontrada.numero_fase) {
+        } else if (hoje > fim) {
           status = 'passada';
         }
         
@@ -123,7 +127,7 @@ const MissoesPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [profile?.institution_id]);
+  }, [profile?.institution_id, profile?.serie, profile?.segmento]);
 
   useEffect(() => {
     fetchData();
@@ -319,7 +323,7 @@ const MissoesPage = () => {
                     isPassada && 'text-[#64748B]'
                   )}>
                     {isFutura && 'Fase futura'}
-                    {isAtual && item.fase && `Semana ${item.fase.semana_atual || 1} de 4`}
+                    {isAtual && item.fase && `Fase atual — Semana ${item.fase.semana_atual || 1} de 4`}
                     {isPassada && 'Concluída'}
                   </p>
                 </div>
