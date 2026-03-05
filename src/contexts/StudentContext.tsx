@@ -10,6 +10,7 @@ interface Profile {
   full_name: string | null;
   serie: string | null;
   turma: string | null;
+  segmento: string | null;
   casa_id: number | null;
   institution_id: string | null;
   institution: string | null;
