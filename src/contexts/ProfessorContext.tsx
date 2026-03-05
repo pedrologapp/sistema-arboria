@@ -184,7 +184,7 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
         // 4. Fetch fase atual - filtrar pela serie das turmas vinculadas
         // First get the teacher's series from turmas
         let serieDosProfessor: number | null = null;
-        if (profileData.segmento === 'infantil' || profileData.segmento === 'fundamental1') {
+        {
           const { data: turmasData } = await supabase
             .from('professor_turma')
             .select('turmas!inner(serie)')
@@ -194,7 +194,6 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
           
           if (turmasData && turmasData.length > 0) {
             const turma = turmasData[0].turmas as unknown as { serie: string };
-            // turmas.serie é TEXT ("Grupo V"), fases.serie é SMALLINT (5)
             serieDosProfessor = converterSerieTextoParaNumero(turma.serie);
             console.log('[ProfessorContext] serie texto:', turma.serie, '→ número:', serieDosProfessor);
           }
