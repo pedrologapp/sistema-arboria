@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Users, Crown, Star, UserCircle } from 'lucide-react';
 
 interface Inteligencia {
@@ -44,6 +45,8 @@ const CasasPage = () => {
   const [mentores, setMentores] = useState<Mentor[]>([]);
   const [cargos, setCargos] = useState<Cargo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [serieFiltro, setSerieFiltro] = useState('');
+  const [turmaFiltro, setTurmaFiltro] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -88,7 +91,35 @@ const CasasPage = () => {
     return match ? match[1] : null;
   };
 
-  const getMembrosForCasa = (casaId: number) => membros.filter((m) => m.casa_id === casaId);
+  // Derived: available series and turmas for filters
+  const seriesDisponiveis = useMemo(() => {
+    const set = new Set<string>();
+    membros.forEach((m) => {
+      const s = extractSerieNum(m.serie);
+      if (s) set.add(s);
+    });
+    return [...set].sort();
+  }, [membros]);
+
+  const turmasDisponiveis = useMemo(() => {
+    let filtered = membros;
+    if (serieFiltro) filtered = filtered.filter((m) => extractSerieNum(m.serie) === serieFiltro);
+    const set = new Set<string>();
+    filtered.forEach((m) => {
+      if (m.turma) set.add(m.turma.toUpperCase());
+    });
+    return [...set].sort();
+  }, [membros, serieFiltro]);
+
+  // Filtered SERIES list for card display
+  const seriesParaExibir = serieFiltro ? [serieFiltro] : SERIES;
+
+  const getMembrosForCasa = (casaId: number) => {
+    let ms = membros.filter((m) => m.casa_id === casaId);
+    if (serieFiltro) ms = ms.filter((m) => extractSerieNum(m.serie) === serieFiltro);
+    if (turmaFiltro) ms = ms.filter((m) => (m.turma || '').toUpperCase() === turmaFiltro);
+    return ms;
+  };
 
   const getMentorForCasa = (casaId: number) => mentores.find((m) => m.casa_id === casaId);
 
@@ -129,7 +160,34 @@ const CasasPage = () => {
   return (
     <div className="min-h-screen bg-[#0A0A0A] px-4 py-6">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-xl font-bold text-white mb-6">Casas</h1>
+        <h1 className="text-xl font-bold text-white mb-4">Casas</h1>
+
+        {/* Filtros */}
+        <div className="flex gap-3 mb-6">
+          <Select value={serieFiltro} onValueChange={(v) => { setSerieFiltro(v === 'all' ? '' : v); setTurmaFiltro(''); }}>
+            <SelectTrigger className="w-[140px] bg-white/5 border-white/10 text-white text-sm h-9">
+              <SelectValue placeholder="Todas séries" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas séries</SelectItem>
+              {seriesDisponiveis.map((s) => (
+                <SelectItem key={s} value={s}>{s}º ano</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={turmaFiltro} onValueChange={(v) => setTurmaFiltro(v === 'all' ? '' : v)} disabled={!serieFiltro}>
+            <SelectTrigger className="w-[140px] bg-white/5 border-white/10 text-white text-sm h-9">
+              <SelectValue placeholder="Todas turmas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas turmas</SelectItem>
+              {turmasDisponiveis.map((t) => (
+                <SelectItem key={t} value={t}>Turma {t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {inteligencias.map((casa) => {
@@ -162,8 +220,9 @@ const CasasPage = () => {
 
                 {/* Cargos por série e turma */}
                 <div className="px-4 py-3 space-y-1">
-                  {SERIES.map((serie) => {
-                    const turmaLetras = getTurmaLetrasForCasaSerie(casa.id, serie);
+                  {seriesParaExibir.map((serie) => {
+                    let turmaLetras = getTurmaLetrasForCasaSerie(casa.id, serie);
+                    if (turmaFiltro) turmaLetras = turmaLetras.filter((t) => t.toUpperCase() === turmaFiltro);
                     
                     return turmaLetras.map((turmaLetra) => {
                       const cargosT = turmaLetra 
@@ -189,8 +248,8 @@ const CasasPage = () => {
                       );
                     });
                   })}
-                  {/* Líder do 9º ano (único por casa) */}
-                  {(() => {
+                  {/* Líder do 9º ano (único por casa) - só mostra se 9º está no filtro */}
+                  {(!serieFiltro || serieFiltro === '9') && (() => {
                     const lider = getCargosForCasaSerie(casa.id, '9').find((c) => c.cargo === 'lider');
                     return (
                       <div className="flex items-center gap-2 mt-1 ml-8 text-xs">
@@ -210,8 +269,9 @@ const CasasPage = () => {
                       Ver todos os membros
                     </AccordionTrigger>
                     <AccordionContent className="px-4 pb-3">
-                      {SERIES.map((serie) => {
-                        const turmasLetras = getTurmasForCasaSerie(casa.id, serie);
+                      {seriesParaExibir.map((serie) => {
+                        let turmasLetras = getTurmasForCasaSerie(casa.id, serie);
+                        if (turmaFiltro) turmasLetras = turmasLetras.filter((t) => t.toUpperCase() === turmaFiltro);
                         return turmasLetras.map((turmaLetra) => {
                           const membrosS = getMembrosForCasaSerieTurma(casa.id, serie, turmaLetra);
                           if (membrosS.length === 0) return null;
