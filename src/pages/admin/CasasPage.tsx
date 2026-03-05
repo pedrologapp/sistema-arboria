@@ -248,8 +248,8 @@ const CasasPage = () => {
                       );
                     });
                   })}
-                  {/* Líder do 9º ano (único por casa) */}
-                  {(() => {
+                  {/* Líder do 9º ano (único por casa) - só mostra se 9º está no filtro */}
+                  {(!serieFiltro || serieFiltro === '9') && (() => {
                     const lider = getCargosForCasaSerie(casa.id, '9').find((c) => c.cargo === 'lider');
                     return (
                       <div className="flex items-center gap-2 mt-1 ml-8 text-xs">
