@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, MessageCircle, Hash, Users } from 'lucide-react';
+import { Search, MessageCircle, Hash, Users, Crown, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
 import { CasaBrasao } from '@/components/CasaBrasao';
@@ -10,12 +10,32 @@ import { MembroCard } from '@/components/chat/MembroCard';
 import { Input } from '@/components/ui/input';
 import { getStatusOnline } from '@/utils/statusOnline';
 import { toast } from 'sonner';
+import { ConselhoLideresLocked } from '@/components/chat/ConselhoLideresLocked';
 
 const ChatPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { profile, casa, casaColor } = useStudent();
   const [searchTerm, setSearchTerm] = useState('');
+  const [showLockedModal, setShowLockedModal] = useState(false);
+
+  // Buscar canal do Conselho de Líderes
+  const { data: canalConselho } = useQuery({
+    queryKey: ['canal-conselho', profile?.institution_id],
+    queryFn: async () => {
+      if (!profile?.institution_id) return null;
+      const { data } = await supabase
+        .from('canais_casa')
+        .select('*')
+        .eq('tipo', 'conselho_lideres')
+        .eq('institution_id', profile.institution_id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!profile?.institution_id,
+  });
+
+
 
   // Buscar canais da casa do aluno
   const { data: canais = [] } = useQuery({
@@ -230,6 +250,14 @@ const ChatPage = () => {
     }).length;
   }, [membrosCasa]);
 
+  // Verificar se o aluno é líder
+  const isLider = useMemo(() => {
+    if (!profile?.id) return false;
+    const meu = membrosCasa?.find(m => m.id === profile.id);
+    const cargoAtivo = meu?.cargos_casa?.find((c: { ativo: boolean; cargo: string }) => c.ativo && c.cargo === 'lider');
+    return !!cargoAtivo;
+  }, [membrosCasa, profile?.id]);
+
   // Agrupar membros por cargo
   const { lideranca, membrosComuns } = useMemo(() => {
     const lideranca = membrosCasa.filter(m => {
@@ -420,6 +448,38 @@ const ChatPage = () => {
         />
       </div>
 
+      {/* Seção: Canais da Diretoria */}
+      {canalConselho && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 px-1">
+            <Crown className="w-4 h-4 text-yellow-500/60" />
+            <h2 className="text-xs font-semibold text-yellow-500/60 uppercase tracking-wider">
+              Canais da Diretoria
+            </h2>
+          </div>
+          <button
+            onClick={() => {
+              if (isLider) {
+                navigate(`/aluno/chat/canal/${canalConselho.id}`);
+              } else {
+                setShowLockedModal(true);
+              }
+            }}
+            className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left active:scale-[0.98] ${
+              isLider
+                ? 'bg-yellow-500/10 border border-yellow-500/30 hover:bg-yellow-500/15'
+                : 'bg-white/[0.03] border border-white/5 opacity-60 hover:opacity-70'
+            }`}
+          >
+            <span className="text-lg flex-shrink-0">👑</span>
+            <span className={`flex-1 font-medium truncate ${isLider ? 'text-yellow-400' : 'text-white/60'}`}>
+              Conselho de Líderes
+            </span>
+            {!isLider && <Lock className="w-4 h-4 text-white/30 flex-shrink-0" />}
+          </button>
+        </div>
+      )}
+
       {/* Seção: Canais de Texto */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 px-1">
@@ -531,6 +591,9 @@ const ChatPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal de canal bloqueado */}
+      <ConselhoLideresLocked open={showLockedModal} onOpenChange={setShowLockedModal} />
     </div>
   );
 };
