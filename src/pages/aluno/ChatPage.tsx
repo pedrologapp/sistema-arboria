@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, MessageCircle, Hash, Users } from 'lucide-react';
+import { Search, MessageCircle, Hash, Users, Crown, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
 import { CasaBrasao } from '@/components/CasaBrasao';
@@ -10,12 +10,38 @@ import { MembroCard } from '@/components/chat/MembroCard';
 import { Input } from '@/components/ui/input';
 import { getStatusOnline } from '@/utils/statusOnline';
 import { toast } from 'sonner';
+import { ConselhoLideresLocked } from '@/components/chat/ConselhoLideresLocked';
 
 const ChatPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { profile, casa, casaColor } = useStudent();
   const [searchTerm, setSearchTerm] = useState('');
+  const [showLockedModal, setShowLockedModal] = useState(false);
+
+  // Buscar canal do Conselho de Líderes
+  const { data: canalConselho } = useQuery({
+    queryKey: ['canal-conselho', profile?.institution_id],
+    queryFn: async () => {
+      if (!profile?.institution_id) return null;
+      const { data } = await supabase
+        .from('canais_casa')
+        .select('*')
+        .eq('tipo', 'conselho_lideres')
+        .eq('institution_id', profile.institution_id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!profile?.institution_id,
+  });
+
+  // Verificar se o aluno é líder
+  const isLider = useMemo(() => {
+    if (!profile?.id) return false;
+    const cargoAtivo = membrosCasa?.find(m => m.id === profile.id)
+      ?.cargos_casa?.find((c: { ativo: boolean; cargo: string }) => c.ativo && c.cargo === 'lider');
+    return !!cargoAtivo;
+  }, [membrosCasa, profile?.id]);
 
   // Buscar canais da casa do aluno
   const { data: canais = [] } = useQuery({

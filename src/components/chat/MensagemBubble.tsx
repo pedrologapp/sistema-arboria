@@ -17,11 +17,18 @@ interface Mensagem {
   autor: MensagemAutor;
 }
 
+interface CasaBadgeInfo {
+  nome?: string;
+  emoji?: string;
+  cor?: string;
+}
+
 interface MensagemBubbleProps {
   mensagem: Mensagem;
   isMe: boolean;
   casaColor: string;
   agruparComAnterior?: boolean;
+  casaBadge?: CasaBadgeInfo;
 }
 
 const CARGO_BADGE: Record<string, string> = {
@@ -42,7 +49,8 @@ export const MensagemBubble = ({
   mensagem, 
   isMe, 
   casaColor, 
-  agruparComAnterior = false 
+  agruparComAnterior = false,
+  casaBadge 
 }: MensagemBubbleProps) => {
   const nomeAutor = mensagem.autor?.full_name || 'Usuário';
   const cargoAtivo = mensagem.autor?.cargos_casa?.find(c => c.ativo);
@@ -86,6 +94,18 @@ export const MensagemBubble = ({
           <span className="font-medium text-white">
             {nomeAutor}
           </span>
+          
+          {casaBadge?.nome && (
+            <span 
+              className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+              style={{ 
+                backgroundColor: `${casaBadge.cor || casaColor}20`,
+                color: casaBadge.cor || casaColor
+              }}
+            >
+              {casaBadge.emoji} {casaBadge.nome}
+            </span>
+          )}
           
           {cargoKey && CARGO_BADGE[cargoKey] && (
             <span className="text-sm text-white/60">
