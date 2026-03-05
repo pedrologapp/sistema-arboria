@@ -666,7 +666,7 @@ export type Database = {
       canais_casa: {
         Row: {
           apenas_lideranca: boolean | null
-          casa_id: number
+          casa_id: number | null
           created_at: string | null
           descricao: string | null
           icone: string | null
@@ -678,7 +678,7 @@ export type Database = {
         }
         Insert: {
           apenas_lideranca?: boolean | null
-          casa_id: number
+          casa_id?: number | null
           created_at?: string | null
           descricao?: string | null
           icone?: string | null
@@ -690,7 +690,7 @@ export type Database = {
         }
         Update: {
           apenas_lideranca?: boolean | null
-          casa_id?: number
+          casa_id?: number | null
           created_at?: string | null
           descricao?: string | null
           icone?: string | null
@@ -3319,6 +3319,7 @@ export type Database = {
         Args: { p_fase_anterior_id: string; p_fase_nova_id: string }
         Returns: number
       }
+      pode_acessar_conselho: { Args: { p_user_id: string }; Returns: boolean }
       user_participa_conversa: {
         Args: { p_conversa_id: string }
         Returns: boolean
