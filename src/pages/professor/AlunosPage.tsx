@@ -1,12 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Search, Trophy } from 'lucide-react';
+import { Users, Search } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useAlunosCasa } from '@/hooks/useAlunosCasa';
 import { useAlertasAlunos } from '@/hooks/useAlertasAlunos';
-import { CasaBrasao } from '@/components/CasaBrasao';
 import { ChatCasaCard } from '@/components/professor/ChatCasaCard';
 import { AlertBoxes } from '@/components/professor/AlertBoxes';
 import { BannerComeceAqui } from '@/components/professor/BannerComeceAqui';
