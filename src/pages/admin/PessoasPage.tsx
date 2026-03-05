@@ -247,7 +247,7 @@ const PessoasPage = () => {
       const matchSegmento = !filtroSegmento || aluno.segmento === filtroSegmento;
       const matchSerie = !filtroSerie || aluno.serie === filtroSerie;
       const matchTurma = !filtroTurma || aluno.turma === filtroTurma;
-      const matchCasa = !filtroCasa || aluno.casa_id === Number(filtroCasa);
+      const matchCasa = !filtroCasa || (filtroCasa === 'sem_casa' ? aluno.casa_id === null : aluno.casa_id === Number(filtroCasa));
       const alunoCargo = cargosMap[aluno.id] || 'membro';
       const matchFuncao = !filtroFuncao || alunoCargo === filtroFuncao;
       
@@ -366,6 +366,7 @@ const PessoasPage = () => {
                 className="p-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm min-w-[120px]"
               >
                 <option value="">Casa</option>
+                <option value="sem_casa">Sem designação</option>
                 {casas?.map(c => (
                   <option key={c.id} value={c.id}>{c.nome}</option>
                 ))}
