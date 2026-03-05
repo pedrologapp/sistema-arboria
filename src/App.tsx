@@ -200,6 +200,22 @@ const App = () => (
               </ProtectedRoute>
             } />
 
+            {/* Admin Chat Routes */}
+            <Route path="/admin/chat" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <AdminChatPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/chat/canal/:canalId" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <AdminCanalChatPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+
             {/* Professor Routes */}
             <Route path="/professor" element={
               <ProfessorProtectedRoute>
