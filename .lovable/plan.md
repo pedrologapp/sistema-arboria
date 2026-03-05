@@ -1,82 +1,84 @@
 
 
-## Fix: Alunos do Infantil/F1 não aparecem após criação
+## Plano: Sistema de Comunicação Admin-Líderes (Conselho de Líderes)
 
-### Causa raiz
+Este é um recurso grande com 3 partes principais. Vou dividir em etapas claras.
 
-O trigger `sync_user_role_to_aluno_turma` é disparado quando um registro é inserido na tabela `user_roles`. Dentro dele, a função `ensure_turma_exists` é chamada com 4 argumentos. Porém, existem **duas versões** dessa função no banco:
+---
 
-```text
-ensure_turma_exists(uuid, text, text, smallint)          -- versão antiga
-ensure_turma_exists(uuid, text, text, smallint, text)    -- versão nova (com segmento)
-```
+### Parte 1: Banco de Dados
 
-Quando chamada com 4 argumentos, o Postgres não consegue decidir qual usar (erro `42725: function is not unique`). Isso faz o `INSERT` na `user_roles` falhar silenciosamente — o aluno é criado no `profiles` mas **sem role**, e como a `PessoasPage` filtra por `user_roles.role = 'user'`, o aluno não aparece.
+**Migração 1 — Tornar `casa_id` nullable em `canais_casa`:**
+- Atualmente `casa_id` é obrigatório (NOT NULL). Para criar um canal global (Conselho de Líderes) que não pertence a nenhuma casa, precisamos torná-lo nullable.
+- `ALTER TABLE canais_casa ALTER COLUMN casa_id DROP NOT NULL;`
 
-### Solução
+**Migração 2 — Inserir o canal "Conselho de Líderes":**
+- Insert com `tipo = 'conselho_lideres'`, `casa_id = NULL`, `nome = 'Conselho de Líderes'`, `icone = '👑'`, `apenas_lideranca = true`.
+- Precisamos do `institution_id` da instituição existente.
 
-Uma migração SQL com 3 passos:
+**Migração 3 — Atualizar RLS de `mensagens_canal`:**
+- Política de SELECT: permitir se o canal é de uma casa do usuário (existente) OU se o canal é tipo `conselho_lideres` e o usuário é admin ou tem cargo `lider` ativo.
+- Política de INSERT: mesma lógica para escrita.
+- Criar função security definer `pode_acessar_conselho(p_user_id uuid)` que verifica se é admin (via `user_roles`) ou líder (via `cargos_casa` com cargo='lider' e ativo=true).
 
-1. **Remover a versão antiga** (4 args) da função `ensure_turma_exists`, mantendo apenas a versão com 5 argumentos (que inclui `segmento`)
-2. **Atualizar o trigger** `sync_user_role_to_aluno_turma` para passar o `segmento` do perfil como 5º argumento
-3. **Reparar os dados** da aluna Ruamma — inserir o role `user` e garantir o vínculo `aluno_turma`
+**Migração 4 — Atualizar RLS de `canais_casa`:**
+- Permitir SELECT do canal conselho para todos os alunos da instituição (todos veem que existe).
 
-### Detalhes técnicos
+---
 
-**Migração SQL:**
-```sql
--- 1. Dropar a versão ambígua (4 args)
-DROP FUNCTION IF EXISTS public.ensure_turma_exists(uuid, text, text, smallint);
+### Parte 2: Chat dos Alunos (`ChatPage.tsx`)
 
--- 2. Atualizar o trigger para passar segmento
-CREATE OR REPLACE FUNCTION public.sync_user_role_to_aluno_turma()
-RETURNS trigger AS $$
-DECLARE
-  v_profile RECORD;
-  v_turma_id uuid;
-  v_ano_letivo smallint;
-BEGIN
-  IF NEW.role != 'user' THEN RETURN NEW; END IF;
-  
-  SELECT id, serie, turma, institution_id, segmento
-  INTO v_profile FROM public.profiles WHERE id = NEW.user_id;
-  
-  IF v_profile.serie IS NULL OR v_profile.turma IS NULL OR v_profile.institution_id IS NULL THEN
-    RETURN NEW;
-  END IF;
-  
-  SELECT COALESCE(ano_letivo_atual, EXTRACT(YEAR FROM CURRENT_DATE)::smallint)
-  INTO v_ano_letivo FROM public.institution_settings
-  WHERE institution_id = v_profile.institution_id;
-  
-  IF v_ano_letivo IS NULL THEN
-    v_ano_letivo := EXTRACT(YEAR FROM CURRENT_DATE)::smallint;
-  END IF;
-  
-  v_turma_id := public.ensure_turma_exists(
-    v_profile.institution_id, v_profile.serie, v_profile.turma, 
-    v_ano_letivo, COALESCE(v_profile.segmento, 'fundamental2')
-  );
-  
-  INSERT INTO public.aluno_turma (aluno_id, turma_id, ano_letivo, ativo)
-  VALUES (v_profile.id, v_turma_id, v_ano_letivo, true)
-  ON CONFLICT (aluno_id, turma_id, ano_letivo) DO UPDATE SET ativo = true;
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+**Alterações:**
+1. Nova query para buscar canal do tipo `conselho_lideres` da instituição do aluno.
+2. Nova query para verificar se o aluno tem cargo `lider` ativo.
+3. Adicionar seção "👑 CANAIS DA DIRETORIA" **acima** da seção "Canais de Texto" existente.
+4. Se é líder: canal clicável, navega para `CanalChatPage` normalmente. Visual premium (borda dourada).
+5. Se NÃO é líder: canal com cadeado, ao clicar mostra modal/toast com mensagem aspiracional. Visual esmaecido.
 
--- 3. Reparar dados da Ruamma (e qualquer outro aluno sem role)
-INSERT INTO public.user_roles (user_id, role)
-SELECT p.id, 'user'::app_role
-FROM public.profiles p
-WHERE p.institution_id = '902876e9-b263-4c01-9013-aeef7b6d24e1'
-  AND p.segmento IN ('infantil', 'fundamental1')
-  AND NOT EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = p.id)
-  AND p.nome IS NOT NULL;
-```
+**Arquivos:**
+- `src/pages/aluno/ChatPage.tsx` — adicionar seção Diretoria
+- `src/components/chat/ConselhoLideresLocked.tsx` — novo componente para o modal de bloqueio
 
-### Arquivos/ações
-- 1 migração SQL (3 comandos acima)
-- Nenhum arquivo de código precisa ser alterado
+---
+
+### Parte 3: Chat no Admin
+
+**Novos arquivos:**
+- `src/pages/admin/AdminChatPage.tsx` — página principal com 2 abas:
+  - Aba "👑 Conselho de Líderes": reutiliza a mesma lógica de `CanalChatPage` mas adaptada para o admin (sem restrição de casa)
+  - Aba "🏠 Casas": seletor das 8 casas → ao selecionar, lista os canais daquela casa → ao clicar num canal, abre o chat
+- `src/pages/admin/AdminCanalChatPage.tsx` — visualização de canal para o admin (pode ler e escrever em qualquer canal)
+
+**Alterações em arquivos existentes:**
+- `src/App.tsx` — adicionar rotas `/admin/chat` e `/admin/chat/canal/:canalId`
+- `src/components/AdminBottomNav.tsx` — adicionar item "Chat" com ícone `MessageCircle` (substituir um item existente ou adicionar)
+- `src/components/AdminHeader.tsx` — adicionar link Chat no header desktop
+
+**Lógica do Admin no canal:**
+- Admin usa `mensagens_canal` normalmente para enviar mensagens
+- Na visualização de casas, admin busca canais de qualquer `casa_id` via query sem filtro de casa (RLS precisa permitir admin ver todos)
+- Mensagens no Conselho mostram o brasão/cor da casa do remetente (join com `profiles.casa_id` → `inteligencias`)
+
+---
+
+### Alterações em `CanalChatPage.tsx` e `MensagemBubble.tsx`
+
+Para o Conselho de Líderes, as mensagens precisam mostrar o brasão da casa do autor:
+- No query de mensagens, incluir join com `inteligencias` via `profiles.casa_id`
+- No `MensagemBubble`, renderizar badge colorido da casa quando o canal é tipo `conselho_lideres`
+
+---
+
+### Resumo de arquivos
+
+| Arquivo | Ação |
+|---------|------|
+| DB Migration (4 statements) | Criar |
+| `src/pages/aluno/ChatPage.tsx` | Editar — seção Diretoria |
+| `src/components/chat/ConselhoLideresLocked.tsx` | Criar — modal bloqueio |
+| `src/pages/admin/AdminChatPage.tsx` | Criar — página chat admin |
+| `src/pages/admin/AdminCanalChatPage.tsx` | Criar — chat de canal admin |
+| `src/App.tsx` | Editar — rotas admin chat |
+| `src/components/AdminBottomNav.tsx` | Editar — item Chat |
+| `src/components/chat/MensagemBubble.tsx` | Editar — badge casa no conselho |
 
