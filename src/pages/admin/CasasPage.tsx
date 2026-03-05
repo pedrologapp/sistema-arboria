@@ -160,7 +160,34 @@ const CasasPage = () => {
   return (
     <div className="min-h-screen bg-[#0A0A0A] px-4 py-6">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-xl font-bold text-white mb-6">Casas</h1>
+        <h1 className="text-xl font-bold text-white mb-4">Casas</h1>
+
+        {/* Filtros */}
+        <div className="flex gap-3 mb-6">
+          <Select value={serieFiltro} onValueChange={(v) => { setSerieFiltro(v === 'all' ? '' : v); setTurmaFiltro(''); }}>
+            <SelectTrigger className="w-[140px] bg-white/5 border-white/10 text-white text-sm h-9">
+              <SelectValue placeholder="Todas séries" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas séries</SelectItem>
+              {seriesDisponiveis.map((s) => (
+                <SelectItem key={s} value={s}>{s}º ano</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={turmaFiltro} onValueChange={(v) => setTurmaFiltro(v === 'all' ? '' : v)} disabled={!serieFiltro}>
+            <SelectTrigger className="w-[140px] bg-white/5 border-white/10 text-white text-sm h-9">
+              <SelectValue placeholder="Todas turmas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas turmas</SelectItem>
+              {turmasDisponiveis.map((t) => (
+                <SelectItem key={t} value={t}>Turma {t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {inteligencias.map((casa) => {
