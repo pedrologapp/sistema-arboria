@@ -220,8 +220,9 @@ const CasasPage = () => {
 
                 {/* Cargos por série e turma */}
                 <div className="px-4 py-3 space-y-1">
-                  {SERIES.map((serie) => {
-                    const turmaLetras = getTurmaLetrasForCasaSerie(casa.id, serie);
+                  {seriesParaExibir.map((serie) => {
+                    let turmaLetras = getTurmaLetrasForCasaSerie(casa.id, serie);
+                    if (turmaFiltro) turmaLetras = turmaLetras.filter((t) => t.toUpperCase() === turmaFiltro);
                     
                     return turmaLetras.map((turmaLetra) => {
                       const cargosT = turmaLetra 
