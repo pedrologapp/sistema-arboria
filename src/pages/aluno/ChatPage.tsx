@@ -35,7 +35,7 @@ const ChatPage = () => {
     enabled: !!profile?.institution_id,
   });
 
-  // isLider is computed after membrosCasa is defined (below)
+
 
   // Buscar canais da casa do aluno
   const { data: canais = [] } = useQuery({
