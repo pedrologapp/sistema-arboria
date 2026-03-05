@@ -195,7 +195,7 @@ const HomePage = () => {
                 <Progress
                   value={progressPercent}
                   className="h-2 bg-white/10"
-                  style={{ '--progress-color': casaColor } as React.CSSProperties}
+                  indicatorColor={casaColor}
                 />
               </div>
             </>
