@@ -1,82 +1,32 @@
 
 
-## Fix: Alunos do Infantil/F1 não aparecem após criação
+## Plano: Corrigir busca de fases na aba Missões do aluno
 
-### Causa raiz
+### Diagnóstico
 
-O trigger `sync_user_role_to_aluno_turma` é disparado quando um registro é inserido na tabela `user_roles`. Dentro dele, a função `ensure_turma_exists` é chamada com 4 argumentos. Porém, existem **duas versões** dessa função no banco:
+Dois problemas na query de `MissoesPage.tsx`:
 
-```text
-ensure_turma_exists(uuid, text, text, smallint)          -- versão antiga
-ensure_turma_exists(uuid, text, text, smallint, text)    -- versão nova (com segmento)
-```
+**Problema 1 — `ano_letivo_atual` desatualizado:** A tabela `institution_settings` tem `ano_letivo_atual = 2025`, mas as fases estão cadastradas com `ano_letivo = 2026`. A query filtra `.eq('ano_letivo', 2025)` e não encontra nada.
 
-Quando chamada com 4 argumentos, o Postgres não consegue decidir qual usar (erro `42725: function is not unique`). Isso faz o `INSERT` na `user_roles` falhar silenciosamente — o aluno é criado no `profiles` mas **sem role**, e como a `PessoasPage` filtra por `user_roles.role = 'user'`, o aluno não aparece.
+**Problema 2 — Filtro de série exclui fases sem série:** As 8 fases do fundamental2 para 2026 estão assim:
+- Fase 1 (Intrapessoal): `serie = 6`, `serie = 7`, `serie = 8`, `serie = 9` (uma linha por série)
+- Fases 2-8: `serie = NULL` (compartilhadas entre todas as séries)
 
-### Solução
+A query atual usa `.eq('serie', 6)` que exclui as 7 fases com `serie = NULL`. Precisa usar `.or('serie.eq.6,serie.is.null')`.
 
-Uma migração SQL com 3 passos:
+### Alteração: `src/pages/aluno/MissoesPage.tsx`
 
-1. **Remover a versão antiga** (4 args) da função `ensure_turma_exists`, mantendo apenas a versão com 5 argumentos (que inclui `segmento`)
-2. **Atualizar o trigger** `sync_user_role_to_aluno_turma` para passar o `segmento` do perfil como 5º argumento
-3. **Reparar os dados** da aluna Ruamma — inserir o role `user` e garantir o vínculo `aluno_turma`
+Na função `fetchData` (linhas 70-92):
 
-### Detalhes técnicos
+1. **Ano letivo**: Usar `new Date().getFullYear()` como fallback principal em vez de confiar no `ano_letivo_atual` da settings (que está desatualizado). Melhor ainda: buscar ambos os anos ou simplesmente não filtrar por ano e deixar as datas determinarem o status.
 
-**Migração SQL:**
-```sql
--- 1. Dropar a versão ambígua (4 args)
-DROP FUNCTION IF EXISTS public.ensure_turma_exists(uuid, text, text, smallint);
+2. **Filtro de série**: Trocar `.eq('serie', serieNum)` por `.or(`serie.eq.${serieNum},serie.is.null`)` para incluir fases genéricas (sem série definida) junto com as específicas da série do aluno.
 
--- 2. Atualizar o trigger para passar segmento
-CREATE OR REPLACE FUNCTION public.sync_user_role_to_aluno_turma()
-RETURNS trigger AS $$
-DECLARE
-  v_profile RECORD;
-  v_turma_id uuid;
-  v_ano_letivo smallint;
-BEGIN
-  IF NEW.role != 'user' THEN RETURN NEW; END IF;
-  
-  SELECT id, serie, turma, institution_id, segmento
-  INTO v_profile FROM public.profiles WHERE id = NEW.user_id;
-  
-  IF v_profile.serie IS NULL OR v_profile.turma IS NULL OR v_profile.institution_id IS NULL THEN
-    RETURN NEW;
-  END IF;
-  
-  SELECT COALESCE(ano_letivo_atual, EXTRACT(YEAR FROM CURRENT_DATE)::smallint)
-  INTO v_ano_letivo FROM public.institution_settings
-  WHERE institution_id = v_profile.institution_id;
-  
-  IF v_ano_letivo IS NULL THEN
-    v_ano_letivo := EXTRACT(YEAR FROM CURRENT_DATE)::smallint;
-  END IF;
-  
-  v_turma_id := public.ensure_turma_exists(
-    v_profile.institution_id, v_profile.serie, v_profile.turma, 
-    v_ano_letivo, COALESCE(v_profile.segmento, 'fundamental2')
-  );
-  
-  INSERT INTO public.aluno_turma (aluno_id, turma_id, ano_letivo, ativo)
-  VALUES (v_profile.id, v_turma_id, v_ano_letivo, true)
-  ON CONFLICT (aluno_id, turma_id, ano_letivo) DO UPDATE SET ativo = true;
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+3. **Deduplicação**: Como pode haver uma fase com `serie=6` E outra com `serie=null` para o mesmo `numero_fase`, agrupar por `numero_fase` e dar preferência à fase com série específica.
 
--- 3. Reparar dados da Ruamma (e qualquer outro aluno sem role)
-INSERT INTO public.user_roles (user_id, role)
-SELECT p.id, 'user'::app_role
-FROM public.profiles p
-WHERE p.institution_id = '902876e9-b263-4c01-9013-aeef7b6d24e1'
-  AND p.segmento IN ('infantil', 'fundamental1')
-  AND NOT EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = p.id)
-  AND p.nome IS NOT NULL;
-```
+### Arquivo alterado
 
-### Arquivos/ações
-- 1 migração SQL (3 comandos acima)
-- Nenhum arquivo de código precisa ser alterado
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/pages/aluno/MissoesPage.tsx` | Corrigir filtro de ano_letivo e serie na query de fases |
 
