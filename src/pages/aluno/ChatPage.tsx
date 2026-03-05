@@ -35,13 +35,7 @@ const ChatPage = () => {
     enabled: !!profile?.institution_id,
   });
 
-  // Verificar se o aluno é líder
-  const isLider = useMemo(() => {
-    if (!profile?.id) return false;
-    const cargoAtivo = membrosCasa?.find(m => m.id === profile.id)
-      ?.cargos_casa?.find((c: { ativo: boolean; cargo: string }) => c.ativo && c.cargo === 'lider');
-    return !!cargoAtivo;
-  }, [membrosCasa, profile?.id]);
+  // isLider is computed after membrosCasa is defined (below)
 
   // Buscar canais da casa do aluno
   const { data: canais = [] } = useQuery({
@@ -445,6 +439,38 @@ const ChatPage = () => {
           className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40"
         />
       </div>
+
+      {/* Seção: Canais da Diretoria */}
+      {canalConselho && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 px-1">
+            <Crown className="w-4 h-4 text-yellow-500/60" />
+            <h2 className="text-xs font-semibold text-yellow-500/60 uppercase tracking-wider">
+              Canais da Diretoria
+            </h2>
+          </div>
+          <button
+            onClick={() => {
+              if (isLider) {
+                navigate(`/aluno/chat/canal/${canalConselho.id}`);
+              } else {
+                setShowLockedModal(true);
+              }
+            }}
+            className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left active:scale-[0.98] ${
+              isLider
+                ? 'bg-yellow-500/10 border border-yellow-500/30 hover:bg-yellow-500/15'
+                : 'bg-white/[0.03] border border-white/5 opacity-60 hover:opacity-70'
+            }`}
+          >
+            <span className="text-lg flex-shrink-0">👑</span>
+            <span className={`flex-1 font-medium truncate ${isLider ? 'text-yellow-400' : 'text-white/60'}`}>
+              Conselho de Líderes
+            </span>
+            {!isLider && <Lock className="w-4 h-4 text-white/30 flex-shrink-0" />}
+          </button>
+        </div>
+      )}
 
       {/* Seção: Canais de Texto */}
       <div className="space-y-2">
