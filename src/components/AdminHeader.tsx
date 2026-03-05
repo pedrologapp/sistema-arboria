@@ -15,6 +15,7 @@ import {
   Settings,
   LogOut,
   TreeDeciduous,
+  MessageCircle,
 } from 'lucide-react';
 
 const navItems = [
@@ -22,6 +23,7 @@ const navItems = [
   { title: 'Pessoas', href: '/admin/pessoas', icon: Users },
   { title: 'Casas', href: '/admin/casas', icon: Shield },
   { title: 'Fases', href: '/admin/fases', icon: Calendar },
+  { title: 'Chat', href: '/admin/chat', icon: MessageCircle },
   { title: 'Relatórios', href: '/admin/relatorios', icon: FileText },
   { title: 'Config', href: '/admin/config', icon: Settings },
 ];
