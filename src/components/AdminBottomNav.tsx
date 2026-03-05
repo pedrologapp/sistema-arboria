@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Activity, Users, Shield, Calendar, FileText, Settings, BookOpen } from 'lucide-react';
+import { Activity, Users, Shield, Calendar, MessageCircle, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface NavItemConfig {
@@ -21,7 +21,7 @@ const AdminBottomNav = () => {
     { id: 'pessoas', icon: <Users size={18} />, label: 'Pessoas', path: '/admin/pessoas' },
     { id: 'casas', icon: <Shield size={18} />, label: 'Casas', path: '/admin/casas' },
     { id: 'fases', icon: <Calendar size={18} />, label: 'Fases', path: '/admin/fases' },
-    { id: 'conteudo', icon: <BookOpen size={18} />, label: 'Conteúdo', path: '/admin/conteudo' },
+    { id: 'chat', icon: <MessageCircle size={18} />, label: 'Chat', path: '/admin/chat' },
     { id: 'config', icon: <Settings size={18} />, label: 'Config', path: '/admin/config' },
   ];
 

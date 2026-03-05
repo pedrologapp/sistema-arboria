@@ -33,6 +33,8 @@ import RelatoriosPage from "./pages/admin/RelatoriosPage";
 import ConfigPage from "./pages/admin/ConfigPage";
 import ConteudoAdminPage from "./pages/admin/ConteudoAdminPage";
 import ConteudoInteligenciaAdminPage from "./pages/admin/ConteudoInteligenciaAdminPage";
+import AdminChatPage from "./pages/admin/AdminChatPage";
+import AdminCanalChatPage from "./pages/admin/AdminCanalChatPage";
 
 // Aluno pages
 import HomePage from "./pages/aluno/HomePage";
