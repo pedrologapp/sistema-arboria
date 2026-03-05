@@ -1,10 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Target, MessageCircle, Shield, Star, ChevronRight } from 'lucide-react';
+import { Target, MessageCircle, Shield, Star, ChevronRight, Calendar } from 'lucide-react';
 import { useStudent } from '@/contexts/StudentContext';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { supabase } from '@/integrations/supabase/client';
+import { Progress } from '@/components/ui/progress';
+import { calcularSemanaAtual } from '@/utils/timezone';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -158,6 +160,55 @@ const HomePage = () => {
           )}
         </div>
       </div>
+
+      {/* Phase Card */}
+      <button
+        onClick={() => navigate('/aluno/missoes')}
+        className="w-full flex items-center gap-4 p-4 rounded-2xl text-left
+          bg-gradient-to-r from-white/[0.06] to-white/[0.02]
+          backdrop-blur-sm border border-white/10
+          hover:scale-[1.02] hover:border-white/20
+          transition-all duration-300 ease-out active:scale-[0.98]"
+        style={{ boxShadow: `0 8px 24px -6px ${casaColor}20` }}
+      >
+        {faseAtual ? (() => {
+          const semana = calcularSemanaAtual(faseAtual.data_inicio, faseAtual.data_fim);
+          const totalSemanas = 4;
+          const progressPercent = Math.min((semana / totalSemanas) * 100, 100);
+          return (
+            <>
+              <div
+                className="p-3 rounded-lg shrink-0"
+                style={{ backgroundColor: `${casaColor}20` }}
+              >
+                <Calendar className="w-6 h-6" style={{ color: casaColor }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium text-sm truncate">
+                  Fase {faseAtual.numero_fase} — {faseAtual.inteligencia?.nome || 'Carregando...'}
+                </p>
+                <p className="text-white/50 text-xs mt-0.5">
+                  Semana {semana} de {totalSemanas}
+                </p>
+              </div>
+              <div className="w-16 shrink-0">
+                <Progress
+                  value={progressPercent}
+                  className="h-2 bg-white/10"
+                  style={{ '--progress-color': casaColor } as React.CSSProperties}
+                />
+              </div>
+            </>
+          );
+        })() : (
+          <>
+            <div className="p-3 rounded-lg shrink-0 bg-white/10">
+              <Calendar className="w-6 h-6 text-white/40" />
+            </div>
+            <p className="text-white/40 text-sm">Nenhuma fase ativa no momento</p>
+          </>
+        )}
+      </button>
 
       {/* Quick Actions */}
       <div className="space-y-3">
