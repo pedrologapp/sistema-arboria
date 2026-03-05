@@ -87,7 +87,7 @@ const CasaPage = () => {
           .select('aluno_id, cargo')
           .eq('casa_id', casa.id)
           .eq('institution_id', profile.institution_id)
-          .eq('ano_letivo', 2025)
+          .eq('ano_letivo', new Date().getFullYear())
           .eq('ativo', true),
       ]);
 
@@ -284,15 +284,17 @@ const CasaPage = () => {
           }}
         >
           {/* Líder */}
-          {lider && (
-            <>
-              <h3 className="text-xs font-medium text-amber-400/80 px-3 pt-3 pb-1">🦅 LÍDER</h3>
-              <MembroItemCompacto
-                membro={lider}
-                isCurrentUser={lider.aluno_id === user?.id}
-                casaColor={casaColor}
-              />
-            </>
+          <h3 className="text-xs font-medium text-amber-400/80 px-3 pt-3 pb-1">🦅 LÍDER</h3>
+          {lider ? (
+            <MembroItemCompacto
+              membro={lider}
+              isCurrentUser={lider.aluno_id === user?.id}
+              casaColor={casaColor}
+            />
+          ) : (
+            <div className="px-3 py-2.5 text-sm text-white/30 italic">
+              Nenhum líder eleito ainda
+            </div>
           )}
 
           {/* Coordenadores */}
