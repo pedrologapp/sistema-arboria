@@ -197,6 +197,34 @@ const ProfessorDashboard = () => {
                 Casa {casaMentor.nome}
               </h2>
               <p className="text-white/50 text-sm font-light">{tituloMentor}</p>
+
+              {/* Sub-card Fase e Semana */}
+              {faseAtual && faseAtual.inteligencia && (
+                <div 
+                  className="mt-4 p-3 rounded-xl border text-left"
+                  style={{
+                    backgroundColor: `${faseAtual.inteligencia.cor_hex || casaColor}15`,
+                    borderColor: `${faseAtual.inteligencia.cor_hex || casaColor}30`,
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    {faseAtual.inteligencia.emoji && (
+                      <span className="text-lg">{faseAtual.inteligencia.emoji}</span>
+                    )}
+                    <span 
+                      className="text-sm font-semibold"
+                      style={{ color: faseAtual.inteligencia.cor_hex || casaColor }}
+                    >
+                      Fase {faseAtual.numero_fase}: {faseAtual.inteligencia.nome}
+                    </span>
+                  </div>
+                  <p className="text-white/60 text-xs font-light">
+                    {faseAtual.semana_atual 
+                      ? `Semana ${faseAtual.semana_atual} de 4` 
+                      : 'Semana não definida'}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}
