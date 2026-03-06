@@ -28,7 +28,9 @@ const CARGO_EMOJI: Record<string, string> = {
 
 export const MembroCard = ({ membro, isMe, onIniciarConversa, temDmNaoLida = false, hideStatus = false }: MembroCardProps) => {
   const status = getStatusOnline(membro.ultima_atividade);
-  const nomeExibido = membro.nome || membro.full_name || 'Usuário';
+  const nomeExibido = (membro.nome && membro.sobrenome) 
+    ? `${membro.nome} ${membro.sobrenome}` 
+    : membro.full_name || membro.nome || 'Usuário';
   const cargoAtivo = membro.cargos_casa?.find(c => c.ativo);
   const cargoLabel = cargoAtivo?.cargo ? CARGO_EMOJI[cargoAtivo.cargo] : null;
 
