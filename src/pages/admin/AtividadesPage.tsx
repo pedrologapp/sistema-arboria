@@ -41,7 +41,6 @@ interface ActivityLog {
     full_name: string | null;
     avatar_url: string | null;
     casa_id: number | null;
-    role: string | null;
   } | null;
 }
 
@@ -170,7 +169,7 @@ const AtividadesPage = () => {
 
     let query = supabase
       .from('activity_logs' as any)
-      .select('*, profiles!activity_logs_user_id_fkey(full_name, avatar_url, casa_id, role)')
+      .select('*, profiles!activity_logs_user_id_fkey(full_name, avatar_url, casa_id)')
       .gte('created_at', dateFrom)
       .order('created_at', { ascending: false })
       .range(from, to);
