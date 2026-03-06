@@ -433,16 +433,25 @@ const MissaoDetalhePage = () => {
 
     try {
       // 1. Criar registro de entrega
+      // Build respostas_itens array from individual responses
+      const respostasItensArray = missao.itens?.map((item, index) => ({
+        item_index: index,
+        nome: item.nome,
+        resposta: respostasItens[index] || ''
+      })).filter(r => r.resposta.trim()) || null;
+
       const { data: novaEntrega, error: entregaError } = await supabase
         .from('entregas')
         .insert({
           missao_id: missao.id,
           aluno_id: user.id,
           texto_resposta: textoResposta.trim() || null,
+          respostas_itens: respostasItensArray,
+          reflexao_resposta: reflexaoResposta.trim() || null,
           status: 'pendente',
           entregue_no_prazo: !isPast(new Date(missao.data_prazo)),
           numero_tentativa: (entrega?.numero_tentativa || 0) + 1
-        })
+        } as any)
         .select()
         .single();
 
