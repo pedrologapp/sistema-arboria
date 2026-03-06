@@ -724,33 +724,13 @@ const MissaoDetalhePage = () => {
       {/* PDF VIEWER INLINE */}
       {/* ═══════════════════════════════════════ */}
       {missao.arquivo_pdf_url ? (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="space-y-3"
-        >
-          <div 
-            className="rounded-xl overflow-hidden shadow-lg border border-white/10"
-            style={{ boxShadow: `0 0 20px ${casaColor}10` }}
-          >
-            <iframe
-              src={missao.arquivo_pdf_url}
-              className="w-full bg-white"
-              style={{ height: '70vh', minHeight: '400px' }}
-              title="PDF da Missão"
-            />
-          </div>
-          
-          {/* Botão baixar PDF */}
-          <button
-            onClick={() => baixarPDF(missao.arquivo_pdf_url!, missao.arquivo_pdf_nome || 'missao.pdf')}
-            className="flex items-center gap-2 mx-auto text-white/50 hover:text-white/80 text-sm transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            <span>Baixar PDF</span>
-          </button>
-        </motion.div>
+        <PdfViewerInline
+          pdfUrl={missao.arquivo_pdf_url}
+          pdfNome={missao.arquivo_pdf_nome || 'missao.pdf'}
+          casaColor={casaColor}
+          onBaixar={() => baixarPDF(missao.arquivo_pdf_url!, missao.arquivo_pdf_nome || 'missao.pdf')}
+        />
+      
       ) : (
         /* ═══════════════════════════════════════ */
         /* FALLBACK: Conteúdo em texto */
