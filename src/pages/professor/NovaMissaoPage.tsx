@@ -9,6 +9,11 @@ import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import { CasaBrasao } from '@/components/CasaBrasao';
 
+interface MissaoItem {
+  nome: string;
+  descricao: string;
+}
+
 interface MissaoForm {
   // Organização
   serie_filtro: number | null;
@@ -32,10 +37,15 @@ interface MissaoForm {
   
   // Conteúdo
   titulo: string;
-  descricao: string;
+  contexto: string;
+  lente_especial: string;
   instrucoes: string;
-  dicas: string;
+  itens: MissaoItem[];
   reflexao: string;
+  
+  // Legacy (kept for backward compat)
+  descricao: string;
+  dicas: string;
   
   // Configurações
   tipo: 'principal' | 'secundaria' | 'bonus';
@@ -78,10 +88,13 @@ const NovaMissaoPage = () => {
     
     // Conteúdo
     titulo: '',
-    descricao: '',
+    contexto: '',
+    lente_especial: '',
     instrucoes: '',
-    dicas: '',
+    itens: [],
     reflexao: '',
+    descricao: '',
+    dicas: '',
     
     // Configurações
     tipo: 'principal',
