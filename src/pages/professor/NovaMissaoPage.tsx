@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { toast } from 'sonner';
-import { ArrowLeft, Eye, X, Search } from 'lucide-react';
+import { ArrowLeft, Eye, X, Search, Upload, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import { CasaBrasao } from '@/components/CasaBrasao';
@@ -61,6 +61,10 @@ const NovaMissaoPage = () => {
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [buscaAluno, setBuscaAluno] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const [pdfFile, setPdfFile] = useState<{ name: string; url: string } | null>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
 
   // Verificar se deve iniciar com semana extra
   const defaultSemana = searchParams.get('semana') === 'extra' ? 'extra' : null;
