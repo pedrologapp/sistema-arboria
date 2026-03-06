@@ -17,8 +17,9 @@ import {
   Loader2,
   Trophy,
   Info,
-  ExternalLink,
-  Download
+  Download,
+  Camera,
+  File
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -120,7 +121,7 @@ const MissaoDetalhePage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
+  const photoInputRef = useRef<HTMLInputElement>(null);
   // Estados
   const [missao, setMissao] = useState<MissaoDetalhe | null>(null);
   const [entrega, setEntrega] = useState<Entrega | null>(null);
@@ -405,12 +406,12 @@ const MissaoDetalhePage = () => {
   const validar = (): string[] => {
     const erros: string[] = [];
 
-    // Texto é SEMPRE obrigatório
-    if (!textoResposta.trim()) {
-      erros.push('O texto da resposta é obrigatório');
+    // Pelo menos texto OU arquivo
+    if (!textoResposta.trim() && arquivos.length === 0) {
+      erros.push('Envie pelo menos um arquivo ou escreva um comentário');
     }
 
-    // Arquivo é opcional (só obrigatório se a missão exigir)
+    // Arquivo obrigatório se a missão exigir
     if (missao?.requer_arquivo && arquivos.length === 0) {
       erros.push('É necessário anexar pelo menos um arquivo');
     }
