@@ -110,10 +110,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    if (!error && data?.user) {
+      import('@/utils/logActivity').then(({ logActivity }) =>
+        logActivity(data.user.id, 'login')
+      );
+    }
     return { error: error as Error | null };
   };
 
@@ -135,6 +140,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const signOut = async () => {
+    // Log before clearing session
+    if (user) {
+      import('@/utils/logActivity').then(({ logActivity }) =>
+        logActivity(user.id, 'logout')
+      );
+    }
+
     // Use local sign-out to guarantee session cleanup even when backend session is already invalid/expired
     const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) {

@@ -135,6 +135,16 @@ const AvaliarEntregaPage = () => {
     },
     onSuccess: (data) => {
       toast.success(`Entrega aprovada! ${data.pontosCalculados} pontos concedidos.`);
+      // Log activity
+      if (profile?.id) {
+        import('@/utils/logActivity').then(({ logActivity }) =>
+          logActivity(profile.id, 'missao_avaliada', {
+            missao_id: entrega?.missao?.id,
+            aluno_nome: entrega?.aluno?.full_name,
+            nota,
+          })
+        );
+      }
       queryClient.invalidateQueries({ queryKey: ['entregas'] });
       queryClient.invalidateQueries({ queryKey: ['entrega-avaliar'] });
       queryClient.invalidateQueries({ queryKey: ['entregas-pendentes-count'] });
