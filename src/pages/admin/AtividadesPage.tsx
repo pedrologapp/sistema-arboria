@@ -225,6 +225,53 @@ const AtividadesPage = () => {
     { label: 'Observações', value: counts.observacoes, color: '#3b82f6', icon: <Eye className="w-5 h-5" />, actionValue: 'observacao_criada' },
   ];
 
+  return (
+    <div className="container mx-auto px-4 py-6 max-w-4xl">
+      {/* Title */}
+      <div className="flex items-center gap-3 mb-6">
+        <Activity className="w-6 h-6 text-indigo-400" />
+        <h1 className="text-2xl font-bold text-white">Atividades do Sistema</h1>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        <Select value={actionFilter} onValueChange={setActionFilter}>
+          <SelectTrigger className="w-[140px] bg-white/5 border-white/10 text-white">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {FILTER_ACTIONS.map((f) => (
+              <SelectItem key={f.value} value={f.value}>
+                {f.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={periodFilter} onValueChange={setPeriodFilter}>
+          <SelectTrigger className="w-[120px] bg-white/5 border-white/10 text-white">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PERIOD_OPTIONS.map((p) => (
+              <SelectItem key={p.value} value={p.value}>
+                {p.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className="relative flex-1 min-w-[180px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+          <Input
+            placeholder="Buscar aluno..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/30"
+          />
+        </div>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {summaryCards.map((card) => {
