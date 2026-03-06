@@ -17,62 +17,38 @@ export interface NotificacoesPorSemana {
   aprovadas: number;
 }
 
+// Helper: extract numeric grade from serie string (e.g. "6º ano" → 6)
+const extractSerieNum = (serie?: string | null): number | null => {
+  if (!serie) return null;
+  const match = serie.replace(/[^0-9]/g, '');
+  return match ? parseInt(match, 10) : null;
+};
+
 export const useNotificacoes = () => {
   const { user } = useAuth();
   const { profile, casa } = useStudent();
   const queryClient = useQueryClient();
+  const serieNum = extractSerieNum(profile?.serie);
 
-  // 1. Contar missões pendentes (APENAS do ano letivo atual)
+  // 1. Contar missões pendentes — a RPC já filtra por fase ativa + série
   const { data: missoesPendentes = 0 } = useQuery({
-    queryKey: ['count-missoes-pendentes', user?.id, profile?.institution_id],
+    queryKey: ['count-missoes-pendentes', user?.id],
     queryFn: async () => {
-      if (!user?.id || !profile?.institution_id) return 0;
+      if (!user?.id) return 0;
       
-      // Buscar ano letivo da fase ativa
-      const { data: faseAtiva } = await supabase
-        .from('fases')
-        .select('ano_letivo')
-        .eq('institution_id', profile.institution_id)
-        .eq('ativo', true)
-        .maybeSingle();
-      
-      const anoLetivo = faseAtiva?.ano_letivo || new Date().getFullYear();
-      
-      // Buscar IDs das fases do ano correto
-      const { data: fasesAnoAtual } = await supabase
-        .from('fases')
-        .select('id')
-        .eq('institution_id', profile.institution_id)
-        .eq('ano_letivo', anoLetivo);
-      
-      const faseIdsValidos = new Set(fasesAnoAtual?.map(f => f.id) || []);
-      
-      // Buscar missões do aluno
       const { data: missoes, error } = await supabase.rpc('get_missoes_do_aluno', {
         p_aluno_id: user.id,
       });
       
       if (error || !missoes) return 0;
       
-      // Buscar fase_id de cada missão
-      const missaoIds = missoes.map((m: any) => m.id);
-      if (missaoIds.length === 0) return 0;
-      
-      const { data: missaoFases } = await supabase
-        .from('missoes')
-        .select('id, fase_id')
-        .in('id', missaoIds);
-      
-      // Filtrar: ano atual + (não entregou OU refazer)
       const pendentes = missoes.filter((m: any) => {
-        const mf = missaoFases?.find(mf => mf.id === m.id);
-        if (!mf?.fase_id || !faseIdsValidos.has(mf.fase_id)) return false;
         return (!m.ja_entregou && !m.atrasada) || m.status_entrega === 'refazer';
       });
       
       return pendentes.length;
     },
-    enabled: !!user?.id && !!profile?.institution_id,
+    enabled: !!user?.id,
     staleTime: 60000,
     refetchInterval: 120000,
   });
@@ -98,32 +74,13 @@ export const useNotificacoes = () => {
     refetchInterval: 120000,
   });
 
-  // 3. Notificações detalhadas por fase (APENAS do ano letivo atual)
+  // 3. Notificações detalhadas por fase (apenas fase ativa da série do aluno)
   const { data: notificacoesPorFase = [] } = useQuery<NotificacoesPorFase[]>({
-    queryKey: ['notificacoes-por-fase', user?.id, profile?.institution_id],
+    queryKey: ['notificacoes-por-fase', user?.id, profile?.institution_id, serieNum],
     queryFn: async () => {
       if (!user?.id || !profile?.institution_id) return [];
       
-      // PRIMEIRO: Descobrir o ano letivo correto baseado na fase ativa
-      const { data: faseAtiva } = await supabase
-        .from('fases')
-        .select('ano_letivo')
-        .eq('institution_id', profile.institution_id)
-        .eq('ativo', true)
-        .maybeSingle();
-      
-      const anoLetivo = faseAtiva?.ano_letivo || new Date().getFullYear();
-      
-      // Buscar IDs das fases do ano correto
-      const { data: fasesAnoAtual } = await supabase
-        .from('fases')
-        .select('id')
-        .eq('institution_id', profile.institution_id)
-        .eq('ano_letivo', anoLetivo);
-      
-      const faseIdsValidos = new Set(fasesAnoAtual?.map(f => f.id) || []);
-      
-      // Buscar missões do aluno
+      // Buscar missões já filtradas pela RPC (fase ativa + série)
       const { data: missoes, error: missaoError } = await supabase.rpc('get_missoes_do_aluno', {
         p_aluno_id: user.id,
       });
@@ -147,13 +104,12 @@ export const useNotificacoes = () => {
         .select('id, fase_id')
         .in('id', missaoIds);
       
-      // Agrupar por fase_id (APENAS fases do ano atual)
+      // Agrupar por fase_id
       const faseMap = new Map<string, NotificacoesPorFase>();
       
       for (const m of missoes) {
         const mf = missaoFases?.find(mf => mf.id === m.id);
-        // FILTRAR: só processar se a fase_id pertence ao ano atual
-        if (!mf?.fase_id || !faseIdsValidos.has(mf.fase_id)) continue;
+        if (!mf?.fase_id) continue;
         
         if (!faseMap.has(mf.fase_id)) {
           faseMap.set(mf.fase_id, { faseId: mf.fase_id, pendentes: 0, aprovadas: 0 });
@@ -161,12 +117,10 @@ export const useNotificacoes = () => {
         
         const entry = faseMap.get(mf.fase_id)!;
         
-        // Pendente: não entregou ou precisa refazer
         if ((!m.ja_entregou && !m.atrasada) || m.status_entrega === 'refazer') {
           entry.pendentes++;
         }
         
-        // Aprovada não vista
         if (entregasAprovadas?.some(e => e.missao_id === m.id)) {
           entry.aprovadas++;
         }
@@ -179,32 +133,13 @@ export const useNotificacoes = () => {
     refetchInterval: 120000,
   });
 
-  // 4. Notificações detalhadas por semana (APENAS do ano letivo atual)
+  // 4. Notificações detalhadas por semana (apenas fase ativa da série do aluno)
   const { data: notificacoesPorSemana = [] } = useQuery<NotificacoesPorSemana[]>({
-    queryKey: ['notificacoes-por-semana', user?.id, profile?.institution_id],
+    queryKey: ['notificacoes-por-semana', user?.id, profile?.institution_id, serieNum],
     queryFn: async () => {
       if (!user?.id || !profile?.institution_id) return [];
       
-      // PRIMEIRO: Descobrir o ano letivo correto baseado na fase ativa
-      const { data: faseAtiva } = await supabase
-        .from('fases')
-        .select('ano_letivo')
-        .eq('institution_id', profile.institution_id)
-        .eq('ativo', true)
-        .maybeSingle();
-      
-      const anoLetivo = faseAtiva?.ano_letivo || new Date().getFullYear();
-      
-      // Buscar IDs das fases do ano correto
-      const { data: fasesAnoAtual } = await supabase
-        .from('fases')
-        .select('id')
-        .eq('institution_id', profile.institution_id)
-        .eq('ano_letivo', anoLetivo);
-      
-      const faseIdsValidos = new Set(fasesAnoAtual?.map(f => f.id) || []);
-      
-      // Buscar missões do aluno
+      // Buscar missões já filtradas pela RPC
       const { data: missoes, error: missaoError } = await supabase.rpc('get_missoes_do_aluno', {
         p_aluno_id: user.id,
       });
@@ -228,13 +163,12 @@ export const useNotificacoes = () => {
         .select('id, fase_id, semana')
         .in('id', missaoIds);
       
-      // Agrupar por fase_id + semana (APENAS fases do ano atual)
+      // Agrupar por fase_id + semana
       const semanaMap = new Map<string, NotificacoesPorSemana>();
       
       for (const m of missoes) {
         const mi = missaoInfo?.find(mi => mi.id === m.id);
-        // FILTRAR: só processar se a fase_id pertence ao ano atual
-        if (!mi?.fase_id || mi.semana == null || !faseIdsValidos.has(mi.fase_id)) continue;
+        if (!mi?.fase_id || mi.semana == null) continue;
         
         const key = `${mi.fase_id}_${mi.semana}`;
         
@@ -249,12 +183,10 @@ export const useNotificacoes = () => {
         
         const entry = semanaMap.get(key)!;
         
-        // Pendente: não entregou ou precisa refazer
         if ((!m.ja_entregou && !m.atrasada) || m.status_entrega === 'refazer') {
           entry.pendentes++;
         }
         
-        // Aprovada não vista
         if (entregasAprovadas?.some(e => e.missao_id === m.id)) {
           entry.aprovadas++;
         }
@@ -273,7 +205,6 @@ export const useNotificacoes = () => {
     queryFn: async () => {
       if (!profile?.id || !casa?.id) return 0;
       
-      // Buscar canais da casa
       const { data: canais } = await supabase
         .from('canais_casa')
         .select('id')
@@ -281,7 +212,6 @@ export const useNotificacoes = () => {
       
       if (!canais?.length) return 0;
       
-      // Buscar última leitura do usuário
       const { data: leituras } = await supabase
         .from('canal_leituras')
         .select('canal_id, ultima_leitura')
@@ -372,7 +302,6 @@ export const useNotificacoes = () => {
         schema: 'public',
         table: 'entregas'
       }, () => {
-        // Invalidar caches de notificações de missões quando entregas são atualizadas
         queryClient.invalidateQueries({ queryKey: ['count-aprovadas-nao-vistas'] });
         queryClient.invalidateQueries({ queryKey: ['notificacoes-por-fase'] });
         queryClient.invalidateQueries({ queryKey: ['notificacoes-por-semana'] });
@@ -402,7 +331,6 @@ export const useNotificacoes = () => {
     notificacoesPorSemana,
     getNotificacoesFase,
     getNotificacoesSemana,
-    // Total de notificações de missões para o badge na nav
     totalMissoesNotificacoes: missoesPendentes + aprovadasNaoVistas,
   };
 };
