@@ -1120,6 +1120,8 @@ export type Database = {
           nota: number | null
           numero_tentativa: number | null
           pontos_concedidos: number | null
+          reflexao_resposta: string | null
+          respostas_itens: Json | null
           status: string | null
           texto_resposta: string | null
           updated_at: string | null
@@ -1138,6 +1140,8 @@ export type Database = {
           nota?: number | null
           numero_tentativa?: number | null
           pontos_concedidos?: number | null
+          reflexao_resposta?: string | null
+          respostas_itens?: Json | null
           status?: string | null
           texto_resposta?: string | null
           updated_at?: string | null
@@ -1156,6 +1160,8 @@ export type Database = {
           nota?: number | null
           numero_tentativa?: number | null
           pontos_concedidos?: number | null
+          reflexao_resposta?: string | null
+          respostas_itens?: Json | null
           status?: string | null
           texto_resposta?: string | null
           updated_at?: string | null
@@ -2086,6 +2092,8 @@ export type Database = {
           institution_id: string
           instrucoes: string | null
           inteligencia_cross: number | null
+          itens: Json | null
+          lente_especial: string | null
           para_todos_da_casa: boolean | null
           permite_entrega_atrasada: boolean | null
           pontos_base: number
@@ -2121,6 +2129,8 @@ export type Database = {
           institution_id: string
           instrucoes?: string | null
           inteligencia_cross?: number | null
+          itens?: Json | null
+          lente_especial?: string | null
           para_todos_da_casa?: boolean | null
           permite_entrega_atrasada?: boolean | null
           pontos_base?: number
@@ -2156,6 +2166,8 @@ export type Database = {
           institution_id?: string
           instrucoes?: string | null
           inteligencia_cross?: number | null
+          itens?: Json | null
+          lente_especial?: string | null
           para_todos_da_casa?: boolean | null
           permite_entrega_atrasada?: boolean | null
           pontos_base?: number

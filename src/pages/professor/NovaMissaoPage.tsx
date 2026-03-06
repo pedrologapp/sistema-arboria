@@ -9,6 +9,11 @@ import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import { CasaBrasao } from '@/components/CasaBrasao';
 
+interface MissaoItem {
+  nome: string;
+  descricao: string;
+}
+
 interface MissaoForm {
   // Organização
   serie_filtro: number | null;
@@ -32,10 +37,15 @@ interface MissaoForm {
   
   // Conteúdo
   titulo: string;
-  descricao: string;
+  contexto: string;
+  lente_especial: string;
   instrucoes: string;
-  dicas: string;
+  itens: MissaoItem[];
   reflexao: string;
+  
+  // Legacy (kept for backward compat)
+  descricao: string;
+  dicas: string;
   
   // Configurações
   tipo: 'principal' | 'secundaria' | 'bonus';
@@ -78,10 +88,13 @@ const NovaMissaoPage = () => {
     
     // Conteúdo
     titulo: '',
-    descricao: '',
+    contexto: '',
+    lente_especial: '',
     instrucoes: '',
-    dicas: '',
+    itens: [],
     reflexao: '',
+    descricao: '',
+    dicas: '',
     
     // Configurações
     tipo: 'principal',
@@ -236,8 +249,12 @@ const NovaMissaoPage = () => {
       toast.error('Digite o título da missão');
       return;
     }
-    if (!form.descricao.trim()) {
-      toast.error('Digite a descrição da missão');
+    if (!form.contexto.trim()) {
+      toast.error('Digite o contexto da missão');
+      return;
+    }
+    if (!form.instrucoes.trim()) {
+      toast.error('Digite a instrução da missão');
       return;
     }
     if (!form.data_prazo) {
@@ -301,17 +318,19 @@ const NovaMissaoPage = () => {
         
         // Conteúdo
         titulo: form.titulo.trim(),
-        descricao: form.descricao.trim(),
+        contexto: form.contexto.trim(),
+        lente_especial: form.lente_especial.trim() || null,
         instrucoes: form.instrucoes.trim() || null,
-        dicas: form.dicas.trim() || null,
+        itens: form.itens.length > 0 ? form.itens : null,
         reflexao: form.reflexao.trim() || null,
+        descricao: form.contexto.trim(), // backward compat
         
         // Configurações
         tipo: form.tipo,
         pontos_base: form.pontos_base,
         requer_texto: form.requer_texto,
         requer_arquivo: form.requer_arquivo,
-      }).select().single();
+      } as any).select().single();
 
       if (error) throw error;
 
@@ -799,57 +818,112 @@ const NovaMissaoPage = () => {
             />
           </div>
 
-          {/* Descrição */}
+          {/* Contexto */}
           <div className="mb-4">
-            <label className="text-white/60 text-sm block mb-2">Descrição *</label>
+            <label className="text-white/60 text-sm block mb-1">Contexto *</label>
+            <p className="text-white/30 text-xs mb-2">Texto narrativo que inspira e contextualiza. Fale diretamente com o aluno.</p>
             <textarea
-              value={form.descricao}
-              onChange={(e) => setForm(f => ({ ...f, descricao: e.target.value }))}
-              placeholder="Contexto e objetivo da missão..."
+              value={form.contexto}
+              onChange={(e) => setForm(f => ({ ...f, contexto: e.target.value }))}
+              placeholder="Explique o cenário ou situação para o aluno..."
               rows={4}
               className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
             />
           </div>
 
-          {/* Instruções */}
+          {/* Lente Especial */}
           <div className="mb-4">
-            <label className="text-white/60 text-sm block mb-2">
-              Instruções <span className="text-white/30">(suporta Markdown)</span>
-            </label>
+            <label className="text-white/60 text-sm block mb-1">🔍 Lente Especial <span className="text-white/30">(opcional)</span></label>
+            <p className="text-white/30 text-xs mb-2">Ex: "O que ele DIRIA? Como ele FALARIA?"</p>
+            <input
+              type="text"
+              value={form.lente_especial}
+              onChange={(e) => setForm(f => ({ ...f, lente_especial: e.target.value }))}
+              placeholder="Qual pergunta ou ângulo guia esta missão?"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/50"
+            />
+          </div>
+
+          {/* Instrução da Missão */}
+          <div className="mb-4">
+            <label className="text-white/60 text-sm block mb-1">🎯 Instrução da Missão *</label>
+            <p className="text-white/30 text-xs mb-2">Descreva a tarefa principal. Suporta Markdown.</p>
             <textarea
               value={form.instrucoes}
               onChange={(e) => setForm(f => ({ ...f, instrucoes: e.target.value }))}
-              placeholder={`1. Primeira instrução\n2. Segunda instrução\n3. Terceira instrução`}
-              rows={6}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50 font-mono text-sm"
-            />
-          </div>
-
-          {/* Dicas */}
-          <div className="mb-4">
-            <label className="text-white/60 text-sm block mb-2">
-              Dicas <span className="text-white/30">(opcional, suporta Markdown)</span>
-            </label>
-            <textarea
-              value={form.dicas}
-              onChange={(e) => setForm(f => ({ ...f, dicas: e.target.value }))}
-              placeholder={`- Dica útil para o aluno\n- Outra dica importante`}
+              placeholder="Ex: Crie a identidade verbal do seu personagem"
               rows={3}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50 font-mono text-sm"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
             />
           </div>
 
-          {/* Reflexão */}
+          {/* Itens para Registrar */}
           <div className="mb-4">
-            <label className="text-white/60 text-sm block mb-2">
-              Reflexão <span className="text-white/30">(opcional)</span>
-            </label>
-            <input
-              type="text"
+            <label className="text-white/60 text-sm block mb-1">📝 Itens para Registrar <span className="text-white/30">(opcional)</span></label>
+            <p className="text-white/30 text-xs mb-2">Cada item terá um campo de resposta individual para o aluno.</p>
+            
+            <div className="space-y-3 mb-3">
+              {form.itens.map((item, index) => (
+                <div key={index} className="bg-white/5 border border-white/10 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/40 text-xs font-medium">Item {index + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => setForm(f => ({
+                        ...f,
+                        itens: f.itens.filter((_, i) => i !== index)
+                      }))}
+                      className="text-red-400/60 hover:text-red-400 text-xs px-2 py-1"
+                    >
+                      ✕ Remover
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={item.nome}
+                    onChange={(e) => setForm(f => ({
+                      ...f,
+                      itens: f.itens.map((it, i) => i === index ? { ...it, nome: e.target.value } : it)
+                    }))}
+                    placeholder="Nome do item (ex: A FRASE DE APRESENTAÇÃO)"
+                    className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-blue-500/50 font-medium"
+                  />
+                  <textarea
+                    value={item.descricao}
+                    onChange={(e) => setForm(f => ({
+                      ...f,
+                      itens: f.itens.map((it, i) => i === index ? { ...it, descricao: e.target.value } : it)
+                    }))}
+                    placeholder="Descrição / orientação para o aluno..."
+                    rows={2}
+                    className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/20 resize-none focus:outline-none focus:border-blue-500/50"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setForm(f => ({
+                ...f,
+                itens: [...f.itens, { nome: '', descricao: '' }]
+              }))}
+              className="w-full py-2.5 border border-dashed border-white/20 rounded-lg text-white/50 text-sm hover:border-white/40 hover:text-white/70 transition-colors"
+            >
+              + Adicionar item
+            </button>
+          </div>
+
+          {/* Reflexão Final */}
+          <div className="mb-4">
+            <label className="text-white/60 text-sm block mb-1">💭 Reflexão Final <span className="text-white/30">(opcional)</span></label>
+            <p className="text-white/30 text-xs mb-2">Pergunta reflexiva para o aluno responder ao final (mínimo 3 linhas)</p>
+            <textarea
               value={form.reflexao}
               onChange={(e) => setForm(f => ({ ...f, reflexao: e.target.value }))}
-              placeholder="Pergunta para o aluno refletir..."
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/50"
+              placeholder="Ex: O jeito de falar do seu personagem se parece com o SEU jeito de falar?"
+              rows={3}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
             />
           </div>
         </div>
@@ -1005,31 +1079,44 @@ const NovaMissaoPage = () => {
                 {form.titulo || 'Sem título'}
               </h4>
               
-              <p className="text-white/70">
-                {form.descricao || 'Sem descrição'}
-              </p>
+              <div className="bg-white/5 p-3 rounded-lg">
+                <p className="text-white/40 text-xs uppercase mb-1">📖 Contexto</p>
+                <p className="text-white/70">{form.contexto || 'Sem contexto'}</p>
+              </div>
               
+              {form.lente_especial && (
+                <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg">
+                  <p className="text-white/40 text-xs uppercase mb-1">🔍 Lente Especial</p>
+                  <p className="text-white/80 italic">"{form.lente_especial}"</p>
+                </div>
+              )}
+
               {form.instrucoes && (
                 <div>
-                  <p className="text-white/40 text-sm mb-2 font-medium">📋 Instruções:</p>
+                  <p className="text-white/40 text-sm mb-2 font-medium">🎯 Instrução da Missão:</p>
                   <div className="text-white/70 prose prose-invert prose-sm max-w-none">
                     <ReactMarkdown>{form.instrucoes}</ReactMarkdown>
                   </div>
                 </div>
               )}
-              
-              {form.dicas && (
+
+              {form.itens.length > 0 && (
                 <div>
-                  <p className="text-white/40 text-sm mb-2 font-medium">💡 Dicas:</p>
-                  <div className="text-white/70 prose prose-invert prose-sm max-w-none">
-                    <ReactMarkdown>{form.dicas}</ReactMarkdown>
+                  <p className="text-white/40 text-sm mb-2 font-medium">📝 Itens para Registrar:</p>
+                  <div className="space-y-2">
+                    {form.itens.map((item, i) => (
+                      <div key={i} className="bg-white/5 p-3 rounded-lg">
+                        <p className="text-white font-medium text-sm">{i + 1}. {item.nome || '(sem nome)'}</p>
+                        {item.descricao && <p className="text-white/60 text-xs mt-1">{item.descricao}</p>}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
               
               {form.reflexao && (
-                <div className="bg-white/5 p-3 rounded-lg">
-                  <p className="text-white/40 text-sm mb-1">🤔 Reflexão:</p>
+                <div className="bg-purple-500/10 border border-purple-500/20 p-3 rounded-lg">
+                  <p className="text-white/40 text-sm mb-1">💭 Reflexão Final:</p>
                   <p className="text-white/80 italic">{form.reflexao}</p>
                 </div>
               )}

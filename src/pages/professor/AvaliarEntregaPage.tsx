@@ -325,6 +325,30 @@ const AvaliarEntregaPage = () => {
         <div className="bg-white/5 border border-white/10 rounded-xl p-4">
           <p className="text-xs text-white/40 uppercase tracking-wider mb-3">📝 Resposta do Aluno</p>
           
+          {/* Respostas por item (novo formato) */}
+          {(entrega as any).respostas_itens && Array.isArray((entrega as any).respostas_itens) && (entrega as any).respostas_itens.length > 0 && (
+            <div className="space-y-3 mb-4">
+              <p className="text-white/50 text-xs uppercase">Itens respondidos:</p>
+              {((entrega as any).respostas_itens as { item_index: number; nome: string; resposta: string }[]).map((item, i) => (
+                <div key={i} className="bg-black/20 rounded-lg p-3">
+                  <p className="text-white/60 text-xs font-semibold mb-1">{item.nome || `Item ${item.item_index + 1}`}</p>
+                  <p className="text-white/90 text-sm whitespace-pre-wrap">{item.resposta}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Reflexão */}
+          {(entrega as any).reflexao_resposta && (
+            <div className="mb-4">
+              <p className="text-white/50 text-xs uppercase mb-2">💭 Reflexão Final:</p>
+              <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
+                <p className="text-white/90 text-sm whitespace-pre-wrap">{(entrega as any).reflexao_resposta}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Texto livre */}
           {entrega.texto_resposta ? (
             <div className="bg-black/30 rounded-lg p-3">
               <p className="text-white/90 text-sm whitespace-pre-wrap">
@@ -332,7 +356,9 @@ const AvaliarEntregaPage = () => {
               </p>
             </div>
           ) : (
-            <p className="text-white/40 text-sm italic">Nenhuma resposta em texto</p>
+            !((entrega as any).respostas_itens?.length) && (
+              <p className="text-white/40 text-sm italic">Nenhuma resposta em texto</p>
+            )
           )}
         </div>
 

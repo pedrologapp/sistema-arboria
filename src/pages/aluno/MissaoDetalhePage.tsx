@@ -37,6 +37,10 @@ interface MissaoDetalhe {
   titulo: string;
   descricao: string | null;
   instrucoes: string | null;
+  contexto: string | null;
+  lente_especial: string | null;
+  itens: { nome: string; descricao: string }[] | null;
+  reflexao: string | null;
   tipo: 'principal' | 'secundaria' | 'bonus';
   pontos_base: number;
   data_prazo: string;
@@ -125,6 +129,8 @@ const MissaoDetalhePage = () => {
   
   // Estados do formulário
   const [textoResposta, setTextoResposta] = useState('');
+  const [respostasItens, setRespostasItens] = useState<Record<number, string>>({});
+  const [reflexaoResposta, setReflexaoResposta] = useState('');
   const [arquivos, setArquivos] = useState<ArquivoParaUpload[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [errosValidacao, setErrosValidacao] = useState<string[]>([]);
@@ -182,6 +188,10 @@ const MissaoDetalhePage = () => {
           titulo,
           descricao,
           instrucoes,
+          contexto,
+          lente_especial,
+          itens,
+          reflexao,
           tipo,
           pontos_base,
           data_prazo,
@@ -205,12 +215,19 @@ const MissaoDetalhePage = () => {
       if (!missaoData) throw new Error('Missão não encontrada');
 
       const inteligenciaData = missaoData.casa as { nome: string; cor_hex: string; emoji: string } | null;
+      
+      // Parse itens from JSONB
+      const parsedItens = missaoData.itens ? (missaoData.itens as any as { nome: string; descricao: string }[]) : null;
 
       setMissao({
         id: missaoData.id,
         titulo: missaoData.titulo,
         descricao: missaoData.descricao,
         instrucoes: missaoData.instrucoes,
+        contexto: (missaoData as any).contexto || missaoData.descricao || null,
+        lente_especial: (missaoData as any).lente_especial || null,
+        itens: parsedItens,
+        reflexao: (missaoData as any).reflexao || null,
         tipo: missaoData.tipo as 'principal' | 'secundaria' | 'bonus',
         pontos_base: missaoData.pontos_base,
         data_prazo: missaoData.data_prazo,
@@ -416,16 +433,25 @@ const MissaoDetalhePage = () => {
 
     try {
       // 1. Criar registro de entrega
+      // Build respostas_itens array from individual responses
+      const respostasItensArray = missao.itens?.map((item, index) => ({
+        item_index: index,
+        nome: item.nome,
+        resposta: respostasItens[index] || ''
+      })).filter(r => r.resposta.trim()) || null;
+
       const { data: novaEntrega, error: entregaError } = await supabase
         .from('entregas')
         .insert({
           missao_id: missao.id,
           aluno_id: user.id,
           texto_resposta: textoResposta.trim() || null,
+          respostas_itens: respostasItensArray,
+          reflexao_resposta: reflexaoResposta.trim() || null,
           status: 'pendente',
           entregue_no_prazo: !isPast(new Date(missao.data_prazo)),
           numero_tentativa: (entrega?.numero_tentativa || 0) + 1
-        })
+        } as any)
         .select()
         .single();
 
@@ -601,58 +627,60 @@ const MissaoDetalhePage = () => {
   const tempoRestante = getTempoRestante();
   const mostrarFormulario = podeEnviar();
 
+  // Determine display context
+  const displayContexto = missao.contexto || missao.descricao;
+  const hasNewFormat = !!(missao.lente_especial || missao.itens?.length || missao.reflexao || missao.contexto);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="py-6 space-y-6 pb-24"
+      className="py-6 space-y-5 pb-24"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => navigate('/aluno/missoes')}
-          className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span>Voltar</span>
-        </button>
-        <span 
-          className="text-lg font-bold"
-          style={{ color: casaColor }}
-        >
-          {missao.pontos_base} pts
-        </span>
-      </div>
-
-      {/* Tipo da missão */}
-      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${tipoConfig.bg} ${tipoConfig.text} ${tipoConfig.border} border`}>
-        <span>{tipoConfig.emoji}</span>
-        <span className="text-sm font-semibold">{tipoConfig.label}</span>
-      </div>
-
-      {/* Título */}
-      <h1 className="text-2xl font-bold text-white">
-        {missao.titulo}
-      </h1>
-
-      {/* Prazo */}
-      <div className="flex items-center gap-4 text-sm">
-        <div className="flex items-center gap-2 text-white/60">
-          <Calendar className="w-4 h-4" />
-          <span>Prazo: {format(new Date(missao.data_prazo), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
-        </div>
-        {tempoRestante && (
-          <div className={`flex items-center gap-2 ${
-            tempoRestante.atrasado ? 'text-red-400' : 
-            tempoRestante.urgente ? 'text-orange-400' : 'text-green-400'
-          }`}>
-            <Clock className="w-4 h-4" />
-            <span>{tempoRestante.texto}</span>
+      {/* Header com cor da casa */}
+      <div 
+        className="rounded-xl p-4 -mx-1"
+        style={{ backgroundColor: `${casaColor}15`, borderLeft: `3px solid ${casaColor}` }}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <button
+            onClick={() => navigate('/aluno/missoes')}
+            className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Voltar</span>
+          </button>
+          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${tipoConfig.bg} ${tipoConfig.text} ${tipoConfig.border} border`}>
+            <span>{tipoConfig.emoji}</span>
+            <span className="text-sm font-semibold">{tipoConfig.label}</span>
           </div>
+        </div>
+        
+        {missao.casa_nome && (
+          <p className="text-xs uppercase tracking-wider mb-1" style={{ color: casaColor }}>
+            Missão — Casa {missao.casa_emoji} {missao.casa_nome}
+          </p>
         )}
+        
+        <div className="flex items-center gap-4 text-sm text-white/60">
+          <span className="font-bold text-lg" style={{ color: casaColor }}>
+            ⭐ {missao.pontos_base} pts
+          </span>
+          <span>•</span>
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Prazo: {format(new Date(missao.data_prazo), "dd/MM", { locale: ptBR })}</span>
+          </div>
+          {tempoRestante && (
+            <span className={
+              tempoRestante.atrasado ? 'text-red-400' : 
+              tempoRestante.urgente ? 'text-orange-400' : 'text-green-400'
+            }>
+              {tempoRestante.texto}
+            </span>
+          )}
+        </div>
       </div>
-
-      <div className="h-px bg-white/10" />
 
       {/* Banner de aviso para missão de outra casa */}
       {ehMissaoDeOutraCasa && (
@@ -675,107 +703,210 @@ const MissaoDetalhePage = () => {
         </motion.div>
       )}
 
-      {/* Contexto - sempre visível */}
+      {/* Card Título */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="space-y-2"
+        className="text-center py-2"
       >
-        <h2 className="text-sm font-semibold text-white/60 flex items-center gap-2">
-          <FileText className="w-4 h-4" />
-          📖 CONTEXTO
-        </h2>
-        <p className="text-white/80 whitespace-pre-wrap leading-relaxed">
-          {missao.descricao || 'Nenhum contexto adicional para esta missão.'}
-        </p>
+        <h1 className="text-2xl font-bold text-white">
+          🎭 "{missao.titulo}"
+        </h1>
       </motion.div>
 
-      {/* Instruções - sempre visível */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="space-y-2"
-      >
-        <div className="h-px bg-white/10" />
-        <h2 className="text-sm font-semibold text-white/60 flex items-center gap-2 pt-2">
-          📋 INSTRUÇÕES
-        </h2>
-        <div className="prose prose-invert prose-sm max-w-none">
-          <ReactMarkdown
-            components={{
-              p: ({ children }) => (
-                <p className="text-white/80 mb-4 leading-relaxed">{children}</p>
-              ),
-              strong: ({ children }) => (
-                <strong className="text-white font-semibold">{children}</strong>
-              ),
-              em: ({ children }) => (
-                <em className="text-white/70 italic">{children}</em>
-              ),
-              ul: ({ children }) => (
-                <ul className="list-disc list-inside space-y-1 text-white/80 mb-4 ml-2">{children}</ul>
-              ),
-              ol: ({ children }) => (
-                <ol className="list-decimal list-inside space-y-1 text-white/80 mb-4 ml-2">{children}</ol>
-              ),
-              li: ({ children }) => (
-                <li className="text-white/80">{children}</li>
-              ),
-              hr: () => (
-                <hr className="border-white/10 my-4" />
-              ),
-              h1: ({ children }) => (
-                <h1 className="text-lg font-bold text-white mb-3">{children}</h1>
-              ),
-              h2: ({ children }) => (
-                <h2 className="text-base font-semibold text-white mb-2">{children}</h2>
-              ),
-              h3: ({ children }) => (
-                <h3 className="text-sm font-semibold text-white/90 mb-2">{children}</h3>
-              ),
-              blockquote: ({ children }) => (
-                <blockquote className="border-l-2 border-white/30 pl-4 italic text-white/70 my-4">
-                  {children}
-                </blockquote>
-              ),
-            }}
-          >
-            {missao.instrucoes || 'Siga as orientações do professor para completar esta missão.'}
-          </ReactMarkdown>
-        </div>
-      </motion.div>
+      {/* Card CONTEXTO */}
+      {displayContexto && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="rounded-xl border border-white/10 bg-white/5 p-4"
+        >
+          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-3">
+            📖 CONTEXTO
+          </h2>
+          <p className="text-white/80 whitespace-pre-wrap leading-relaxed">
+            {displayContexto}
+          </p>
+        </motion.div>
+      )}
 
-      {/* Material de Apoio (PDF do Admin) */}
-      {missao.arquivo_pdf_url && (
+      {/* Card LENTE ESPECIAL */}
+      {missao.lente_especial && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="rounded-xl p-4"
+          style={{ backgroundColor: `${casaColor}10`, border: `1px solid ${casaColor}30` }}
+        >
+          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-2">
+            🔍 SUA LENTE ESPECIAL
+          </h2>
+          <p className="text-white/90 italic text-lg leading-relaxed">
+            "{missao.lente_especial}"
+          </p>
+        </motion.div>
+      )}
+
+      {/* Card SUA MISSÃO (instrucoes) */}
+      {missao.instrucoes && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="rounded-xl border border-white/10 bg-white/5 p-4"
+        >
+          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-3">
+            🎯 SUA MISSÃO
+          </h2>
+          <div className="prose prose-invert prose-sm max-w-none">
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => <p className="text-white/80 mb-3 leading-relaxed">{children}</p>,
+                strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
+                em: ({ children }) => <em className="text-white/70 italic">{children}</em>,
+                ul: ({ children }) => <ul className="list-disc list-inside space-y-1 text-white/80 mb-3 ml-2">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 text-white/80 mb-3 ml-2">{children}</ol>,
+                li: ({ children }) => <li className="text-white/80">{children}</li>,
+                blockquote: ({ children }) => <blockquote className="border-l-2 border-white/30 pl-4 italic text-white/70 my-3">{children}</blockquote>,
+              }}
+            >
+              {missao.instrucoes}
+            </ReactMarkdown>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Card O QUE REGISTRAR (itens) */}
+      {missao.itens && missao.itens.length > 0 && mostrarFormulario && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
           className="rounded-xl border border-white/10 bg-white/5 p-4"
         >
+          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-4">
+            📝 O QUE REGISTRAR
+          </h2>
+          <div className="space-y-4">
+            {missao.itens.map((item, index) => {
+              const numEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+              return (
+                <div key={index} className="space-y-2">
+                  <div>
+                    <p className="text-white font-semibold text-sm">
+                      {numEmojis[index] || `${index + 1}.`} {item.nome}
+                    </p>
+                    {item.descricao && (
+                      <p className="text-white/50 text-sm mt-1">{item.descricao}</p>
+                    )}
+                  </div>
+                  <Textarea
+                    value={respostasItens[index] || ''}
+                    onChange={(e) => setRespostasItens(prev => ({ ...prev, [index]: e.target.value }))}
+                    placeholder="Sua resposta..."
+                    rows={3}
+                    disabled={enviando}
+                    className="bg-black/30 border-white/10 text-white placeholder:text-white/25 resize-none text-sm"
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Card O QUE REGISTRAR (view only, when not submitting) */}
+      {missao.itens && missao.itens.length > 0 && !mostrarFormulario && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="rounded-xl border border-white/10 bg-white/5 p-4"
+        >
+          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-4">
+            📝 O QUE REGISTRAR
+          </h2>
+          <div className="space-y-3">
+            {missao.itens.map((item, index) => {
+              const numEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+              return (
+                <div key={index}>
+                  <p className="text-white font-semibold text-sm">
+                    {numEmojis[index] || `${index + 1}.`} {item.nome}
+                  </p>
+                  {item.descricao && <p className="text-white/50 text-xs mt-0.5">{item.descricao}</p>}
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Card REFLEXÃO FINAL */}
+      {missao.reflexao && mostrarFormulario && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="rounded-xl p-4"
+          style={{ backgroundColor: `${casaColor}08`, border: `1px solid ${casaColor}20` }}
+        >
+          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-2">
+            💭 REFLEXÃO FINAL <span className="text-white/30 normal-case">(mínimo 3 linhas)</span>
+          </h2>
+          <p className="text-white/70 text-sm mb-3 italic">{missao.reflexao}</p>
+          <Textarea
+            value={reflexaoResposta}
+            onChange={(e) => setReflexaoResposta(e.target.value)}
+            placeholder="Reflita e escreva aqui..."
+            rows={5}
+            disabled={enviando}
+            className="bg-black/30 border-white/10 text-white placeholder:text-white/25 resize-none"
+          />
+        </motion.div>
+      )}
+
+      {/* Card REFLEXÃO FINAL (view only) */}
+      {missao.reflexao && !mostrarFormulario && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="rounded-xl p-4"
+          style={{ backgroundColor: `${casaColor}08`, border: `1px solid ${casaColor}20` }}
+        >
+          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-2">
+            💭 REFLEXÃO FINAL
+          </h2>
+          <p className="text-white/70 text-sm italic">{missao.reflexao}</p>
+        </motion.div>
+      )}
+
+      {/* Material de Apoio (PDF do Admin) */}
+      {missao.arquivo_pdf_url && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="rounded-xl border border-white/10 bg-white/5 p-4"
+        >
           <div className="flex items-center gap-2 mb-3">
             <FileText className="w-4 h-4 text-blue-400" />
             <h3 className="text-sm font-medium text-white">📎 Material de Apoio</h3>
           </div>
-          
-          {/* Card do arquivo com duas ações */}
           <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
             <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
               <FileText className="w-5 h-5 text-blue-400" />
             </div>
-            
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">
                 {missao.arquivo_pdf_nome || 'Material da Missão.pdf'}
               </p>
               <p className="text-xs text-white/50">PDF anexado pelo professor</p>
             </div>
-            
-            {/* Botões de ação */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              {/* Visualizar */}
               <a
                 href={missao.arquivo_pdf_url}
                 target="_blank"
@@ -785,8 +916,6 @@ const MissaoDetalhePage = () => {
               >
                 <ExternalLink className="w-4 h-4 text-blue-400" />
               </a>
-              
-              {/* Baixar */}
               <button
                 onClick={() => baixarPDF(
                   missao.arquivo_pdf_url!, 
