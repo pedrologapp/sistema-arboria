@@ -330,7 +330,7 @@ const NovaMissaoPage = () => {
         pontos_base: form.pontos_base,
         requer_texto: form.requer_texto,
         requer_arquivo: form.requer_arquivo,
-      }).select().single();
+      } as any).select().single();
 
       if (error) throw error;
 
