@@ -20,7 +20,7 @@ const ProfessorChatPage = () => {
 
   const casaColor = casaMentor?.cor_hex || '#6366f1';
 
-  // Buscar canais da casa
+  // Buscar canais da casa (excluindo lideranca_casa)
   const { data: canais = [] } = useQuery({
     queryKey: ['professor-canais-casa', casaMentor?.id],
     queryFn: async () => {
@@ -29,11 +29,29 @@ const ProfessorChatPage = () => {
         .from('canais_casa')
         .select('*')
         .eq('casa_id', casaMentor.id)
+        .neq('tipo', 'lideranca_casa')
         .order('ordem');
       if (error) throw error;
       return data || [];
     },
     enabled: !!casaMentor?.id,
+  });
+
+  // Buscar canal de liderança da casa
+  const { data: canalLideranca } = useQuery({
+    queryKey: ['professor-canal-lideranca', casaMentor?.id, profile?.institution_id],
+    queryFn: async () => {
+      if (!casaMentor?.id || !profile?.institution_id) return null;
+      const { data } = await supabase
+        .from('canais_casa')
+        .select('*')
+        .eq('tipo', 'lideranca_casa')
+        .eq('casa_id', casaMentor.id)
+        .eq('institution_id', profile.institution_id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!casaMentor?.id && !!profile?.institution_id,
   });
 
   // Buscar última leitura do professor em cada canal
