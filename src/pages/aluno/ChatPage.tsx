@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, MessageCircle, Hash, Users, Crown, Lock } from 'lucide-react';
+import { Search, MessageCircle, Hash, Users, Crown, Lock, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
 import { CasaBrasao } from '@/components/CasaBrasao';
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { getStatusOnline } from '@/utils/statusOnline';
 import { toast } from 'sonner';
 import { ConselhoLideresLocked } from '@/components/chat/ConselhoLideresLocked';
+import { LiderancaCasaLocked } from '@/components/chat/LiderancaCasaLocked';
 
 const ChatPage = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const ChatPage = () => {
   const { profile, casa, casaColor } = useStudent();
   const [searchTerm, setSearchTerm] = useState('');
   const [showLockedModal, setShowLockedModal] = useState(false);
+  const [showLiderancaLockedModal, setShowLiderancaLockedModal] = useState(false);
 
   // Buscar canal do Conselho de Líderes
   const { data: canalConselho } = useQuery({
@@ -37,7 +39,24 @@ const ChatPage = () => {
 
 
 
-  // Buscar canais da casa do aluno
+  // Buscar canal de Liderança da casa
+  const { data: canalLideranca } = useQuery({
+    queryKey: ['canal-lideranca', casa?.id, profile?.institution_id],
+    queryFn: async () => {
+      if (!casa?.id || !profile?.institution_id) return null;
+      const { data } = await supabase
+        .from('canais_casa')
+        .select('*')
+        .eq('tipo', 'lideranca_casa')
+        .eq('casa_id', casa.id)
+        .eq('institution_id', profile.institution_id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!casa?.id && !!profile?.institution_id,
+  });
+
+  // Buscar canais da casa do aluno (excluindo lideranca_casa)
   const { data: canais = [] } = useQuery({
     queryKey: ['canais-casa', casa?.id],
     queryFn: async () => {
@@ -46,6 +65,7 @@ const ChatPage = () => {
         .from('canais_casa')
         .select('*')
         .eq('casa_id', casa.id)
+        .neq('tipo', 'lideranca_casa')
         .order('ordem');
       if (error) throw error;
       return data || [];
@@ -255,6 +275,14 @@ const ChatPage = () => {
     if (!profile?.id) return false;
     const meu = membrosCasa?.find(m => m.id === profile.id);
     const cargoAtivo = meu?.cargos_casa?.find((c: { ativo: boolean; cargo: string }) => c.ativo && c.cargo === 'lider');
+    return !!cargoAtivo;
+  }, [membrosCasa, profile?.id]);
+
+  // Verificar se o aluno tem acesso ao canal de liderança (líder ou coordenador)
+  const isLiderancaCasa = useMemo(() => {
+    if (!profile?.id) return false;
+    const meu = membrosCasa?.find(m => m.id === profile.id);
+    const cargoAtivo = meu?.cargos_casa?.find((c: { ativo: boolean; cargo: string }) => c.ativo && (c.cargo === 'lider' || c.cargo === 'coordenador'));
     return !!cargoAtivo;
   }, [membrosCasa, profile?.id]);
 
