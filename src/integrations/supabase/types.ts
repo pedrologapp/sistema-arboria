@@ -3320,6 +3320,10 @@ export type Database = {
         Returns: number
       }
       pode_acessar_conselho: { Args: { p_user_id: string }; Returns: boolean }
+      pode_acessar_lideranca_casa: {
+        Args: { p_casa_id: number; p_user_id: string }
+        Returns: boolean
+      }
       user_participa_conversa: {
         Args: { p_conversa_id: string }
         Returns: boolean
