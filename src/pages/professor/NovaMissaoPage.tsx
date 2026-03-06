@@ -253,20 +253,13 @@ const NovaMissaoPage = () => {
       toast.error('Digite o título da missão');
       return;
     }
-    if (!form.contexto.trim()) {
-      toast.error('Digite o contexto da missão');
-      return;
-    }
-    if (!form.instrucoes.trim()) {
-      toast.error('Digite a instrução da missão');
+    // PDF ou texto são necessários
+    if (!pdfFile && !form.contexto.trim() && !form.instrucoes.trim()) {
+      toast.error('Anexe o PDF da missão ou preencha o conteúdo em texto');
       return;
     }
     if (!form.data_prazo) {
       toast.error('Selecione o prazo');
-      return;
-    }
-    if (!form.requer_texto && !form.requer_arquivo) {
-      toast.error('Selecione pelo menos um tipo de entrega');
       return;
     }
 
@@ -322,12 +315,14 @@ const NovaMissaoPage = () => {
         
         // Conteúdo
         titulo: form.titulo.trim(),
-        contexto: form.contexto.trim(),
+        contexto: form.contexto.trim() || null,
         lente_especial: form.lente_especial.trim() || null,
         instrucoes: form.instrucoes.trim() || null,
         itens: form.itens.length > 0 ? form.itens : null,
         reflexao: form.reflexao.trim() || null,
-        descricao: form.contexto.trim(), // backward compat
+        descricao: form.descricao.trim() || form.contexto.trim() || null,
+        arquivo_pdf_url: pdfFile?.url || null,
+        arquivo_pdf_nome: pdfFile?.name || null,
         
         // Configurações
         tipo: form.tipo,
