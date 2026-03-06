@@ -508,6 +508,39 @@ const ChatPage = () => {
         </div>
       )}
 
+      {/* Seção: Liderança da Casa */}
+      {canalLideranca && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 px-1">
+            <Zap className="w-4 h-4" style={{ color: `${casaColor}99` }} />
+            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: `${casaColor}99` }}>
+              Liderança da Casa
+            </h2>
+          </div>
+          <button
+            onClick={() => {
+              if (isLiderancaCasa) {
+                navigate(`/aluno/chat/canal/${canalLideranca.id}`);
+              } else {
+                setShowLiderancaLockedModal(true);
+              }
+            }}
+            className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left active:scale-[0.98] ${
+              isLiderancaCasa
+                ? 'bg-white/[0.06] border hover:bg-white/10'
+                : 'bg-white/[0.03] border border-white/5 opacity-60 hover:opacity-70'
+            }`}
+            style={isLiderancaCasa ? { borderColor: `${casaColor}40` } : undefined}
+          >
+            <span className="text-lg flex-shrink-0">⚡</span>
+            <span className={`flex-1 font-medium truncate ${isLiderancaCasa ? 'text-white/90' : 'text-white/60'}`}>
+              Liderança
+            </span>
+            {!isLiderancaCasa && <Lock className="w-4 h-4 text-white/30 flex-shrink-0" />}
+          </button>
+        </div>
+      )}
+
       {/* Seção: Canais de Texto */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 px-1">
