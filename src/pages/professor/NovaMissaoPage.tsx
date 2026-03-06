@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { toast } from 'sonner';
-import { ArrowLeft, Eye, X, Search } from 'lucide-react';
+import { ArrowLeft, Eye, X, Search, Upload, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import { CasaBrasao } from '@/components/CasaBrasao';
@@ -61,6 +61,10 @@ const NovaMissaoPage = () => {
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [buscaAluno, setBuscaAluno] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const [pdfFile, setPdfFile] = useState<{ name: string; url: string } | null>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
 
   // Verificar se deve iniciar com semana extra
   const defaultSemana = searchParams.get('semana') === 'extra' ? 'extra' : null;
@@ -249,20 +253,13 @@ const NovaMissaoPage = () => {
       toast.error('Digite o título da missão');
       return;
     }
-    if (!form.contexto.trim()) {
-      toast.error('Digite o contexto da missão');
-      return;
-    }
-    if (!form.instrucoes.trim()) {
-      toast.error('Digite a instrução da missão');
+    // PDF ou texto são necessários
+    if (!pdfFile && !form.contexto.trim() && !form.instrucoes.trim()) {
+      toast.error('Anexe o PDF da missão ou preencha o conteúdo em texto');
       return;
     }
     if (!form.data_prazo) {
       toast.error('Selecione o prazo');
-      return;
-    }
-    if (!form.requer_texto && !form.requer_arquivo) {
-      toast.error('Selecione pelo menos um tipo de entrega');
       return;
     }
 
@@ -318,12 +315,14 @@ const NovaMissaoPage = () => {
         
         // Conteúdo
         titulo: form.titulo.trim(),
-        contexto: form.contexto.trim(),
+        contexto: form.contexto.trim() || null,
         lente_especial: form.lente_especial.trim() || null,
         instrucoes: form.instrucoes.trim() || null,
         itens: form.itens.length > 0 ? form.itens : null,
         reflexao: form.reflexao.trim() || null,
-        descricao: form.contexto.trim(), // backward compat
+        descricao: form.descricao.trim() || form.contexto.trim() || null,
+        arquivo_pdf_url: pdfFile?.url || null,
+        arquivo_pdf_nome: pdfFile?.name || null,
         
         // Configurações
         tipo: form.tipo,
@@ -813,118 +812,228 @@ const NovaMissaoPage = () => {
               type="text"
               value={form.titulo}
               onChange={(e) => setForm(f => ({ ...f, titulo: e.target.value }))}
-              placeholder="Ex: O Colecionador de Palavras"
+              placeholder="Ex: A Voz do Personagem"
               className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/50"
             />
           </div>
 
-          {/* Contexto */}
+          {/* PDF da Missão */}
           <div className="mb-4">
-            <label className="text-white/60 text-sm block mb-1">Contexto *</label>
-            <p className="text-white/30 text-xs mb-2">Texto narrativo que inspira e contextualiza. Fale diretamente com o aluno.</p>
-            <textarea
-              value={form.contexto}
-              onChange={(e) => setForm(f => ({ ...f, contexto: e.target.value }))}
-              placeholder="Explique o cenário ou situação para o aluno..."
-              rows={4}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
-            />
-          </div>
-
-          {/* Lente Especial */}
-          <div className="mb-4">
-            <label className="text-white/60 text-sm block mb-1">🔍 Lente Especial <span className="text-white/30">(opcional)</span></label>
-            <p className="text-white/30 text-xs mb-2">Ex: "O que ele DIRIA? Como ele FALARIA?"</p>
-            <input
-              type="text"
-              value={form.lente_especial}
-              onChange={(e) => setForm(f => ({ ...f, lente_especial: e.target.value }))}
-              placeholder="Qual pergunta ou ângulo guia esta missão?"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/50"
-            />
-          </div>
-
-          {/* Instrução da Missão */}
-          <div className="mb-4">
-            <label className="text-white/60 text-sm block mb-1">🎯 Instrução da Missão *</label>
-            <p className="text-white/30 text-xs mb-2">Descreva a tarefa principal. Suporta Markdown.</p>
-            <textarea
-              value={form.instrucoes}
-              onChange={(e) => setForm(f => ({ ...f, instrucoes: e.target.value }))}
-              placeholder="Ex: Crie a identidade verbal do seu personagem"
-              rows={3}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
-            />
-          </div>
-
-          {/* Itens para Registrar */}
-          <div className="mb-4">
-            <label className="text-white/60 text-sm block mb-1">📝 Itens para Registrar <span className="text-white/30">(opcional)</span></label>
-            <p className="text-white/30 text-xs mb-2">Cada item terá um campo de resposta individual para o aluno.</p>
+            <label className="text-white/60 text-sm block mb-1">📄 PDF da Missão *</label>
+            <p className="text-white/30 text-xs mb-2">O conteúdo principal da missão. O aluno verá este PDF inline no app.</p>
             
-            <div className="space-y-3 mb-3">
-              {form.itens.map((item, index) => (
-                <div key={index} className="bg-white/5 border border-white/10 rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/40 text-xs font-medium">Item {index + 1}</span>
-                    <button
-                      type="button"
-                      onClick={() => setForm(f => ({
-                        ...f,
-                        itens: f.itens.filter((_, i) => i !== index)
-                      }))}
-                      className="text-red-400/60 hover:text-red-400 text-xs px-2 py-1"
-                    >
-                      ✕ Remover
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    value={item.nome}
-                    onChange={(e) => setForm(f => ({
-                      ...f,
-                      itens: f.itens.map((it, i) => i === index ? { ...it, nome: e.target.value } : it)
-                    }))}
-                    placeholder="Nome do item (ex: A FRASE DE APRESENTAÇÃO)"
-                    className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-blue-500/50 font-medium"
-                  />
-                  <textarea
-                    value={item.descricao}
-                    onChange={(e) => setForm(f => ({
-                      ...f,
-                      itens: f.itens.map((it, i) => i === index ? { ...it, descricao: e.target.value } : it)
-                    }))}
-                    placeholder="Descrição / orientação para o aluno..."
-                    rows={2}
-                    className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/20 resize-none focus:outline-none focus:border-blue-500/50"
-                  />
+            {pdfFile ? (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                <FileText className="w-5 h-5 text-green-400 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{pdfFile.name}</p>
+                  <p className="text-xs text-green-400/70">PDF anexado ✓</p>
                 </div>
-              ))}
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setPdfFile(null)}
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-red-400 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => pdfInputRef.current?.click()}
+                disabled={pdfUploading}
+                className="w-full border-2 border-dashed border-white/20 rounded-lg p-6 text-center hover:border-white/40 hover:bg-white/5 transition-all"
+              >
+                {pdfUploading ? (
+                  <div className="flex items-center justify-center gap-2 text-white/60">
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white/80 rounded-full animate-spin" />
+                    <span>Enviando PDF...</span>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="w-8 h-8 text-white/40 mx-auto mb-2" />
+                    <p className="text-white/60 text-sm">Clique para enviar o PDF da missão</p>
+                    <p className="text-white/30 text-xs mt-1">Até 10MB</p>
+                  </>
+                )}
+              </button>
+            )}
+            <input
+              ref={pdfInputRef}
+              type="file"
+              accept=".pdf"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (file.size > 10 * 1024 * 1024) {
+                  toast.error('PDF deve ter no máximo 10MB');
+                  return;
+                }
+                setPdfUploading(true);
+                try {
+                  const timestamp = Date.now();
+                  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+                  const filePath = `missoes/${timestamp}_${safeName}`;
+                  
+                  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+                  const session = (await supabase.auth.getSession()).data.session;
+                  
+                  const controller = new AbortController();
+                  const timeoutId = setTimeout(() => controller.abort(), 90000);
+                  
+                  const response = await fetch(
+                    `${supabaseUrl}/storage/v1/object/fase-conteudos/${filePath}`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${session?.access_token}`,
+                        'Content-Type': file.type,
+                        'x-upsert': 'true',
+                      },
+                      body: file,
+                      signal: controller.signal,
+                    }
+                  );
+                  clearTimeout(timeoutId);
+                  
+                  if (!response.ok) throw new Error('Falha no upload');
+                  
+                  const { data: publicUrlData } = supabase.storage
+                    .from('fase-conteudos')
+                    .getPublicUrl(filePath);
+                  
+                  setPdfFile({ name: file.name, url: publicUrlData.publicUrl });
+                  toast.success('PDF enviado!');
+                } catch (err: any) {
+                  console.error('Erro upload PDF:', err);
+                  toast.error(err.name === 'AbortError' ? 'Upload expirou. Tente novamente.' : 'Erro ao enviar PDF');
+                } finally {
+                  setPdfUploading(false);
+                  e.target.value = '';
+                }
+              }}
+              className="hidden"
+            />
+          </div>
 
+          {/* Descrição curta (opcional) */}
+          <div className="mb-4">
+            <label className="text-white/60 text-sm block mb-1">Descrição curta <span className="text-white/30">(opcional)</span></label>
+            <p className="text-white/30 text-xs mb-2">Texto que aparece no card da lista de missões.</p>
+            <textarea
+              value={form.descricao}
+              onChange={(e) => setForm(f => ({ ...f, descricao: e.target.value }))}
+              placeholder="Breve descrição da missão..."
+              rows={2}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
+            />
+          </div>
+
+          {/* Campos avançados (colapsável) */}
+          <div className="border border-white/10 rounded-lg overflow-hidden">
             <button
               type="button"
-              onClick={() => setForm(f => ({
-                ...f,
-                itens: [...f.itens, { nome: '', descricao: '' }]
-              }))}
-              className="w-full py-2.5 border border-dashed border-white/20 rounded-lg text-white/50 text-sm hover:border-white/40 hover:text-white/70 transition-colors"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/[0.07] transition-colors"
             >
-              + Adicionar item
+              <span className="text-white/50 text-sm">Campos avançados (opcional)</span>
+              {showAdvanced ? <ChevronUp className="w-4 h-4 text-white/40" /> : <ChevronDown className="w-4 h-4 text-white/40" />}
             </button>
-          </div>
+            
+            {showAdvanced && (
+              <div className="p-4 space-y-4 border-t border-white/10">
+                {/* Contexto */}
+                <div>
+                  <label className="text-white/60 text-sm block mb-1">📖 Contexto</label>
+                  <p className="text-white/30 text-xs mb-2">Texto narrativo que inspira e contextualiza.</p>
+                  <textarea
+                    value={form.contexto}
+                    onChange={(e) => setForm(f => ({ ...f, contexto: e.target.value }))}
+                    placeholder="Explique o cenário ou situação para o aluno..."
+                    rows={3}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
+                  />
+                </div>
 
-          {/* Reflexão Final */}
-          <div className="mb-4">
-            <label className="text-white/60 text-sm block mb-1">💭 Reflexão Final <span className="text-white/30">(opcional)</span></label>
-            <p className="text-white/30 text-xs mb-2">Pergunta reflexiva para o aluno responder ao final (mínimo 3 linhas)</p>
-            <textarea
-              value={form.reflexao}
-              onChange={(e) => setForm(f => ({ ...f, reflexao: e.target.value }))}
-              placeholder="Ex: O jeito de falar do seu personagem se parece com o SEU jeito de falar?"
-              rows={3}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
-            />
+                {/* Lente Especial */}
+                <div>
+                  <label className="text-white/60 text-sm block mb-1">🔍 Lente Especial</label>
+                  <input
+                    type="text"
+                    value={form.lente_especial}
+                    onChange={(e) => setForm(f => ({ ...f, lente_especial: e.target.value }))}
+                    placeholder="Qual pergunta ou ângulo guia esta missão?"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/50"
+                  />
+                </div>
+
+                {/* Instrução */}
+                <div>
+                  <label className="text-white/60 text-sm block mb-1">🎯 Instrução da Missão</label>
+                  <textarea
+                    value={form.instrucoes}
+                    onChange={(e) => setForm(f => ({ ...f, instrucoes: e.target.value }))}
+                    placeholder="Descreva a tarefa principal"
+                    rows={3}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
+                  />
+                </div>
+
+                {/* Itens */}
+                <div>
+                  <label className="text-white/60 text-sm block mb-1">📝 Itens para Registrar</label>
+                  <div className="space-y-3 mb-3">
+                    {form.itens.map((item, index) => (
+                      <div key={index} className="bg-white/5 border border-white/10 rounded-lg p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-white/40 text-xs font-medium">Item {index + 1}</span>
+                          <button
+                            type="button"
+                            onClick={() => setForm(f => ({ ...f, itens: f.itens.filter((_, i) => i !== index) }))}
+                            className="text-red-400/60 hover:text-red-400 text-xs px-2 py-1"
+                          >
+                            ✕ Remover
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          value={item.nome}
+                          onChange={(e) => setForm(f => ({ ...f, itens: f.itens.map((it, i) => i === index ? { ...it, nome: e.target.value } : it) }))}
+                          placeholder="Nome do item"
+                          className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-blue-500/50 font-medium"
+                        />
+                        <textarea
+                          value={item.descricao}
+                          onChange={(e) => setForm(f => ({ ...f, itens: f.itens.map((it, i) => i === index ? { ...it, descricao: e.target.value } : it) }))}
+                          placeholder="Descrição / orientação"
+                          rows={2}
+                          className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/20 resize-none focus:outline-none focus:border-blue-500/50"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, itens: [...f.itens, { nome: '', descricao: '' }] }))}
+                    className="w-full py-2.5 border border-dashed border-white/20 rounded-lg text-white/50 text-sm hover:border-white/40 hover:text-white/70 transition-colors"
+                  >
+                    + Adicionar item
+                  </button>
+                </div>
+
+                {/* Reflexão */}
+                <div>
+                  <label className="text-white/60 text-sm block mb-1">💭 Reflexão Final</label>
+                  <textarea
+                    value={form.reflexao}
+                    onChange={(e) => setForm(f => ({ ...f, reflexao: e.target.value }))}
+                    placeholder="Pergunta reflexiva para o aluno"
+                    rows={3}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

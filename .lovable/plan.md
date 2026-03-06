@@ -1,62 +1,82 @@
 
 
-## Plano: Reformular Missões — PDF Inline + Resposta Multimídia
+## Fix: Alunos do Infantil/F1 não aparecem após criação
 
-### Resumo
+### Causa raiz
 
-Transformar a experiência de missões: o conteúdo principal passa a ser um **PDF renderizado inline** na tela do aluno, com área de resposta multimídia (fotos, arquivos, texto) abaixo. Simplificar o formulário do professor para focar no PDF como conteúdo principal.
+O trigger `sync_user_role_to_aluno_turma` é disparado quando um registro é inserido na tabela `user_roles`. Dentro dele, a função `ensure_turma_exists` é chamada com 4 argumentos. Porém, existem **duas versões** dessa função no banco:
 
-### 1. Professor — Simplificar `NovaMissaoPage.tsx`
+```text
+ensure_turma_exists(uuid, text, text, smallint)          -- versão antiga
+ensure_turma_exists(uuid, text, text, smallint, text)    -- versão nova (com segmento)
+```
 
-Reestruturar a seção "Conteúdo da Missão" (linhas 801-929):
+Quando chamada com 4 argumentos, o Postgres não consegue decidir qual usar (erro `42725: function is not unique`). Isso faz o `INSERT` na `user_roles` falhar silenciosamente — o aluno é criado no `profiles` mas **sem role**, e como a `PessoasPage` filtra por `user_roles.role = 'user'`, o aluno não aparece.
 
-**Novos campos (em ordem):**
-1. **Título** * — manter, atualizar placeholder
-2. **PDF da Missão** * — novo upload de PDF (campo principal, usa storage bucket `fase-conteudos`). Mostra preview do nome do arquivo após upload. Salva em `arquivo_pdf_url` e `arquivo_pdf_nome` (campos já existem na tabela)
-3. **Pontuação** * — manter (categoria principal/secundária/bônus)
-4. **Prazo** * — manter
-5. **Descrição curta** — opcional, texto que aparece no card da lista (usa campo `descricao`)
+### Solução
 
-**Campos antigos** (Contexto, Lente Especial, Instrução, Itens, Reflexão) movidos para seção colapsável "Campos avançados (opcional)" para backward compatibility. Validação atualizada: não exigir mais `contexto` e `instrucoes` como obrigatórios se PDF estiver presente.
+Uma migração SQL com 3 passos:
 
-**Upload do PDF:** Usar a mesma estratégia de upload via fetch/blob com timeout de 90s (conforme memory de storage). Bucket: `fase-conteudos` (público, já configurado). Path: `missoes/{missaoId}/{timestamp}_{filename}`.
+1. **Remover a versão antiga** (4 args) da função `ensure_turma_exists`, mantendo apenas a versão com 5 argumentos (que inclui `segmento`)
+2. **Atualizar o trigger** `sync_user_role_to_aluno_turma` para passar o `segmento` do perfil como 5º argumento
+3. **Reparar os dados** da aluna Ruamma — inserir o role `user` e garantir o vínculo `aluno_turma`
 
-### 2. Aluno — Reformular `MissaoDetalhePage.tsx`
+### Detalhes técnicos
 
-Reestruturar completamente o corpo da página (linhas 634-1205):
+**Migração SQL:**
+```sql
+-- 1. Dropar a versão ambígua (4 args)
+DROP FUNCTION IF EXISTS public.ensure_turma_exists(uuid, text, text, smallint);
 
-**Novo layout:**
+-- 2. Atualizar o trigger para passar segmento
+CREATE OR REPLACE FUNCTION public.sync_user_role_to_aluno_turma()
+RETURNS trigger AS $$
+DECLARE
+  v_profile RECORD;
+  v_turma_id uuid;
+  v_ano_letivo smallint;
+BEGIN
+  IF NEW.role != 'user' THEN RETURN NEW; END IF;
+  
+  SELECT id, serie, turma, institution_id, segmento
+  INTO v_profile FROM public.profiles WHERE id = NEW.user_id;
+  
+  IF v_profile.serie IS NULL OR v_profile.turma IS NULL OR v_profile.institution_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+  
+  SELECT COALESCE(ano_letivo_atual, EXTRACT(YEAR FROM CURRENT_DATE)::smallint)
+  INTO v_ano_letivo FROM public.institution_settings
+  WHERE institution_id = v_profile.institution_id;
+  
+  IF v_ano_letivo IS NULL THEN
+    v_ano_letivo := EXTRACT(YEAR FROM CURRENT_DATE)::smallint;
+  END IF;
+  
+  v_turma_id := public.ensure_turma_exists(
+    v_profile.institution_id, v_profile.serie, v_profile.turma, 
+    v_ano_letivo, COALESCE(v_profile.segmento, 'fundamental2')
+  );
+  
+  INSERT INTO public.aluno_turma (aluno_id, turma_id, ano_letivo, ativo)
+  VALUES (v_profile.id, v_turma_id, v_ano_letivo, true)
+  ON CONFLICT (aluno_id, turma_id, ano_letivo) DO UPDATE SET ativo = true;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
-1. **Header** — manter (cor da casa, pontos, prazo, status)
+-- 3. Reparar dados da Ruamma (e qualquer outro aluno sem role)
+INSERT INTO public.user_roles (user_id, role)
+SELECT p.id, 'user'::app_role
+FROM public.profiles p
+WHERE p.institution_id = '902876e9-b263-4c01-9013-aeef7b6d24e1'
+  AND p.segmento IN ('infantil', 'fundamental1')
+  AND NOT EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = p.id)
+  AND p.nome IS NOT NULL;
+```
 
-2. **PDF Viewer Inline** — se `arquivo_pdf_url` existe:
-   - Renderizar `<iframe src={pdfUrl} />` com altura ~70vh, bordas arredondadas, sombra
-   - Botão "⬇️ Baixar PDF" discreto abaixo (já existe a função `baixarPDF`)
-
-3. **Fallback texto** — se não tem PDF, mostrar conteúdo em texto como antes (Contexto, Lente, Instrução, Itens, Reflexão) — backward compat
-
-4. **Separador visual**
-
-5. **Seção "📤 SUA RESPOSTA"** — reformulada:
-   - **Botões de upload em linha**: 📷 Foto (accept image/*, capture=environment) | 📎 Arquivo (accept any) | 📝 Texto (toggle textarea)
-   - **Grid de previews** dos arquivos anexados (miniaturas para imagens, ícone+nome para outros)
-   - **Textarea "Comentário"** — opcional, sempre visível
-   - Validação: pelo menos um arquivo OU texto (não exigir texto sempre como hoje)
-
-6. **Botão "📤 Enviar Entrega"** — fixo no bottom, cor da casa
-
-7. **Estados pós-envio** — manter lógica existente (pendente, aprovada, refazer) mas mostrar dentro da seção "SUA RESPOSTA"
-
-**Mudança de validação** (linha 405-418): Remover obrigatoriedade de texto. Exigir pelo menos texto OU arquivo.
-
-### 3. Sem alterações no banco de dados
-
-Os campos `arquivo_pdf_url` e `arquivo_pdf_nome` já existem na tabela `missoes`. Os campos de upload de entrega já funcionam via `entrega_arquivos`. Nenhuma migração SQL necessária.
-
-### Arquivos alterados
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/pages/professor/NovaMissaoPage.tsx` | Simplificar form: PDF como campo principal, campos texto em seção colapsável |
-| `src/pages/aluno/MissaoDetalhePage.tsx` | PDF viewer inline + área de resposta multimídia com botões foto/arquivo |
+### Arquivos/ações
+- 1 migração SQL (3 comandos acima)
+- Nenhum arquivo de código precisa ser alterado
 

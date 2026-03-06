@@ -17,8 +17,9 @@ import {
   Loader2,
   Trophy,
   Info,
-  ExternalLink,
-  Download
+  Download,
+  Camera,
+  File
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -120,7 +121,7 @@ const MissaoDetalhePage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
+  const photoInputRef = useRef<HTMLInputElement>(null);
   // Estados
   const [missao, setMissao] = useState<MissaoDetalhe | null>(null);
   const [entrega, setEntrega] = useState<Entrega | null>(null);
@@ -405,12 +406,12 @@ const MissaoDetalhePage = () => {
   const validar = (): string[] => {
     const erros: string[] = [];
 
-    // Texto é SEMPRE obrigatório
-    if (!textoResposta.trim()) {
-      erros.push('O texto da resposta é obrigatório');
+    // Pelo menos texto OU arquivo
+    if (!textoResposta.trim() && arquivos.length === 0) {
+      erros.push('Envie pelo menos um arquivo ou escreva um comentário');
     }
 
-    // Arquivo é opcional (só obrigatório se a missão exigir)
+    // Arquivo obrigatório se a missão exigir
     if (missao?.requer_arquivo && arquivos.length === 0) {
       erros.push('É necessário anexar pelo menos um arquivo');
     }
@@ -635,7 +636,7 @@ const MissaoDetalhePage = () => {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="py-6 space-y-5 pb-24"
+      className="py-6 space-y-5 pb-32"
     >
       {/* Header com cor da casa */}
       <div 
@@ -656,10 +657,30 @@ const MissaoDetalhePage = () => {
           </div>
         </div>
         
-        {missao.casa_nome && (
-          <p className="text-xs uppercase tracking-wider mb-1" style={{ color: casaColor }}>
-            Missão — Casa {missao.casa_emoji} {missao.casa_nome}
-          </p>
+        {/* Título no header */}
+        <h1 className="text-xl font-bold text-white mb-2">
+          {missao.titulo}
+        </h1>
+
+        {/* Status */}
+        {entrega && (
+          <div className="mb-2">
+            {entrega.status === 'pendente' && (
+              <span className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                ✅ Enviada — Aguardando avaliação
+              </span>
+            )}
+            {entrega.status === 'aprovada' && (
+              <span className="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+                🌟 Aprovada — {entrega.nota}/10
+              </span>
+            )}
+            {entrega.status === 'refazer' && (
+              <span className="text-xs px-2 py-1 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                🔄 Refazer — Veja o feedback
+              </span>
+            )}
+          </div>
         )}
         
         <div className="flex items-center gap-4 text-sm text-white/60">
@@ -669,7 +690,7 @@ const MissaoDetalhePage = () => {
           <span>•</span>
           <div className="flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5" />
-            <span>Prazo: {format(new Date(missao.data_prazo), "dd/MM", { locale: ptBR })}</span>
+            <span>Prazo: {format(new Date(missao.data_prazo), "dd/MM/yyyy", { locale: ptBR })}</span>
           </div>
           {tempoRestante && (
             <span className={
@@ -692,262 +713,193 @@ const MissaoDetalhePage = () => {
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="font-medium text-blue-300">
-                Esta missão é da Casa {missao.casa_nome}
-              </p>
-              <p className="text-sm text-blue-300/70 mt-1">
-                Você está visualizando esta missão, mas não pode realizá-la pois pertence a outra casa.
-              </p>
+              <p className="font-medium text-blue-300">Esta missão é da Casa {missao.casa_nome}</p>
+              <p className="text-sm text-blue-300/70 mt-1">Você não pode realizá-la pois pertence a outra casa.</p>
             </div>
           </div>
         </motion.div>
       )}
 
-      {/* Card Título */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center py-2"
-      >
-        <h1 className="text-2xl font-bold text-white">
-          🎭 "{missao.titulo}"
-        </h1>
-      </motion.div>
-
-      {/* Card CONTEXTO */}
-      {displayContexto && (
+      {/* ═══════════════════════════════════════ */}
+      {/* PDF VIEWER INLINE */}
+      {/* ═══════════════════════════════════════ */}
+      {missao.arquivo_pdf_url ? (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="rounded-xl border border-white/10 bg-white/5 p-4"
+          className="space-y-3"
         >
-          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-3">
-            📖 CONTEXTO
-          </h2>
-          <p className="text-white/80 whitespace-pre-wrap leading-relaxed">
-            {displayContexto}
-          </p>
+          <div 
+            className="rounded-xl overflow-hidden shadow-lg border border-white/10"
+            style={{ boxShadow: `0 0 20px ${casaColor}10` }}
+          >
+            <iframe
+              src={missao.arquivo_pdf_url}
+              className="w-full bg-white"
+              style={{ height: '70vh', minHeight: '400px' }}
+              title="PDF da Missão"
+            />
+          </div>
+          
+          {/* Botão baixar PDF */}
+          <button
+            onClick={() => baixarPDF(missao.arquivo_pdf_url!, missao.arquivo_pdf_nome || 'missao.pdf')}
+            className="flex items-center gap-2 mx-auto text-white/50 hover:text-white/80 text-sm transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            <span>Baixar PDF</span>
+          </button>
         </motion.div>
-      )}
-
-      {/* Card LENTE ESPECIAL */}
-      {missao.lente_especial && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="rounded-xl p-4"
-          style={{ backgroundColor: `${casaColor}10`, border: `1px solid ${casaColor}30` }}
-        >
-          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-2">
-            🔍 SUA LENTE ESPECIAL
-          </h2>
-          <p className="text-white/90 italic text-lg leading-relaxed">
-            "{missao.lente_especial}"
-          </p>
-        </motion.div>
-      )}
-
-      {/* Card SUA MISSÃO (instrucoes) */}
-      {missao.instrucoes && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="rounded-xl border border-white/10 bg-white/5 p-4"
-        >
-          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-3">
-            🎯 SUA MISSÃO
-          </h2>
-          <div className="prose prose-invert prose-sm max-w-none">
-            <ReactMarkdown
-              components={{
-                p: ({ children }) => <p className="text-white/80 mb-3 leading-relaxed">{children}</p>,
-                strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
-                em: ({ children }) => <em className="text-white/70 italic">{children}</em>,
-                ul: ({ children }) => <ul className="list-disc list-inside space-y-1 text-white/80 mb-3 ml-2">{children}</ul>,
-                ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 text-white/80 mb-3 ml-2">{children}</ol>,
-                li: ({ children }) => <li className="text-white/80">{children}</li>,
-                blockquote: ({ children }) => <blockquote className="border-l-2 border-white/30 pl-4 italic text-white/70 my-3">{children}</blockquote>,
-              }}
+      ) : (
+        /* ═══════════════════════════════════════ */
+        /* FALLBACK: Conteúdo em texto */
+        /* ═══════════════════════════════════════ */
+        <>
+          {/* Card CONTEXTO */}
+          {displayContexto && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="rounded-xl border border-white/10 bg-white/5 p-4"
             >
-              {missao.instrucoes}
-            </ReactMarkdown>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Card O QUE REGISTRAR (itens) */}
-      {missao.itens && missao.itens.length > 0 && mostrarFormulario && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="rounded-xl border border-white/10 bg-white/5 p-4"
-        >
-          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-4">
-            📝 O QUE REGISTRAR
-          </h2>
-          <div className="space-y-4">
-            {missao.itens.map((item, index) => {
-              const numEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
-              return (
-                <div key={index} className="space-y-2">
-                  <div>
-                    <p className="text-white font-semibold text-sm">
-                      {numEmojis[index] || `${index + 1}.`} {item.nome}
-                    </p>
-                    {item.descricao && (
-                      <p className="text-white/50 text-sm mt-1">{item.descricao}</p>
-                    )}
-                  </div>
-                  <Textarea
-                    value={respostasItens[index] || ''}
-                    onChange={(e) => setRespostasItens(prev => ({ ...prev, [index]: e.target.value }))}
-                    placeholder="Sua resposta..."
-                    rows={3}
-                    disabled={enviando}
-                    className="bg-black/30 border-white/10 text-white placeholder:text-white/25 resize-none text-sm"
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Card O QUE REGISTRAR (view only, when not submitting) */}
-      {missao.itens && missao.itens.length > 0 && !mostrarFormulario && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="rounded-xl border border-white/10 bg-white/5 p-4"
-        >
-          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-4">
-            📝 O QUE REGISTRAR
-          </h2>
-          <div className="space-y-3">
-            {missao.itens.map((item, index) => {
-              const numEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
-              return (
-                <div key={index}>
-                  <p className="text-white font-semibold text-sm">
-                    {numEmojis[index] || `${index + 1}.`} {item.nome}
-                  </p>
-                  {item.descricao && <p className="text-white/50 text-xs mt-0.5">{item.descricao}</p>}
-                </div>
-              );
-            })}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Card REFLEXÃO FINAL */}
-      {missao.reflexao && mostrarFormulario && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="rounded-xl p-4"
-          style={{ backgroundColor: `${casaColor}08`, border: `1px solid ${casaColor}20` }}
-        >
-          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-2">
-            💭 REFLEXÃO FINAL <span className="text-white/30 normal-case">(mínimo 3 linhas)</span>
-          </h2>
-          <p className="text-white/70 text-sm mb-3 italic">{missao.reflexao}</p>
-          <Textarea
-            value={reflexaoResposta}
-            onChange={(e) => setReflexaoResposta(e.target.value)}
-            placeholder="Reflita e escreva aqui..."
-            rows={5}
-            disabled={enviando}
-            className="bg-black/30 border-white/10 text-white placeholder:text-white/25 resize-none"
-          />
-        </motion.div>
-      )}
-
-      {/* Card REFLEXÃO FINAL (view only) */}
-      {missao.reflexao && !mostrarFormulario && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="rounded-xl p-4"
-          style={{ backgroundColor: `${casaColor}08`, border: `1px solid ${casaColor}20` }}
-        >
-          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-2">
-            💭 REFLEXÃO FINAL
-          </h2>
-          <p className="text-white/70 text-sm italic">{missao.reflexao}</p>
-        </motion.div>
-      )}
-
-      {/* Material de Apoio (PDF do Admin) */}
-      {missao.arquivo_pdf_url && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-          className="rounded-xl border border-white/10 bg-white/5 p-4"
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <FileText className="w-4 h-4 text-blue-400" />
-            <h3 className="text-sm font-medium text-white">📎 Material de Apoio</h3>
-          </div>
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-            <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-              <FileText className="w-5 h-5 text-blue-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
-                {missao.arquivo_pdf_nome || 'Material da Missão.pdf'}
+              <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-3">
+                📖 CONTEXTO
+              </h2>
+              <p className="text-white/80 whitespace-pre-wrap leading-relaxed">
+                {displayContexto}
               </p>
-              <p className="text-xs text-white/50">PDF anexado pelo professor</p>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <a
-                href={missao.arquivo_pdf_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-all"
-                title="Visualizar"
-              >
-                <ExternalLink className="w-4 h-4 text-blue-400" />
-              </a>
-              <button
-                onClick={() => baixarPDF(
-                  missao.arquivo_pdf_url!, 
-                  missao.arquivo_pdf_nome || 'material.pdf'
-                )}
-                className="p-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 transition-all"
-                title="Baixar"
-              >
-                <Download className="w-4 h-4 text-emerald-400" />
-              </button>
-            </div>
-          </div>
-        </motion.div>
+            </motion.div>
+          )}
+
+          {/* Card LENTE ESPECIAL */}
+          {missao.lente_especial && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="rounded-xl p-4"
+              style={{ backgroundColor: `${casaColor}10`, border: `1px solid ${casaColor}30` }}
+            >
+              <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-2">
+                🔍 SUA LENTE ESPECIAL
+              </h2>
+              <p className="text-white/90 italic text-lg leading-relaxed">
+                "{missao.lente_especial}"
+              </p>
+            </motion.div>
+          )}
+
+          {/* Card SUA MISSÃO */}
+          {missao.instrucoes && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="rounded-xl border border-white/10 bg-white/5 p-4"
+            >
+              <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-3">
+                🎯 SUA MISSÃO
+              </h2>
+              <div className="prose prose-invert prose-sm max-w-none">
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => <p className="text-white/80 mb-3 leading-relaxed">{children}</p>,
+                    strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
+                    em: ({ children }) => <em className="text-white/70 italic">{children}</em>,
+                    ul: ({ children }) => <ul className="list-disc list-inside space-y-1 text-white/80 mb-3 ml-2">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 text-white/80 mb-3 ml-2">{children}</ol>,
+                    li: ({ children }) => <li className="text-white/80">{children}</li>,
+                    blockquote: ({ children }) => <blockquote className="border-l-2 border-white/30 pl-4 italic text-white/70 my-3">{children}</blockquote>,
+                  }}
+                >
+                  {missao.instrucoes}
+                </ReactMarkdown>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Card ITENS (view only) */}
+          {missao.itens && missao.itens.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className="rounded-xl border border-white/10 bg-white/5 p-4"
+            >
+              <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-4">
+                📝 O QUE REGISTRAR
+              </h2>
+              <div className="space-y-3">
+                {missao.itens.map((item, index) => {
+                  const numEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+                  return (
+                    <div key={index}>
+                      <p className="text-white font-semibold text-sm">
+                        {numEmojis[index] || `${index + 1}.`} {item.nome}
+                      </p>
+                      {item.descricao && <p className="text-white/50 text-xs mt-0.5">{item.descricao}</p>}
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Card REFLEXÃO */}
+          {missao.reflexao && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="rounded-xl p-4"
+              style={{ backgroundColor: `${casaColor}08`, border: `1px solid ${casaColor}20` }}
+            >
+              <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-2">
+                💭 REFLEXÃO FINAL
+              </h2>
+              <p className="text-white/70 text-sm italic">{missao.reflexao}</p>
+            </motion.div>
+          )}
+        </>
       )}
 
-      {/* Separador antes da seção de entrega */}
+      {/* Separador */}
       <div className="h-px bg-white/10" />
 
-      {/* Título da seção de entrega */}
+      {/* ═══════════════════════════════════════ */}
+      {/* SEÇÃO: SUA RESPOSTA */}
+      {/* ═══════════════════════════════════════ */}
       <h2 className="text-sm font-semibold text-white/60 flex items-center gap-2">
-        📨 SUA ENTREGA
+        📤 SUA RESPOSTA
       </h2>
 
-      {/* Status da entrega existente */}
-      {entrega && (
+      {/* Feedback do professor (se refazer) */}
+      {entrega?.status === 'refazer' && entrega.feedback_professor && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/30"
+        >
+          <div className="flex items-center gap-2 text-orange-400 mb-2">
+            <RefreshCw className="w-5 h-5" />
+            <span className="font-medium">O professor pediu ajustes</span>
+          </div>
+          <p className="text-white/80 text-sm">Leia o feedback e envie novamente:</p>
+          <p className="text-white/60 italic text-sm bg-black/20 p-3 rounded-lg mt-2">
+            "{entrega.feedback_professor}"
+          </p>
+        </motion.div>
+      )}
+
+      {/* Status da entrega */}
+      {entrega && entrega.status !== 'refazer' && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
           className="space-y-4"
         >
-          {/* Status Badge */}
           {entrega.status === 'pendente' && (
             <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
               <div className="flex items-center gap-2 text-blue-400 mb-2">
@@ -976,24 +928,10 @@ const MissaoDetalhePage = () => {
                 <Trophy className="w-4 h-4" />
                 <span className="text-sm">+{entrega.pontos_concedidos} pontos conquistados!</span>
               </div>
-            </div>
-          )}
-
-          {entrega.status === 'refazer' && (
-            <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/30">
-              <div className="flex items-center gap-2 text-orange-400 mb-2">
-                <RefreshCw className="w-5 h-5" />
-                <span className="font-medium">Refazer</span>
-              </div>
               {entrega.feedback_professor && (
-                <>
-                  <p className="text-sm text-white/80 mb-2">
-                    O professor pediu algumas correções:
-                  </p>
-                  <p className="text-white/60 italic text-sm bg-black/20 p-3 rounded-lg">
-                    "{entrega.feedback_professor}"
-                  </p>
-                </>
+                <p className="text-white/60 italic text-sm mt-3 bg-black/20 p-3 rounded-lg">
+                  "{entrega.feedback_professor}"
+                </p>
               )}
             </div>
           )}
@@ -1002,9 +940,7 @@ const MissaoDetalhePage = () => {
           {entrega.texto_resposta && (
             <div className="p-4 rounded-xl bg-white/5 border border-white/10">
               <h4 className="text-sm text-white/60 mb-2">Sua resposta:</h4>
-              <p className="text-white/80 whitespace-pre-wrap text-sm">
-                {entrega.texto_resposta}
-              </p>
+              <p className="text-white/80 whitespace-pre-wrap text-sm">{entrega.texto_resposta}</p>
             </div>
           )}
 
@@ -1012,22 +948,22 @@ const MissaoDetalhePage = () => {
           {entrega.arquivos.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-sm text-white/60">Arquivos enviados:</h4>
-              <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
                 {entrega.arquivos.map(arquivo => (
                   <a
                     key={arquivo.id}
                     href={arquivo.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-2 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
                   >
                     {isImage({ tipo_arquivo: arquivo.tipo_arquivo }) ? (
-                      <ImageIcon className="w-5 h-5 text-white/60" />
+                      <ImageIcon className="w-4 h-4 text-white/60 flex-shrink-0" />
                     ) : (
-                      <FileText className="w-5 h-5 text-white/60" />
+                      <FileText className="w-4 h-4 text-white/60 flex-shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white truncate">{arquivo.nome_original}</p>
+                      <p className="text-xs text-white truncate">{arquivo.nome_original}</p>
                       <p className="text-xs text-white/40">{formatBytes(arquivo.tamanho_bytes)}</p>
                     </div>
                   </a>
@@ -1046,7 +982,7 @@ const MissaoDetalhePage = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ delay: 0.3 }}
-            className="space-y-6"
+            className="space-y-5"
           >
             {/* Erros de validação */}
             {errosValidacao.length > 0 && (
@@ -1060,134 +996,110 @@ const MissaoDetalhePage = () => {
               </div>
             )}
 
-            {/* Textarea */}
+            {/* Instrução */}
+            <p className="text-white/50 text-sm">
+              Envie sua entrega: fotos, arquivos ou texto.
+            </p>
+
+            {/* Botões de upload em linha */}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={enviando}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-white/70"
+              >
+                <Camera className="w-5 h-5" />
+                <span className="text-sm">Foto</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={enviando}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-white/70"
+              >
+                <File className="w-5 h-5" />
+                <span className="text-sm">Arquivo</span>
+              </button>
+            </div>
+
+            {/* Hidden inputs */}
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              multiple
+              onChange={(e) => handleFileSelect(e.target.files)}
+              className="hidden"
+              disabled={enviando}
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,.pdf,.txt"
+              onChange={(e) => handleFileSelect(e.target.files)}
+              className="hidden"
+              disabled={enviando}
+            />
+
+            {/* Grid de previews */}
+            {arquivos.length > 0 && (
+              <div className="grid grid-cols-3 gap-2">
+                {arquivos.map((arquivo) => (
+                  <motion.div
+                    key={arquivo.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="relative rounded-lg overflow-hidden bg-white/5 border border-white/10 aspect-square"
+                  >
+                    {arquivo.preview ? (
+                      <img 
+                        src={arquivo.preview} 
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center p-2">
+                        <FileText className="w-6 h-6 text-white/40 mb-1" />
+                        <p className="text-xs text-white/50 truncate w-full text-center">{arquivo.file.name}</p>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => removerArquivo(arquivo.id)}
+                      disabled={enviando}
+                      className="absolute top-1 right-1 p-1 bg-black/70 rounded-full hover:bg-black/90 transition-colors"
+                    >
+                      <X className="w-3 h-3 text-white" />
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5">
+                      <p className="text-[10px] text-white/70 truncate">{formatBytes(arquivo.file.size)}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
+            {/* Textarea comentário */}
             <div className="space-y-2">
-              <h2 className="text-sm font-semibold text-white/60 flex items-center gap-2">
-                ✏️ SUA RESPOSTA
-                {missao.requer_texto && <span className="text-red-400">*</span>}
-              </h2>
+              <label className="text-sm text-white/50">Comentário (opcional)</label>
               <div className="relative">
                 <Textarea
                   value={textoResposta}
                   onChange={(e) => setTextoResposta(e.target.value)}
-                  placeholder="Digite sua resposta aqui..."
-                  rows={6}
+                  placeholder="Escreva um comentário ou sua resposta..."
+                  rows={4}
                   disabled={enviando}
                   className="bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-none"
                 />
-                <span className="absolute bottom-3 right-3 text-xs text-white/40">
-                  {textoResposta.length} caracteres
-                </span>
+                {textoResposta.length > 0 && (
+                  <span className="absolute bottom-3 right-3 text-xs text-white/40">
+                    {textoResposta.length}
+                  </span>
+                )}
               </div>
             </div>
-
-            {/* Upload de arquivos */}
-            <div className="space-y-3">
-              <h2 className="text-sm font-semibold text-white/60 flex items-center gap-2">
-                <Paperclip className="w-4 h-4" />
-                ANEXAR ARQUIVO
-                {missao.requer_arquivo && <span className="text-red-400">*</span>}
-              </h2>
-
-              {/* Área de drop */}
-              <div
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className={`
-                  border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all
-                  ${isDragging 
-                    ? 'border-white/40 bg-white/10' 
-                    : 'border-white/20 bg-white/5 hover:border-white/30 hover:bg-white/[0.07]'
-                  }
-                `}
-              >
-                <Paperclip className="w-8 h-8 text-white/40 mx-auto mb-2" />
-                <p className="text-white/60 text-sm">
-                  Arraste ou clique para anexar
-                </p>
-                <p className="text-white/40 text-xs mt-1">
-                  PDF, imagens (PNG, JPG) e texto (TXT) até 10MB
-                </p>
-                <p className="text-amber-400/80 text-xs mt-1">
-                  ⚠️ Arquivos .docx não são aceitos
-                </p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept="image/*,.pdf,.txt"
-                  onChange={(e) => handleFileSelect(e.target.files)}
-                  className="hidden"
-                  disabled={enviando}
-                />
-              </div>
-
-              {/* Lista de arquivos */}
-              {arquivos.length > 0 && (
-                <div className="space-y-2">
-                  {arquivos.map((arquivo) => (
-                    <motion.div
-                      key={arquivo.id}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10"
-                    >
-                      {arquivo.preview ? (
-                        <img 
-                          src={arquivo.preview} 
-                          alt="Preview"
-                          className="w-12 h-12 rounded object-cover"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded bg-white/10 flex items-center justify-center">
-                          <FileText className="w-6 h-6 text-white/40" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-white truncate">{arquivo.file.name}</p>
-                        <p className="text-xs text-white/40">{formatBytes(arquivo.file.size)}</p>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removerArquivo(arquivo.id);
-                        }}
-                        disabled={enviando}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                      >
-                        <X className="w-4 h-4 text-white/60" />
-                      </button>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Botão de enviar */}
-            <Button
-              onClick={handleEnviar}
-              disabled={enviando}
-              className="w-full h-12 text-base font-semibold"
-              style={{ 
-                backgroundColor: casaColor,
-                color: 'white'
-              }}
-            >
-              {enviando ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                <>
-                  <Send className="w-5 h-5 mr-2" />
-                  Enviar Resposta
-                </>
-              )}
-            </Button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1197,9 +1109,34 @@ const MissaoDetalhePage = () => {
         <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-center">
           <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
           <p className="text-red-400 font-medium">Prazo encerrado</p>
-          <p className="text-white/60 text-sm mt-1">
-            Esta missão não aceita entregas atrasadas.
-          </p>
+          <p className="text-white/60 text-sm mt-1">Esta missão não aceita entregas atrasadas.</p>
+        </div>
+      )}
+
+      {/* Botão fixo no bottom */}
+      {mostrarFormulario && (
+        <div className="fixed bottom-20 left-0 right-0 p-4 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f] to-transparent z-10">
+          <Button
+            onClick={handleEnviar}
+            disabled={enviando}
+            className="w-full h-12 text-base font-semibold rounded-xl shadow-lg"
+            style={{ 
+              backgroundColor: casaColor,
+              color: 'white'
+            }}
+          >
+            {enviando ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Enviando...
+              </>
+            ) : (
+              <>
+                <Send className="w-5 h-5 mr-2" />
+                📤 Enviar Entrega
+              </>
+            )}
+          </Button>
         </div>
       )}
     </motion.div>
