@@ -219,77 +219,42 @@ const AtividadesPage = () => {
   }, [searchQuery]);
 
   const summaryCards = [
-    { label: 'Logins', value: counts.logins, color: '#22c55e', icon: <LogIn className="w-5 h-5" /> },
-    { label: 'Entregas', value: counts.entregas, color: '#eab308', icon: <Send className="w-5 h-5" /> },
-    { label: 'Mensagens', value: counts.mensagens, color: '#a855f7', icon: <MessageCircle className="w-5 h-5" /> },
-    { label: 'Observações', value: counts.observacoes, color: '#3b82f6', icon: <Eye className="w-5 h-5" /> },
+    { label: 'Logins', value: counts.logins, color: '#22c55e', icon: <LogIn className="w-5 h-5" />, actionValue: 'login' },
+    { label: 'Entregas', value: counts.entregas, color: '#eab308', icon: <Send className="w-5 h-5" />, actionValue: 'missao_entrega' },
+    { label: 'Mensagens', value: counts.mensagens, color: '#a855f7', icon: <MessageCircle className="w-5 h-5" />, actionValue: 'chat_mensagem' },
+    { label: 'Observações', value: counts.observacoes, color: '#3b82f6', icon: <Eye className="w-5 h-5" />, actionValue: 'observacao_criada' },
   ];
-
-  return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
-      {/* Title */}
-      <div className="flex items-center gap-3 mb-6">
-        <Activity className="w-6 h-6 text-indigo-400" />
-        <h1 className="text-2xl font-bold text-white">Atividades do Sistema</h1>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-6">
-        <Select value={actionFilter} onValueChange={setActionFilter}>
-          <SelectTrigger className="w-[140px] bg-white/5 border-white/10 text-white">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {FILTER_ACTIONS.map((f) => (
-              <SelectItem key={f.value} value={f.value}>
-                {f.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={periodFilter} onValueChange={setPeriodFilter}>
-          <SelectTrigger className="w-[120px] bg-white/5 border-white/10 text-white">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {PERIOD_OPTIONS.map((p) => (
-              <SelectItem key={p.value} value={p.value}>
-                {p.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <div className="relative flex-1 min-w-[180px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-          <Input
-            placeholder="Buscar aluno..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/30"
-          />
-        </div>
-      </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        {summaryCards.map((card) => (
-          <Card key={card.label} className="bg-white/5 border-white/10">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: `${card.color}20`, color: card.color }}
-              >
-                {card.icon}
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-white">{card.value}</p>
-                <p className="text-xs text-white/50">{card.label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {summaryCards.map((card) => {
+          const isActive = actionFilter === card.actionValue;
+          return (
+            <button
+              key={card.label}
+              onClick={() => setActionFilter(isActive ? 'all' : card.actionValue)}
+              className="text-left"
+            >
+              <Card className={cn(
+                "bg-white/5 border-white/10 transition-all",
+                isActive && "ring-2 ring-offset-0",
+              )} style={isActive ? { borderColor: card.color, boxShadow: `0 0 12px ${card.color}30` } : undefined}>
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: `${card.color}20`, color: card.color }}
+                  >
+                    {card.icon}
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-white">{card.value}</p>
+                    <p className="text-xs text-white/50">{card.label}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </button>
+          );
+        })}
       </div>
 
       {/* Timeline */}
