@@ -67,24 +67,17 @@ const MissoesPage = () => {
 
       if (intError) throw intError;
 
-      // Buscar ano letivo das settings ou fallback
-      const { data: settings } = await supabase
-        .from('institution_settings')
-        .select('ano_letivo_atual')
-        .eq('institution_id', profile.institution_id)
-        .single();
-      const anoLetivoAtual = settings?.ano_letivo_atual || new Date().getFullYear();
-
-      // Buscar fases filtradas por série e segmento do aluno
+      // Buscar fases filtradas por segmento do aluno
+      // Não filtrar por ano_letivo (pode estar desatualizado no settings)
+      // Incluir fases com serie=NULL (compartilhadas) e serie específica do aluno
       let query = supabase
         .from('fases')
-        .select('id, numero_fase, semana_atual, ativo, inteligencia_id, data_inicio, data_fim')
+        .select('id, numero_fase, semana_atual, ativo, inteligencia_id, data_inicio, data_fim, serie')
         .eq('institution_id', profile.institution_id)
-        .eq('ano_letivo', anoLetivoAtual)
         .eq('segmento', segmento);
 
       if (serieNum) {
-        query = query.eq('serie', serieNum);
+        query = query.or(`serie.eq.${serieNum},serie.is.null`);
       }
 
       const { data: fases, error: fasesError } = await query;
