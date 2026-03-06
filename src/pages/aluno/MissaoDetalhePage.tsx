@@ -1169,9 +1169,9 @@ const MissaoDetalhePage = () => {
         </div>
       )}
 
-      {/* Botão fixo no bottom */}
+      {/* Botão Enviar Entrega inline */}
       {mostrarFormulario && (
-        <div className="fixed bottom-20 left-0 right-0 p-4 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f] to-transparent z-10">
+        <div className="mt-4">
           <Button
             onClick={handleEnviar}
             disabled={enviando}
