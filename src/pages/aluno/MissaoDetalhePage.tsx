@@ -37,6 +37,10 @@ interface MissaoDetalhe {
   titulo: string;
   descricao: string | null;
   instrucoes: string | null;
+  contexto: string | null;
+  lente_especial: string | null;
+  itens: { nome: string; descricao: string }[] | null;
+  reflexao: string | null;
   tipo: 'principal' | 'secundaria' | 'bonus';
   pontos_base: number;
   data_prazo: string;
