@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Hash, Users, Eye, ArrowLeft, Lock } from 'lucide-react';
+import { Search, Hash, Users, Eye, ArrowLeft, Lock, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { CasaBrasao } from '@/components/CasaBrasao';
@@ -20,7 +20,7 @@ const ProfessorChatPage = () => {
 
   const casaColor = casaMentor?.cor_hex || '#6366f1';
 
-  // Buscar canais da casa
+  // Buscar canais da casa (excluindo lideranca_casa)
   const { data: canais = [] } = useQuery({
     queryKey: ['professor-canais-casa', casaMentor?.id],
     queryFn: async () => {
@@ -29,11 +29,29 @@ const ProfessorChatPage = () => {
         .from('canais_casa')
         .select('*')
         .eq('casa_id', casaMentor.id)
+        .neq('tipo', 'lideranca_casa')
         .order('ordem');
       if (error) throw error;
       return data || [];
     },
     enabled: !!casaMentor?.id,
+  });
+
+  // Buscar canal de liderança da casa
+  const { data: canalLideranca } = useQuery({
+    queryKey: ['professor-canal-lideranca', casaMentor?.id, profile?.institution_id],
+    queryFn: async () => {
+      if (!casaMentor?.id || !profile?.institution_id) return null;
+      const { data } = await supabase
+        .from('canais_casa')
+        .select('*')
+        .eq('tipo', 'lideranca_casa')
+        .eq('casa_id', casaMentor.id)
+        .eq('institution_id', profile.institution_id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!casaMentor?.id && !!profile?.institution_id,
   });
 
   // Buscar última leitura do professor em cada canal
@@ -369,6 +387,26 @@ const ProfessorChatPage = () => {
 
       <ScrollArea className="flex-1">
         <div className="space-y-6">
+          {/* Seção: Liderança da Casa */}
+          {canalLideranca && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 px-1">
+                <Zap className="w-4 h-4" style={{ color: `${casaColor}99` }} />
+                <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: `${casaColor}99` }}>
+                  Liderança da Casa
+                </h2>
+              </div>
+              <button
+                onClick={() => navigate(`/professor/chat/canal/${canalLideranca.id}`)}
+                className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/[0.06] border hover:bg-white/10 transition-all active:scale-[0.98]"
+                style={{ borderColor: `${casaColor}40` }}
+              >
+                <span className="text-lg">⚡</span>
+                <span className="text-white/90 font-medium flex-1 text-left">Liderança</span>
+              </button>
+            </div>
+          )}
+
           {/* Seção: Canais de Texto */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 px-1">
