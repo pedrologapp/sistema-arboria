@@ -72,6 +72,7 @@ const PERIOD_OPTIONS = [
   { value: 'today', label: 'Hoje' },
   { value: '7d', label: '7 dias' },
   { value: '30d', label: '30 dias' },
+  { value: 'all', label: 'Total' },
 ];
 
 const PAGE_SIZE = 20;
@@ -84,6 +85,8 @@ function getDateFilter(period: string): string {
       return subDays(new Date(), 7).toISOString();
     case '30d':
       return subDays(new Date(), 30).toISOString();
+    case 'all':
+      return '2020-01-01T00:00:00.000Z';
     default:
       return startOfDay(new Date()).toISOString();
   }
@@ -129,7 +132,7 @@ const AtividadesPage = () => {
 
   // Filters
   const [actionFilter, setActionFilter] = useState('all');
-  const [periodFilter, setPeriodFilter] = useState('today');
+  const [periodFilter, setPeriodFilter] = useState('30d');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Summary counts
