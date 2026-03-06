@@ -23,8 +23,8 @@ const navItems = [
   { title: 'Pessoas', href: '/admin/pessoas', icon: Users },
   { title: 'Casas', href: '/admin/casas', icon: Shield },
   { title: 'Fases', href: '/admin/fases', icon: Calendar },
+  { title: 'Atividades', href: '/admin/atividades', icon: FileText },
   { title: 'Chat', href: '/admin/chat', icon: MessageCircle },
-  { title: 'Relatórios', href: '/admin/relatorios', icon: FileText },
   { title: 'Config', href: '/admin/config', icon: Settings },
 ];
 

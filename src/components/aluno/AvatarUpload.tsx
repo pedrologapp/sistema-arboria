@@ -73,6 +73,11 @@ const AvatarUpload = ({ userId, currentAvatarUrl, casaColor, onUploadSuccess }: 
 
       if (updateError) throw updateError;
 
+      // Log activity
+      import('@/utils/logActivity').then(({ logActivity }) =>
+        logActivity(userId, 'perfil_atualizado', { campo_alterado: 'avatar' })
+      );
+
       toast.success('Foto atualizada com sucesso!');
       onUploadSuccess();
 

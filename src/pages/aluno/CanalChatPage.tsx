@@ -179,6 +179,14 @@ const CanalChatPage = () => {
       autor_id: profile.id,
       conteudo: conteudo.trim()
     });
+
+    // Log activity
+    import('@/utils/logActivity').then(({ logActivity }) =>
+      logActivity(profile.id, 'chat_mensagem', {
+        canal: canal?.nome,
+        casa: canal?.casa_id,
+      })
+    );
   };
 
   if (loadingCanal) {

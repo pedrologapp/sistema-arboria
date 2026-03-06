@@ -35,6 +35,7 @@ import ConteudoAdminPage from "./pages/admin/ConteudoAdminPage";
 import ConteudoInteligenciaAdminPage from "./pages/admin/ConteudoInteligenciaAdminPage";
 import AdminChatPage from "./pages/admin/AdminChatPage";
 import AdminCanalChatPage from "./pages/admin/AdminCanalChatPage";
+import AtividadesPage from "./pages/admin/AtividadesPage";
 
 // Aluno pages
 import HomePage from "./pages/aluno/HomePage";
@@ -196,6 +197,15 @@ const App = () => (
               <ProtectedRoute requireAdmin>
                 <AdminLayout>
                   <ConteudoInteligenciaAdminPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+
+            {/* Admin Atividades */}
+            <Route path="/admin/atividades" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <AtividadesPage />
                 </AdminLayout>
               </ProtectedRoute>
             } />

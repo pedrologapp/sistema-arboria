@@ -1,102 +1,82 @@
 
 
-## Plano: Sistema de Logs/Histórico de Atividades no Admin
+## Fix: Alunos do Infantil/F1 não aparecem após criação
 
-### Visão geral
-Criar tabela `activity_logs`, uma função utilitária `logActivity()`, inserir chamadas nos pontos estratégicos do app, e criar uma página "Atividades" no painel Admin com filtros, cards resumo e timeline.
+### Causa raiz
 
----
+O trigger `sync_user_role_to_aluno_turma` é disparado quando um registro é inserido na tabela `user_roles`. Dentro dele, a função `ensure_turma_exists` é chamada com 4 argumentos. Porém, existem **duas versões** dessa função no banco:
 
-### 1. Migração SQL — Tabela + Índices + RLS
-
-```sql
-CREATE TABLE public.activity_logs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
-  action text NOT NULL,
-  details jsonb DEFAULT '{}',
-  ip_address text,
-  created_at timestamptz DEFAULT now()
-);
-
-ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
-
--- Admin pode ler tudo
-CREATE POLICY "admin_read_logs" ON public.activity_logs
-  FOR SELECT TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
--- Qualquer autenticado pode inserir (registrar próprias ações)
-CREATE POLICY "authenticated_insert_logs" ON public.activity_logs
-  FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE INDEX idx_logs_created ON public.activity_logs(created_at DESC);
-CREATE INDEX idx_logs_user_action ON public.activity_logs(user_id, action);
-CREATE INDEX idx_logs_action ON public.activity_logs(action);
+```text
+ensure_turma_exists(uuid, text, text, smallint)          -- versão antiga
+ensure_turma_exists(uuid, text, text, smallint, text)    -- versão nova (com segmento)
 ```
 
-### 2. Utilitário — `src/utils/logActivity.ts`
+Quando chamada com 4 argumentos, o Postgres não consegue decidir qual usar (erro `42725: function is not unique`). Isso faz o `INSERT` na `user_roles` falhar silenciosamente — o aluno é criado no `profiles` mas **sem role**, e como a `PessoasPage` filtra por `user_roles.role = 'user'`, o aluno não aparece.
 
-Função fire-and-forget que faz `supabase.from('activity_logs').insert(...)`. Aceita `userId`, `action`, `details`. Detecta device (mobile/desktop) automaticamente para login.
+### Solução
 
-### 3. Pontos de inserção de logs
+Uma migração SQL com 3 passos:
 
-| Local | Ação | Arquivo |
-|-------|------|---------|
-| Login bem-sucedido | `login` | `src/contexts/AuthContext.tsx` (signIn) |
-| Logout | `logout` | `src/contexts/AuthContext.tsx` (signOut) |
-| Entrega de missão | `missao_entrega` | `src/pages/aluno/MissaoDetalhePage.tsx` (handleEnviar) |
-| Avaliação de entrega | `missao_avaliada` | `src/pages/professor/AvaliarEntregaPage.tsx` (mutation onSuccess) |
-| Envio de mensagem canal | `chat_mensagem` | `src/pages/aluno/CanalChatPage.tsx` (enviarMensagem) |
-| Atualização de perfil/avatar | `perfil_atualizado` | `src/components/aluno/AvatarUpload.tsx` |
+1. **Remover a versão antiga** (4 args) da função `ensure_turma_exists`, mantendo apenas a versão com 5 argumentos (que inclui `segmento`)
+2. **Atualizar o trigger** `sync_user_role_to_aluno_turma` para passar o `segmento` do perfil como 5º argumento
+3. **Reparar os dados** da aluna Ruamma — inserir o role `user` e garantir o vínculo `aluno_turma`
 
-Não vou alterar lógica existente — apenas adicionar uma chamada `logActivity(...)` após cada ação bem-sucedida.
+### Detalhes técnicos
 
-### 4. Admin Header — Adicionar link "Atividades"
+**Migração SQL:**
+```sql
+-- 1. Dropar a versão ambígua (4 args)
+DROP FUNCTION IF EXISTS public.ensure_turma_exists(uuid, text, text, smallint);
 
-**Arquivo:** `src/components/AdminHeader.tsx`
-- Adicionar `{ title: 'Atividades', href: '/admin/atividades', icon: Activity }` ao array `navItems` (já importa `Activity`)
+-- 2. Atualizar o trigger para passar segmento
+CREATE OR REPLACE FUNCTION public.sync_user_role_to_aluno_turma()
+RETURNS trigger AS $$
+DECLARE
+  v_profile RECORD;
+  v_turma_id uuid;
+  v_ano_letivo smallint;
+BEGIN
+  IF NEW.role != 'user' THEN RETURN NEW; END IF;
+  
+  SELECT id, serie, turma, institution_id, segmento
+  INTO v_profile FROM public.profiles WHERE id = NEW.user_id;
+  
+  IF v_profile.serie IS NULL OR v_profile.turma IS NULL OR v_profile.institution_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+  
+  SELECT COALESCE(ano_letivo_atual, EXTRACT(YEAR FROM CURRENT_DATE)::smallint)
+  INTO v_ano_letivo FROM public.institution_settings
+  WHERE institution_id = v_profile.institution_id;
+  
+  IF v_ano_letivo IS NULL THEN
+    v_ano_letivo := EXTRACT(YEAR FROM CURRENT_DATE)::smallint;
+  END IF;
+  
+  v_turma_id := public.ensure_turma_exists(
+    v_profile.institution_id, v_profile.serie, v_profile.turma, 
+    v_ano_letivo, COALESCE(v_profile.segmento, 'fundamental2')
+  );
+  
+  INSERT INTO public.aluno_turma (aluno_id, turma_id, ano_letivo, ativo)
+  VALUES (v_profile.id, v_turma_id, v_ano_letivo, true)
+  ON CONFLICT (aluno_id, turma_id, ano_letivo) DO UPDATE SET ativo = true;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
-**Arquivo:** `src/components/AdminBottomNav.tsx`
-- Adicionar item de navegação correspondente
+-- 3. Reparar dados da Ruamma (e qualquer outro aluno sem role)
+INSERT INTO public.user_roles (user_id, role)
+SELECT p.id, 'user'::app_role
+FROM public.profiles p
+WHERE p.institution_id = '902876e9-b263-4c01-9013-aeef7b6d24e1'
+  AND p.segmento IN ('infantil', 'fundamental1')
+  AND NOT EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = p.id)
+  AND p.nome IS NOT NULL;
+```
 
-### 5. Rota Admin
-
-**Arquivo:** `src/App.tsx`
-- Importar `AtividadesPage` e adicionar rota `/admin/atividades` com `AdminLayout`
-
-### 6. Página — `src/pages/admin/AtividadesPage.tsx`
-
-Layout conforme especificado:
-
-- **Filtros em linha**: Tipo de ação (select), Casa (select com inteligências), Período (Hoje/7d/30d), Busca por nome
-- **4 Cards resumo**: Logins, Entregas, Mensagens, Observações — contagens do período filtrado
-- **Timeline**: Lista cronológica reversa, 20 itens por vez, "Carregar mais"
-  - Cada item: ícone colorido + horário + nome (via join com profiles) + ação + detalhes
-  - Cores: verde=login, amarelo=entrega, roxo=chat, azul=observação, laranja=avaliação
-  - Click expande detalhes (jsonb)
-- Query com filtros dinâmicos e `.range()` para paginação
-
-### 7. Visão por aluno (inline na timeline)
-
-Ao clicar no nome do aluno na timeline, navega para `/admin/pessoas/aluno/:id` (já existe). Não criarei uma nova página — os dados de log ficam acessíveis pela timeline filtrada por busca de nome.
-
----
-
-### Arquivos criados/editados
-
-| Arquivo | Ação |
-|---------|------|
-| Migração SQL | Criar tabela + RLS + índices |
-| `src/utils/logActivity.ts` | Criar |
-| `src/pages/admin/AtividadesPage.tsx` | Criar |
-| `src/contexts/AuthContext.tsx` | Editar (add log em signIn/signOut) |
-| `src/pages/aluno/MissaoDetalhePage.tsx` | Editar (add log em entrega) |
-| `src/pages/professor/AvaliarEntregaPage.tsx` | Editar (add log em avaliação) |
-| `src/pages/aluno/CanalChatPage.tsx` | Editar (add log em mensagem) |
-| `src/components/aluno/AvatarUpload.tsx` | Editar (add log em avatar) |
-| `src/components/AdminHeader.tsx` | Editar (add nav item) |
-| `src/components/AdminBottomNav.tsx` | Editar (add nav item) |
-| `src/App.tsx` | Editar (add rota) |
+### Arquivos/ações
+- 1 migração SQL (3 comandos acima)
+- Nenhum arquivo de código precisa ser alterado
 

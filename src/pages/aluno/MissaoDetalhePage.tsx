@@ -580,7 +580,16 @@ const MissaoDetalhePage = () => {
       // 6. Invalidar cache de missões pendentes
       queryClient.invalidateQueries({ queryKey: ['count-missoes-pendentes'] });
 
-      // 7. Sucesso
+      // 7. Log de atividade
+      import('@/utils/logActivity').then(({ logActivity }) =>
+        logActivity(user.id, 'missao_entrega', {
+          missao_id: missao.id,
+          missao_titulo: missao.titulo,
+          casa: missao.casa_nome,
+        })
+      );
+
+      // 8. Sucesso
       toast({
         title: "🎉 Resposta enviada!",
         description: "Sua entrega foi registrada com sucesso."
