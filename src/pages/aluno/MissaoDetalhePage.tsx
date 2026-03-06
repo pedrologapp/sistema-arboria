@@ -129,6 +129,8 @@ const MissaoDetalhePage = () => {
   
   // Estados do formulário
   const [textoResposta, setTextoResposta] = useState('');
+  const [respostasItens, setRespostasItens] = useState<Record<number, string>>({});
+  const [reflexaoResposta, setReflexaoResposta] = useState('');
   const [arquivos, setArquivos] = useState<ArquivoParaUpload[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [errosValidacao, setErrosValidacao] = useState<string[]>([]);
