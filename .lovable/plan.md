@@ -1,82 +1,58 @@
 
 
-## Fix: Alunos do Infantil/F1 não aparecem após criação
+## Plano: Canal "Liderança" por Casa
 
-### Causa raiz
+### Resumo
 
-O trigger `sync_user_role_to_aluno_turma` é disparado quando um registro é inserido na tabela `user_roles`. Dentro dele, a função `ensure_turma_exists` é chamada com 4 argumentos. Porém, existem **duas versões** dessa função no banco:
+Criar um canal `tipo = 'lideranca_casa'` por casa (8 canais), com acesso restrito a líder + coordenadores + mentor + admin. Membros comuns veem o canal com cadeado mas não acessam.
 
-```text
-ensure_turma_exists(uuid, text, text, smallint)          -- versão antiga
-ensure_turma_exists(uuid, text, text, smallint, text)    -- versão nova (com segmento)
-```
+### 1. Migração SQL
 
-Quando chamada com 4 argumentos, o Postgres não consegue decidir qual usar (erro `42725: function is not unique`). Isso faz o `INSERT` na `user_roles` falhar silenciosamente — o aluno é criado no `profiles` mas **sem role**, e como a `PessoasPage` filtra por `user_roles.role = 'user'`, o aluno não aparece.
+Inserir 8 canais na tabela `canais_casa` (um por casa) com:
+- `nome`: 'Liderança'
+- `icone`: '⚡'
+- `tipo`: 'lideranca_casa'
+- `casa_id`: 1-8
+- `ordem`: -1 (aparecer antes dos canais normais)
+- `apenas_lideranca`: true
 
-### Solução
+Criar função `pode_acessar_lideranca_casa(p_user_id uuid, p_casa_id smallint)` (SECURITY DEFINER):
+- Retorna true se:
+  - `has_role(p_user_id, 'admin')` OR
+  - Cargo `lider` ou `coordenador` ativo na `cargos_casa` para a mesma casa OR
+  - Professor mentor da casa (`professor_casa` com `eh_mentor_principal = true`)
 
-Uma migração SQL com 3 passos:
+Atualizar RLS de `canais_casa` (SELECT): incluir `tipo = 'lideranca_casa'` visível para alunos da mesma casa (todos veem, mas acesso controlado no frontend).
 
-1. **Remover a versão antiga** (4 args) da função `ensure_turma_exists`, mantendo apenas a versão com 5 argumentos (que inclui `segmento`)
-2. **Atualizar o trigger** `sync_user_role_to_aluno_turma` para passar o `segmento` do perfil como 5º argumento
-3. **Reparar os dados** da aluna Ruamma — inserir o role `user` e garantir o vínculo `aluno_turma`
+Atualizar RLS de `mensagens_canal`:
+- SELECT: adicionar condição para `lideranca_casa` usando `pode_acessar_lideranca_casa`
+- INSERT: adicionar condição para `lideranca_casa` usando `pode_acessar_lideranca_casa`
 
-### Detalhes técnicos
+### 2. Frontend — `src/pages/aluno/ChatPage.tsx`
 
-**Migração SQL:**
-```sql
--- 1. Dropar a versão ambígua (4 args)
-DROP FUNCTION IF EXISTS public.ensure_turma_exists(uuid, text, text, smallint);
+Adicionar query para buscar canal `lideranca_casa` da casa do aluno. Adicionar `useMemo` para verificar se aluno é líder ou coordenador (`isLiderancaCasa`).
 
--- 2. Atualizar o trigger para passar segmento
-CREATE OR REPLACE FUNCTION public.sync_user_role_to_aluno_turma()
-RETURNS trigger AS $$
-DECLARE
-  v_profile RECORD;
-  v_turma_id uuid;
-  v_ano_letivo smallint;
-BEGIN
-  IF NEW.role != 'user' THEN RETURN NEW; END IF;
-  
-  SELECT id, serie, turma, institution_id, segmento
-  INTO v_profile FROM public.profiles WHERE id = NEW.user_id;
-  
-  IF v_profile.serie IS NULL OR v_profile.turma IS NULL OR v_profile.institution_id IS NULL THEN
-    RETURN NEW;
-  END IF;
-  
-  SELECT COALESCE(ano_letivo_atual, EXTRACT(YEAR FROM CURRENT_DATE)::smallint)
-  INTO v_ano_letivo FROM public.institution_settings
-  WHERE institution_id = v_profile.institution_id;
-  
-  IF v_ano_letivo IS NULL THEN
-    v_ano_letivo := EXTRACT(YEAR FROM CURRENT_DATE)::smallint;
-  END IF;
-  
-  v_turma_id := public.ensure_turma_exists(
-    v_profile.institution_id, v_profile.serie, v_profile.turma, 
-    v_ano_letivo, COALESCE(v_profile.segmento, 'fundamental2')
-  );
-  
-  INSERT INTO public.aluno_turma (aluno_id, turma_id, ano_letivo, ativo)
-  VALUES (v_profile.id, v_turma_id, v_ano_letivo, true)
-  ON CONFLICT (aluno_id, turma_id, ano_letivo) DO UPDATE SET ativo = true;
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+Renderizar seção "⚡ LIDERANÇA DA CASA" entre "Canais da Diretoria" e "Canais de Texto":
+- Se `isLiderancaCasa`: canal clicável, navega para `/aluno/chat/canal/{id}`
+- Se membro comum: canal com cadeado, ao clicar mostra modal com mensagem "Este canal é exclusivo para a Liderança da Casa..."
 
--- 3. Reparar dados da Ruamma (e qualquer outro aluno sem role)
-INSERT INTO public.user_roles (user_id, role)
-SELECT p.id, 'user'::app_role
-FROM public.profiles p
-WHERE p.institution_id = '902876e9-b263-4c01-9013-aeef7b6d24e1'
-  AND p.segmento IN ('infantil', 'fundamental1')
-  AND NOT EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = p.id)
-  AND p.nome IS NOT NULL;
-```
+Criar componente `LiderancaCasaLocked` (similar ao `ConselhoLideresLocked`) com visual usando ⚡ e cor da casa.
 
-### Arquivos/ações
-- 1 migração SQL (3 comandos acima)
-- Nenhum arquivo de código precisa ser alterado
+### 3. Frontend — `src/pages/admin/AdminChatPage.tsx`
+
+Na aba "Casas", quando uma casa é selecionada, buscar também o canal `lideranca_casa` dessa casa e mostrá-lo com destaque antes dos canais normais.
+
+### 4. Frontend — `src/pages/professor/ProfessorChatPage.tsx`
+
+Buscar canal `lideranca_casa` da casa do mentor. Renderizar seção "⚡ LIDERANÇA DA CASA" antes dos "Canais de Texto", clicável (professor mentor tem acesso total de leitura e escrita).
+
+### Arquivos alterados
+
+| Arquivo | Alteração |
+|---------|-----------|
+| Migração SQL | Inserir 8 canais + função `pode_acessar_lideranca_casa` + atualizar RLS |
+| `src/components/chat/LiderancaCasaLocked.tsx` | Novo — modal de canal bloqueado |
+| `src/pages/aluno/ChatPage.tsx` | Seção "Liderança da Casa" com lógica de acesso |
+| `src/pages/admin/AdminChatPage.tsx` | Mostrar canal liderança ao visualizar canais de uma casa |
+| `src/pages/professor/ProfessorChatPage.tsx` | Seção "Liderança da Casa" com acesso total |
 
