@@ -1079,31 +1079,44 @@ const NovaMissaoPage = () => {
                 {form.titulo || 'Sem título'}
               </h4>
               
-              <p className="text-white/70">
-                {form.descricao || 'Sem descrição'}
-              </p>
+              <div className="bg-white/5 p-3 rounded-lg">
+                <p className="text-white/40 text-xs uppercase mb-1">📖 Contexto</p>
+                <p className="text-white/70">{form.contexto || 'Sem contexto'}</p>
+              </div>
               
+              {form.lente_especial && (
+                <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg">
+                  <p className="text-white/40 text-xs uppercase mb-1">🔍 Lente Especial</p>
+                  <p className="text-white/80 italic">"{form.lente_especial}"</p>
+                </div>
+              )}
+
               {form.instrucoes && (
                 <div>
-                  <p className="text-white/40 text-sm mb-2 font-medium">📋 Instruções:</p>
+                  <p className="text-white/40 text-sm mb-2 font-medium">🎯 Instrução da Missão:</p>
                   <div className="text-white/70 prose prose-invert prose-sm max-w-none">
                     <ReactMarkdown>{form.instrucoes}</ReactMarkdown>
                   </div>
                 </div>
               )}
-              
-              {form.dicas && (
+
+              {form.itens.length > 0 && (
                 <div>
-                  <p className="text-white/40 text-sm mb-2 font-medium">💡 Dicas:</p>
-                  <div className="text-white/70 prose prose-invert prose-sm max-w-none">
-                    <ReactMarkdown>{form.dicas}</ReactMarkdown>
+                  <p className="text-white/40 text-sm mb-2 font-medium">📝 Itens para Registrar:</p>
+                  <div className="space-y-2">
+                    {form.itens.map((item, i) => (
+                      <div key={i} className="bg-white/5 p-3 rounded-lg">
+                        <p className="text-white font-medium text-sm">{i + 1}. {item.nome || '(sem nome)'}</p>
+                        {item.descricao && <p className="text-white/60 text-xs mt-1">{item.descricao}</p>}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
               
               {form.reflexao && (
-                <div className="bg-white/5 p-3 rounded-lg">
-                  <p className="text-white/40 text-sm mb-1">🤔 Reflexão:</p>
+                <div className="bg-purple-500/10 border border-purple-500/20 p-3 rounded-lg">
+                  <p className="text-white/40 text-sm mb-1">💭 Reflexão Final:</p>
                   <p className="text-white/80 italic">{form.reflexao}</p>
                 </div>
               )}
