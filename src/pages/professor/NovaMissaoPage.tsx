@@ -249,8 +249,12 @@ const NovaMissaoPage = () => {
       toast.error('Digite o título da missão');
       return;
     }
-    if (!form.descricao.trim()) {
-      toast.error('Digite a descrição da missão');
+    if (!form.contexto.trim()) {
+      toast.error('Digite o contexto da missão');
+      return;
+    }
+    if (!form.instrucoes.trim()) {
+      toast.error('Digite a instrução da missão');
       return;
     }
     if (!form.data_prazo) {
@@ -314,10 +318,12 @@ const NovaMissaoPage = () => {
         
         // Conteúdo
         titulo: form.titulo.trim(),
-        descricao: form.descricao.trim(),
+        contexto: form.contexto.trim(),
+        lente_especial: form.lente_especial.trim() || null,
         instrucoes: form.instrucoes.trim() || null,
-        dicas: form.dicas.trim() || null,
+        itens: form.itens.length > 0 ? form.itens : null,
         reflexao: form.reflexao.trim() || null,
+        descricao: form.contexto.trim(), // backward compat
         
         // Configurações
         tipo: form.tipo,
