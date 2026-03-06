@@ -98,7 +98,83 @@ const getTipoConfig = (tipo: string) => {
   }
 };
 
-// Formatar bytes
+// PDF Viewer com Google Docs proxy + fallback
+const PdfViewerInline = ({ pdfUrl, pdfNome, casaColor, onBaixar }: { 
+  pdfUrl: string; pdfNome: string; casaColor: string; onBaixar: () => void 
+}) => {
+  const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
+
+  useEffect(() => {
+    setStatus('loading');
+    timerRef.current = setTimeout(() => {
+      setStatus(prev => prev === 'loading' ? 'error' : prev);
+    }, 8000);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [pdfUrl]);
+
+  if (status === 'error') {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-xl border border-white/10 bg-white/5 p-6 space-y-4"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ background: `${casaColor}20` }}>
+            <FileText className="w-6 h-6" style={{ color: casaColor }} />
+          </div>
+          <div>
+            <p className="font-semibold text-white">{pdfNome}</p>
+            <p className="text-xs text-white/50">PDF da missão</p>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <Button
+            onClick={() => window.open(pdfUrl, '_blank')}
+            className="flex-1 gap-2"
+            style={{ background: casaColor }}
+          >
+            <FileText className="w-4 h-4" /> Abrir Missão
+          </Button>
+          <Button variant="outline" onClick={onBaixar} className="gap-2 border-white/20 text-white hover:bg-white/10">
+            <Download className="w-4 h-4" /> Baixar
+          </Button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="space-y-3">
+      {status === 'loading' && (
+        <div className="rounded-xl border border-white/10 bg-white/5 flex items-center justify-center" style={{ height: '70vh', minHeight: '400px' }}>
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="w-8 h-8 animate-spin" style={{ color: casaColor }} />
+            <p className="text-white/50 text-sm">Carregando PDF...</p>
+          </div>
+        </div>
+      )}
+      <div className="rounded-xl overflow-hidden shadow-lg border border-white/10" style={{ boxShadow: `0 0 20px ${casaColor}10`, display: status === 'loading' ? 'none' : 'block' }}>
+        <iframe
+          src={googleViewerUrl}
+          className="w-full bg-white"
+          style={{ height: '70vh', minHeight: '400px' }}
+          title="PDF da Missão"
+          onLoad={() => { setStatus('loaded'); if (timerRef.current) clearTimeout(timerRef.current); }}
+        />
+      </div>
+      <button onClick={onBaixar} className="flex items-center gap-2 mx-auto text-white/50 hover:text-white/80 text-sm transition-colors">
+        <Download className="w-4 h-4" />
+        <span>Baixar PDF</span>
+      </button>
+    </motion.div>
+  );
+};
+
+
 const formatBytes = (bytes: number | null) => {
   if (!bytes) return '0 B';
   const k = 1024;
