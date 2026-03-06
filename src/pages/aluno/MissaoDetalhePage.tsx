@@ -188,6 +188,10 @@ const MissaoDetalhePage = () => {
           titulo,
           descricao,
           instrucoes,
+          contexto,
+          lente_especial,
+          itens,
+          reflexao,
           tipo,
           pontos_base,
           data_prazo,
@@ -211,12 +215,19 @@ const MissaoDetalhePage = () => {
       if (!missaoData) throw new Error('Missão não encontrada');
 
       const inteligenciaData = missaoData.casa as { nome: string; cor_hex: string; emoji: string } | null;
+      
+      // Parse itens from JSONB
+      const parsedItens = missaoData.itens ? (missaoData.itens as any as { nome: string; descricao: string }[]) : null;
 
       setMissao({
         id: missaoData.id,
         titulo: missaoData.titulo,
         descricao: missaoData.descricao,
         instrucoes: missaoData.instrucoes,
+        contexto: (missaoData as any).contexto || missaoData.descricao || null,
+        lente_especial: (missaoData as any).lente_especial || null,
+        itens: parsedItens,
+        reflexao: (missaoData as any).reflexao || null,
         tipo: missaoData.tipo as 'principal' | 'secundaria' | 'bonus',
         pontos_base: missaoData.pontos_base,
         data_prazo: missaoData.data_prazo,
