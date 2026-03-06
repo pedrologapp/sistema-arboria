@@ -53,6 +53,7 @@ interface Missao {
   status: string | null;
   arquivo_pdf_url: string | null;
   arquivo_pdf_nome: string | null;
+  data_prazo: string | null;
 }
 
 interface Inteligencia {
@@ -151,7 +152,7 @@ const MissoesPorCasa = ({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('missoes')
-        .select('id, fase_id, semana, tipo_missao, casa_id, titulo, contexto, instrucoes, pontos_base, requer_texto, requer_arquivo, status, arquivo_pdf_url, arquivo_pdf_nome')
+        .select('id, fase_id, semana, tipo_missao, casa_id, titulo, contexto, instrucoes, pontos_base, requer_texto, requer_arquivo, status, arquivo_pdf_url, arquivo_pdf_nome, data_prazo')
         .eq('fase_id', faseId)
         .eq('semana', semana)
         .eq('tipo_missao', 'individual');
@@ -193,8 +194,8 @@ const MissoesPorCasa = ({
       setTiposEntrega(tipos.length > 0 ? tipos : ['texto']);
       
       // Carregar prazo existente
-      if ((missao as any).data_prazo) {
-        const dtPrazo = new Date((missao as any).data_prazo);
+      if (missao.data_prazo) {
+        const dtPrazo = new Date(missao.data_prazo);
         setDataPrazo(format(dtPrazo, 'yyyy-MM-dd'));
         setHoraPrazo(format(dtPrazo, 'HH:mm'));
       } else {
