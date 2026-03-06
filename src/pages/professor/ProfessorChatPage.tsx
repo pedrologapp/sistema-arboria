@@ -387,6 +387,26 @@ const ProfessorChatPage = () => {
 
       <ScrollArea className="flex-1">
         <div className="space-y-6">
+          {/* Seção: Liderança da Casa */}
+          {canalLideranca && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 px-1">
+                <Zap className="w-4 h-4" style={{ color: `${casaColor}99` }} />
+                <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: `${casaColor}99` }}>
+                  Liderança da Casa
+                </h2>
+              </div>
+              <button
+                onClick={() => navigate(`/professor/chat/canal/${canalLideranca.id}`)}
+                className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/[0.06] border hover:bg-white/10 transition-all active:scale-[0.98]"
+                style={{ borderColor: `${casaColor}40` }}
+              >
+                <span className="text-lg">⚡</span>
+                <span className="text-white/90 font-medium flex-1 text-left">Liderança</span>
+              </button>
+            </div>
+          )}
+
           {/* Seção: Canais de Texto */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 px-1">
