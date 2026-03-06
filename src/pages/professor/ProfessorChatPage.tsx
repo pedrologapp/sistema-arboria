@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Hash, Users, Eye, ArrowLeft, Lock } from 'lucide-react';
+import { Search, Hash, Users, Eye, ArrowLeft, Lock, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { CasaBrasao } from '@/components/CasaBrasao';

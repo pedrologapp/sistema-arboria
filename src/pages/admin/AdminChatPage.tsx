@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Crown, Home, MessageCircle } from 'lucide-react';
+import { Crown, Home, MessageCircle, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CanalItem } from '@/components/chat/CanalItem';
@@ -35,7 +35,7 @@ const AdminChatPage = () => {
     },
   });
 
-  // Buscar canais da casa selecionada
+  // Buscar canais da casa selecionada (excluindo lideranca_casa)
   const { data: canaisCasa = [] } = useQuery({
     queryKey: ['admin-canais-casa', casaSelecionada],
     queryFn: async () => {
@@ -44,11 +44,30 @@ const AdminChatPage = () => {
         .from('canais_casa')
         .select('*')
         .eq('casa_id', casaSelecionada)
+        .neq('tipo', 'lideranca_casa')
         .order('ordem');
       return data || [];
     },
     enabled: !!casaSelecionada,
   });
+
+  // Buscar canal de liderança da casa selecionada
+  const { data: canalLideranca } = useQuery({
+    queryKey: ['admin-canal-lideranca', casaSelecionada],
+    queryFn: async () => {
+      if (!casaSelecionada) return null;
+      const { data } = await supabase
+        .from('canais_casa')
+        .select('*')
+        .eq('casa_id', casaSelecionada)
+        .eq('tipo', 'lideranca_casa')
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!casaSelecionada,
+  });
+
+  const casaAtual = casas.find(c => c.id === casaSelecionada);
 
   return (
     <div className="space-y-4">
@@ -119,18 +138,40 @@ const AdminChatPage = () => {
                 ← Voltar às casas
               </button>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">{casas.find(c => c.id === casaSelecionada)?.emoji}</span>
+                <span className="text-lg">{casaAtual?.emoji}</span>
                 <h2 className="text-white font-semibold">
-                  {casas.find(c => c.id === casaSelecionada)?.nome}
+                  {casaAtual?.nome}
                 </h2>
               </div>
+
+              {/* Canal de Liderança */}
+              {canalLideranca && (
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 px-1">
+                    <Zap className="w-4 h-4" style={{ color: `${casaAtual?.cor_hex || '#6366f1'}99` }} />
+                    <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: `${casaAtual?.cor_hex || '#6366f1'}99` }}>
+                      Liderança da Casa
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/admin/chat/canal/${canalLideranca.id}`)}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/[0.06] border hover:bg-white/10 transition-all active:scale-[0.98]"
+                    style={{ borderColor: `${casaAtual?.cor_hex || '#6366f1'}40` }}
+                  >
+                    <span className="text-lg">⚡</span>
+                    <span className="text-white/90 font-medium flex-1 text-left">Liderança</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Canais normais */}
               <div className="space-y-1">
                 {canaisCasa.map((canal) => (
                   <CanalItem
                     key={canal.id}
                     canal={canal}
                     onClick={() => navigate(`/admin/chat/canal/${canal.id}`)}
-                    casaColor={casas.find(c => c.id === casaSelecionada)?.cor_hex}
+                    casaColor={casaAtual?.cor_hex}
                   />
                 ))}
                 {canaisCasa.length === 0 && (

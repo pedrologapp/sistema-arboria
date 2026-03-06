@@ -655,6 +655,7 @@ const ChatPage = () => {
 
       {/* Modal de canal bloqueado */}
       <ConselhoLideresLocked open={showLockedModal} onOpenChange={setShowLockedModal} />
+      <LiderancaCasaLocked open={showLiderancaLockedModal} onOpenChange={setShowLiderancaLockedModal} casaColor={casaColor} />
     </div>
   );
 };
