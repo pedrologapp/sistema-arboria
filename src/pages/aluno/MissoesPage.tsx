@@ -82,13 +82,20 @@ const MissoesPage = () => {
 
       const { data: fases, error: fasesError } = await query;
 
-      if (fasesError) throw fasesError;
+      // Deduplicate: if same numero_fase has both serie-specific and serie=null, prefer specific
+      const fasesDedup = new Map<number, typeof fases extends (infer T)[] ? T : never>();
+      for (const fase of (fases || [])) {
+        const existing = fasesDedup.get(fase.numero_fase);
+        if (!existing || (fase.serie !== null && existing.serie === null)) {
+          fasesDedup.set(fase.numero_fase, fase);
+        }
+      }
 
       // Determinar status pela data atual
       const hoje = new Date();
       hoje.setHours(12, 0, 0, 0);
       
-      const itensLista: ItemFase[] = (fases || []).map(fase => {
+      const itensLista: ItemFase[] = Array.from(fasesDedup.values()).map(fase => {
         const inteligencia = inteligencias?.find(i => i.id === fase.inteligencia_id);
         if (!inteligencia) return null;
         
