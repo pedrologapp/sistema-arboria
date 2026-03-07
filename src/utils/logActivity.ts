@@ -22,10 +22,15 @@ export async function logActivity(
   details: Record<string, any> = {}
 ) {
   try {
-    await supabase.from('activity_logs' as any).insert({
-      user_id: userId,
-      action,
-      details: { ...details, device: getDevice() },
+    await supabase.functions.invoke('log-activity', {
+      body: {
+        action,
+        details: {
+          ...details,
+          device: getDevice(),
+          user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+        },
+      },
     });
   } catch (e) {
     // Fire-and-forget: never block the user flow

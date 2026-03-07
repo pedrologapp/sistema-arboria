@@ -53,3 +53,6 @@ verify_jwt = false
 
 [functions.reset-aluno-dados]
 verify_jwt = false
+
+[functions.log-activity]
+verify_jwt = false
