@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import ConfirmarObservacaoModal from '@/components/professor/circulo/ConfirmarObservacaoModal';
 import { ObservacaoPersonalizadaModal } from '@/components/professor/circulo/ObservacaoPersonalizadaModal';
+import { logActivity } from '@/utils/logActivity';
 import { BannerObservarVsMapa } from '@/components/professor/circulo/BannerObservarVsMapa';
 
 interface Sinal {
@@ -158,6 +159,11 @@ const CirculoRegistrarPage = () => {
 
       if (error) throw error;
 
+      logActivity(profile.id, 'observacao_criada', {
+        aluno_id: aluno.id,
+        aluno_nome: aluno.full_name || aluno.nome,
+        sinal: selectedSinal.label_pt,
+      });
       toast.success('Observação registrada!');
       setModalOpen(false);
       setSelectedSinal(null);
@@ -240,6 +246,11 @@ const CirculoRegistrarPage = () => {
 
       if (error) throw error;
 
+      logActivity(profile.id, 'observacao_criada', {
+        aluno_id: aluno.id,
+        aluno_nome: aluno.full_name || aluno.nome,
+        tipo: 'personalizada',
+      });
       toast.success('Observação personalizada registrada!');
       setModalPersonalizadoOpen(false);
       
