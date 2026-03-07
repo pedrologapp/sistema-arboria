@@ -37,6 +37,7 @@ interface ActivityLog {
   action: string;
   details: Record<string, any>;
   created_at: string;
+  ip_address: string | null;
   profiles?: {
     full_name: string | null;
     avatar_url: string | null;
@@ -378,9 +379,18 @@ const AtividadesPage = () => {
                       <div className="ml-11 mb-3 p-3 rounded-lg bg-white/5 border border-white/10 text-xs space-y-1">
                         <p className="text-white/50">📅 {fullDate}</p>
                         <p className="text-white/50">🏷️ Ação: <span className="text-white/70">{config.label}</span></p>
-                        {log.details && Object.keys(log.details).length > 0 && (
+                        {log.ip_address && (
+                          <p className="text-white/50">🌐 IP: <span className="text-white/70 font-mono">{log.ip_address}</span></p>
+                        )}
+                        {log.details?.device && (
+                          <p className="text-white/50">📱 Dispositivo: <span className="text-white/70">{log.details.device}</span></p>
+                        )}
+                        {log.details?.user_agent && (
+                          <p className="text-white/50">🖥️ Navegador: <span className="text-white/70 break-all">{log.details.user_agent}</span></p>
+                        )}
+                        {log.details && Object.keys(log.details).filter(k => !['device', 'user_agent'].includes(k)).length > 0 && (
                           <pre className="text-white/40 mt-2 overflow-x-auto whitespace-pre-wrap break-all">
-                            {JSON.stringify(log.details, null, 2)}
+                            {JSON.stringify(Object.fromEntries(Object.entries(log.details).filter(([k]) => !['device', 'user_agent'].includes(k))), null, 2)}
                           </pre>
                         )}
                       </div>
