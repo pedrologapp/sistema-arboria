@@ -8,6 +8,7 @@ import { ArrowLeft, Eye, X, Search, Upload, FileText, ChevronDown, ChevronUp } f
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import { CasaBrasao } from '@/components/CasaBrasao';
+import { logActivity } from '@/utils/logActivity';
 
 interface MissaoItem {
   nome: string;
@@ -348,6 +349,9 @@ const NovaMissaoPage = () => {
         }
       }
 
+      logActivity(profile.id, 'missao_criada', {
+        missao_titulo: form.titulo,
+      });
       toast.success(
         form.liberar_agora 
           ? 'Missão criada e liberada!' 
