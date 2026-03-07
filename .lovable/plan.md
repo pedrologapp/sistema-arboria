@@ -1,34 +1,49 @@
 
 
-## Plano: Deletar mensagens de Adryan Samuel dos canais
+## Plano: Integrar logActivity nas ações que faltam
 
-### Dados encontrados
+### Diagnóstico
 
-Adryan Samuel da Silva Dantas (ID: `84938726-22bb-48fe-9263-4a20cc2af164`) tem **2 mensagens** em canais de chat:
+O banco tem apenas **16 logs no total**. O `logActivity` só está integrado em:
+- Login/Logout (AuthContext)
+- Chat mensagem (CanalChatPage)
+- Entrega de missão (MissaoDetalhePage)
+- Avaliação de entrega (AvaliarEntregaPage)
+- Avatar atualizado (AvatarUpload)
 
-| Mensagem | Canal | Data |
-|----------|-------|------|
-| "Oi" | `fdc2dc7d...` | 10/02/2026 |
-| "Estou com uma duvida na missao semanal da linguistica" | `14546d75...` | 10/02/2026 |
+**Faltam integrações em:**
+- Registro de observações (CirculoRegistrarPage, CirculoRegistrarMultiplosPage)
+- Criação de missões (NovaMissaoPage/EditarMissaoPage)
 
-Não há mensagens privadas (DMs) dele.
+Além disso, os 14 logs de `observacao_criada` existentes vieram provavelmente de um backfill manual, não do código.
 
-### Ação
+### Solução
 
-Executar DELETE no banco de dados para remover as 2 mensagens:
-
-```sql
-DELETE FROM mensagens_canal
-WHERE autor_id = '84938726-22bb-48fe-9263-4a20cc2af164';
+**1. Adicionar logActivity em CirculoRegistrarPage.tsx** (após insert de observação com sucesso)
+```typescript
+logActivity(profile.id, 'observacao_criada', {
+  aluno_id: aluno.id,
+  aluno_nome: aluno.full_name || aluno.nome,
+});
 ```
 
-Também verificar e limpar activity_logs relacionados, se houver:
-
-```sql
-DELETE FROM activity_logs
-WHERE user_id = '84938726-22bb-48fe-9263-4a20cc2af164'
-  AND action = 'chat_mensagem';
+**2. Adicionar logActivity em CirculoRegistrarMultiplosPage.tsx** (após insert em massa)
+```typescript
+logActivity(profile.id, 'observacao_criada', {
+  quantidade: observacoes.length,
+});
 ```
 
-Nenhuma alteração de código necessária.
+**3. Adicionar logActivity em NovaMissaoPage.tsx** (após criação de missão)
+```typescript
+logActivity(user.id, 'missao_criada', {
+  missao_titulo: titulo,
+});
+```
+
+**4. Opcionalmente: criar trigger no banco** para garantir que TODA observação inserida gere um log automaticamente, sem depender do frontend. Isso seria mais robusto.
+
+### Abordagem recomendada
+
+Integrar via código frontend nos 3 arquivos acima. Rápido e consistente com o padrão já usado no projeto.
 
