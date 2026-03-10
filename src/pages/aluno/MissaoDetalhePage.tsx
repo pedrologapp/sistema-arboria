@@ -482,14 +482,9 @@ const MissaoDetalhePage = () => {
   const validar = (): string[] => {
     const erros: string[] = [];
 
-    // Pelo menos texto OU arquivo
-    if (!textoResposta.trim() && arquivos.length === 0) {
-      erros.push('Envie pelo menos um arquivo ou escreva um comentário');
-    }
-
-    // Arquivo obrigatório se a missão exigir
-    if (missao?.requer_arquivo && arquivos.length === 0) {
-      erros.push('É necessário anexar pelo menos um arquivo');
+    // Texto é obrigatório
+    if (!textoResposta.trim()) {
+      erros.push('Escreva sua resposta antes de enviar');
     }
 
     return erros;
