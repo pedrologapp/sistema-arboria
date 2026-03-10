@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { calcularSemanaAtualDaFase } from '@/utils/timezone';
 
 type Segmento = 'infantil' | 'fundamental1' | 'fundamental2';
 
