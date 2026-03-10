@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
+import { calcularSemanaAtualDaFase } from '@/utils/timezone';
 
 interface Profile {
   id: string;
