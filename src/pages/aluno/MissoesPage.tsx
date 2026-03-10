@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
+import { calcularSemanaAtualDaFase } from '@/utils/timezone';
 import { useStudent } from '@/contexts/StudentContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,7 @@ interface ItemFase {
   inteligencia: Inteligencia;
   fase: Fase | null;
   status: 'futura' | 'atual' | 'passada';
+  semanaCalculada: number;
 }
 
 const MissoesPage = () => {
@@ -113,7 +115,8 @@ const MissoesPage = () => {
         return {
           inteligencia,
           fase,
-          status
+          status,
+          semanaCalculada: fase.data_inicio ? calcularSemanaAtualDaFase(fase.data_inicio, fase.data_fim) : 1
         };
       }).filter(Boolean) as ItemFase[];
 
@@ -323,7 +326,7 @@ const MissoesPage = () => {
                     isPassada && 'text-[#64748B]'
                   )}>
                     {isFutura && 'Fase futura'}
-                    {isAtual && item.fase && `Fase atual — Semana ${item.fase.semana_atual || 1} de 4`}
+                    {isAtual && item.fase && `Fase atual — Semana ${item.semanaCalculada || 1} de 4`}
                     {isPassada && 'Concluída'}
                   </p>
                 </div>

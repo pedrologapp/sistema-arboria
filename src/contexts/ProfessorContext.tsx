@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { calcularSemanaAtualDaFase } from '@/utils/timezone';
 
 type Segmento = 'infantil' | 'fundamental1' | 'fundamental2';
 
@@ -262,7 +263,7 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
           setFaseAtual({
             id: faseData.id,
             numero_fase: faseData.numero_fase,
-            semana_atual: faseData.semana_atual,
+            semana_atual: calcularSemanaAtualDaFase(faseData.data_inicio, faseData.data_fim),
             data_inicio: faseData.data_inicio,
             data_fim: faseData.data_fim,
             inteligencia: faseData.inteligencias as unknown as Inteligencia || null

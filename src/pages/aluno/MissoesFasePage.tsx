@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { useStudent } from '@/contexts/StudentContext';
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { calcularSemanaAtualDaFase } from '@/utils/timezone';
 import { toast } from 'sonner';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
@@ -71,6 +72,8 @@ const MissoesFasePage = () => {
           numero_fase,
           semana_atual,
           ativo,
+          data_inicio,
+          data_fim,
           inteligencia:inteligencias!inteligencia_id (
             id, nome, cor_hex, brasao_url, emoji
           )
@@ -84,10 +87,15 @@ const MissoesFasePage = () => {
         return;
       }
 
+      // Calculate semana_atual from dates instead of using DB field
+      const semanaCalculada = faseData.data_inicio 
+        ? calcularSemanaAtualDaFase(faseData.data_inicio, faseData.data_fim)
+        : (faseData.semana_atual || 1);
+
       const faseFormatada: FaseData = {
         id: faseData.id,
         numero_fase: faseData.numero_fase,
-        semana_atual: faseData.semana_atual,
+        semana_atual: semanaCalculada,
         ativo: faseData.ativo,
         inteligencia: faseData.inteligencia as unknown as Inteligencia
       };
