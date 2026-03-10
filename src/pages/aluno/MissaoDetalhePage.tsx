@@ -482,14 +482,9 @@ const MissaoDetalhePage = () => {
   const validar = (): string[] => {
     const erros: string[] = [];
 
-    // Pelo menos texto OU arquivo
-    if (!textoResposta.trim() && arquivos.length === 0) {
-      erros.push('Envie pelo menos um arquivo ou escreva um comentário');
-    }
-
-    // Arquivo obrigatório se a missão exigir
-    if (missao?.requer_arquivo && arquivos.length === 0) {
-      erros.push('É necessário anexar pelo menos um arquivo');
+    // Texto é obrigatório
+    if (!textoResposta.trim()) {
+      erros.push('Escreva sua resposta antes de enviar');
     }
 
     return erros;
@@ -1063,7 +1058,7 @@ const MissaoDetalhePage = () => {
 
             {/* Instrução */}
             <p className="text-white/50 text-sm">
-              Envie sua entrega: fotos, arquivos ou texto.
+              Escreva sua resposta. Você também pode anexar fotos ou arquivos.
             </p>
 
             {/* Botões de upload em linha */}
@@ -1148,7 +1143,7 @@ const MissaoDetalhePage = () => {
 
             {/* Textarea comentário */}
             <div className="space-y-2">
-              <label className="text-sm text-white/50">Comentário (opcional)</label>
+              <label className="text-sm text-white/50">Sua resposta <span className="text-red-400">*</span></label>
               <div className="relative">
                 <Textarea
                   value={textoResposta}
@@ -1183,7 +1178,7 @@ const MissaoDetalhePage = () => {
         <div className="mt-4">
           <Button
             onClick={handleEnviar}
-            disabled={enviando}
+            disabled={enviando || !textoResposta.trim()}
             className="w-full h-12 text-base font-semibold rounded-xl shadow-lg"
             style={{ 
               backgroundColor: casaColor,
