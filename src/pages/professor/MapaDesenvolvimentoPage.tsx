@@ -102,6 +102,7 @@ const MapaDesenvolvimentoPage = () => {
   const { data: faseF2 } = useQuery({
     queryKey: ['mapa-fase-f2', selectedSerieF2, profile?.institution_id],
     queryFn: async () => {
+      const hoje = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
         .from('fases')
         .select(`id, numero_fase, semana_atual, data_inicio, data_fim,
@@ -109,14 +110,15 @@ const MapaDesenvolvimentoPage = () => {
         .eq('institution_id', profile?.institution_id!)
         .eq('segmento', 'fundamental2')
         .eq('serie', parseInt(selectedSerieF2))
-        .eq('ativo', true)
+        .lte('data_inicio', hoje)
+        .gte('data_fim', hoje)
         .maybeSingle();
       if (error) throw error;
       if (!data) return null;
       return {
         id: data.id,
         numero_fase: data.numero_fase,
-        semana_atual: data.semana_atual,
+        semana_atual: calcularSemanaAtualDaFase(data.data_inicio, data.data_fim),
         data_inicio: data.data_inicio,
         data_fim: data.data_fim,
         inteligencia: data.inteligencias as any
