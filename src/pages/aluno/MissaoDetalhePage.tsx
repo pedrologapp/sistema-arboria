@@ -1058,7 +1058,7 @@ const MissaoDetalhePage = () => {
 
             {/* Instrução */}
             <p className="text-white/50 text-sm">
-              Envie sua entrega: fotos, arquivos ou texto.
+              Escreva sua resposta. Você também pode anexar fotos ou arquivos.
             </p>
 
             {/* Botões de upload em linha */}
