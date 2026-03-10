@@ -199,9 +199,10 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
           }
         }
 
-        let faseQuery = supabase
-          .from('fases')
-          .select(`
+        // Determinar fase atual baseada nas datas (não no flag ativo)
+        const hoje = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+        const faseSelectFields = `
             id,
             numero_fase,
             semana_atual,
@@ -216,9 +217,14 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
               brasao_url,
               descricao
             )
-          `)
+          `;
+
+        let faseQuery = supabase
+          .from('fases')
+          .select(faseSelectFields)
           .eq('institution_id', profileData.institution_id)
-          .eq('ativo', true);
+          .lte('data_inicio', hoje)
+          .gte('data_fim', hoje);
 
         // Filter by serie if professor has turmas
         if (serieDosProfessor != null) {
@@ -228,7 +234,27 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
           faseQuery = faseQuery.eq('segmento', profileData.segmento);
         }
 
-        const { data: faseData, error: faseError } = await faseQuery.order('numero_fase', { ascending: true }).limit(1).maybeSingle();
+        let { data: faseData, error: faseError } = await faseQuery.order('numero_fase', { ascending: true }).limit(1).maybeSingle();
+
+        // Fallback: se nenhuma fase cobre hoje, buscar a próxima fase futura
+        if (!faseData && !faseError) {
+          let fallbackQuery = supabase
+            .from('fases')
+            .select(faseSelectFields)
+            .eq('institution_id', profileData.institution_id)
+            .gt('data_inicio', hoje);
+
+          if (serieDosProfessor != null) {
+            fallbackQuery = fallbackQuery.eq('serie', serieDosProfessor);
+          }
+          if (profileData.segmento) {
+            fallbackQuery = fallbackQuery.eq('segmento', profileData.segmento);
+          }
+
+          const fallback = await fallbackQuery.order('data_inicio', { ascending: true }).limit(1).maybeSingle();
+          faseData = fallback.data;
+          faseError = fallback.error;
+        }
 
         if (faseError) {
           console.error('Error fetching fase atual:', faseError);
