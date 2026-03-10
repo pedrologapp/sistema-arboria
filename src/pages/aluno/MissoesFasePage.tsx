@@ -72,6 +72,8 @@ const MissoesFasePage = () => {
           numero_fase,
           semana_atual,
           ativo,
+          data_inicio,
+          data_fim,
           inteligencia:inteligencias!inteligencia_id (
             id, nome, cor_hex, brasao_url, emoji
           )
