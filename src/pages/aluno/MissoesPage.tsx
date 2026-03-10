@@ -115,7 +115,8 @@ const MissoesPage = () => {
         return {
           inteligencia,
           fase,
-          status
+          status,
+          semanaCalculada: fase.data_inicio ? calcularSemanaAtualDaFase(fase.data_inicio, fase.data_fim) : 1
         };
       }).filter(Boolean) as ItemFase[];
 

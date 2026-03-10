@@ -84,10 +84,15 @@ const MissoesFasePage = () => {
         return;
       }
 
+      // Calculate semana_atual from dates instead of using DB field
+      const semanaCalculada = faseData.data_inicio 
+        ? calcularSemanaAtualDaFase((faseData as any).data_inicio, (faseData as any).data_fim)
+        : (faseData.semana_atual || 1);
+
       const faseFormatada: FaseData = {
         id: faseData.id,
         numero_fase: faseData.numero_fase,
-        semana_atual: faseData.semana_atual,
+        semana_atual: semanaCalculada,
         ativo: faseData.ativo,
         inteligencia: faseData.inteligencia as unknown as Inteligencia
       };
