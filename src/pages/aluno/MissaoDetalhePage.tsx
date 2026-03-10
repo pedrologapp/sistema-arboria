@@ -1178,7 +1178,7 @@ const MissaoDetalhePage = () => {
         <div className="mt-4">
           <Button
             onClick={handleEnviar}
-            disabled={enviando}
+            disabled={enviando || !textoResposta.trim()}
             className="w-full h-12 text-base font-semibold rounded-xl shadow-lg"
             style={{ 
               backgroundColor: casaColor,
