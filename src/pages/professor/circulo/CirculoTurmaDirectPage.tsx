@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Users2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { calcularSemanaAtualDaFase } from '@/utils/timezone';
+import HistoricoObservacoesTurma from '@/components/professor/circulo/HistoricoObservacoesTurma';
 
 interface Aluno {
   id: string;
@@ -16,12 +19,18 @@ interface Aluno {
 const CirculoTurmaDirectPage = () => {
   const { turmaId } = useParams<{ turmaId: string }>();
   const navigate = useNavigate();
-  const { turmasVinculadas } = useProfessor();
+  const { turmasVinculadas, faseAtual } = useProfessor();
 
-  // Encontrar dados da turma
   const turmaInfo = turmasVinculadas?.find(t => t.id === turmaId);
 
-  // Buscar alunos da turma
+  // Calculate current week from phase
+  const semanaAtualCalc = faseAtual
+    ? calcularSemanaAtualDaFase(faseAtual.data_inicio, faseAtual.data_fim)
+    : 1;
+
+  const [semanaSelecionada, setSemanaSelecionada] = useState<number | null>(semanaAtualCalc || 1);
+
+  // Fetch students
   const { data: alunos, isLoading } = useQuery({
     queryKey: ['alunos-turma-direta', turmaId],
     queryFn: async (): Promise<Aluno[]> => {
@@ -53,14 +62,10 @@ const CirculoTurmaDirectPage = () => {
         const p = at.profiles as any;
         const primeiroNome = p.nome || p.full_name?.split(' ')[0] || 'Aluno';
         const sobrenome = p.sobrenome || p.full_name?.split(' ').slice(1).join(' ') || '';
-        
-        // Nome abreviado: Primeiro Nome + Inicial do sobrenome
-        const nomeAbreviado = sobrenome 
+        const nomeAbreviado = sobrenome
           ? `${primeiroNome} ${sobrenome.charAt(0).toUpperCase()}.`
           : primeiroNome;
-        
-        // Iniciais para avatar
-        const iniciais = primeiroNome.charAt(0).toUpperCase() + 
+        const iniciais = primeiroNome.charAt(0).toUpperCase() +
           (sobrenome ? sobrenome.charAt(0).toUpperCase() : '');
 
         return {
@@ -79,9 +84,11 @@ const CirculoTurmaDirectPage = () => {
     navigate(`/professor/circulo/aluno/${alunoId}`);
   };
 
+  const semanas = [1, 2, 3, 4];
+
   return (
     <div className="space-y-5 pt-4">
-      {/* Header com voltar e botão Selecionar */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
@@ -94,8 +101,6 @@ const CirculoTurmaDirectPage = () => {
             {turmaInfo?.nome || 'Turma'}
           </h1>
         </div>
-        
-        {/* Botão Selecionar (futuro) */}
         <button
           className="flex items-center gap-2 px-3 py-2 rounded-lg
             bg-white/5 hover:bg-white/10 transition-colors
@@ -118,7 +123,7 @@ const CirculoTurmaDirectPage = () => {
         </div>
       )}
 
-      {/* Grid de Alunos */}
+      {/* Student Grid */}
       {!isLoading && alunos && alunos.length > 0 && (
         <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
           {alunos.map((aluno) => (
@@ -126,14 +131,12 @@ const CirculoTurmaDirectPage = () => {
               key={aluno.id}
               onClick={() => handleAlunoClick(aluno.id)}
               className="flex flex-col items-center gap-1 p-1.5 rounded-xl
-                hover:bg-white/5 transition-all duration-200 
+                hover:bg-white/5 transition-all duration-200
                 active:scale-95 group"
             >
               <Avatar className="h-14 w-14 ring-2 ring-transparent group-hover:ring-white/20 transition-all">
                 <AvatarImage src={aluno.avatarUrl} className="object-cover" />
-                <AvatarFallback 
-                  className="text-white text-base font-semibold bg-[#1e3a5f]"
-                >
+                <AvatarFallback className="text-white text-base font-semibold bg-[#1e3a5f]">
                   {aluno.iniciais}
                 </AvatarFallback>
               </Avatar>
@@ -151,6 +154,57 @@ const CirculoTurmaDirectPage = () => {
           <Users2 className="w-12 h-12 text-white/20 mx-auto mb-4" />
           <p className="text-white/50">Nenhum aluno encontrado nesta turma</p>
         </div>
+      )}
+
+      {/* Week Selector S1-S4 + Todas */}
+      {faseAtual && (
+        <div className="flex items-center gap-2">
+          {semanas.map(s => {
+            const isAtual = s === semanaAtualCalc;
+            const isFuturo = s > semanaAtualCalc;
+            const isSelecionada = semanaSelecionada === s;
+
+            return (
+              <button
+                key={s}
+                disabled={isFuturo}
+                onClick={() => setSemanaSelecionada(s)}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all
+                  ${isSelecionada
+                    ? 'bg-white/15 text-white ring-1 ring-white/30'
+                    : isAtual
+                      ? 'bg-white/8 text-white/70 hover:bg-white/12'
+                      : isFuturo
+                        ? 'bg-white/3 text-white/20 cursor-not-allowed'
+                        : 'bg-white/5 text-white/50 hover:bg-white/10'
+                  }`}
+              >
+                S{s}
+              </button>
+            );
+          })}
+          <button
+            onClick={() => setSemanaSelecionada(null)}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all
+              ${semanaSelecionada === null
+                ? 'bg-white/15 text-white ring-1 ring-white/30'
+                : 'bg-white/5 text-white/50 hover:bg-white/10'
+              }`}
+          >
+            Todas
+          </button>
+        </div>
+      )}
+
+      {/* Observation History */}
+      {faseAtual && turmaId && alunos && alunos.length > 0 && (
+        <HistoricoObservacoesTurma
+          turmaId={turmaId}
+          faseId={faseAtual.id}
+          semanaSelecionada={semanaSelecionada}
+          dataInicioFase={faseAtual.data_inicio}
+          alunos={alunos}
+        />
       )}
     </div>
   );
