@@ -122,6 +122,7 @@ const HistoricoObservacoesTurma = ({
           {obsFiltradas.map((obs: any) => {
             const sinal = obs.sinais;
             const profile = obs.profiles;
+            if (!sinal || !profile) return null;
             const nomeAluno = profile.full_name ||
               [profile.nome, profile.sobrenome].filter(Boolean).join(' ') || 'Aluno';
             const primeiroNome = profile.nome || profile.full_name?.split(' ')[0] || 'Aluno';
