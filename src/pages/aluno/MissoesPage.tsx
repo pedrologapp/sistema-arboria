@@ -323,7 +323,7 @@ const MissoesPage = () => {
                     isPassada && 'text-[#64748B]'
                   )}>
                     {isFutura && 'Fase futura'}
-                    {isAtual && item.fase && `Fase atual — Semana ${item.fase.semana_atual || 1} de 4`}
+                    {isAtual && item.fase && `Fase atual — Semana ${item.semanaCalculada || 1} de 4`}
                     {isPassada && 'Concluída'}
                   </p>
                 </div>

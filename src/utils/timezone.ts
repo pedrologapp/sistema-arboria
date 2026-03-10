@@ -86,6 +86,24 @@ export const calcularSemanaAtual = (dataInicio: string, dataFim: string): number
   return Math.min(semana, 4);
 };
 
+// Calcular semana atual de uma fase baseado nas datas (1-4)
+// S1: dia 0-6, S2: dia 7-13, S3: dia 14-20, S4: dia 21+
+export const calcularSemanaAtualDaFase = (dataInicio: string, dataFim: string): number => {
+  const agora = agoraBrasil();
+  const inicio = parseDataLocal(dataInicio);
+  const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  const inicioData = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
+
+  if (hoje < inicioData) return 0; // fase não começou
+
+  const diffDias = Math.floor((hoje.getTime() - inicioData.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDias <= 6) return 1;
+  if (diffDias <= 13) return 2;
+  if (diffDias <= 20) return 3;
+  return 4; // dia 21+ até data_fim
+};
+
 // Obter início do dia no timezone Brasil
 export const inicioDoDiaBrasil = (data?: Date): Date => {
   const d = data ? new Date(data) : agoraBrasil();
