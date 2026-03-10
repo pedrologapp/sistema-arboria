@@ -1143,7 +1143,7 @@ const MissaoDetalhePage = () => {
 
             {/* Textarea comentário */}
             <div className="space-y-2">
-              <label className="text-sm text-white/50">Comentário (opcional)</label>
+              <label className="text-sm text-white/50">Sua resposta <span className="text-red-400">*</span></label>
               <div className="relative">
                 <Textarea
                   value={textoResposta}
