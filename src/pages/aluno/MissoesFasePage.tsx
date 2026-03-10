@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { useStudent } from '@/contexts/StudentContext';
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { calcularSemanaAtualDaFase } from '@/utils/timezone';
 import { toast } from 'sonner';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
