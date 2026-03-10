@@ -40,6 +40,7 @@ interface ItemFase {
   inteligencia: Inteligencia;
   fase: Fase | null;
   status: 'futura' | 'atual' | 'passada';
+  semanaCalculada: number;
 }
 
 const MissoesPage = () => {
