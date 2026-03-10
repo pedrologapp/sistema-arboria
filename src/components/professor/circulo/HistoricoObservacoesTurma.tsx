@@ -54,12 +54,12 @@ const HistoricoObservacoesTurma = ({
           observacao_texto,
           created_at,
           sinal_id,
-          sinais!inner (
+          sinais (
             emoji,
             label_pt,
             valencia
           ),
-          profiles!inner (
+          profiles!observacoes_aluno_id_fkey (
             full_name,
             nome,
             sobrenome
