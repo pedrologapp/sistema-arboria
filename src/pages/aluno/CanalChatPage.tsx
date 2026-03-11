@@ -7,6 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
 import { useEffect, useRef, useMemo } from 'react';
 import { MensagemBubble } from '@/components/chat/MensagemBubble';
+import { DateSeparator } from '@/components/chat/DateSeparator';
+import { format } from 'date-fns';
 import { MensagemFixada } from '@/components/chat/MensagemFixada';
 import { ChatInput } from '@/components/chat/ChatInput';
 
@@ -266,15 +268,22 @@ const CanalChatPage = () => {
               </p>
             </div>
           ) : (
-            mensagensNormais.map((msg, index) => (
-              <MensagemBubble
-                key={msg.id}
-                mensagem={msg}
-                isMe={msg.autor?.id === profile?.id}
-                casaColor={casaColor}
-                agruparComAnterior={deveAgrupar(msg, mensagensNormais[index - 1] || null)}
-              />
-            ))
+            mensagensNormais.map((msg, index) => {
+              const dataAtual = format(new Date(msg.created_at), 'yyyy-MM-dd');
+              const dataAnterior = index > 0 ? format(new Date(mensagensNormais[index - 1].created_at), 'yyyy-MM-dd') : null;
+              const mostrarData = dataAtual !== dataAnterior;
+              return (
+                <div key={msg.id}>
+                  {mostrarData && <DateSeparator date={msg.created_at} />}
+                  <MensagemBubble
+                    mensagem={msg}
+                    isMe={msg.autor?.id === profile?.id}
+                    casaColor={casaColor}
+                    agruparComAnterior={!mostrarData && deveAgrupar(msg, mensagensNormais[index - 1] || null)}
+                  />
+                </div>
+              );
+            })
           )}
           <div ref={bottomRef} />
         </div>
