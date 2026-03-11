@@ -7,6 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
 import { useEffect, useRef, useMemo } from 'react';
 import { MensagemBubble } from '@/components/chat/MensagemBubble';
+import { DateSeparator } from '@/components/chat/DateSeparator';
+import { format } from 'date-fns';
 import { MensagemFixada } from '@/components/chat/MensagemFixada';
 import { ChatInput } from '@/components/chat/ChatInput';
 
