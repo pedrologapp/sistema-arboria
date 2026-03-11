@@ -8,6 +8,8 @@ import { useProfessor } from '@/contexts/ProfessorContext';
 import { useEffect, useRef, useMemo } from 'react';
 import { MensagemBubble } from '@/components/chat/MensagemBubble';
 import { MensagemFixada } from '@/components/chat/MensagemFixada';
+import { DateSeparator } from '@/components/chat/DateSeparator';
+import { format } from 'date-fns';
 
 const ProfessorCanalViewPage = () => {
   const { canalId } = useParams();
