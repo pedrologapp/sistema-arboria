@@ -221,15 +221,22 @@ const ProfessorCanalViewPage = () => {
               </p>
             </div>
           ) : (
-            mensagensNormais.map((msg, index) => (
-              <MensagemBubble
-                key={msg.id}
-                mensagem={msg}
-                isMe={false}
-                casaColor={casaColor}
-                agruparComAnterior={deveAgrupar(msg, mensagensNormais[index - 1] || null)}
-              />
-            ))
+            mensagensNormais.map((msg, index) => {
+              const dataAtual = format(new Date(msg.created_at), 'yyyy-MM-dd');
+              const dataAnterior = index > 0 ? format(new Date(mensagensNormais[index - 1].created_at), 'yyyy-MM-dd') : null;
+              const mostrarData = dataAtual !== dataAnterior;
+              return (
+                <div key={msg.id}>
+                  {mostrarData && <DateSeparator date={msg.created_at} />}
+                  <MensagemBubble
+                    mensagem={msg}
+                    isMe={false}
+                    casaColor={casaColor}
+                    agruparComAnterior={!mostrarData && deveAgrupar(msg, mensagensNormais[index - 1] || null)}
+                  />
+                </div>
+              );
+            })
           )}
           <div ref={bottomRef} />
         </div>

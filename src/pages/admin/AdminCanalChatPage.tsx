@@ -204,16 +204,21 @@ const AdminCanalChatPage = () => {
             mensagensNormais.map((msg, index) => {
               const autorCasa = isConselho ? (msg.autor as any)?.casa : null;
               const msgCasaColor = autorCasa?.cor_hex || casaColor;
+              const dataAtual = format(new Date(msg.created_at), 'yyyy-MM-dd');
+              const dataAnterior = index > 0 ? format(new Date(mensagensNormais[index - 1].created_at), 'yyyy-MM-dd') : null;
+              const mostrarData = dataAtual !== dataAnterior;
 
               return (
-                <MensagemBubble
-                  key={msg.id}
-                  mensagem={msg}
-                  isMe={msg.autor?.id === profile?.id}
-                  casaColor={msgCasaColor}
-                  agruparComAnterior={deveAgrupar(msg, mensagensNormais[index - 1] || null)}
-                  casaBadge={isConselho ? { nome: autorCasa?.nome, emoji: autorCasa?.emoji, cor: autorCasa?.cor_hex } : undefined}
-                />
+                <div key={msg.id}>
+                  {mostrarData && <DateSeparator date={msg.created_at} />}
+                  <MensagemBubble
+                    mensagem={msg}
+                    isMe={msg.autor?.id === profile?.id}
+                    casaColor={msgCasaColor}
+                    agruparComAnterior={!mostrarData && deveAgrupar(msg, mensagensNormais[index - 1] || null)}
+                    casaBadge={isConselho ? { nome: autorCasa?.nome, emoji: autorCasa?.emoji, cor: autorCasa?.cor_hex } : undefined}
+                  />
+                </div>
               );
             })
           )}
