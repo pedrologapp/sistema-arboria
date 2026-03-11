@@ -541,6 +541,11 @@ const MissaoDetalhePage = () => {
 
         if (uploadError) {
           console.error('Erro no upload:', uploadError);
+          toast({
+            variant: "destructive",
+            title: "Erro ao enviar arquivo",
+            description: `Não foi possível enviar "${arquivo.file.name}". Tente outro formato.`
+          });
           continue;
         }
 
