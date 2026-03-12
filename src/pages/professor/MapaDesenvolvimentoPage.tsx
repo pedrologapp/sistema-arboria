@@ -472,11 +472,9 @@ const MapaDesenvolvimentoPage = () => {
           <span className="text-xs text-blue-300">
             📋 Visualizando registro da Semana {selectedSemana}
           </span>
-          {selectedSemana === semanaAtual - 1 && (
-            <button onClick={() => setIsEditing(true)} className="ml-auto text-xs text-blue-400 underline">
-              Editar
-            </button>
-          )}
+          <button onClick={() => setIsEditing(true)} className="ml-auto text-xs text-blue-400 underline">
+            Editar
+          </button>
         </div>
       )}
 
