@@ -132,7 +132,7 @@ const MapaDesenvolvimentoPage = () => {
   const semanaAtual = activeFase?.semana_atual || 1;
   const isSemanaPassada = selectedSemana < semanaAtual;
   const isSemanaFutura = selectedSemana > semanaAtual;
-  const canEdit = !isSemanaFutura && (!isSemanaPassada || (isSemanaPassada && selectedSemana === semanaAtual - 1 && isEditing));
+  const canEdit = !isSemanaFutura && (!isSemanaPassada || isEditing);
   
 
   // Fetch alunos da turma (F2: filter by casa_id)
@@ -472,11 +472,9 @@ const MapaDesenvolvimentoPage = () => {
           <span className="text-xs text-blue-300">
             📋 Visualizando registro da Semana {selectedSemana}
           </span>
-          {selectedSemana === semanaAtual - 1 && (
-            <button onClick={() => setIsEditing(true)} className="ml-auto text-xs text-blue-400 underline">
-              Editar
-            </button>
-          )}
+          <button onClick={() => setIsEditing(true)} className="ml-auto text-xs text-blue-400 underline">
+            Editar
+          </button>
         </div>
       )}
 

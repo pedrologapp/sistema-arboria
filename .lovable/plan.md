@@ -1,58 +1,82 @@
 
 
-## Plano: Resetar dados da Semana 2 e permitir edição da Semana 1
+## Fix: Alunos do Infantil/F1 não aparecem após criação
 
-### Parte 1 — Deletar dados da Semana 2 (Grupo IV, professora Jaqueline)
+### Causa raiz
 
-Executar via insert tool (operação de dados):
+O trigger `sync_user_role_to_aluno_turma` é disparado quando um registro é inserido na tabela `user_roles`. Dentro dele, a função `ensure_turma_exists` é chamada com 4 argumentos. Porém, existem **duas versões** dessa função no banco:
 
+```text
+ensure_turma_exists(uuid, text, text, smallint)          -- versão antiga
+ensure_turma_exists(uuid, text, text, smallint, text)    -- versão nova (com segmento)
+```
+
+Quando chamada com 4 argumentos, o Postgres não consegue decidir qual usar (erro `42725: function is not unique`). Isso faz o `INSERT` na `user_roles` falhar silenciosamente — o aluno é criado no `profiles` mas **sem role**, e como a `PessoasPage` filtra por `user_roles.role = 'user'`, o aluno não aparece.
+
+### Solução
+
+Uma migração SQL com 3 passos:
+
+1. **Remover a versão antiga** (4 args) da função `ensure_turma_exists`, mantendo apenas a versão com 5 argumentos (que inclui `segmento`)
+2. **Atualizar o trigger** `sync_user_role_to_aluno_turma` para passar o `segmento` do perfil como 5º argumento
+3. **Reparar os dados** da aluna Ruamma — inserir o role `user` e garantir o vínculo `aluno_turma`
+
+### Detalhes técnicos
+
+**Migração SQL:**
 ```sql
-DELETE FROM mapa_desenvolvimento
-WHERE semana_numero = 2
-  AND turma_id IN (
-    SELECT id FROM turmas WHERE serie = 'Grupo IV' OR serie = '4'
-  )
-  AND professor_id = '7050e5ee-07e8-4d23-b6a9-45be22e2f6f6';
+-- 1. Dropar a versão ambígua (4 args)
+DROP FUNCTION IF EXISTS public.ensure_turma_exists(uuid, text, text, smallint);
+
+-- 2. Atualizar o trigger para passar segmento
+CREATE OR REPLACE FUNCTION public.sync_user_role_to_aluno_turma()
+RETURNS trigger AS $$
+DECLARE
+  v_profile RECORD;
+  v_turma_id uuid;
+  v_ano_letivo smallint;
+BEGIN
+  IF NEW.role != 'user' THEN RETURN NEW; END IF;
+  
+  SELECT id, serie, turma, institution_id, segmento
+  INTO v_profile FROM public.profiles WHERE id = NEW.user_id;
+  
+  IF v_profile.serie IS NULL OR v_profile.turma IS NULL OR v_profile.institution_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+  
+  SELECT COALESCE(ano_letivo_atual, EXTRACT(YEAR FROM CURRENT_DATE)::smallint)
+  INTO v_ano_letivo FROM public.institution_settings
+  WHERE institution_id = v_profile.institution_id;
+  
+  IF v_ano_letivo IS NULL THEN
+    v_ano_letivo := EXTRACT(YEAR FROM CURRENT_DATE)::smallint;
+  END IF;
+  
+  v_turma_id := public.ensure_turma_exists(
+    v_profile.institution_id, v_profile.serie, v_profile.turma, 
+    v_ano_letivo, COALESCE(v_profile.segmento, 'fundamental2')
+  );
+  
+  INSERT INTO public.aluno_turma (aluno_id, turma_id, ano_letivo, ativo)
+  VALUES (v_profile.id, v_turma_id, v_ano_letivo, true)
+  ON CONFLICT (aluno_id, turma_id, ano_letivo) DO UPDATE SET ativo = true;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 3. Reparar dados da Ruamma (e qualquer outro aluno sem role)
+INSERT INTO public.user_roles (user_id, role)
+SELECT p.id, 'user'::app_role
+FROM public.profiles p
+WHERE p.institution_id = '902876e9-b263-4c01-9013-aeef7b6d24e1'
+  AND p.segmento IN ('infantil', 'fundamental1')
+  AND NOT EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = p.id)
+  AND p.nome IS NOT NULL;
 ```
 
-Isso apaga todas as alocações de quadrante da semana 2 feitas pela Jaqueline para o Grupo IV.
-
-### Parte 2 — Permitir edição de semanas passadas (não travar semana 1)
-
-Atualmente em `MapaDesenvolvimentoPage.tsx`, a lógica na linha 135 restringe edição de semanas passadas:
-
-```typescript
-const canEdit = !isSemanaFutura && (!isSemanaPassada || (isSemanaPassada && selectedSemana === semanaAtual - 1 && isEditing));
-```
-
-Isso só permite editar **uma** semana anterior (semanaAtual - 1). Se a fase está na semana 3, o professor não pode editar semana 1.
-
-**Alteração**: Remover a restrição de "apenas semana anterior". Semanas passadas serão editáveis ao clicar em "Editar":
-
-```typescript
-const canEdit = !isSemanaFutura && (!isSemanaPassada || isEditing);
-```
-
-E na UI (linha 475), remover a condição `selectedSemana === semanaAtual - 1` do botão "Editar" para que apareça em **qualquer** semana passada:
-
-```typescript
-// Antes
-{selectedSemana === semanaAtual - 1 && (
-  <button onClick={() => setIsEditing(true)} ...>Editar</button>
-)}
-
-// Depois
-<button onClick={() => setIsEditing(true)} ...>Editar</button>
-```
-
-Também no `CirculoTurmaDirectPage.tsx`, as semanas futuras continuam desabilitadas, mas semanas passadas já são acessíveis — sem mudança necessária ali.
-
-### Parte 3 — Semana sem dados deve aparecer como editável (não read-only)
-
-Já funciona assim: quando `savedAlocacoes` está vazio, `hasSavedData` é `false` e `isReadOnly` é `false`, permitindo edição. Sem alteração necessária.
-
-### Resumo de arquivos alterados
-
-- **Dados**: DELETE no `mapa_desenvolvimento` (semana 2, Grupo IV, Jaqueline)
-- **Código**: `src/pages/professor/MapaDesenvolvimentoPage.tsx` — 2 linhas alteradas para desbloquear edição de qualquer semana passada
+### Arquivos/ações
+- 1 migração SQL (3 comandos acima)
+- Nenhum arquivo de código precisa ser alterado
 
