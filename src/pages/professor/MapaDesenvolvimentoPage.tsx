@@ -132,7 +132,7 @@ const MapaDesenvolvimentoPage = () => {
   const semanaAtual = activeFase?.semana_atual || 1;
   const isSemanaPassada = selectedSemana < semanaAtual;
   const isSemanaFutura = selectedSemana > semanaAtual;
-  const canEdit = !isSemanaFutura && (!isSemanaPassada || (isSemanaPassada && selectedSemana === semanaAtual - 1 && isEditing));
+  const canEdit = !isSemanaFutura && (!isSemanaPassada || isEditing);
   
 
   // Fetch alunos da turma (F2: filter by casa_id)
