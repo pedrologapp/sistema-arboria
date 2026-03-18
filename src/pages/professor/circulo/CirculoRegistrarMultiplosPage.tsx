@@ -10,6 +10,8 @@ import { toast } from 'sonner';
 import ConfirmarObservacaoModal from '@/components/professor/circulo/ConfirmarObservacaoModal';
 import { ObservacaoPersonalizadaModal } from '@/components/professor/circulo/ObservacaoPersonalizadaModal';
 import { logActivity } from '@/utils/logActivity';
+import { format } from 'date-fns';
+import { agoraBrasil } from '@/utils/timezone';
 
 interface Sinal {
   id: number;
@@ -128,9 +130,8 @@ const CirculoRegistrarMultiplosPage = () => {
         inteligencia_expressa: aluno.casa_id!, // Cada aluno tem sua própria casa
         intensidade: 'normal',
         observacao_texto: nota || null,
-        data_observacao: new Date().toISOString().split('T')[0]
+        data_observacao: format(agoraBrasil(), 'yyyy-MM-dd')
       }));
-
       // Inserir todas de uma vez
       const { error } = await supabase.from('observacoes').insert(observacoes);
 
@@ -200,9 +201,8 @@ const CirculoRegistrarMultiplosPage = () => {
         inteligencia_expressa: aluno.casa_id!,
         intensidade: 'normal',
         observacao_texto: texto, // Texto obrigatório aqui
-        data_observacao: new Date().toISOString().split('T')[0]
+        data_observacao: format(agoraBrasil(), 'yyyy-MM-dd')
       }));
-
       // Inserir todas de uma vez
       const { error } = await supabase.from('observacoes').insert(observacoes);
 

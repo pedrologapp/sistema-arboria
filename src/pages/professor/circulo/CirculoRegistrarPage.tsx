@@ -10,6 +10,8 @@ import { toast } from 'sonner';
 import ConfirmarObservacaoModal from '@/components/professor/circulo/ConfirmarObservacaoModal';
 import { ObservacaoPersonalizadaModal } from '@/components/professor/circulo/ObservacaoPersonalizadaModal';
 import { logActivity } from '@/utils/logActivity';
+import { format } from 'date-fns';
+import { agoraBrasil } from '@/utils/timezone';
 import { BannerObservarVsMapa } from '@/components/professor/circulo/BannerObservarVsMapa';
 
 interface Sinal {
@@ -154,9 +156,8 @@ const CirculoRegistrarPage = () => {
         inteligencia_expressa: alunoInteligenciaId!,
         intensidade: 'normal',
         observacao_texto: nota || null,
-        data_observacao: new Date().toISOString().split('T')[0]
+        data_observacao: format(agoraBrasil(), 'yyyy-MM-dd')
       });
-
       if (error) throw error;
 
       logActivity(profile.id, 'observacao_criada', {
@@ -241,9 +242,8 @@ const CirculoRegistrarPage = () => {
         inteligencia_expressa: alunoInteligenciaId!,
         intensidade: 'normal',
         observacao_texto: texto,
-        data_observacao: new Date().toISOString().split('T')[0]
+        data_observacao: format(agoraBrasil(), 'yyyy-MM-dd')
       });
-
       if (error) throw error;
 
       logActivity(profile.id, 'observacao_criada', {
