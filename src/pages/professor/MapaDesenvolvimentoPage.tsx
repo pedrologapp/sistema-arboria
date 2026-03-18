@@ -430,7 +430,7 @@ const MapaDesenvolvimentoPage = () => {
         {[1, 2, 3, 4].map(s => (
           <button
             key={s}
-            disabled={s > semanaAtual}
+            disabled={isF2 && s > semanaAtual}
             onClick={() => { setSelectedSemana(s); setIsEditing(false); }}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all
               ${s === selectedSemana 
