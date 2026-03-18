@@ -585,7 +585,7 @@ const MapaDesenvolvimentoPage = () => {
       {canEdit && !isReadOnly && (
         <Button
           onClick={() => saveMutation.mutate()}
-          disabled={!todosAlocados || saveMutation.isPending}
+          disabled={saveMutation.isPending || (isF2 ? !todosAlocados : Object.keys(alocacoes).length === 0)}
           className="w-full py-6 text-base font-semibold rounded-xl shadow-lg"
           size="lg"
         >
