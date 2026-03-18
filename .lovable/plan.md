@@ -1,82 +1,65 @@
 
 
-## Fix: Alunos do Infantil/F1 não aparecem após criação
+## Resultado da Investigação — Observações da Professora Andrea (Maternal III)
 
-### Causa raiz
+### Dados encontrados
 
-O trigger `sync_user_role_to_aluno_turma` é disparado quando um registro é inserido na tabela `user_roles`. Dentro dele, a função `ensure_turma_exists` é chamada com 4 argumentos. Porém, existem **duas versões** dessa função no banco:
+A fase atual começou em **02/03** e termina em **28/03**.
+Semanas: S1 = 02-08/03, S2 = 09-15/03, S3 = 16-22/03, S4 = 23-28/03.
 
-```text
-ensure_turma_exists(uuid, text, text, smallint)          -- versão antiga
-ensure_turma_exists(uuid, text, text, smallint, text)    -- versão nova (com segmento)
-```
+**Semana 1 (3 observações):**
+| Data | Hora BRT | Aluno | Sinal | Valência |
+|------|----------|-------|-------|----------|
+| 04/03 | 15:11 | Beatriz Macedo | Estava leve | positivo |
+| 04/03 | 16:04 | Geovanne Isaque | Outro | atenção |
+| 04/03 | 16:08 | Laura Chloe | Brilhou | positivo |
 
-Quando chamada com 4 argumentos, o Postgres não consegue decidir qual usar (erro `42725: function is not unique`). Isso faz o `INSERT` na `user_roles` falhar silenciosamente — o aluno é criado no `profiles` mas **sem role**, e como a `PessoasPage` filtra por `user_roles.role = 'user'`, o aluno não aparece.
+**Semana 2 (10 observações):**
+| Data salva | Hora real BRT | Aluno | Sinal |
+|------------|---------------|-------|-------|
+| 10/03 | 09/03 21:02 | Laura Chloe | Brilhou |
+| 10/03 | 09/03 21:04 | Ricardo Arthur | Pegou rápido |
+| 10/03 | 09/03 21:05 | Ruan Carlos | Inovou |
+| 10/03 | 09/03 21:10 | Beatriz Macedo | Outro |
+| 10/03 | 09/03 21:11 | Geovanne Isaque | Outro |
+| 10/03 | 09/03 21:16 | Júlia Yasmin | Travou |
+| 10/03 | 10/03 09:12 | Bernardo Henrique | Outro |
+| 10/03 | 10/03 09:13 | Geovanne Isaque | Outro |
+| 10/03 | 10/03 16:55 | Geovanne Isaque | Outro |
+| 10/03 | 10/03 16:56 | Laura Chloe | Outro |
 
-### Solução
+**Semana 3 (2 observações):**
+| Data | Hora BRT | Aluno | Sinal |
+|------|----------|-------|-------|
+| 16/03 | 14:31 | Maria Ísis | Outro |
+| 16/03 | 14:33 | Maria Ísis | Outro |
 
-Uma migração SQL com 3 passos:
+### Análise
 
-1. **Remover a versão antiga** (4 args) da função `ensure_turma_exists`, mantendo apenas a versão com 5 argumentos (que inclui `segmento`)
-2. **Atualizar o trigger** `sync_user_role_to_aluno_turma` para passar o `segmento` do perfil como 5º argumento
-3. **Reparar os dados** da aluna Ruamma — inserir o role `user` e garantir o vínculo `aluno_turma`
+Neste caso específico, **nenhuma observação mudou de semana** por causa do timezone. As 6 observações feitas no dia 09/03 às 21h (BRT) foram salvas com data 10/03 (UTC), mas ambas as datas caem na **Semana 2** (dias 7-13 da fase).
 
-### Detalhes técnicos
+**Porém, há um bug real no código** que pode causar problemas em outros casos: o sistema usa `new Date().toISOString().split('T')[0]` que salva a data em UTC. Se alguém registrar uma observação no dia **08/03 às 22h BRT** (último dia da S1), a data seria salva como **09/03** (S2).
 
-**Migração SQL:**
+### O que provavelmente aconteceu
+
+A professora Andrea registrou observações no **domingo 09/03 às 21h** (já era S2) pensando que ainda era S1. A fase começou dia 02/03 (segunda), então S1 vai de 02 a 08/03. O dia 09/03 (segunda-feira) já é S2.
+
+### Plano de correção
+
+1. **Corrigir o bug de timezone** nos 2 arquivos que registram observações para prevenir problemas futuros:
+   - `src/pages/professor/circulo/CirculoRegistrarPage.tsx`
+   - `src/pages/professor/circulo/CirculoRegistrarMultiplosPage.tsx`
+   - Trocar `new Date().toISOString().split('T')[0]` por `format(agoraBrasil(), 'yyyy-MM-dd')`
+
+2. **Corrigir as 6 observações** do dia 09/03 21h BRT que foram salvas como 10/03, mudando para 09/03 (a data correta no Brasil):
 ```sql
--- 1. Dropar a versão ambígua (4 args)
-DROP FUNCTION IF EXISTS public.ensure_turma_exists(uuid, text, text, smallint);
-
--- 2. Atualizar o trigger para passar segmento
-CREATE OR REPLACE FUNCTION public.sync_user_role_to_aluno_turma()
-RETURNS trigger AS $$
-DECLARE
-  v_profile RECORD;
-  v_turma_id uuid;
-  v_ano_letivo smallint;
-BEGIN
-  IF NEW.role != 'user' THEN RETURN NEW; END IF;
-  
-  SELECT id, serie, turma, institution_id, segmento
-  INTO v_profile FROM public.profiles WHERE id = NEW.user_id;
-  
-  IF v_profile.serie IS NULL OR v_profile.turma IS NULL OR v_profile.institution_id IS NULL THEN
-    RETURN NEW;
-  END IF;
-  
-  SELECT COALESCE(ano_letivo_atual, EXTRACT(YEAR FROM CURRENT_DATE)::smallint)
-  INTO v_ano_letivo FROM public.institution_settings
-  WHERE institution_id = v_profile.institution_id;
-  
-  IF v_ano_letivo IS NULL THEN
-    v_ano_letivo := EXTRACT(YEAR FROM CURRENT_DATE)::smallint;
-  END IF;
-  
-  v_turma_id := public.ensure_turma_exists(
-    v_profile.institution_id, v_profile.serie, v_profile.turma, 
-    v_ano_letivo, COALESCE(v_profile.segmento, 'fundamental2')
-  );
-  
-  INSERT INTO public.aluno_turma (aluno_id, turma_id, ano_letivo, ativo)
-  VALUES (v_profile.id, v_turma_id, v_ano_letivo, true)
-  ON CONFLICT (aluno_id, turma_id, ano_letivo) DO UPDATE SET ativo = true;
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- 3. Reparar dados da Ruamma (e qualquer outro aluno sem role)
-INSERT INTO public.user_roles (user_id, role)
-SELECT p.id, 'user'::app_role
-FROM public.profiles p
-WHERE p.institution_id = '902876e9-b263-4c01-9013-aeef7b6d24e1'
-  AND p.segmento IN ('infantil', 'fundamental1')
-  AND NOT EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = p.id)
-  AND p.nome IS NOT NULL;
+UPDATE observacoes SET data_observacao = '2026-03-09'
+WHERE professor_id = 'e6b8938f-db13-4dac-a28c-fb4ce8f6c3ef'
+AND data_observacao = '2026-03-10'
+AND created_at < '2026-03-10T00:00:00+00:00';
 ```
 
-### Arquivos/ações
-- 1 migração SQL (3 comandos acima)
-- Nenhum arquivo de código precisa ser alterado
+Isso não muda a semana (ambas são S2), mas deixa a data precisa.
+
+**Nota:** Os dados da Andrea estão todos nas semanas corretas. A S1 tem apenas 3 observações de 04/03. Se ela acredita que fez mais na S1, pode ser que tenha registrado no dia 09/03 pensando que ainda era S1.
 
