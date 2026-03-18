@@ -131,7 +131,7 @@ const MapaDesenvolvimentoPage = () => {
   const activeFase = isF2 ? faseF2 : faseAtual;
   const semanaAtual = activeFase?.semana_atual || 1;
   const isSemanaPassada = selectedSemana < semanaAtual;
-  const isSemanaFutura = selectedSemana > semanaAtual;
+  const isSemanaFutura = isF2 && selectedSemana > semanaAtual;
   const canEdit = !isSemanaFutura && (!isSemanaPassada || isEditing);
   
 
