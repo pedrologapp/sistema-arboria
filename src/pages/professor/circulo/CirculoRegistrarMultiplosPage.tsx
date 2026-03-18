@@ -130,9 +130,8 @@ const CirculoRegistrarMultiplosPage = () => {
         inteligencia_expressa: aluno.casa_id!, // Cada aluno tem sua própria casa
         intensidade: 'normal',
         observacao_texto: nota || null,
-        data_observacao: new Date().toISOString().split('T')[0]
+        data_observacao: format(agoraBrasil(), 'yyyy-MM-dd')
       }));
-
       // Inserir todas de uma vez
       const { error } = await supabase.from('observacoes').insert(observacoes);
 
