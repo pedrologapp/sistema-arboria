@@ -168,7 +168,7 @@ const CirculoTurmaDirectPage = () => {
             return (
               <button
                 key={s}
-                disabled={isFuturo}
+                disabled={isF2 && isFuturo}
                 onClick={() => setSemanaSelecionada(s)}
                 className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all
                   ${isSelecionada
