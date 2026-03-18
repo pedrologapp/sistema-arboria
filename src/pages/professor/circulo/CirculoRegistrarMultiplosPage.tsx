@@ -10,6 +10,8 @@ import { toast } from 'sonner';
 import ConfirmarObservacaoModal from '@/components/professor/circulo/ConfirmarObservacaoModal';
 import { ObservacaoPersonalizadaModal } from '@/components/professor/circulo/ObservacaoPersonalizadaModal';
 import { logActivity } from '@/utils/logActivity';
+import { format } from 'date-fns';
+import { agoraBrasil } from '@/utils/timezone';
 
 interface Sinal {
   id: number;
