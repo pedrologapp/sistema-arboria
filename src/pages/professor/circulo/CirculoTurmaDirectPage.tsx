@@ -19,7 +19,8 @@ interface Aluno {
 const CirculoTurmaDirectPage = () => {
   const { turmaId } = useParams<{ turmaId: string }>();
   const navigate = useNavigate();
-  const { turmasVinculadas, faseAtual } = useProfessor();
+  const { turmasVinculadas, faseAtual, segmento } = useProfessor();
+  const isF2 = segmento === 'fundamental2';
 
   const turmaInfo = turmasVinculadas?.find(t => t.id === turmaId);
 
