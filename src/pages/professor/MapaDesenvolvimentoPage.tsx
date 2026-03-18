@@ -131,7 +131,7 @@ const MapaDesenvolvimentoPage = () => {
   const activeFase = isF2 ? faseF2 : faseAtual;
   const semanaAtual = activeFase?.semana_atual || 1;
   const isSemanaPassada = selectedSemana < semanaAtual;
-  const isSemanaFutura = selectedSemana > semanaAtual;
+  const isSemanaFutura = isF2 && selectedSemana > semanaAtual;
   const canEdit = !isSemanaFutura && (!isSemanaPassada || isEditing);
   
 
@@ -430,7 +430,7 @@ const MapaDesenvolvimentoPage = () => {
         {[1, 2, 3, 4].map(s => (
           <button
             key={s}
-            disabled={s > semanaAtual}
+            disabled={isF2 && s > semanaAtual}
             onClick={() => { setSelectedSemana(s); setIsEditing(false); }}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all
               ${s === selectedSemana 
@@ -585,7 +585,7 @@ const MapaDesenvolvimentoPage = () => {
       {canEdit && !isReadOnly && (
         <Button
           onClick={() => saveMutation.mutate()}
-          disabled={!todosAlocados || saveMutation.isPending}
+          disabled={saveMutation.isPending || (isF2 ? !todosAlocados : Object.keys(alocacoes).length === 0)}
           className="w-full py-6 text-base font-semibold rounded-xl shadow-lg"
           size="lg"
         >
