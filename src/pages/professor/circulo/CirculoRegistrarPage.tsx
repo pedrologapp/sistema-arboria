@@ -156,9 +156,8 @@ const CirculoRegistrarPage = () => {
         inteligencia_expressa: alunoInteligenciaId!,
         intensidade: 'normal',
         observacao_texto: nota || null,
-        data_observacao: new Date().toISOString().split('T')[0]
+        data_observacao: format(agoraBrasil(), 'yyyy-MM-dd')
       });
-
       if (error) throw error;
 
       logActivity(profile.id, 'observacao_criada', {
