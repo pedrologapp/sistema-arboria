@@ -116,7 +116,7 @@ export const StudentProvider = ({ children }: StudentProviderProps) => {
     setError(null);
 
     try {
-      // 1. Fetch profile
+      // 1. Fetch profile first (needed for subsequent queries)
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -126,131 +126,83 @@ export const StudentProvider = ({ children }: StudentProviderProps) => {
       if (profileError) throw profileError;
       setProfile(profileData);
 
-      // 2. Fetch casa (if casa_id exists)
-      if (profileData?.casa_id) {
-        const { data: casaData, error: casaError } = await supabase
-          .from('inteligencias')
-          .select('*')
-          .eq('id', profileData.casa_id)
-          .single();
+      // 2. Fetch everything else IN PARALLEL
+      const serieNum = profileData?.serie ? parseInt(profileData.serie) : null;
 
-        if (!casaError && casaData) {
-          setCasa(casaData);
-        }
+      // Build fase query
+      let faseQuery = supabase
+        .from('fases')
+        .select('id, numero_fase, semana_atual, data_inicio, data_fim, inteligencia:inteligencias!inteligencia_id(id, nome, codigo, emoji, cor_hex)')
+        .eq('institution_id', profileData.institution_id)
+        .eq('ativo', true);
+      if (profileData.segmento) faseQuery = faseQuery.or(`segmento.eq.${profileData.segmento},segmento.is.null`);
+      if (serieNum) faseQuery = faseQuery.or(`serie.eq.${serieNum},serie.is.null`);
+
+      const [casaRes, instRes, faseRes, rankingRes, membrosRes, scoresRes] = await Promise.all([
+        // Casa
+        profileData?.casa_id
+          ? supabase.from('inteligencias').select('*').eq('id', profileData.casa_id).single()
+          : Promise.resolve({ data: null, error: null }),
+        // Institution
+        profileData?.institution_id
+          ? supabase.from('institutions').select('name').eq('id', profileData.institution_id).single()
+          : Promise.resolve({ data: null, error: null }),
+        // Fase atual
+        profileData?.institution_id
+          ? faseQuery.order('numero_fase').limit(1).maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        // Ranking do aluno
+        supabase.from('ranking_alunos_por_casa').select('total_pontos, posicao_na_casa, missoes_completadas').eq('aluno_id', user.id).maybeSingle(),
+        // Membros da casa (para calcular posicao correta)
+        profileData?.casa_id && profileData?.institution_id
+          ? supabase.from('ranking_alunos_por_casa').select('aluno_id, total_pontos').eq('casa_id', profileData.casa_id).eq('institution_id', profileData.institution_id)
+          : Promise.resolve({ data: null, error: null }),
+        // Scores de inteligencia
+        supabase.from('perfil_inteligencias_aluno').select('*').eq('aluno_id', user.id).order('inteligencia_id'),
+      ]);
+
+      // Process casa
+      if (casaRes.data) setCasa(casaRes.data);
+
+      // Process institution
+      if (instRes.data) setInstitutionName((instRes.data as any).name);
+
+      // Process fase
+      if (faseRes.data) {
+        const faseData = faseRes.data as any;
+        const inteligenciaData = Array.isArray(faseData.inteligencia) ? faseData.inteligencia[0] : faseData.inteligencia;
+        setFaseAtual({
+          id: faseData.id,
+          numero_fase: faseData.numero_fase,
+          semana_atual: calcularSemanaAtualDaFase(faseData.data_inicio, faseData.data_fim),
+          data_inicio: faseData.data_inicio,
+          data_fim: faseData.data_fim,
+          inteligencia: inteligenciaData,
+        });
       }
 
-      // 3. Fetch institution name and fase atual
-      if (profileData?.institution_id) {
-        const { data: instData } = await supabase
-          .from('institutions')
-          .select('name')
-          .eq('id', profileData.institution_id)
-          .single();
-
-        if (instData) {
-          setInstitutionName(instData.name);
-        }
-
-        // 3.5. Fetch fase atual (filtrada por segmento e série do aluno)
-        let faseQuery = supabase
-          .from('fases')
-          .select(`
-            id,
-            numero_fase,
-            semana_atual,
-            data_inicio,
-            data_fim,
-            inteligencia:inteligencias!inteligencia_id (
-              id,
-              nome,
-              codigo,
-              emoji,
-              cor_hex
-            )
-          `)
-          .eq('institution_id', profileData.institution_id)
-          .eq('ativo', true);
-
-        // Filtrar por segmento do aluno
-        if (profileData.serie) {
-          // Extrair número da série para filtro
-          const serieNum = parseInt(profileData.serie);
-          if (!isNaN(serieNum)) {
-            faseQuery = faseQuery.eq('serie', serieNum);
-          }
-        }
-
-        const { data: faseData } = await faseQuery
-          .order('numero_fase')
-          .limit(1)
-          .maybeSingle();
-
-        if (faseData) {
-          const inteligenciaData = Array.isArray(faseData.inteligencia) 
-            ? faseData.inteligencia[0] 
-            : faseData.inteligencia;
-          
-          setFaseAtual({
-            id: faseData.id,
-            numero_fase: faseData.numero_fase,
-            semana_atual: calcularSemanaAtualDaFase(faseData.data_inicio, faseData.data_fim),
-            data_inicio: faseData.data_inicio,
-            data_fim: faseData.data_fim,
-            inteligencia: inteligenciaData,
-          });
-        }
+      // Process ranking with correct position
+      let posicaoCalculada = rankingRes.data?.posicao_na_casa || 0;
+      if (membrosRes.data && membrosRes.data.length > 0) {
+        const ordenado = [...membrosRes.data].sort((a: any, b: any) => (b.total_pontos || 0) - (a.total_pontos || 0));
+        const minhaPosicao = ordenado.findIndex((m: any) => m.aluno_id === user.id) + 1;
+        posicaoCalculada = minhaPosicao || 1;
       }
-
-      // 4. Fetch ranking info from view
-      const { data: rankingData } = await supabase
-        .from('ranking_alunos_por_casa')
-        .select('total_pontos, posicao_na_casa, missoes_completadas')
-        .eq('aluno_id', user.id)
-        .maybeSingle();
-
-      // 4.1 Calcular posição correta baseada em pontos (workaround para bug da view)
-      let posicaoCalculada = rankingData?.posicao_na_casa || 0;
-      
-      if (profileData?.casa_id && profileData?.institution_id) {
-        const { data: membrosCasa } = await supabase
-          .from('ranking_alunos_por_casa')
-          .select('aluno_id, total_pontos')
-          .eq('casa_id', profileData.casa_id)
-          .eq('institution_id', profileData.institution_id);
-
-        if (membrosCasa && membrosCasa.length > 0) {
-          // Ordenar por pontos (maior primeiro)
-          const ordenado = [...membrosCasa].sort((a, b) => 
-            (b.total_pontos || 0) - (a.total_pontos || 0)
-          );
-          
-          // Encontrar posição do aluno atual (index + 1)
-          const minhaPosicao = ordenado.findIndex(m => m.aluno_id === user.id) + 1;
-          posicaoCalculada = minhaPosicao || 1;
-        }
-      }
-
       setRanking({
-        total_pontos: rankingData?.total_pontos || 0,
+        total_pontos: rankingRes.data?.total_pontos || 0,
         posicao_na_casa: posicaoCalculada,
-        missoes_completadas: rankingData?.missoes_completadas || 0,
+        missoes_completadas: rankingRes.data?.missoes_completadas || 0,
       });
 
-      // 5. Fetch inteligencia scores from view
-      const { data: scoresData } = await supabase
-        .from('perfil_inteligencias_aluno')
-        .select('*')
-        .eq('aluno_id', user.id)
-        .order('inteligencia_id');
-
-      if (scoresData) {
-        setInteligenciaScores(scoresData.map(s => ({
+      // Process scores
+      if (scoresRes.data) {
+        setInteligenciaScores(scoresRes.data.map((s: any) => ({
           inteligencia_id: s.inteligencia_id || 0,
           inteligencia_nome: s.inteligencia_nome || '',
           inteligencia_codigo: s.inteligencia_codigo || '',
           inteligencia_emoji: s.inteligencia_emoji,
           inteligencia_cor: s.inteligencia_cor,
-          inteligencia_brasao_url: (s as Record<string, unknown>).inteligencia_brasao_url as string | null || null,
+          inteligencia_brasao_url: s.inteligencia_brasao_url || null,
           score_atual: Number(s.score_atual) || 0,
           total_evidencias: s.total_evidencias || 0,
           eh_casa_do_aluno: s.eh_casa_do_aluno || false,

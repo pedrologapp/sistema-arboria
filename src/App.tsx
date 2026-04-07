@@ -36,6 +36,7 @@ import ConteudoInteligenciaAdminPage from "./pages/admin/ConteudoInteligenciaAdm
 import AdminChatPage from "./pages/admin/AdminChatPage";
 import AdminCanalChatPage from "./pages/admin/AdminCanalChatPage";
 import AtividadesPage from "./pages/admin/AtividadesPage";
+import DadosPage from "./pages/admin/DadosPage";
 
 // Aluno pages
 import HomePage from "./pages/aluno/HomePage";
@@ -51,6 +52,8 @@ import DmChatPage from "./pages/aluno/DmChatPage";
 import MembrosPage from "./pages/aluno/MembrosPage";
 import PerfilPage from "./pages/aluno/PerfilPage";
 import ConfiguracoesPage from "./pages/aluno/ConfiguracoesPage";
+import DashboardLiderPage from "./pages/aluno/DashboardLiderPage";
+import ConquistasPage from "./pages/aluno/ConquistasPage";
 
 // Professor pages
 import ProfessorDashboardWrapper from "./pages/professor/ProfessorDashboardWrapper";
@@ -67,6 +70,7 @@ import CirculoTurmaDirectPage from "./pages/professor/circulo/CirculoTurmaDirect
 import CirculoAlunosPage from "./pages/professor/circulo/CirculoAlunosPage";
 import CirculoRegistrarPage from "./pages/professor/circulo/CirculoRegistrarPage";
 import CirculoRegistrarMultiplosPage from "./pages/professor/circulo/CirculoRegistrarMultiplosPage";
+import CirculoPessoalPage from "./pages/professor/circulo/CirculoPessoalPage";
 import AlunosPageWrapper from "./pages/professor/AlunosPageWrapper";
 import PerfilAlunoPageWrapper from "./pages/professor/PerfilAlunoPageWrapper";
 import ProfessorConfiguracoesPage from "./pages/professor/ProfessorConfiguracoesPage";
@@ -176,6 +180,13 @@ const App = () => (
               <ProtectedRoute requireAdmin>
                 <AdminLayout>
                   <RelatoriosPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/dados" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <DadosPage />
                 </AdminLayout>
               </ProtectedRoute>
             } />
@@ -417,6 +428,13 @@ const App = () => (
                 </ProfessorLayout>
               </ProfessorProtectedRoute>
             } />
+            <Route path="/professor/circulo/pessoal" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <CirculoPessoalPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
             <Route path="/professor/alunos" element={
               <ProfessorProtectedRoute>
                 <ProfessorLayout>
@@ -573,6 +591,20 @@ const App = () => (
               <StudentProtectedRoute>
                 <StudentLayout>
                   <ConfiguracoesPage />
+                </StudentLayout>
+              </StudentProtectedRoute>
+            } />
+            <Route path="/aluno/conquistas" element={
+              <StudentProtectedRoute>
+                <StudentLayout>
+                  <ConquistasPage />
+                </StudentLayout>
+              </StudentProtectedRoute>
+            } />
+            <Route path="/aluno/dashboard" element={
+              <StudentProtectedRoute>
+                <StudentLayout>
+                  <DashboardLiderPage />
                 </StudentLayout>
               </StudentProtectedRoute>
             } />

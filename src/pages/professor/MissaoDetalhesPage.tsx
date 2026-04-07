@@ -12,6 +12,11 @@ interface Missao {
   titulo: string;
   descricao: string | null;
   instrucoes: string | null;
+  contexto: string | null;
+  lente_especial: string | null;
+  reflexao: string | null;
+  arquivo_pdf_url: string | null;
+  arquivo_pdf_nome: string | null;
   tipo: string;
   tipo_missao: string | null;
   pontos_base: number;
@@ -197,7 +202,7 @@ const MissaoDetalhesPage = () => {
     if (!missao) return '';
     let titulo = `Semana ${missao.semana || '?'} - ${missao.tipo_missao === 'individual' ? 'Individual' : 'Geral'}`;
     if (missao.inteligencia_cross_rel) {
-      titulo += ` - ${missao.inteligencia_cross_rel.nome} ${missao.inteligencia_cross_rel.emoji || ''}`;
+      titulo += ` - ${missao.inteligencia_cross_rel.nome}`;
     }
     return titulo;
   };
@@ -296,6 +301,54 @@ const MissaoDetalhesPage = () => {
             </div>
           </div>
         </div>
+
+        {/* PDF da Missão */}
+        {missao.arquivo_pdf_url && (
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+              <BookOpen size={16} className="text-blue-400" />
+              PDF da Missao
+            </h3>
+            <div className="rounded-lg overflow-hidden bg-black/20 border border-white/5">
+              <iframe
+                src={`https://docs.google.com/gview?url=${encodeURIComponent(missao.arquivo_pdf_url)}&embedded=true`}
+                className="w-full h-[400px]"
+                title="PDF da missão"
+              />
+            </div>
+            <div className="flex gap-2 mt-2">
+              <a
+                href={missao.arquivo_pdf_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                Abrir em nova aba
+              </a>
+              {missao.arquivo_pdf_nome && (
+                <span className="text-xs text-white/30">{missao.arquivo_pdf_nome}</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Contexto */}
+        {missao.contexto && (
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-white mb-2">Contexto</h3>
+            <div className="prose prose-sm prose-invert max-w-none text-white/60">
+              <ReactMarkdown>{missao.contexto}</ReactMarkdown>
+            </div>
+          </div>
+        )}
+
+        {/* Lente Especial */}
+        {missao.lente_especial && (
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-white mb-2">Lente Especial</h3>
+            <p className="text-white/60 text-sm">{missao.lente_especial}</p>
+          </div>
+        )}
 
         {/* Informações */}
         <div className="bg-white/5 border border-white/10 rounded-xl p-4">
@@ -412,7 +465,7 @@ const MissaoDetalhesPage = () => {
             {checklist.entregaram.length > 0 && (
               <div className="mb-4">
                 <p className="text-xs font-medium text-green-400 mb-2 flex items-center gap-1">
-                  ✅ Entregaram ({checklist.entregaram.length})
+                  Entregaram ({checklist.entregaram.length})
                 </p>
                 <div className="space-y-2">
                   {checklist.entregaram.map((aluno) => (

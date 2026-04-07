@@ -43,6 +43,7 @@ interface MissaoDetalhe {
   itens: { nome: string; descricao: string }[] | null;
   reflexao: string | null;
   tipo: 'principal' | 'secundaria' | 'bonus';
+  tipo_missao: 'geral' | 'individual' | null;
   pontos_base: number;
   data_prazo: string;
   data_liberacao: string;
@@ -270,6 +271,7 @@ const MissaoDetalhePage = () => {
           itens,
           reflexao,
           tipo,
+          tipo_missao,
           pontos_base,
           data_prazo,
           data_liberacao,
@@ -306,6 +308,7 @@ const MissaoDetalhePage = () => {
         itens: parsedItens,
         reflexao: (missaoData as any).reflexao || null,
         tipo: missaoData.tipo as 'principal' | 'secundaria' | 'bonus',
+        tipo_missao: (missaoData as any).tipo_missao || 'geral',
         pontos_base: missaoData.pontos_base,
         data_prazo: missaoData.data_prazo,
         data_liberacao: missaoData.data_liberacao,
@@ -372,10 +375,12 @@ const MissaoDetalhePage = () => {
             .update({ visualizada_pelo_aluno: true })
             .eq('id', entregaData.id);
           
-          // Invalidar caches de notificações
+          // Invalidar TODOS os caches de notificações
           queryClient.invalidateQueries({ queryKey: ['count-aprovadas-nao-vistas'] });
+          queryClient.invalidateQueries({ queryKey: ['count-missoes-pendentes'] });
           queryClient.invalidateQueries({ queryKey: ['notificacoes-por-fase'] });
           queryClient.invalidateQueries({ queryKey: ['notificacoes-por-semana'] });
+          queryClient.invalidateQueries({ queryKey: ['missoes-urgentes'] });
         }
       }
 
@@ -636,11 +641,12 @@ const MissaoDetalhePage = () => {
   const podeEnviar = () => {
     if (!missao) return false;
 
-    // Se a missão é de uma casa específica e não é a casa do aluno, não pode enviar
-    if (missao.casa_id !== null && missao.casa_id !== profile?.casa_id) {
+    // Missões GERAIS podem ser feitas por qualquer aluno da série
+    // Missões INDIVIDUAIS só pela casa específica
+    if (missao.tipo_missao === 'individual' && missao.casa_id !== null && missao.casa_id !== profile?.casa_id) {
       return false;
     }
-    
+
     // Se nunca enviou
     if (!entrega) {
       // Verificar se está no prazo ou permite atrasada
@@ -649,19 +655,19 @@ const MissaoDetalhePage = () => {
       }
       return true;
     }
-    
+
     // Se já enviou e está aprovada, não pode mais
     if (entrega.status === 'aprovada') return false;
-    
+
     // Se status é 'refazer', pode reenviar
     if (entrega.status === 'refazer') return true;
-    
+
     // Se está pendente, não pode (aguardando avaliação)
     return false;
   };
 
-  // É missão de outra casa?
-  const ehMissaoDeOutraCasa = missao?.casa_id !== null && missao?.casa_id !== profile?.casa_id;
+  // É missão de outra casa? Só para missões INDIVIDUAIS
+  const ehMissaoDeOutraCasa = missao?.tipo_missao === 'individual' && missao?.casa_id !== null && missao?.casa_id !== profile?.casa_id;
 
   // Loading state
   if (loading) {

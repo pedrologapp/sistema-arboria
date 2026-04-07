@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -76,7 +76,7 @@ const NovaMissaoPage = () => {
     semana: defaultSemana,
     tipo_missao: 'geral',
     inteligencia_cross: null,
-    turmas: ['A', 'B'],
+    turmas: [],
     
     // Destinatários
     para_todos: true,
@@ -120,6 +120,33 @@ const NovaMissaoPage = () => {
     }
   });
 
+  // Buscar turmas disponíveis dinamicamente (baseado nos alunos da série selecionada)
+  const { data: turmasDisponiveis } = useQuery({
+    queryKey: ['turmas-disponiveis', form.serie_filtro, profile?.institution_id],
+    queryFn: async () => {
+      if (!form.serie_filtro || !profile?.institution_id) return [];
+      const { data } = await supabase
+        .from('profiles')
+        .select('turma')
+        .eq('institution_id', profile.institution_id)
+        .eq('segmento', 'fundamental2')
+        .ilike('serie', `%${form.serie_filtro}%`)
+        .not('casa_id', 'is', null)
+        .not('turma', 'is', null);
+      // Extrair turmas únicas e ordenar
+      const turmas = [...new Set(data?.map(d => d.turma).filter(Boolean) as string[])].sort();
+      return turmas;
+    },
+    enabled: !!form.serie_filtro && !!profile?.institution_id
+  });
+
+  // Quando turmas disponíveis mudam (série selecionada), selecionar todas por padrão
+  useEffect(() => {
+    if (turmasDisponiveis && turmasDisponiveis.length > 0) {
+      setForm(f => ({ ...f, turmas: [...turmasDisponiveis], alunos_selecionados: [] }));
+    }
+  }, [turmasDisponiveis]);
+
   // Buscar alunos disponíveis (filtrados por série, turma, casa)
   // NOTA: Usamos casa_id IS NOT NULL para identificar alunos (professores/admins não têm casa)
   // Isso evita depender da tabela user_roles que tem RLS restritiva para professores
@@ -138,9 +165,9 @@ const NovaMissaoPage = () => {
       // Filtrar por série
       query = query.ilike('serie', `%${form.serie_filtro}%`);
 
-      // Filtrar por turmas selecionadas
-      if (form.turmas.length > 0 && form.turmas.length < 2) {
-        query = query.eq('turma', form.turmas[0]);
+      // Filtrar por turmas selecionadas (se não são todas)
+      if (form.turmas.length > 0 && turmasDisponiveis && form.turmas.length < turmasDisponiveis.length) {
+        query = query.in('turma', form.turmas);
       }
 
       // Se for INDIVIDUAL, filtrar pela casa/inteligência selecionada
@@ -287,8 +314,9 @@ const NovaMissaoPage = () => {
     setLoading(true);
 
     try {
-      // turma_filtro: null se todas, ou a turma específica
-      const turmaFiltro = form.turmas.length === 2 ? null : (form.turmas[0] || null);
+      // turma_filtro: null se todas as turmas selecionadas, ou a turma específica
+      const todasTurmasSelecionadas = turmasDisponiveis && form.turmas.length >= turmasDisponiveis.length;
+      const turmaFiltro = todasTurmasSelecionadas ? null : (form.turmas.length === 1 ? form.turmas[0] : null);
       
       // Converter 'extra' para 0 ao salvar
       const semanaValue = form.semana === 'extra' ? 0 : form.semana;
@@ -448,30 +476,32 @@ const NovaMissaoPage = () => {
             </button>
           </div>
 
-          {/* Turmas */}
-          <div className="mb-4">
-            <label className="text-white/60 text-sm block mb-2">Turmas</label>
-            <div className="flex gap-2">
-              {['A', 'B'].map((turma) => (
-                <button
-                  key={turma}
-                  type="button"
-                  onClick={() => toggleTurma(turma)}
-                  className={cn(
-                    "flex-1 py-3 rounded-lg font-medium transition-colors",
-                    form.turmas.includes(turma)
-                      ? "bg-green-600/20 border border-green-500/50 text-green-400"
-                      : "bg-white/5 border border-transparent text-white/40"
-                  )}
-                >
-                  {form.turmas.includes(turma) ? '✓' : ''} Turma {turma}
-                </button>
-              ))}
+          {/* Turmas (dinâmico) */}
+          {form.serie_filtro && (turmasDisponiveis?.length || 0) > 0 && (
+            <div className="mb-4">
+              <label className="text-white/60 text-sm block mb-2">Turmas</label>
+              <div className="flex gap-2">
+                {turmasDisponiveis?.map((turma) => (
+                  <button
+                    key={turma}
+                    type="button"
+                    onClick={() => toggleTurma(turma)}
+                    className={cn(
+                      "flex-1 py-3 rounded-lg font-medium transition-colors",
+                      form.turmas.includes(turma)
+                        ? "bg-green-600/20 border border-green-500/50 text-green-400"
+                        : "bg-white/5 border border-transparent text-white/40"
+                    )}
+                  >
+                    {form.turmas.includes(turma) ? '✓ ' : ''}Turma {turma}
+                  </button>
+                ))}
+              </div>
+              <p className="text-white/30 text-xs mt-2">
+                Deixe todas selecionadas para enviar a todas as turmas
+              </p>
             </div>
-            <p className="text-white/30 text-xs mt-2">
-              Deixe ambas selecionadas para enviar a todas as turmas
-            </p>
-          </div>
+          )}
 
           {/* Tipo de Missão */}
           <div className="mb-4">
@@ -823,8 +853,8 @@ const NovaMissaoPage = () => {
 
           {/* PDF da Missão */}
           <div className="mb-4">
-            <label className="text-white/60 text-sm block mb-1">📄 PDF da Missão *</label>
-            <p className="text-white/30 text-xs mb-2">O conteúdo principal da missão. O aluno verá este PDF inline no app.</p>
+            <label className="text-white/60 text-sm block mb-1">PDF da Missão</label>
+            <p className="text-white/30 text-xs mb-2">Opcional. O aluno podera visualizar este PDF diretamente no app.</p>
             
             {pdfFile ? (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-green-500/10 border border-green-500/30">
@@ -1046,7 +1076,7 @@ const NovaMissaoPage = () => {
         {/* ══════════════════════════════════════ */}
         <div>
           <h2 className="text-white/40 text-sm uppercase tracking-wide mb-4 flex items-center gap-2">
-            ⚙️ Configurações
+            Configurações
           </h2>
 
           {/* Categoria/Tipo */}

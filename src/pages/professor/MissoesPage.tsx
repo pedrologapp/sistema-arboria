@@ -26,26 +26,22 @@ interface AlunoLista {
 }
 
 // Configuração visual por categoria de engajamento
-const categoriasConfig: Record<string, { icone: string; corBg: string; subtitulo: string }> = {
-  green: { 
-    icone: '⚡', 
+const categoriasConfig: Record<string, { corBg: string; subtitulo: string }> = {
+  green: {
     corBg: 'bg-green-500/20',
-    subtitulo: 'Entregaram em menos de 50% do prazo' 
+    subtitulo: 'Entregaram em menos de 50% do prazo'
   },
-  blue: { 
-    icone: '🚶', 
+  blue: {
     corBg: 'bg-blue-500/20',
-    subtitulo: 'Entregaram entre 50% e 100% do prazo' 
+    subtitulo: 'Entregaram entre 50% e 100% do prazo'
   },
-  orange: { 
-    icone: '🐢', 
+  orange: {
     corBg: 'bg-orange-500/20',
-    subtitulo: 'Entregaram após o prazo' 
+    subtitulo: 'Entregaram apos o prazo'
   },
-  red: { 
-    icone: '🔴', 
+  red: {
     corBg: 'bg-red-500/20',
-    subtitulo: 'Ainda não entregaram' 
+    subtitulo: 'Ainda nao entregaram'
   }
 };
 
@@ -115,20 +111,20 @@ const MissoesPage = () => {
   const { data: entregasPorTurma } = useQuery({
     queryKey: ['entregas-por-turma', casaMentor?.id, profile?.institution_id],
     queryFn: async () => {
-      // 1. Buscar alunos da casa agrupados por série e turma
+      // 1. Buscar TODOS os alunos F2 agrupados por série e turma
       const { data: alunos, error: errAlunos } = await supabase
         .from('profiles')
         .select('id, serie, turma')
-        .eq('casa_id', casaMentor!.id)
-        .eq('institution_id', profile!.institution_id!);
+        .eq('institution_id', profile!.institution_id!)
+        .eq('segmento', 'fundamental2')
+        .not('casa_id', 'is', null);
 
       if (errAlunos) throw errAlunos;
 
-      // 2. Buscar missões liberadas
+      // 2. Buscar TODAS as missões liberadas da instituição
       const { data: missoes, error: errMissoes } = await supabase
         .from('missoes')
         .select('id')
-        .eq('casa_id', casaMentor!.id)
         .eq('institution_id', profile!.institution_id!)
         .eq('status', 'liberada');
 
@@ -199,19 +195,18 @@ const MissoesPage = () => {
 
 
   const { data: estatisticas } = useQuery({
-    queryKey: ['estatisticas-missoes', casaMentor?.id, profile?.institution_id],
+    queryKey: ['estatisticas-missoes', profile?.institution_id],
     queryFn: async () => {
-      // Buscar IDs das missões da casa
+      // Buscar TODAS as missões liberadas da instituição
       const { data: missoes } = await supabase
         .from('missoes')
         .select('id')
-        .eq('casa_id', casaMentor!.id)
         .eq('institution_id', profile!.institution_id!)
         .eq('status', 'liberada');
-      
+
       const missaoIds = missoes?.map(m => m.id) || [];
-      
-      // Entregas pendentes de avaliação (nota IS NULL e status diferente de 'refazer')
+
+      // Entregas pendentes de avaliação
       let entregasPendentes = 0;
       if (missaoIds.length > 0) {
         const { count } = await supabase
@@ -223,7 +218,7 @@ const MissoesPage = () => {
         entregasPendentes = count || 0;
       }
 
-      // Total de entregas (aprovadas)
+      // Total de entregas aprovadas
       let totalEntregas = 0;
       let entregasNoPrazo = 0;
       if (missaoIds.length > 0) {
@@ -232,22 +227,21 @@ const MissoesPage = () => {
           .select('id, entregue_no_prazo')
           .in('missao_id', missaoIds)
           .eq('status', 'aprovada');
-        
+
         totalEntregas = entregasData?.length || 0;
         entregasNoPrazo = entregasData?.filter(e => e.entregue_no_prazo).length || 0;
       }
 
-      // TOTAL de alunos da casa (não apenas ativos recentemente)
+      // TOTAL de alunos F2 da instituição
       const { count: totalAlunos } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
-        .eq('casa_id', casaMentor!.id)
         .eq('institution_id', profile!.institution_id!)
+        .eq('segmento', 'fundamental2')
         .not('casa_id', 'is', null);
 
-      // Percentual de entregas no prazo
-      const percentualNoPrazo = totalEntregas > 0 
-        ? Math.round((entregasNoPrazo / totalEntregas) * 100) 
+      const percentualNoPrazo = totalEntregas > 0
+        ? Math.round((entregasNoPrazo / totalEntregas) * 100)
         : 0;
 
       return {
@@ -257,18 +251,17 @@ const MissoesPage = () => {
         missaoIds
       };
     },
-    enabled: !!casaMentor?.id && !!profile?.institution_id
+    enabled: !!profile?.institution_id
   });
 
   // Engajamento dos alunos (com dados para os modais)
   const { data: engajamento } = useQuery<EngajamentoData>({
     queryKey: ['engajamento-alunos', casaMentor?.id, profile?.institution_id],
     queryFn: async (): Promise<EngajamentoData> => {
-      // Buscar missões ativas com datas
+      // Buscar TODAS as missões ativas com datas
       const { data: missoes } = await supabase
         .from('missoes')
         .select('id, data_liberacao, data_prazo')
-        .eq('casa_id', casaMentor!.id)
         .eq('institution_id', profile!.institution_id!)
         .eq('status', 'liberada');
       
@@ -392,46 +385,48 @@ const MissoesPage = () => {
     enabled: !!casaMentor?.id && !!profile?.institution_id
   });
 
-  // Status dos alunos
+  // Status dos alunos — filtra por séries que têm missões ativas
   const { data: statusAlunos } = useQuery({
-    queryKey: ['status-alunos-missoes', casaMentor?.id, profile?.institution_id],
+    queryKey: ['status-alunos-missoes', profile?.institution_id],
     queryFn: async () => {
-      // Total de alunos da casa
-      const { data: alunos } = await supabase
-        .from('profiles')
-        .select('id, nome, sobrenome, serie, turma, avatar_url')
-        .eq('casa_id', casaMentor!.id)
-        .eq('institution_id', profile!.institution_id!)
-        .not('casa_id', 'is', null);
-
-      const totalAlunos = alunos?.length || 0;
-      if (totalAlunos === 0) {
-        return { 
-          entregaram: { count: 0, percent: 0, alunos: [] }, 
-          atrasados: { count: 0, percent: 0, alunos: [] }, 
-          naoEntregaram: { count: 0, percent: 0, alunos: [] },
-          total: 0
-        };
-      }
-
-      // Buscar IDs das missões ativas
+      // Buscar TODAS as missões liberadas com serie_filtro
       const { data: missoes } = await supabase
         .from('missoes')
-        .select('id')
-        .eq('casa_id', casaMentor!.id)
+        .select('id, serie_filtro')
         .eq('institution_id', profile!.institution_id!)
         .eq('status', 'liberada');
-      
+
       const missaoIds = missoes?.map(m => m.id) || [];
-      
-      if (missaoIds.length === 0) {
-        return { 
-          entregaram: { count: 0, percent: 0, alunos: [] }, 
-          atrasados: { count: 0, percent: 0, alunos: [] }, 
-          naoEntregaram: { count: totalAlunos, percent: 100, alunos: alunos || [] },
-          total: totalAlunos
-        };
+      if (missaoIds.length === 0) return null;
+
+      // Determinar quais séries têm missões
+      const seriesComMissao = new Set<string>();
+      missoes?.forEach(m => {
+        if (m.serie_filtro) {
+          seriesComMissao.add(String(m.serie_filtro));
+        } else {
+          // Missão sem filtro de série = para todas
+          ['6', '7', '8', '9'].forEach(s => seriesComMissao.add(s));
+        }
+      });
+
+      // Buscar alunos APENAS das séries que têm missões
+      let alunosQuery = supabase
+        .from('profiles')
+        .select('id, nome, sobrenome, serie, turma, avatar_url, casa_id')
+        .eq('institution_id', profile!.institution_id!)
+        .eq('segmento', 'fundamental2')
+        .not('casa_id', 'is', null);
+
+      // Filtrar por séries com missão
+      const serieFilters = Array.from(seriesComMissao).map(s => `serie.ilike.%${s}%`).join(',');
+      if (serieFilters) {
+        alunosQuery = alunosQuery.or(serieFilters);
       }
+
+      const { data: alunos } = await alunosQuery;
+      const totalAlunos = alunos?.length || 0;
+      if (totalAlunos === 0) return null;
 
       // Buscar entregas
       const { data: entregas } = await supabase
@@ -447,32 +442,32 @@ const MissoesPage = () => {
       const alunosComAtraso = alunos?.filter(a => alunosAtrasados.has(a.id)) || [];
 
       return {
-        entregaram: { 
-          count: alunosQueEntregaram.length, 
+        entregaram: {
+          count: alunosQueEntregaram.length,
           percent: Math.round((alunosQueEntregaram.length / totalAlunos) * 100),
           alunos: alunosQueEntregaram
         },
-        atrasados: { 
-          count: alunosComAtraso.length, 
+        atrasados: {
+          count: alunosComAtraso.length,
           percent: Math.round((alunosComAtraso.length / totalAlunos) * 100),
           alunos: alunosComAtraso
         },
-        naoEntregaram: { 
-          count: alunosSemEntrega.length, 
+        naoEntregaram: {
+          count: alunosSemEntrega.length,
           percent: Math.round((alunosSemEntrega.length / totalAlunos) * 100),
           alunos: alunosSemEntrega
         },
         total: totalAlunos
       };
     },
-    enabled: !!casaMentor?.id && !!profile?.institution_id
+    enabled: !!profile?.institution_id
   });
 
   const abrirModal = (titulo: string, alunos: AlunoLista[], cor: string) => {
     setModalTitulo(titulo);
     setModalAlunos(alunos);
     setModalCor(cor);
-    setModalIcone(categoriasConfig[cor]?.icone || '📋');
+    setModalIcone('');
     setModalSubtitulo(categoriasConfig[cor]?.subtitulo || '');
     setModalAberto(true);
   };
@@ -592,34 +587,31 @@ const MissoesPage = () => {
               className="p-3 rounded-lg hover:bg-white/10 transition-colors"
               onClick={() => engajamento?.rapidos.count && abrirModal('Alunos Rápidos', engajamento.rapidos.alunos, 'green')}
             >
-              <p className="text-2xl mb-1">⚡</p>
-              <p className="text-xl font-bold text-white">
+              <p className="text-xl font-bold text-green-400">
                 {engajamento?.rapidos.percent || 0}%
               </p>
               <p className="text-[10px] text-white/40 font-medium">
-                {engajamento?.rapidos.count || 0} rápidos
+                {engajamento?.rapidos.count || 0} rapidos
               </p>
             </button>
-            
-            <button 
+
+            <button
               className="p-3 rounded-lg hover:bg-white/10 transition-colors"
               onClick={() => engajamento?.noPrazo.count && abrirModal('No Prazo', engajamento.noPrazo.alunos, 'blue')}
             >
-              <p className="text-2xl mb-1">🚶</p>
-              <p className="text-xl font-bold text-white">
+              <p className="text-xl font-bold text-blue-400">
                 {engajamento?.noPrazo.percent || 0}%
               </p>
               <p className="text-[10px] text-white/40 font-medium">
                 {engajamento?.noPrazo.count || 0} no prazo
               </p>
             </button>
-            
-            <button 
+
+            <button
               className="p-3 rounded-lg hover:bg-white/10 transition-colors"
               onClick={() => engajamento?.atrasados.count && abrirModal('Atrasados', engajamento.atrasados.alunos, 'orange')}
             >
-              <p className="text-2xl mb-1">🐢</p>
-              <p className="text-xl font-bold text-white">
+              <p className="text-xl font-bold text-orange-400">
                 {engajamento?.atrasados.percent || 0}%
               </p>
               <p className="text-[10px] text-white/40 font-medium">
@@ -630,7 +622,7 @@ const MissoesPage = () => {
         </div>
       </div>
 
-      {/* 👥 Status dos Alunos */}
+      {/* Status dos Alunos */}
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Users size={16} className="text-white/40" />
@@ -639,69 +631,75 @@ const MissoesPage = () => {
           </p>
         </div>
 
-        <div className="bg-white/5 rounded-xl border border-white/10 p-4 space-y-4">
-          {/* Entregaram */}
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-white flex items-center gap-2">
-                <span className="text-green-500">🟢</span> Entregaram
-              </span>
-              <span className="text-sm text-white/60">
-                {statusAlunos?.entregaram.count || 0} ({statusAlunos?.entregaram.percent || 0}%)
-              </span>
+        {statusAlunos ? (
+          <div className="bg-white/5 rounded-xl border border-white/10 p-4 space-y-4">
+            {/* Entregaram */}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm text-white flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500" /> Entregaram
+                </span>
+                <span className="text-sm text-white/60">
+                  {statusAlunos.entregaram.count} ({statusAlunos.entregaram.percent}%)
+                </span>
+              </div>
+              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-green-500 rounded-full transition-all duration-500"
+                  style={{ width: `${statusAlunos.entregaram.percent}%` }}
+                />
+              </div>
             </div>
-            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-green-500 rounded-full transition-all duration-500"
-                style={{ width: `${statusAlunos?.entregaram.percent || 0}%` }}
-              />
-            </div>
-          </div>
 
-          {/* Atrasados */}
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-white flex items-center gap-2">
-                <span className="text-yellow-500">🟡</span> Atrasados
-              </span>
-              <span className="text-sm text-white/60">
-                {statusAlunos?.atrasados.count || 0} ({statusAlunos?.atrasados.percent || 0}%)
-              </span>
+            {/* Atrasados */}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm text-white flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-yellow-500" /> Atrasados
+                </span>
+                <span className="text-sm text-white/60">
+                  {statusAlunos.atrasados.count} ({statusAlunos.atrasados.percent}%)
+                </span>
+              </div>
+              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-yellow-500 rounded-full transition-all duration-500"
+                  style={{ width: `${statusAlunos.atrasados.percent}%` }}
+                />
+              </div>
             </div>
-            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-yellow-500 rounded-full transition-all duration-500"
-                style={{ width: `${statusAlunos?.atrasados.percent || 0}%` }}
-              />
-            </div>
-          </div>
 
-          {/* Não entregaram - Clicável */}
-          <button 
-            className="w-full text-left"
-            onClick={() => statusAlunos?.naoEntregaram.alunos && statusAlunos.naoEntregaram.alunos.length > 0 && 
-              abrirModal('🔴 Não Entregaram', statusAlunos.naoEntregaram.alunos, 'red')
-            }
-          >
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-white flex items-center gap-2">
-                <span className="text-red-500">🔴</span> Não entregaram
-              </span>
-              <span className="text-sm text-white/60 flex items-center gap-1">
-                {statusAlunos?.naoEntregaram.count || 0} ({statusAlunos?.naoEntregaram.percent || 0}%)
-                {(statusAlunos?.naoEntregaram.count || 0) > 0 && (
-                  <ChevronRight size={14} className="text-white/40" />
-                )}
-              </span>
-            </div>
-            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-red-500 rounded-full transition-all duration-500"
-                style={{ width: `${statusAlunos?.naoEntregaram.percent || 0}%` }}
-              />
-            </div>
-          </button>
-        </div>
+            {/* Não entregaram - Clicável */}
+            <button
+              className="w-full text-left"
+              onClick={() => statusAlunos.naoEntregaram.alunos.length > 0 &&
+                abrirModal('Não Entregaram', statusAlunos.naoEntregaram.alunos, 'red')
+              }
+            >
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm text-white flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-red-500" /> Não entregaram
+                </span>
+                <span className="text-sm text-white/60 flex items-center gap-1">
+                  {statusAlunos.naoEntregaram.count} ({statusAlunos.naoEntregaram.percent}%)
+                  {statusAlunos.naoEntregaram.count > 0 && (
+                    <ChevronRight size={14} className="text-white/40" />
+                  )}
+                </span>
+              </div>
+              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-red-500 rounded-full transition-all duration-500"
+                  style={{ width: `${statusAlunos.naoEntregaram.percent}%` }}
+                />
+              </div>
+            </button>
+          </div>
+        ) : (
+          <div className="bg-white/5 rounded-xl border border-white/10 p-4 text-center">
+            <p className="text-white/40 text-sm">Nenhuma missão ativa no momento</p>
+          </div>
+        )}
       </div>
 
       {/* Modal de Lista de Alunos - Layout Compacto */}

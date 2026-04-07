@@ -1,693 +1,432 @@
-import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  Users, 
-  GraduationCap, 
-  Shield,
-  Search,
-  Plus,
-  Upload,
-  Loader2,
-  Trash2,
-  Key
-} from 'lucide-react';
-import PessoaCard from '@/components/admin/PessoaCard';
-import ModalImportarCSV from '@/components/admin/ModalImportarCSV';
-import ModalAdicionarUsuario from '@/components/admin/ModalAdicionarUsuario';
-import ModalExcluirAlunosMassa from '@/components/admin/ModalExcluirAlunosMassa';
-import ModalGerarContas from '@/components/admin/ModalGerarContas';
-import TabelaVisaoGeralProfessores from '@/components/admin/TabelaVisaoGeralProfessores';
+import { Search, ChevronDown, ChevronUp, ChevronRight, Plus, RefreshCw, Users, Shield, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
-type TabType = 'alunos' | 'professores' | 'admins';
-
-interface Inteligencia {
-  id: number;
-  nome: string;
-  codigo: string;
-}
+type Tab = 'alunos' | 'professores';
 
 const PessoasPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [searchParams, setSearchParams] = useSearchParams();
-  
-  const tabAtiva = (searchParams.get('tab') as TabType) || 'alunos';
-  const busca = searchParams.get('busca') || '';
-  const filtroSegmento = searchParams.get('segmento') || '';
-  const filtroSerie = searchParams.get('serie') || '';
-  const filtroTurma = searchParams.get('turma') || '';
-  const filtroCasa = searchParams.get('casa') || '';
-  const filtroFuncao = searchParams.get('funcao') || '';
+  const [segmento, setSegmento] = useState<'infantil' | 'fundamental1' | 'fundamental2'>('fundamental2');
+  const [tab, setTab] = useState<Tab>('alunos');
+  const [busca, setBusca] = useState('');
+  const [casaExpandida, setCasaExpandida] = useState<number | null>(null);
+  const [showAddProfessor, setShowAddProfessor] = useState(false);
+  const [profEmail, setProfEmail] = useState('');
+  const [profSenha, setProfSenha] = useState('');
+  const [profNome, setProfNome] = useState('');
+  const [profCasa, setProfCasa] = useState<number | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [sincronizando, setSincronizando] = useState(false);
 
-  const updateParam = (key: string, value: string) => {
-    const params = new URLSearchParams(searchParams);
-    if (value) params.set(key, value);
-    else params.delete(key);
-    setSearchParams(params, { replace: true });
-  };
-
-  const setTabAtiva = (tab: TabType) => updateParam('tab', tab === 'alunos' ? '' : tab);
-  const setBusca = (v: string) => updateParam('busca', v);
-  const setFiltroSegmento = (v: string) => updateParam('segmento', v);
-  const setFiltroSerie = (v: string) => updateParam('serie', v);
-  const setFiltroTurma = (v: string) => updateParam('turma', v);
-  const setFiltroCasa = (v: string) => updateParam('casa', v);
-  const setFiltroFuncao = (v: string) => updateParam('funcao', v);
-  const [modalImportarAberto, setModalImportarAberto] = useState(false);
-  const [modalAdicionarAberto, setModalAdicionarAberto] = useState(false);
-  const [modalExcluirMassaAberto, setModalExcluirMassaAberto] = useState(false);
-  const [modalGerarContasAberto, setModalGerarContasAberto] = useState(false);
-  const [tipoAdicionar, setTipoAdicionar] = useState<'aluno' | 'professor' | 'admin'>('aluno');
-
-  // Buscar institution_id do admin logado
-  const { data: adminProfile } = useQuery({
-    queryKey: ['admin-profile', user?.id],
+  const { data: institutionId } = useQuery({
+    queryKey: ['admin-institution', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('institution_id')
-        .eq('id', user?.id)
-        .single();
-      
-      if (error) throw error;
-      return data;
+      const { data } = await supabase.from('profiles').select('institution_id').eq('id', user!.id).single();
+      return data?.institution_id;
     },
-    enabled: !!user?.id
+    enabled: !!user?.id,
   });
 
-  const institutionId = adminProfile?.institution_id;
-
-  // Buscar casas/inteligências
-  const { data: casas } = useQuery({
-    queryKey: ['inteligencias'],
+  const { data: casas = [] } = useQuery({
+    queryKey: ['admin-casas'],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('inteligencias')
-        .select('id, nome, codigo')
-        .order('id');
-      return (data || []) as Inteligencia[];
+      const { data } = await supabase.from('inteligencias').select('id, nome, cor_hex, codigo').order('id');
+      return data || [];
+    },
+  });
+
+  // Alunos F2
+  const { data: alunos = [], isLoading: loadingAlunos } = useQuery({
+    queryKey: ['admin-pessoas-alunos', institutionId, segmento],
+    queryFn: async () => {
+      if (!institutionId) return [];
+      let q = supabase.from('profiles')
+        .select('id, full_name, nome, sobrenome, serie, turma, avatar_url, casa_id, segmento')
+        .eq('institution_id', institutionId).eq('segmento', segmento).order('full_name');
+      // F2 tem casa, Infantil/F1 pode nao ter
+      if (segmento === 'fundamental2') q = q.not('casa_id', 'is', null);
+      const { data } = await q;
+      return data || [];
+    },
+    enabled: !!institutionId,
+    staleTime: 120000,
+  });
+
+  // Professores
+  const { data: professores = [], isLoading: loadingProfs } = useQuery({
+    queryKey: ['admin-pessoas-professores', institutionId],
+    queryFn: async () => {
+      if (!institutionId) return [];
+      const { data } = await supabase.from('profiles')
+        .select('id, full_name, nome, sobrenome, avatar_url, segmento')
+        .eq('institution_id', institutionId)
+        .in('id', (await supabase.from('user_roles').select('user_id').eq('role', 'professor')).data?.map(r => r.user_id) || []);
+      return data || [];
+    },
+    enabled: !!institutionId,
+    staleTime: 120000,
+  });
+
+  // Professor-casa (mentores)
+  const { data: mentores = [] } = useQuery({
+    queryKey: ['admin-mentores', institutionId],
+    queryFn: async () => {
+      if (!institutionId) return [];
+      const { data } = await supabase.from('professor_casa')
+        .select('professor_id, casa_id, eh_mentor_principal')
+        .eq('institution_id', institutionId).eq('ativo', true);
+      return data || [];
+    },
+    enabled: !!institutionId,
+  });
+
+  // Agrupar alunos por casa
+  const alunosPorCasa = useMemo(() => {
+    let lista = alunos;
+    if (busca) {
+      const t = busca.toLowerCase();
+      lista = lista.filter(a => (a.full_name || a.nome || '').toLowerCase().includes(t));
     }
-  });
+    const map: Record<number, typeof alunos> = {};
+    lista.forEach(a => { if (a.casa_id) { if (!map[a.casa_id]) map[a.casa_id] = []; map[a.casa_id].push(a); }});
+    return map;
+  }, [alunos, busca]);
 
-  // Buscar alunos (role = 'user') e contar sem conta
-  const { data: alunosData, isLoading: loadingAlunos } = useQuery({
-    queryKey: ['admin-alunos', institutionId],
-    queryFn: async () => {
-      // 1. Buscar TODOS os profiles da instituição
-      const { data: allProfiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, nome, sobrenome, full_name, serie, turma, casa_id, avatar_url, created_at, segmento, conta_criada')
-        .eq('institution_id', institutionId)
-        .order('serie')
-        .order('turma')
-        .order('full_name');
-      
-      if (profileError) throw profileError;
-      if (!allProfiles || allProfiles.length === 0) return { alunos: [], semConta: 0, segmentos: [], cargosMap: {} };
-      
-      // 2. Buscar todos os user_roles com role = 'user' (sem filtro de ID)
-      const { data: roleUsers, error: roleError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'user');
-      
-      if (roleError) throw roleError;
-      
-      // 3. Criar Set para lookup rápido O(1)
-      const studentIds = new Set(roleUsers?.map(r => r.user_id) || []);
-      
-      // 4. Filtrar profiles que são alunos
-      const alunosList = allProfiles.filter(p => studentIds.has(p.id));
-      
-      // 5. Contar alunos sem conta Auth (conta_criada = false)
-      const semConta = alunosList.filter(a => a.conta_criada === false).length;
-      
-      // 6. Extrair segmentos únicos dos alunos sem conta
-      const segmentos = [...new Set(
-        alunosList
-          .filter(a => a.conta_criada === false && a.segmento)
-          .map(a => a.segmento)
-      )].filter(Boolean) as string[];
+  // Sem casa (relevante para F2)
+  const alunosSemCasa = useMemo(() => {
+    if (segmento !== 'fundamental2') return [];
+    let lista = alunos.filter(a => !a.casa_id);
+    if (busca) { const t = busca.toLowerCase(); lista = lista.filter(a => (a.full_name || a.nome || '').toLowerCase().includes(t)); }
+    return lista;
+  }, [alunos, busca, segmento]);
 
-      // 7. Buscar cargos ativos da instituição
-      const { data: cargos } = await supabase
-        .from('cargos_casa')
-        .select('aluno_id, cargo')
-        .eq('institution_id', institutionId)
+  // Sincronizar de arboria_alunos
+  const sincronizarAlunos = async () => {
+    if (!institutionId) return;
+    setSincronizando(true);
+    try {
+      // Buscar alunos da tabela arboria_alunos que nao estao em profiles
+      const { data: arboriaAlunos } = await supabase.from('arboria_alunos')
+        .select('nome, sobrenome, nome_completo, serie, turma, segmento, casa_nome, email, ativo')
         .eq('ativo', true);
 
-      const cargosMap: Record<string, string> = {};
-      cargos?.forEach(c => { cargosMap[c.aluno_id] = c.cargo; });
-      
-      return { alunos: alunosList, semConta, segmentos, cargosMap };
-    },
-    enabled: !!institutionId
-  });
+      if (!arboriaAlunos?.length) { toast.info('Nenhum aluno novo para sincronizar'); setSincronizando(false); return; }
 
-  const alunos = alunosData?.alunos || [];
-  const alunosSemConta = alunosData?.semConta || 0;
-  const segmentosDisponiveis = alunosData?.segmentos || [];
-  const cargosMap = alunosData?.cargosMap || {};
+      // Buscar emails existentes
+      const { data: existentes } = await supabase.from('profiles').select('email_gerado').eq('institution_id', institutionId);
+      const emailsExistentes = new Set((existentes || []).map(e => e.email_gerado).filter(Boolean));
 
-  // Buscar professores (role = 'professor')
-  const { data: professores, isLoading: loadingProfessores } = useQuery({
-    queryKey: ['admin-professores', institutionId],
-    queryFn: async () => {
-      // Primeiro buscar user_ids com role = 'professor'
-      const { data: roleUsers, error: roleError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'professor');
-      
-      if (roleError) throw roleError;
-      
-      const userIds = roleUsers?.map(r => r.user_id) || [];
-      
-      if (userIds.length === 0) return [];
-      
-      // Buscar profiles desses users na instituição
-      const { data: profiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, nome, sobrenome, full_name, avatar_url, created_at, segmento')
-        .eq('institution_id', institutionId)
-        .in('id', userIds)
-        .order('full_name');
-      
-      if (profileError) throw profileError;
-      
-      // Buscar vínculos professor_casa
-      const { data: vinculos } = await supabase
-        .from('professor_casa')
-        .select('professor_id, casa_id, eh_mentor_principal, ativo')
-        .eq('institution_id', institutionId)
-        .eq('ativo', true);
+      const casaMap: Record<string, number> = {};
+      casas.forEach(c => { casaMap[c.nome.toLowerCase()] = c.id; casaMap[c.codigo] = c.id; });
 
-      // Buscar vínculos professor_turma
-      const { data: vinculosTurma } = await supabase
-        .from('professor_turma')
-        .select('professor_id, turma_id')
-        .eq('institution_id', institutionId)
-        .eq('ativo', true);
-      
-      // Combinar dados
-      return profiles?.map(prof => ({
-        ...prof,
-        professor_casa: vinculos?.filter(v => v.professor_id === prof.id) || [],
-        turmas_count: vinculosTurma?.filter(v => v.professor_id === prof.id)?.length || 0
-      })) || [];
-    },
-    enabled: !!institutionId
-  });
+      let criados = 0;
+      for (const aluno of arboriaAlunos) {
+        if (!aluno.email || emailsExistentes.has(aluno.email)) continue;
+        if (aluno.segmento !== 'fundamental2') continue;
 
-  // Buscar admins (role = 'admin')
-  const { data: admins, isLoading: loadingAdmins } = useQuery({
-    queryKey: ['admin-admins', institutionId],
-    queryFn: async () => {
-      const { data: roleUsers, error: roleError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin');
-      
-      if (roleError) throw roleError;
-      
-      const userIds = roleUsers?.map(r => r.user_id) || [];
-      
-      if (userIds.length === 0) return [];
-      
-      const { data: profiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, nome, sobrenome, full_name, avatar_url, created_at')
-        .eq('institution_id', institutionId)
-        .in('id', userIds)
-        .order('full_name');
-      
-      if (profileError) throw profileError;
-      return profiles || [];
-    },
-    enabled: !!institutionId
-  });
+        const casaId = aluno.casa_nome ? casaMap[aluno.casa_nome.toLowerCase()] || null : null;
 
-  // Obter nome da casa pelo ID
-  const getNomeCasa = (casaId: number | null): string | null => {
-    if (!casaId) return null;
-    return casas?.find(c => c.id === casaId)?.nome || null;
+        // Tentar criar via admin API (simplificado - apenas profile update)
+        const { data: existingProfile } = await supabase.from('profiles')
+          .select('id').eq('full_name', aluno.nome_completo).eq('institution_id', institutionId).maybeSingle();
+
+        if (existingProfile) {
+          // Atualizar profile existente
+          await supabase.from('profiles').update({
+            serie: aluno.serie, turma: aluno.turma, casa_id: casaId, segmento: aluno.segmento,
+          }).eq('id', existingProfile.id);
+          criados++;
+        }
+      }
+      toast.success(`${criados} alunos sincronizados`);
+      queryClient.invalidateQueries({ queryKey: ['admin-pessoas-alunos'] });
+    } catch (err: any) { toast.error(err.message || 'Erro ao sincronizar'); }
+    finally { setSincronizando(false); }
   };
 
-  // Filtrar alunos e ordenar por serie, turma, nome
-  const alunosFiltrados = alunos
-    ?.filter(aluno => {
-      const matchBusca = !busca || 
-        aluno.full_name?.toLowerCase().includes(busca.toLowerCase()) ||
-        aluno.nome?.toLowerCase().includes(busca.toLowerCase()) ||
-        aluno.sobrenome?.toLowerCase().includes(busca.toLowerCase());
-      const matchSegmento = !filtroSegmento || aluno.segmento === filtroSegmento;
-      const matchSerie = !filtroSerie || aluno.serie === filtroSerie;
-      const matchTurma = !filtroTurma || aluno.turma === filtroTurma;
-      const matchCasa = !filtroCasa || (filtroCasa === 'sem_casa' ? aluno.casa_id === null : aluno.casa_id === Number(filtroCasa));
-      const alunoCargo = cargosMap[aluno.id] || 'membro';
-      const matchFuncao = !filtroFuncao || alunoCargo === filtroFuncao;
-      
-      return matchBusca && matchSegmento && matchSerie && matchTurma && matchCasa && matchFuncao;
-    })
-    ?.sort((a, b) => {
-      // Primeiro por serie
-      if (a.serie !== b.serie) return (a.serie || '').localeCompare(b.serie || '');
-      // Depois por turma
-      if (a.turma !== b.turma) return (a.turma || '').localeCompare(b.turma || '');
-      // Por fim por nome
-      return (a.full_name || '').localeCompare(b.full_name || '');
-    });
+  // Criar professor
+  const criarProfessor = async () => {
+    if (!institutionId || !profEmail || !profSenha || !profNome) return;
+    setSalvando(true);
+    try {
+      const nomes = profNome.trim().split(' ');
+      const nome = nomes[0];
+      const sobrenome = nomes.slice(1).join(' ');
 
-  // Segmentos, séries e turmas únicas
-  const segmentosUnicos = [...new Set(alunos?.map(a => a.segmento).filter(Boolean))].sort() as string[];
-  const seriesUnicas = [...new Set(alunos?.map(a => a.serie).filter(Boolean))].sort();
-  const turmasUnicas = [...new Set(alunos?.map(a => a.turma).filter(Boolean))].sort();
+      // Criar via Supabase Auth Admin (precisa service role - usar edge function ou workaround)
+      // Por agora, criar signup normal
+      const { data: authData, error: authErr } = await supabase.auth.signUp({
+        email: profEmail, password: profSenha,
+        options: { data: { full_name: profNome, nome, sobrenome } }
+      });
+      if (authErr) throw authErr;
+      if (!authData.user) throw new Error('Erro ao criar usuario');
 
-  const tabs = [
-    { id: 'alunos' as TabType, label: 'Alunos', icon: GraduationCap, count: alunos?.length || 0 },
-    { id: 'professores' as TabType, label: 'Professores', icon: Users, count: professores?.length || 0 },
-    { id: 'admins' as TabType, label: 'Admins', icon: Shield, count: admins?.length || 0 },
-  ];
+      // Atualizar profile
+      await supabase.from('profiles').update({
+        nome, sobrenome, full_name: profNome, institution_id: institutionId,
+        segmento: 'fundamental2', must_change_password: false,
+      }).eq('id', authData.user.id);
 
-  const handleAdicionar = (tipo: 'aluno' | 'professor' | 'admin') => {
-    setTipoAdicionar(tipo);
-    setModalAdicionarAberto(true);
+      // Adicionar role professor
+      await supabase.from('user_roles').insert({ user_id: authData.user.id, role: 'professor' });
+
+      // Se casa selecionada, definir como mentor
+      if (profCasa) {
+        await supabase.from('professor_casa').insert({
+          professor_id: authData.user.id, casa_id: profCasa, institution_id: institutionId,
+          ano_letivo: new Date().getFullYear(), eh_mentor_principal: true, ativo: true,
+        });
+      }
+
+      toast.success('Professor criado!');
+      setShowAddProfessor(false);
+      setProfEmail(''); setProfSenha(''); setProfNome(''); setProfCasa(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-pessoas-professores'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-mentores'] });
+    } catch (err: any) { toast.error(err.message || 'Erro'); }
+    finally { setSalvando(false); }
+  };
+
+  const getNomeAbreviado = (a: any) => {
+    const nome = a.nome || a.full_name?.split(' ')[0] || '?';
+    const partes = (a.full_name || '').split(' ');
+    const seg = partes.length > 1 ? partes[1]?.[0] + '.' : '';
+    return `${nome} ${seg}`.trim();
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] px-4 py-6 pb-24">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Pessoas</h1>
-        <p className="text-white/60 text-sm mt-1">
-          Gerencie alunos e professores
-        </p>
+    <div className="p-4 space-y-4 pb-24">
+      <div>
+        <h1 className="text-xl font-semibold text-white">Pessoas</h1>
+        <p className="text-xs text-white/30 mt-0.5">{alunos.length} alunos · {professores.length} professores</p>
+      </div>
+
+      {/* Segmento selector */}
+      <div className="flex gap-2">
+        {[
+          { id: 'fundamental2' as const, label: 'Fundamental 2' },
+          { id: 'fundamental1' as const, label: 'Fundamental 1' },
+          { id: 'infantil' as const, label: 'Infantil' },
+        ].map(s => (
+          <button key={s.id} onClick={() => setSegmento(s.id)}
+            className={cn('flex-1 py-2 rounded-lg text-[10px] font-medium transition-colors',
+              segmento === s.id ? 'bg-blue-600 text-white' : 'bg-white/[0.06] text-white/40 hover:bg-white/[0.1]'
+            )}>
+            {s.label}
+          </button>
+        ))}
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-white/10 mb-6">
-        {tabs.map((tab) => {
-          const IconTab = tab.icon;
-          const isActive = tabAtiva === tab.id;
-          
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setTabAtiva(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
-                isActive 
-                  ? 'text-white border-b-2 border-white' 
-                  : 'text-white/40 hover:text-white/60'
-              }`}
-            >
-              <IconTab className="w-4 h-4" />
-              {tab.label}
-              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                isActive ? 'bg-white/20' : 'bg-white/10'
-              }`}>
-                {tab.count}
-              </span>
+      <div className="flex gap-2">
+        <button onClick={() => setTab('alunos')}
+          className={cn('flex-1 py-2 rounded-lg text-xs font-medium transition-colors',
+            tab === 'alunos' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/[0.06] text-white/40'
+          )}>
+          <Users className="w-3.5 h-3.5 inline mr-1.5" />Alunos ({alunos.length})
+        </button>
+        <button onClick={() => setTab('professores')}
+          className={cn('flex-1 py-2 rounded-lg text-xs font-medium transition-colors',
+            tab === 'professores' ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30' : 'bg-white/[0.06] text-white/40'
+          )}>
+          <Shield className="w-3.5 h-3.5 inline mr-1.5" />Professores ({professores.length})
+        </button>
+      </div>
+
+      {/* Busca */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+        <Input placeholder="Buscar..." value={busca} onChange={e => setBusca(e.target.value)}
+          className="pl-10 bg-white/[0.04] border-white/10 text-white placeholder:text-white/30 h-9 text-sm" />
+        {busca && <button onClick={() => setBusca('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white"><X className="w-4 h-4" /></button>}
+      </div>
+
+      {/* TAB: ALUNOS */}
+      {tab === 'alunos' && (
+        <div className="space-y-3">
+          {/* Acoes */}
+          <div className="flex gap-2">
+            <button onClick={sincronizarAlunos} disabled={sincronizando}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-blue-500/15 text-blue-300 border border-blue-500/25 hover:bg-blue-500/25 transition-colors disabled:opacity-50">
+              <RefreshCw className={cn("w-3 h-3", sincronizando && "animate-spin")} />
+              {sincronizando ? 'Sincronizando...' : 'Sincronizar'}
             </button>
-          );
-        })}
-      </div>
+          </div>
 
-      {/* Conteúdo */}
-      <div className="space-y-4">
-        {/* Tab Alunos */}
-        {tabAtiva === 'alunos' && (
-          <>
-            {/* Filtros */}
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              <select
-                value={filtroSegmento}
-                onChange={(e) => setFiltroSegmento(e.target.value)}
-                className="p-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm min-w-[120px]"
-              >
-                <option value="">Segmento</option>
-                {segmentosUnicos.map(seg => (
-                  <option key={seg} value={seg}>
-                    {seg === 'infantil' ? 'Infantil' : 
-                     seg === 'fundamental1' ? 'Fund. I' : 
-                     seg === 'fundamental2' ? 'Fund. II' : seg}
-                  </option>
-                ))}
-              </select>
-              
-              <select
-                value={filtroSerie}
-                onChange={(e) => setFiltroSerie(e.target.value)}
-                className="p-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm min-w-[100px]"
-              >
-                <option value="">Série</option>
-                {seriesUnicas.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-              
-              <select
-                value={filtroTurma}
-                onChange={(e) => setFiltroTurma(e.target.value)}
-                className="p-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm min-w-[90px]"
-              >
-                <option value="">Turma</option>
-                {turmasUnicas.map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-              
-              <select
-                value={filtroCasa}
-                onChange={(e) => setFiltroCasa(e.target.value)}
-                className="p-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm min-w-[120px]"
-              >
-                <option value="">Casa</option>
-                <option value="sem_casa">Sem designação</option>
-                {casas?.map(c => (
-                  <option key={c.id} value={c.id}>{c.nome}</option>
-                ))}
-              </select>
+          {/* Grid por casa */}
+          {loadingAlunos ? (
+            <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse" />)}</div>
+          ) : (
+            <>
+              {casas.map(casa => {
+                const alunosDaCasa = alunosPorCasa[casa.id] || [];
+                if (alunosDaCasa.length === 0 && busca) return null;
+                const isOpen = casaExpandida === casa.id;
 
-              <select
-                value={filtroFuncao}
-                onChange={(e) => setFiltroFuncao(e.target.value)}
-                className="p-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm min-w-[110px]"
-              >
-                <option value="">Função</option>
-                <option value="membro">Membro</option>
-                <option value="coordenador">Coordenador</option>
-                <option value="lider">Líder</option>
-              </select>
-            </div>
-
-            {/* Busca */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
-              <input
-                type="text"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="Buscar por nome..."
-                className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/30"
-              />
-            </div>
-
-            {/* Total */}
-            <p className="text-sm text-white/50">
-              {alunosFiltrados?.length || 0} alunos encontrados
-            </p>
-
-            {/* Lista Compacta - Estilo Discord */}
-            {loadingAlunos ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
-              </div>
-            ) : (
-              <div className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
-                {/* Header */}
-                <div className="flex items-center px-4 py-2 border-b border-white/10 bg-white/5">
-                  <span className="text-white/30 text-xs uppercase font-medium flex-1">Aluno</span>
-                  <span className="text-white/30 text-xs uppercase font-medium w-24 text-right">Casa</span>
-                </div>
-                
-                {/* Lista */}
-                <div className="max-h-[50vh] overflow-y-auto">
-                  {alunosFiltrados?.map((aluno) => (
-                    <button
-                      key={aluno.id}
-                      onClick={() => navigate(`/admin/pessoas/aluno/${aluno.id}`)}
-                      className="w-full flex items-center gap-3 py-2.5 px-4 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0"
-                    >
-                      {/* Avatar 28px */}
-                      {aluno.avatar_url ? (
-                        <img 
-                          src={aluno.avatar_url} 
-                          alt={aluno.nome}
-                          className="w-7 h-7 rounded-full object-cover flex-shrink-0" 
-                        />
-                      ) : (
-                        <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                          {aluno.nome?.charAt(0).toUpperCase()}
+                return (
+                  <div key={casa.id} className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 overflow-hidden">
+                    <button onClick={() => setCasaExpandida(isOpen ? null : casa.id)}
+                      className="w-full p-3 text-left hover:bg-white/[0.02] transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: casa.cor_hex }} />
+                          <span className="text-sm font-medium text-white">{casa.nome}</span>
+                          <span className="text-xs text-white/30">{alunosDaCasa.length}</span>
                         </div>
-                      )}
-                      
-                       {/* Nome + Segmento + Série/Turma + Badge inline */}
-                       <div className="flex-1 min-w-0 flex items-center gap-2">
-                         <span className="text-white text-sm font-medium truncate min-w-[80px] max-w-[60%]">
-                           {aluno.full_name || `${aluno.nome} ${aluno.sobrenome}`}
-                         </span>
-                         {cargosMap[aluno.id] === 'lider' && (
-                           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-semibold whitespace-nowrap">
-                             👑 Líder
-                           </span>
-                         )}
-                         {cargosMap[aluno.id] === 'coordenador' && (
-                           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-semibold whitespace-nowrap">
-                             ⭐ Coord.
-                           </span>
-                         )}
-                         <span className="text-white/40 text-xs truncate">
-                           {aluno.segmento && `${aluno.segmento} · `}{aluno.serie?.replace(' ano', '')} {aluno.turma}
-                         </span>
-                       </div>
-                      
-                      {/* Casa */}
-                      <span className="text-white/50 text-xs w-24 text-right truncate">
-                        {getNomeCasa(aluno.casa_id) || '-'}
-                      </span>
+                        {isOpen ? <ChevronUp className="w-4 h-4 text-white/30" /> : <ChevronDown className="w-4 h-4 text-white/30" />}
+                      </div>
                     </button>
-                  ))}
+
+                    {!isOpen && alunosDaCasa.length > 0 && (
+                      <div className="px-3 pb-2.5 flex gap-1">
+                        {alunosDaCasa.slice(0, 10).map(a => (
+                          <div key={a.id} className="w-7 h-7 rounded-full overflow-hidden border-2 shrink-0" style={{ borderColor: casa.cor_hex }}>
+                            {a.avatar_url ? <img src={a.avatar_url} alt="" className="w-full h-full object-cover" /> :
+                            <span className="flex items-center justify-center w-full h-full text-[9px] text-white/50" style={{ backgroundColor: `${casa.cor_hex}20` }}>
+                              {(a.nome || '?').charAt(0).toUpperCase()}</span>}
+                          </div>
+                        ))}
+                        {alunosDaCasa.length > 10 && <div className="w-7 h-7 rounded-full bg-white/[0.08] flex items-center justify-center"><span className="text-[8px] text-white/40">+{alunosDaCasa.length - 10}</span></div>}
+                      </div>
+                    )}
+
+                    {isOpen && (
+                      <div className="px-2 pb-2">
+                        <div className="grid grid-cols-4 gap-1">
+                          {alunosDaCasa.map(a => (
+                            <button key={a.id} onClick={() => navigate(`/admin/pessoas/aluno/${a.id}`)}
+                              className="flex flex-col items-center gap-1 p-1.5 rounded-lg hover:bg-white/[0.06] active:scale-95">
+                              <div className="w-10 h-10 rounded-full overflow-hidden border-2" style={{ borderColor: casa.cor_hex }}>
+                                {a.avatar_url ? <img src={a.avatar_url} alt="" className="w-full h-full object-cover" /> :
+                                <span className="flex items-center justify-center w-full h-full text-xs text-white/50" style={{ backgroundColor: `${casa.cor_hex}20` }}>
+                                  {(a.nome || '?').charAt(0).toUpperCase()}</span>}
+                              </div>
+                              <span className="text-[9px] text-white/50 text-center leading-tight truncate w-full">{getNomeAbreviado(a)}</span>
+                              <span className="text-[8px] text-white/25">{a.serie} {a.turma}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {alunosSemCasa.length > 0 && (
+                <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3">
+                  <p className="text-xs text-amber-400 mb-1">{alunosSemCasa.length} alunos sem casa alocada</p>
+                  <p className="text-[10px] text-amber-400/50">Sincronize ou aloque manualmente</p>
                 </div>
-                
-                {alunosFiltrados?.length === 0 && (
-                  <div className="text-center py-12">
-                    <GraduationCap className="w-12 h-12 text-white/20 mx-auto mb-3" />
-                    <p className="text-white/40">Nenhum aluno encontrado</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Botões de Ação */}
-            <div className="flex flex-col gap-3 pt-4">
-              <div className="flex gap-3">
-                <button
-                  onClick={() => handleAdicionar('aluno')}
-                  className="flex-1 p-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
-                >
-                  <Plus className="w-5 h-5" />
-                  Adicionar
-                </button>
-                <button
-                  onClick={() => setModalImportarAberto(true)}
-                  className="flex-1 p-3 bg-white text-black font-medium rounded-xl hover:bg-white/90 transition-colors flex items-center justify-center gap-2"
-                >
-                  <Upload className="w-5 h-5" />
-                  Importar CSV
-                </button>
-              </div>
-              
-              {/* Botão Gerar Contas (se tiver alunos sem conta) */}
-              {alunosSemConta > 0 && (
-                <button
-                  onClick={() => setModalGerarContasAberto(true)}
-                  className="w-full p-3 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl hover:bg-amber-500/20 transition-colors flex items-center justify-center gap-2"
-                >
-                  <Key className="w-5 h-5" />
-                  Gerar Contas ({alunosSemConta} alunos sem acesso)
-                </button>
               )}
-              
-              {/* Botão Excluir Todos */}
-              {(alunos?.length || 0) > 0 && (
-                <button
-                  onClick={() => setModalExcluirMassaAberto(true)}
-                  className="w-full p-3 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2"
-                >
-                  <Trash2 className="w-5 h-5" />
-                  Excluir Todos os Alunos
-                </button>
-              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* TAB: PROFESSORES */}
+      {tab === 'professores' && (
+        <div className="space-y-3">
+          <button onClick={() => setShowAddProfessor(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-violet-500/15 text-violet-300 border border-violet-500/25 hover:bg-violet-500/25 transition-colors">
+            <Plus className="w-3 h-3" /> Novo professor
+          </button>
+
+          {loadingProfs ? (
+            <div className="space-y-2">{[1,2].map(i => <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse" />)}</div>
+          ) : professores.length === 0 ? (
+            <div className="p-6 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+              <p className="text-white/30 text-sm">Nenhum professor cadastrado</p>
             </div>
-          </>
-        )}
-
-        {/* Tab Professores */}
-        {tabAtiva === 'professores' && (
-          <>
-            {/* Total */}
-            <p className="text-sm text-white/50">
-              {professores?.length || 0} professores
-            </p>
-
-            {/* Lista */}
-            {loadingProfessores ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {professores?.map((prof) => {
-                  const casaVinculo = prof.professor_casa?.find((pc: any) => pc.ativo);
-                  const segmentoProf = prof.segmento || 'fundamental2';
-                  
-                  // Determinar subtítulo baseado no segmento
-                  let subtitulo: string;
-                  if (segmentoProf === 'fundamental2') {
-                    subtitulo = casaVinculo 
-                      ? `Mentor: ${getNomeCasa(casaVinculo.casa_id)}`
-                      : 'Sem casa atribuída';
-                  } else {
-                    const segLabel = segmentoProf === 'infantil' ? 'Infantil' : 'Fund. I';
-                    subtitulo = prof.turmas_count > 0
-                      ? `${segLabel} • ${prof.turmas_count} turma(s)`
-                      : `${segLabel} • Sem turmas`;
-                  }
-                  
-                  return (
-                    <PessoaCard
-                      key={prof.id}
-                      nome={prof.full_name || `${prof.nome} ${prof.sobrenome}`}
-                      avatarUrl={prof.avatar_url}
-                      subtitulo={subtitulo}
-                      onClick={() => navigate(`/admin/pessoas/professor/${prof.id}`)}
-                    />
-                  );
-                })}
-                
-                {professores?.length === 0 && (
-                  <div className="text-center py-12">
-                    <Users className="w-12 h-12 text-white/20 mx-auto mb-3" />
-                    <p className="text-white/40">Nenhum professor cadastrado</p>
+          ) : (
+            <div className="space-y-2">
+              {professores.filter(p => !busca || (p.full_name || p.nome || '').toLowerCase().includes(busca.toLowerCase())).map(prof => {
+                const mentorDe = mentores.filter(m => m.professor_id === prof.id);
+                return (
+                  <div key={prof.id} className="flex items-center gap-3 p-3.5 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10">
+                    <div className="w-10 h-10 rounded-full bg-violet-500/20 overflow-hidden shrink-0">
+                      {prof.avatar_url ? <img src={prof.avatar_url} alt="" className="w-full h-full object-cover" /> :
+                      <span className="flex items-center justify-center w-full h-full text-sm text-violet-300">
+                        {(prof.nome || '?').charAt(0).toUpperCase()}</span>}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white font-medium truncate">{prof.full_name || prof.nome}</p>
+                      {mentorDe.length > 0 ? (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <span className="text-[10px] text-white/30">Mentor:</span>
+                          {mentorDe.map(m => {
+                            const c = casas.find(c => c.id === m.casa_id);
+                            return c ? (
+                              <span key={m.casa_id} className="flex items-center gap-1">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.cor_hex }} />
+                                <span className="text-[10px] text-white/40">{c.nome}</span>
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-amber-400/60 mt-0.5">Sem casa atribuida</p>
+                      )}
+                    </div>
+                    <button onClick={() => navigate(`/admin/pessoas/professor/${prof.id}`)}
+                      className="p-1 text-white/20 hover:text-white/50"><ChevronRight className="w-4 h-4" /></button>
                   </div>
-                )}
-              </div>
-            )}
-
-            {/* Tabela de Visão Geral */}
-            {institutionId && (
-              <TabelaVisaoGeralProfessores institutionId={institutionId} />
-            )}
-
-            {/* Botões */}
-            <div className="flex gap-3 pt-4">
-              <button
-                onClick={() => handleAdicionar('professor')}
-                className="flex-1 p-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
-              >
-                <Plus className="w-5 h-5" />
-                Adicionar
-              </button>
-              <button
-                onClick={() => setModalImportarAberto(true)}
-                className="flex-1 p-3 bg-white text-black font-medium rounded-xl hover:bg-white/90 transition-colors flex items-center justify-center gap-2"
-              >
-                <Upload className="w-5 h-5" />
-                Importar CSV
-              </button>
+                );
+              })}
             </div>
-          </>
-        )}
+          )}
+        </div>
+      )}
 
-        {/* Tab Admins */}
-        {tabAtiva === 'admins' && (
-          <>
-            {/* Total */}
-            <p className="text-sm text-white/50">
-              {admins?.length || 0} administradores
-            </p>
-
-            {/* Lista */}
-            {loadingAdmins ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {admins?.map((admin) => (
-                  <PessoaCard
-                    key={admin.id}
-                    nome={admin.full_name || `${admin.nome} ${admin.sobrenome}`}
-                    avatarUrl={admin.avatar_url}
-                    subtitulo="Administrador"
-                    onClick={() => {}}
-                  />
-                ))}
-                
-                {admins?.length === 0 && (
-                  <div className="text-center py-12">
-                    <Shield className="w-12 h-12 text-white/20 mx-auto mb-3" />
-                    <p className="text-white/40">Nenhum admin cadastrado</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Botão */}
-            <div className="pt-4">
-              <button
-                onClick={() => handleAdicionar('admin')}
-                className="w-full p-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
-              >
-                <Plus className="w-5 h-5" />
-                Adicionar Admin
-              </button>
+      {/* Modal: Novo Professor */}
+      {showAddProfessor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-[#1a1a1e] border border-white/10 p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-white font-medium">Novo Professor</p>
+              <button onClick={() => setShowAddProfessor(false)} className="p-1 text-white/30 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
-          </>
-        )}
-      </div>
 
-      {/* Modal Importar CSV */}
-      {modalImportarAberto && institutionId && (
-        <ModalImportarCSV
-          tipo={tabAtiva === 'professores' ? 'professores' : 'alunos'}
-          institutionId={institutionId}
-          onClose={() => setModalImportarAberto(false)}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['admin-alunos'] });
-            queryClient.invalidateQueries({ queryKey: ['admin-professores'] });
-          }}
-        />
-      )}
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] text-white/30 block mb-1">Nome completo</label>
+                <input value={profNome} onChange={e => setProfNome(e.target.value)} placeholder="Maria da Silva"
+                  className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none" />
+              </div>
+              <div>
+                <label className="text-[10px] text-white/30 block mb-1">Email</label>
+                <input value={profEmail} onChange={e => setProfEmail(e.target.value)} placeholder="professor@arboria.com"
+                  className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none" />
+              </div>
+              <div>
+                <label className="text-[10px] text-white/30 block mb-1">Senha</label>
+                <input value={profSenha} onChange={e => setProfSenha(e.target.value)} placeholder="senha123"
+                  className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none" />
+              </div>
+              <div>
+                <label className="text-[10px] text-white/30 block mb-1">Mentor da casa (opcional)</label>
+                <select value={profCasa || ''} onChange={e => setProfCasa(e.target.value ? Number(e.target.value) : null)}
+                  className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none">
+                  <option value="">Nenhuma</option>
+                  {casas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+              </div>
+            </div>
 
-      {/* Modal Adicionar Usuário */}
-      {modalAdicionarAberto && institutionId && (
-        <ModalAdicionarUsuario
-          tipo={tipoAdicionar}
-          institutionId={institutionId}
-          onClose={() => setModalAdicionarAberto(false)}
-        />
-      )}
-
-      {/* Modal Excluir em Massa */}
-      {institutionId && (
-        <ModalExcluirAlunosMassa
-          open={modalExcluirMassaAberto}
-          onOpenChange={setModalExcluirMassaAberto}
-          totalAlunos={alunos?.length || 0}
-          institutionId={institutionId}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['admin-alunos'] });
-          }}
-        />
-      )}
-
-      {/* Modal Gerar Contas */}
-      {modalGerarContasAberto && institutionId && (
-        <ModalGerarContas
-          institutionId={institutionId}
-          totalSemConta={alunosSemConta}
-          segmentos={segmentosDisponiveis}
-          onClose={() => setModalGerarContasAberto(false)}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['admin-alunos'] });
-            setModalGerarContasAberto(false);
-          }}
-        />
+            <button onClick={criarProfessor} disabled={!profNome || !profEmail || !profSenha || salvando}
+              className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors disabled:opacity-40">
+              {salvando ? 'Criando...' : 'Criar professor'}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

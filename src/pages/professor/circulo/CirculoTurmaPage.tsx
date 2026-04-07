@@ -1,121 +1,85 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 
-interface TurmaComContagem {
-  turma_letra: string;
-  count: number;
-}
-
 const CirculoTurmaPage = () => {
   const { serie } = useParams<{ serie: string }>();
-  const { casaColor, profile, casaMentor } = useProfessor();
+  const { profile } = useProfessor();
   const navigate = useNavigate();
 
   const serieNumero = parseInt(serie || '6');
-  const serieTexto = `${serieNumero}º ano`;
 
   const { data: turmas, isLoading } = useQuery({
     queryKey: ['circulo-turmas', profile?.institution_id, serieNumero],
     queryFn: async () => {
       if (!profile?.institution_id) return [];
 
-      // Buscar turmas F2 da instituição via tabela turmas
-      const { data: turmasData, error } = await supabase
-        .from('turmas')
-        .select('id, turma_letra')
+      // Buscar turmas diretamente de profiles (mesma fonte que missoes)
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('turma')
         .eq('institution_id', profile.institution_id)
-        .eq('serie', `${serieNumero}`)
         .eq('segmento', 'fundamental2')
-        .eq('ativo', true);
+        .ilike('serie', `%${serieNumero}%`)
+        .not('casa_id', 'is', null)
+        .not('turma', 'is', null);
 
       if (error) throw error;
 
-      // Buscar contagem de alunos por turma via aluno_turma
-      const turmaIds = (turmasData || []).map(t => t.id);
-      if (turmaIds.length === 0) return [];
-
-      const { data: alunoTurmaData, error: atError } = await supabase
-        .from('aluno_turma')
-        .select('turma_id')
-        .in('turma_id', turmaIds)
-        .eq('ativo', true);
-
-      if (atError) throw atError;
-
-      // Contar alunos por turma
-      const turmaCountMap = new Map<string, number>();
-      (alunoTurmaData || []).forEach(at => {
-        turmaCountMap.set(at.turma_id, (turmaCountMap.get(at.turma_id) || 0) + 1);
+      // Agrupar e contar por turma
+      const contagem: Record<string, number> = {};
+      (data || []).forEach(d => {
+        if (d.turma) contagem[d.turma] = (contagem[d.turma] || 0) + 1;
       });
 
-      const result: TurmaComContagem[] = (turmasData || []).map(t => ({
-        turma_letra: t.turma_letra,
-        count: turmaCountMap.get(t.id) || 0
-      }));
-
-      return result.sort((a, b) => a.turma_letra.localeCompare(b.turma_letra));
+      return Object.entries(contagem)
+        .map(([turma_letra, count]) => ({ turma_letra, count }))
+        .sort((a, b) => a.turma_letra.localeCompare(b.turma_letra));
     },
-    enabled: !!profile?.institution_id
+    enabled: !!profile?.institution_id,
+    staleTime: 120000,
   });
 
-  const handleTurmaClick = (turmaLetra: string) => {
-    navigate(`/professor/circulo/serie/${serieNumero}/turma/${turmaLetra}`);
-  };
-
   return (
-    <div className="space-y-6 pt-4">
-      {/* Header com voltar */}
+    <div className="p-4 space-y-5 pb-24">
       <div className="flex items-center gap-3">
-        <button 
+        <button
           onClick={() => navigate('/professor/circulo')}
-          className="p-2 -ml-2 rounded-full hover:bg-white/10"
+          className="p-2 -ml-1 rounded-lg text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors"
         >
-          <ChevronLeft size={24} className="text-white" />
+          <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-xl font-bold text-white">{serieTexto}</h1>
+        <h1 className="text-xl font-semibold text-white">{serieNumero}o Ano</h1>
       </div>
 
-      {/* Subtitle */}
-      <p className="text-white/60 text-sm">SELECIONE A TURMA</p>
+      <p className="text-[10px] font-semibold text-white/30 uppercase tracking-widest px-1">
+        Selecione a turma
+      </p>
 
-      {/* Grid de turmas */}
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="aspect-square rounded-2xl bg-white/10" />
-          ))}
+        <div className="grid grid-cols-2 gap-3">
+          {[1, 2].map(i => <Skeleton key={i} className="h-24 rounded-xl bg-white/5" />)}
         </div>
       ) : turmas && turmas.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4">
-          {turmas.map((turma) => (
+        <div className="grid grid-cols-2 gap-3">
+          {turmas.map(turma => (
             <button
               key={turma.turma_letra}
-              onClick={() => handleTurmaClick(turma.turma_letra)}
-              className="aspect-square rounded-2xl flex flex-col items-center justify-center gap-2 transition-all active:scale-95"
-              style={{ 
-                backgroundColor: `${casaColor}15`,
-                border: `1px solid ${casaColor}30`
-              }}
+              onClick={() => navigate(`/professor/circulo/serie/${serieNumero}/turma/${turma.turma_letra}`)}
+              className="p-5 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10
+                hover:border-white/20 hover:bg-white/[0.06] transition-all active:scale-[0.97]"
             >
-              <span 
-                className="text-2xl font-bold"
-                style={{ color: casaColor }}
-              >
-                TURMA {turma.turma_letra}
-              </span>
-              <span className="text-white/70 text-sm">
-                {turma.count} {turma.count === 1 ? 'aluno' : 'alunos'}
-              </span>
+              <p className="text-2xl font-bold text-white">Turma {turma.turma_letra}</p>
+              <p className="text-xs text-white/40 mt-1">{turma.count} alunos</p>
             </button>
           ))}
         </div>
       ) : (
-        <div className="text-center py-12">
-          <p className="text-white/50">Nenhuma turma encontrada para esta série</p>
+        <div className="p-8 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+          <p className="text-white/40 text-sm">Nenhuma turma encontrada</p>
         </div>
       )}
     </div>

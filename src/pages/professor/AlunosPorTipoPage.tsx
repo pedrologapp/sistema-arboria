@@ -66,13 +66,17 @@ const AlunosPorTipoPage = () => {
     queryFn: async (): Promise<{ alunos: AlunoComStatus[]; missaoIds: string[] }> => {
       if (!profile?.institution_id || !casaMentor?.id) return { alunos: [], missaoIds: [] };
 
-      // 1. Buscar alunos da casa do mentor
+      // 1. Buscar alunos — para missões gerais: todos da série; para individuais: só da casa
       let alunosQuery = supabase
         .from('profiles')
         .select('id, nome, sobrenome, serie, turma, avatar_url, casa_id')
         .eq('institution_id', profile.institution_id)
-        .eq('casa_id', casaMentor.id)
         .not('casa_id', 'is', null);
+
+      // Se for individual, filtrar pela casa específica
+      if (tipo === 'individual' && casaId) {
+        alunosQuery = alunosQuery.eq('casa_id', Number(casaId));
+      }
 
       // Filtrar por série
       if (serie) {
@@ -221,7 +225,7 @@ const AlunosPorTipoPage = () => {
                     size="mini"
                   />
                 )}
-                {tipo === 'geral' && '📋'}
+                {tipo === 'geral' && ''}
                 {headerTitle}
               </h1>
               <p className="text-white/40 text-xs">{isExtra ? 'Extra' : `Semana ${semana}`} • {serie}º Ano</p>
@@ -288,7 +292,7 @@ const AlunosPorTipoPage = () => {
               className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
               style={{ backgroundColor: `${casaColor}20` }}
             >
-              <span className="text-2xl">👥</span>
+              <span className="text-2xl text-white/30">--</span>
             </div>
             <p className="text-white/60 mb-2">Nenhum aluno encontrado</p>
             <p className="text-white/40 text-sm">

@@ -1,42 +1,60 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Target, Home, MessageCircle, User, Shield } from 'lucide-react';
-import { useStudent } from '@/contexts/StudentContext';
+import { Target, Home, MessageCircle, User, Shield, LayoutDashboard, Lock } from 'lucide-react';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
+import { useStudent } from '@/contexts/StudentContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
-
-interface NavItemConfig {
-  id: string;
-  icon: React.ReactNode;
-  label: string;
-  path: string;
-  disabled?: boolean;
-  badge?: number;
-}
+import { useMemo } from 'react';
+import { toast } from 'sonner';
 
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { casaColor } = useStudent();
   const { totalMissoesNotificacoes, mensagensNaoLidas } = useNotificacoes();
+  const { profile, casa } = useStudent();
 
-  const navItems: NavItemConfig[] = [
-    { id: 'home', icon: <Home />, label: 'Home', path: '/aluno/home' },
-    { id: 'missoes', icon: <Target />, label: 'Missões', path: '/aluno/missoes', badge: totalMissoesNotificacoes > 0 ? totalMissoesNotificacoes : undefined },
-    { id: 'casa', icon: <Shield />, label: 'Casa', path: '/aluno/casa' },
-    { id: 'chat', icon: <MessageCircle />, label: 'Chat', path: '/aluno/chat', badge: mensagensNaoLidas > 0 ? mensagensNaoLidas : undefined },
-    { id: 'perfil', icon: <User />, label: 'Perfil', path: '/aluno/perfil' },
+  // Check cargo
+  const { data: cargoAtivo = null } = useQuery({
+    queryKey: ['meu-cargo-nav', profile?.id, casa?.id],
+    queryFn: async () => {
+      if (!profile?.id || !casa?.id) return null;
+      const { data } = await supabase.from('cargos_casa')
+        .select('cargo').eq('aluno_id', profile.id).eq('casa_id', casa.id).eq('ativo', true).maybeSingle();
+      return data?.cargo || null;
+    },
+    enabled: !!profile?.id && !!casa?.id,
+    staleTime: 300000,
+  });
+
+  const temAcessoDashboard = cargoAtivo === 'lider' || cargoAtivo === 'coordenador';
+
+  const navItems = [
+    { id: 'home', icon: Home, label: 'Home', path: '/aluno/home', color: '#3b82f6' },
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/aluno/dashboard', color: '#06b6d4', locked: !temAcessoDashboard },
+    { id: 'missoes', icon: Target, label: 'Missoes', path: '/aluno/missoes', color: '#f59e0b' },
+    { id: 'casa', icon: Shield, label: 'Casa', path: '/aluno/casa', color: '#10b981' },
+    { id: 'chat', icon: MessageCircle, label: 'Chat', path: '/aluno/chat', color: '#8b5cf6' },
+    { id: 'perfil', icon: User, label: 'Perfil', path: '/aluno/perfil', color: '#ec4899' },
   ];
 
+  const badges: Record<string, number | undefined> = {
+    missoes: totalMissoesNotificacoes > 0 ? totalMissoesNotificacoes : undefined,
+    chat: mensagensNaoLidas > 0 ? mensagensNaoLidas : undefined,
+  };
+
   const getActiveIndex = () => {
-    const currentPath = location.pathname;
-    const index = navItems.findIndex(item => currentPath.startsWith(item.path));
-    return index >= 0 ? index : 0;
+    const idx = navItems.findIndex(item => location.pathname.startsWith(item.path));
+    return idx >= 0 ? idx : 0;
   };
 
   const activeIndex = getActiveIndex();
 
-  const handleNavClick = (item: NavItemConfig) => {
-    if (item.disabled) return;
+  const handleClick = (item: typeof navItems[0]) => {
+    if (item.locked) {
+      toast.info('Disponivel para lideres e coordenadores');
+      return;
+    }
     navigate(item.path);
   };
 
@@ -46,46 +64,41 @@ const BottomNav = () => {
         <div className="relative flex items-center justify-around rounded-full border border-white/10 bg-black/80 backdrop-blur-lg shadow-lg max-w-md mx-auto">
           {navItems.map((item, index) => {
             const isActive = index === activeIndex;
-            const isDisabled = item.disabled;
+            const Icon = item.icon;
+            const badge = badges[item.id];
+            const isLocked = item.locked;
 
             return (
               <button
                 key={item.id}
-                onClick={() => handleNavClick(item)}
-                disabled={isDisabled}
+                onClick={() => handleClick(item)}
                 className={cn(
-                  'relative z-20 flex flex-col items-center justify-center p-3 min-w-[60px] transition-all duration-200',
-                  isDisabled && 'opacity-30 cursor-not-allowed'
+                  'relative z-20 flex flex-col items-center justify-center p-2 min-w-[45px] transition-all duration-200',
+                  isLocked && 'opacity-40'
                 )}
                 aria-label={item.label}
               >
                 <div className="relative">
-                  <div
-                    className={cn(
-                      'w-6 h-6 transition-all duration-200',
-                      isActive ? 'scale-110' : 'scale-100'
-                    )}
-                    style={{
-                      color: isActive ? casaColor : 'rgba(255,255,255,0.4)',
-                    }}
-                  >
-                    {item.icon}
+                  <div className={cn('w-5 h-5 transition-all duration-200', isActive && !isLocked ? 'scale-110' : 'scale-100')}>
+                    <Icon
+                      className="w-full h-full"
+                      style={{ color: isActive && !isLocked ? item.color : 'rgba(255,255,255,0.35)' }}
+                    />
                   </div>
-                  
-                  {/* Badge de notificação */}
-                  {item.badge && item.badge > 0 && (
-                    <div className="absolute -top-1.5 -right-2.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 shadow-lg">
-                      {item.badge > 99 ? '99+' : item.badge}
+                  {isLocked && (
+                    <Lock className="w-2 h-2 text-white/30 absolute -bottom-0.5 -right-1" />
+                  )}
+                  {badge && badge > 0 && (
+                    <div className="absolute -top-1.5 -right-2.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[14px] h-3.5 flex items-center justify-center px-0.5 shadow-lg">
+                      {badge > 99 ? '99+' : badge}
                     </div>
                   )}
                 </div>
                 <span
-                  className={cn(
-                    'text-[10px] mt-1 transition-opacity duration-200',
-                    isActive ? 'opacity-100' : 'opacity-40'
-                  )}
+                  className="text-[8px] mt-0.5 transition-all duration-200"
                   style={{
-                    color: isActive ? casaColor : 'white',
+                    color: isActive && !isLocked ? item.color : 'rgba(255,255,255,0.3)',
+                    fontWeight: isActive ? 500 : 400,
                   }}
                 >
                   {item.label}
@@ -94,21 +107,18 @@ const BottomNav = () => {
             );
           })}
 
-          {/* Limelight effect - top glow */}
           <div
-            className="pointer-events-none absolute -top-2 z-10 h-2 w-12 rounded-full blur-md transition-all duration-300 ease-out"
+            className="pointer-events-none absolute -top-1.5 z-10 h-1.5 w-8 rounded-full blur-sm transition-all duration-300 ease-out"
             style={{
-              backgroundColor: `${casaColor}60`,
-              left: `calc(${(activeIndex * 100) / navItems.length}% + ${100 / navItems.length / 2}% - 24px)`,
+              backgroundColor: `${navItems[activeIndex].color}50`,
+              left: `calc(${(activeIndex * 100) / navItems.length}% + ${100 / navItems.length / 2}% - 16px)`,
             }}
           />
-
-          {/* Limelight effect - bottom indicator */}
           <div
-            className="pointer-events-none absolute -bottom-0.5 z-10 h-1 w-10 rounded-full transition-all duration-300 ease-out"
+            className="pointer-events-none absolute -bottom-0.5 z-10 h-1 w-6 rounded-full transition-all duration-300 ease-out"
             style={{
-              backgroundColor: casaColor,
-              left: `calc(${(activeIndex * 100) / navItems.length}% + ${100 / navItems.length / 2}% - 20px)`,
+              backgroundColor: navItems[activeIndex].locked ? 'transparent' : navItems[activeIndex].color,
+              left: `calc(${(activeIndex * 100) / navItems.length}% + ${100 / navItems.length / 2}% - 12px)`,
             }}
           />
         </div>

@@ -8,26 +8,15 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <div className="min-h-screen w-full bg-black">
-
-      {/* Desktop Header */}
-      <div className="hidden md:block">
-        <AdminHeader />
-      </div>
-
-      {/* Mobile Header (simplified) */}
-      <div className="md:hidden sticky top-0 z-50 bg-black/80 backdrop-blur-lg border-b border-white/10">
-        <div className="flex items-center justify-center h-14">
-          <span className="text-lg font-bold text-white">Arboria</span>
-        </div>
-      </div>
-
+    <div className="min-h-screen w-full bg-[#0A0A0A]">
+      <div className="max-w-lg mx-auto">
       {/* Main Content */}
-      <main className="relative z-10 pb-24 md:pb-8">
+      <main className="relative z-10 pb-24">
         {children}
       </main>
 
-      {/* Mobile Bottom Navigation */}
+      </div>
+      {/* Bottom Navigation */}
       <AdminBottomNav />
     </div>
   );

@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Hash, Users, Eye } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +8,7 @@ import { useEffect, useRef, useMemo } from 'react';
 import { MensagemBubble } from '@/components/chat/MensagemBubble';
 import { MensagemFixada } from '@/components/chat/MensagemFixada';
 import { DateSeparator } from '@/components/chat/DateSeparator';
+import { ChatInput } from '@/components/chat/ChatInput';
 import { format } from 'date-fns';
 
 const ProfessorCanalViewPage = () => {
@@ -18,7 +18,7 @@ const ProfessorCanalViewPage = () => {
   const { casaMentor, profile } = useProfessor();
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const casaColor = casaMentor?.cor_hex || '#6366f1';
+  // Cor neutra, nao usa cor da casa
 
   // Buscar dados do canal
   const { data: canal, isLoading: loadingCanal } = useQuery({
@@ -157,14 +157,12 @@ const ProfessorCanalViewPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between py-3 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
             onClick={() => navigate('/professor/chat')}
-            className="text-white/60 hover:text-white"
+            className="p-2 -ml-1 rounded-lg text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-          </Button>
+          </button>
           {canal?.icone ? (
             <span className="text-lg">{canal.icone}</span>
           ) : (
@@ -188,7 +186,7 @@ const ProfessorCanalViewPage = () => {
             <MensagemFixada
               key={msg.id}
               mensagem={msg}
-              casaColor={casaColor}
+              casaColor={"#94a3b8"}
             />
           ))}
         </div>
@@ -205,12 +203,12 @@ const ProfessorCanalViewPage = () => {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div 
                 className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
-                style={{ backgroundColor: `${casaColor}20` }}
+                style={{ backgroundColor: `${"#94a3b8"}20` }}
               >
                 {canal?.icone ? (
                   <span className="text-2xl">{canal.icone}</span>
                 ) : (
-                  <Hash className="w-6 h-6" style={{ color: casaColor }} />
+                  <Hash className="w-6 h-6" style={{ color: "#94a3b8" }} />
                 )}
               </div>
               <h3 className="text-white font-medium mb-1">
@@ -231,7 +229,7 @@ const ProfessorCanalViewPage = () => {
                   <MensagemBubble
                     mensagem={msg}
                     isMe={false}
-                    casaColor={casaColor}
+                    casaColor={"#94a3b8"}
                     agruparComAnterior={!mostrarData && deveAgrupar(msg, mensagensNormais[index - 1] || null)}
                   />
                 </div>
@@ -242,25 +240,29 @@ const ProfessorCanalViewPage = () => {
         </div>
       </ScrollArea>
 
-      {/* Footer - Aviso Modo Observador (SEM input) */}
-      <div className="py-3 border-t border-white/10">
-        <div 
-          className="p-3 rounded-xl text-center"
-          style={{ 
-            backgroundColor: 'rgba(234, 179, 8, 0.1)',
-            border: '1px solid rgba(234, 179, 8, 0.2)'
-          }}
-        >
-          <div className="flex items-center justify-center gap-2">
-            <Eye className="w-4 h-4 text-yellow-400" />
-            <span className="text-yellow-400 text-sm font-medium">
-              Modo Observador
-            </span>
+      {/* Footer */}
+      <div className="pt-2 pb-2 px-1">
+        {canal?.tipo === 'mentoria' || canal?.tipo === 'lideranca_casa' || canal?.tipo === 'escola_avisos' || canal?.tipo === 'escola_geral' ? (
+          <ChatInput
+            onEnviar={async (conteudo: string) => {
+              if (!conteudo.trim() || !canalId || !profile?.id || !profile?.institution_id) return;
+              await supabase.from('mensagens_canal').insert({
+                canal_id: canalId,
+                institution_id: profile.institution_id,
+                autor_id: profile.id,
+                conteudo: conteudo.trim(),
+              });
+            }}
+            placeholder={`Mensagem em #${canal?.nome?.toLowerCase() || 'canal'}...`}
+          />
+        ) : (
+          <div className="p-2.5 rounded-xl text-center bg-white/[0.04]">
+            <div className="flex items-center justify-center gap-1.5">
+              <Eye className="w-3.5 h-3.5 text-white/25" />
+              <span className="text-white/25 text-xs">Modo leitura</span>
+            </div>
           </div>
-          <p className="text-yellow-400/60 text-xs mt-1">
-            Não é possível enviar mensagens
-          </p>
-        </div>
+        )}
       </div>
     </div>
   );

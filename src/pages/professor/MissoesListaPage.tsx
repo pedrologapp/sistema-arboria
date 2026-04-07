@@ -91,11 +91,9 @@ const MissoesListaPage = () => {
         .ilike('serie', `%${serie}%`);
 
       // Para missões individuais, contar apenas alunos da casa específica
+      // Para missões gerais, contar TODOS os alunos da série (sem filtro de casa)
       if (!isGeral && casaId) {
         query = query.eq('casa_id', Number(casaId));
-      } else {
-        // Para missões gerais, contar alunos da casa do mentor
-        query = query.eq('casa_id', casaMentor!.id);
       }
 
       const { count, error } = await query;
@@ -112,7 +110,7 @@ const MissoesListaPage = () => {
 
   // Header com brasão
   const renderHeaderIcon = () => {
-    if (isGeral) return <span className="text-xl mr-1">📋</span>;
+    if (isGeral) return null;
     return (
       <CasaBrasao 
         brasaoUrl={casa?.brasao_url}
@@ -172,7 +170,7 @@ const MissoesListaPage = () => {
               style={{ backgroundColor: `${casaColor}20` }}
             >
               {isGeral ? (
-                <span className="text-2xl">📋</span>
+                <span className="text-white/30 text-sm">Sem missoes</span>
               ) : (
                 <CasaBrasao 
                   brasaoUrl={casa?.brasao_url}

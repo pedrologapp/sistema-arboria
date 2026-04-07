@@ -1,123 +1,84 @@
 import { useNavigate } from 'react-router-dom';
 import { useProfessor } from '@/contexts/ProfessorContext';
+import { Eye, FileText, ChevronRight } from 'lucide-react';
 
-// Séries por segmento
-const SERIES_POR_SEGMENTO = {
-  infantil: [
-    { numero: 2, label: 'MATERNAL 2' },
-    { numero: 3, label: 'MATERNAL 3' },
-    { numero: 4, label: 'GRUPO IV' },
-    { numero: 5, label: 'GRUPO V' },
-  ],
-  fundamental1: [
-    { numero: 1, label: '1º ANO' },
-    { numero: 2, label: '2º ANO' },
-    { numero: 3, label: '3º ANO' },
-    { numero: 4, label: '4º ANO' },
-    { numero: 5, label: '5º ANO' },
-  ],
-  fundamental2: [
-    { numero: 6, label: '6º ANO' },
-    { numero: 7, label: '7º ANO' },
-    { numero: 8, label: '8º ANO' },
-    { numero: 9, label: '9º ANO' },
-  ],
-};
+const SERIES_F2 = [
+  { numero: 6, label: '6o Ano' },
+  { numero: 7, label: '7o Ano' },
+  { numero: 8, label: '8o Ano' },
+  { numero: 9, label: '9o Ano' },
+];
 
 const CirculoPage = () => {
-  const { casaColor, segmento, turmasVinculadas } = useProfessor();
+  const { faseAtual } = useProfessor();
   const navigate = useNavigate();
 
-  // Cor de destaque (usa cor da casa para F2, cor fixa para outros)
-  const accentColor = segmento === 'fundamental2' ? casaColor : '#6366f1';
+  return (
+    <div className="p-4 space-y-6 pb-24">
+      {/* Header */}
+      <div>
+        <h1 className="text-xl font-semibold text-white">Observar</h1>
+        {faseAtual?.inteligencia && (
+          <p className="text-xs text-white/30 mt-0.5">
+            Fase {faseAtual.numero_fase} — {faseAtual.inteligencia.nome} — Semana {faseAtual.semana_atual || 1}
+          </p>
+        )}
+      </div>
 
-  // Para Infantil/F1: mostrar turmas vinculadas
-  const isSimplificado = segmento === 'infantil' || segmento === 'fundamental1';
-
-  const handleSerieClick = (serie: number) => {
-    navigate(`/professor/circulo/serie/${serie}`);
-  };
-
-  const handleTurmaClick = (turmaId: string) => {
-    navigate(`/professor/circulo/turma/${turmaId}`);
-  };
-
-  // Se for Infantil/F1 com turmas vinculadas, mostrar cards de turmas
-  if (isSimplificado && turmasVinculadas && turmasVinculadas.length > 0) {
-    return (
-      <div className="space-y-6 pt-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-white">Círculo das Inteligências</h1>
+      {/* Observacao Semanal */}
+      <div>
+        <div className="flex items-center gap-2 mb-3 px-1">
+          <div className="w-1 h-3.5 rounded-full bg-violet-500" />
+          <p className="text-[10px] font-semibold text-violet-400/80 uppercase tracking-widest">
+            Observacao Semanal
+          </p>
         </div>
 
-        {/* Subtitle */}
-        <p className="text-white/60 text-sm">SELECIONE A TURMA</p>
-
-        {/* Grid de Turmas */}
-        <div className="grid grid-cols-2 gap-4">
-          {turmasVinculadas.map((turma) => (
+        <div className="grid grid-cols-2 gap-3">
+          {SERIES_F2.map((serie) => (
             <button
-              key={turma.id}
-              onClick={() => handleTurmaClick(turma.id)}
-              className="aspect-square rounded-2xl flex flex-col items-center justify-center gap-2 transition-all active:scale-95"
-              style={{ 
-                backgroundColor: `${accentColor}15`,
-                border: `1px solid ${accentColor}30`
-              }}
+              key={serie.numero}
+              onClick={() => navigate(`/professor/circulo/serie/${serie.numero}`)}
+              className="p-5 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10
+                hover:border-violet-500/30 hover:bg-violet-500/[0.06]
+                transition-all active:scale-[0.97]"
             >
-              <span 
-                className="text-3xl font-bold"
-                style={{ color: accentColor }}
-              >
-                {turma.serie}º {turma.turma_letra}
-              </span>
-              <span className="text-white/70 text-xs font-medium px-2 text-center">
-                {turma.nome}
-              </span>
+              <p className="text-3xl font-bold text-white">{serie.numero}o</p>
+              <p className="text-xs text-white/40 mt-1">ANO</p>
             </button>
           ))}
         </div>
-      </div>
-    );
-  }
 
-  // Para F2 ou fallback: mostrar séries do segmento
-  const series = SERIES_POR_SEGMENTO[segmento || 'fundamental2'] || SERIES_POR_SEGMENTO.fundamental2;
-
-  return (
-    <div className="space-y-6 pt-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-white">Círculo das Inteligências</h1>
+        <p className="text-[10px] text-white/20 text-center mt-2">
+          Selecione a serie para registrar a observacao da semana
+        </p>
       </div>
 
-      {/* Subtitle */}
-      <p className="text-white/60 text-sm">SELECIONE A SÉRIE</p>
+      {/* Observacao Pessoal */}
+      <div>
+        <div className="flex items-center gap-2 mb-3 px-1">
+          <div className="w-1 h-3.5 rounded-full bg-amber-500" />
+          <p className="text-[10px] font-semibold text-amber-400/80 uppercase tracking-widest">
+            Observacao Pessoal
+          </p>
+        </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-2 gap-4">
-        {series.map((serie) => (
-          <button
-            key={serie.numero}
-            onClick={() => handleSerieClick(serie.numero)}
-            className="aspect-square rounded-2xl flex flex-col items-center justify-center gap-2 transition-all active:scale-95"
-            style={{ 
-              backgroundColor: `${accentColor}15`,
-              border: `1px solid ${accentColor}30`
-            }}
-          >
-            <span 
-              className="text-4xl font-bold"
-              style={{ color: accentColor }}
-            >
-              {serie.numero}º
-            </span>
-            <span className="text-white/70 text-sm font-medium">
-              {serie.label.replace(`${serie.numero}º `, '')}
-            </span>
-          </button>
-        ))}
+        <button
+          onClick={() => navigate('/professor/circulo/pessoal')}
+          className="w-full flex items-center gap-4 p-4 rounded-xl text-left
+            bg-[rgba(26,26,30,0.85)] border border-white/10
+            hover:border-amber-500/30 hover:bg-amber-500/[0.06]
+            transition-all active:scale-[0.98]"
+        >
+          <div className="p-2.5 rounded-lg" style={{ backgroundColor: 'rgba(245,158,11,0.12)' }}>
+            <FileText className="w-5 h-5 text-amber-400" />
+          </div>
+          <div className="flex-1">
+            <p className="text-white/90 text-sm font-medium">Registrar observacao avulsa</p>
+            <p className="text-white/35 text-[11px] mt-0.5">Relatar algo sobre um aluno fora do contexto da aula</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-white/20" />
+        </button>
       </div>
     </div>
   );

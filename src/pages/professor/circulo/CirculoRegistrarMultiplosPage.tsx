@@ -101,38 +101,23 @@ const CirculoRegistrarMultiplosPage = () => {
 
     setSaving(true);
     try {
-      // Buscar turma_id
-      const { data: turmaData } = await supabase
-        .from('turmas')
-        .select('id')
-        .eq('institution_id', profile.institution_id!)
-        .eq('serie', serieParam || '6')
-        .ilike('turma_letra', turmaParam || 'A')
-        .maybeSingle();
-
-      if (!turmaData?.id) {
-        toast.error('Turma não encontrada');
-        setSaving(false);
-        return;
-      }
-
       const faseInteligenciaId = faseAtual.inteligencia?.id;
 
-      // Criar array de observações para inserir em batch
       const observacoes = alunos.map(aluno => ({
         institution_id: profile.institution_id!,
         aluno_id: aluno.id,
         professor_id: profile.id,
-        turma_id: turmaData.id,
+        turma_id: null,
         fase_id: faseAtual.id,
         sinal_id: selectedSinal.id,
         inteligencia_fase: faseInteligenciaId!,
-        inteligencia_expressa: aluno.casa_id!, // Cada aluno tem sua própria casa
+        inteligencia_expressa: aluno.casa_id || faseInteligenciaId!,
         intensidade: 'normal',
         observacao_texto: nota || null,
-        data_observacao: format(agoraBrasil(), 'yyyy-MM-dd')
+        data_observacao: format(agoraBrasil(), 'yyyy-MM-dd'),
+        semana: faseAtual.semana_atual || null,
+        tipo_observacao: 'semanal'
       }));
-      // Inserir todas de uma vez
       const { error } = await supabase.from('observacoes').insert(observacoes);
 
       if (error) throw error;
@@ -172,38 +157,23 @@ const CirculoRegistrarMultiplosPage = () => {
 
     setSaving(true);
     try {
-      // Buscar turma_id
-      const { data: turmaData } = await supabase
-        .from('turmas')
-        .select('id')
-        .eq('institution_id', profile.institution_id!)
-        .eq('serie', serieParam || '6')
-        .ilike('turma_letra', turmaParam || 'A')
-        .maybeSingle();
-
-      if (!turmaData?.id) {
-        toast.error('Turma não encontrada');
-        setSaving(false);
-        return;
-      }
-
       const faseInteligenciaId = faseAtual.inteligencia?.id;
 
-      // Criar array de observações para inserir em batch
       const observacoes = alunos.map(aluno => ({
         institution_id: profile.institution_id!,
         aluno_id: aluno.id,
         professor_id: profile.id,
-        turma_id: turmaData.id,
+        turma_id: null,
         fase_id: faseAtual.id,
         sinal_id: sinalOutro.id,
         inteligencia_fase: faseInteligenciaId!,
-        inteligencia_expressa: aluno.casa_id!,
+        inteligencia_expressa: aluno.casa_id || faseInteligenciaId!,
         intensidade: 'normal',
-        observacao_texto: texto, // Texto obrigatório aqui
-        data_observacao: format(agoraBrasil(), 'yyyy-MM-dd')
+        observacao_texto: texto,
+        data_observacao: format(agoraBrasil(), 'yyyy-MM-dd'),
+        semana: faseAtual.semana_atual || null,
+        tipo_observacao: 'semanal'
       }));
-      // Inserir todas de uma vez
       const { error } = await supabase.from('observacoes').insert(observacoes);
 
       if (error) throw error;

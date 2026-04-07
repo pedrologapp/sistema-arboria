@@ -110,53 +110,23 @@ const CirculoRegistrarPage = () => {
 
     setSaving(true);
     try {
-      // Buscar turma_id via aluno_turma (funciona para todos os segmentos)
-      let turmaId: string | null = null;
-
-      const { data: alunoTurmaData } = await supabase
-        .from('aluno_turma')
-        .select('turma_id')
-        .eq('aluno_id', aluno.id)
-        .eq('ativo', true)
-        .limit(1)
-        .maybeSingle();
-
-      if (alunoTurmaData?.turma_id) {
-        turmaId = alunoTurmaData.turma_id;
-      } else {
-        // Fallback: buscar por serie/turma na tabela turmas
-        const { data: turmaData } = await supabase
-          .from('turmas')
-          .select('id')
-          .eq('institution_id', profile.institution_id!)
-          .eq('serie', aluno.serie || '6')
-          .ilike('turma_letra', aluno.turma || 'A')
-          .maybeSingle();
-        turmaId = turmaData?.id || null;
-      }
-
-      if (!turmaId) {
-        toast.error('Turma não encontrada');
-        setSaving(false);
-        return;
-      }
-
       const faseInteligenciaId = faseAtual.inteligencia?.id;
-      // Para alunos sem casa (Infantil/F1), usar inteligência da fase
       const alunoInteligenciaId = aluno.casa_id || faseInteligenciaId;
 
       const { error } = await supabase.from('observacoes').insert({
         institution_id: profile.institution_id!,
         aluno_id: aluno.id,
         professor_id: profile.id,
-        turma_id: turmaId,
+        turma_id: null,
         fase_id: faseAtual.id,
         sinal_id: selectedSinal.id,
         inteligencia_fase: faseInteligenciaId!,
         inteligencia_expressa: alunoInteligenciaId!,
         intensidade: 'normal',
         observacao_texto: nota || null,
-        data_observacao: format(agoraBrasil(), 'yyyy-MM-dd')
+        data_observacao: format(agoraBrasil(), 'yyyy-MM-dd'),
+        semana: faseAtual.semana_atual || null,
+        tipo_observacao: 'semanal',
       });
       if (error) throw error;
 
@@ -198,36 +168,6 @@ const CirculoRegistrarPage = () => {
 
     setSaving(true);
     try {
-      // Buscar turma_id via aluno_turma
-      let turmaId: string | null = null;
-
-      const { data: alunoTurmaData } = await supabase
-        .from('aluno_turma')
-        .select('turma_id')
-        .eq('aluno_id', aluno.id)
-        .eq('ativo', true)
-        .limit(1)
-        .maybeSingle();
-
-      if (alunoTurmaData?.turma_id) {
-        turmaId = alunoTurmaData.turma_id;
-      } else {
-        const { data: turmaData } = await supabase
-          .from('turmas')
-          .select('id')
-          .eq('institution_id', profile.institution_id!)
-          .eq('serie', aluno.serie || '6')
-          .ilike('turma_letra', aluno.turma || 'A')
-          .maybeSingle();
-        turmaId = turmaData?.id || null;
-      }
-
-      if (!turmaId) {
-        toast.error('Turma não encontrada');
-        setSaving(false);
-        return;
-      }
-
       const faseInteligenciaId = faseAtual.inteligencia?.id;
       const alunoInteligenciaId = aluno.casa_id || faseInteligenciaId;
 
@@ -235,14 +175,16 @@ const CirculoRegistrarPage = () => {
         institution_id: profile.institution_id!,
         aluno_id: aluno.id,
         professor_id: profile.id,
-        turma_id: turmaId,
+        turma_id: null,
         fase_id: faseAtual.id,
         sinal_id: sinalOutro.id,
         inteligencia_fase: faseInteligenciaId!,
         inteligencia_expressa: alunoInteligenciaId!,
         intensidade: 'normal',
         observacao_texto: texto,
-        data_observacao: format(agoraBrasil(), 'yyyy-MM-dd')
+        data_observacao: format(agoraBrasil(), 'yyyy-MM-dd'),
+        semana: faseAtual.semana_atual || null,
+        tipo_observacao: 'semanal',
       });
       if (error) throw error;
 

@@ -49,8 +49,8 @@ export const useNotificacoes = () => {
       return pendentes.length;
     },
     enabled: !!user?.id,
-    staleTime: 60000,
-    refetchInterval: 120000,
+    staleTime: 120000,
+    refetchInterval: 300000,
   });
 
   // 2. Contar aprovadas não visualizadas
@@ -70,8 +70,8 @@ export const useNotificacoes = () => {
       return count || 0;
     },
     enabled: !!user?.id,
-    staleTime: 30000,
-    refetchInterval: 120000,
+    staleTime: 120000,
+    refetchInterval: 300000,
   });
 
   // 3. Notificações detalhadas por fase (apenas fase ativa da série do aluno)
@@ -129,8 +129,8 @@ export const useNotificacoes = () => {
       return Array.from(faseMap.values());
     },
     enabled: !!user?.id && !!profile?.institution_id,
-    staleTime: 60000,
-    refetchInterval: 120000,
+    staleTime: 120000,
+    refetchInterval: 300000,
   });
 
   // 4. Notificações detalhadas por semana (apenas fase ativa da série do aluno)
@@ -195,47 +195,58 @@ export const useNotificacoes = () => {
       return Array.from(semanaMap.values());
     },
     enabled: !!user?.id && !!profile?.institution_id,
-    staleTime: 60000,
-    refetchInterval: 120000,
+    staleTime: 120000,
+    refetchInterval: 300000,
   });
 
   // 5. Contar mensagens não lidas nos canais
   const { data: canaisNaoLidos = 0 } = useQuery({
-    queryKey: ['count-canais-nao-lidos', profile?.id, casa?.id],
+    queryKey: ['count-canais-nao-lidos', profile?.id, casa?.id, profile?.institution_id],
     queryFn: async () => {
-      if (!profile?.id || !casa?.id) return 0;
-      
-      const { data: canais } = await supabase
+      if (!profile?.id || !casa?.id || !profile?.institution_id) return 0;
+
+      // Buscar TODOS os canais visiveis: da casa + escola + conselho
+      const { data: canaisCasa } = await supabase
         .from('canais_casa')
         .select('id')
         .eq('casa_id', casa.id);
-      
-      if (!canais?.length) return 0;
-      
+
+      const { data: canaisEscola } = await supabase
+        .from('canais_casa')
+        .select('id')
+        .eq('institution_id', profile.institution_id)
+        .in('tipo', ['escola_avisos', 'escola_geral', 'conselho_lideres']);
+
+      const todosCanais = [...(canaisCasa || []), ...(canaisEscola || [])];
+      // Deduplicate
+      const canaisUnicos = [...new Map(todosCanais.map(c => [c.id, c])).values()];
+
+      if (!canaisUnicos.length) return 0;
+
       const { data: leituras } = await supabase
         .from('canal_leituras')
         .select('canal_id, ultima_leitura')
         .eq('usuario_id', profile.id);
-      
+
       let total = 0;
-      
-      for (const canal of canais) {
+
+      for (const canal of canaisUnicos) {
         const leitura = leituras?.find(l => l.canal_id === canal.id);
         const ultimaLeitura = leitura?.ultima_leitura || '1970-01-01';
-        
+
         const { count } = await supabase
           .from('mensagens_canal')
           .select('*', { count: 'exact', head: true })
           .eq('canal_id', canal.id)
           .gt('created_at', ultimaLeitura)
           .neq('autor_id', profile.id);
-        
+
         total += count || 0;
       }
-      
+
       return total;
     },
-    enabled: !!profile?.id && !!casa?.id,
+    enabled: !!profile?.id && !!casa?.id && !!profile?.institution_id,
     staleTime: 30000,
   });
 

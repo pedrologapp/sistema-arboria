@@ -247,7 +247,7 @@ const MembrosPage = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/aluno/chat')}
+            onClick={() => navigate(-1)}
             className="text-white/60 hover:text-white hover:bg-white/10"
           >
             <ArrowLeft className="w-5 h-5" />

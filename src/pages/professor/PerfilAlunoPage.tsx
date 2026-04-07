@@ -1,495 +1,232 @@
-import { useState } from 'react';
-import { 
-  ArrowLeft, 
-  MessageCircle, 
-  Loader2, 
-  Star, 
-  BarChart3, 
-  AlertTriangle, 
-  Brain, 
-  Eye,
-  ClipboardList,
-  CheckCircle,
-  PlusCircle
-} from 'lucide-react';
+import { ArrowLeft, Trophy, Target, MessageCircle, ChevronRight, TreePine, Award } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useProfessor } from '@/contexts/ProfessorContext';
-import { usePerfilAluno, type PerfilAlunoData } from '@/hooks/usePerfilAluno';
-import { FeedbackEstadoCard } from '@/components/professor/FeedbackEstadoCard';
-import { SugestaoN8NCard } from '@/components/professor/SugestaoN8NCard';
-import HistoricoObservacoes from '@/components/professor/HistoricoObservacoes';
-import RegistrarAcaoModal from '@/components/professor/RegistrarAcaoModal';
-import RegistrarConversaModal from '@/components/professor/RegistrarConversaModal';
-import SugestaoAtivaModal from '@/components/professor/SugestaoAtivaModal';
-
-// ============ COMPONENTES AUXILIARES ============
-
-interface StatusCardProps {
-  status: PerfilAlunoData['status'];
-  percentual: number;
-  media: number;
-}
-
-const StatusCard = ({ status, percentual, media }: StatusCardProps) => {
-  const config = {
-    destaque: {
-      bg: 'bg-green-500/10',
-      border: 'border-green-500/20',
-      texto: 'text-green-400',
-      Icon: Star,
-      label: 'DESTAQUE'
-    },
-    regular: {
-      bg: 'bg-yellow-500/10',
-      border: 'border-yellow-500/20',
-      texto: 'text-yellow-400',
-      Icon: BarChart3,
-      label: 'REGULAR'
-    },
-    risco: {
-      bg: 'bg-red-500/10',
-      border: 'border-red-500/20',
-      texto: 'text-red-400',
-      Icon: AlertTriangle,
-      label: 'EM RISCO'
-    }
-  }[status];
-
-  const IconComponent = config.Icon;
-
-  return (
-    <div className={`p-4 rounded-xl border ${config.bg} ${config.border}`}>
-      <p className={`font-semibold ${config.texto} flex items-center gap-2`}>
-        <IconComponent className="w-4 h-4" strokeWidth={2} />
-        <span>{config.label}</span>
-      </p>
-      <p className="text-white/60 text-sm mt-1">
-        {Math.round(percentual)}% entregas • Média {media.toFixed(1)}
-      </p>
-    </div>
-  );
-};
-
-interface InteligenciaProgressBarProps {
-  emoji: string;
-  nome: string;
-  score: number;
-  cor: string;
-}
-
-const InteligenciaProgressBar = ({ emoji, nome, score, cor }: InteligenciaProgressBarProps) => {
-  return (
-    <div className="flex items-center gap-3">
-      <span className="text-base w-6 flex-shrink-0">{emoji}</span>
-      <span className="text-white/60 text-sm w-24 truncate flex-shrink-0">{nome}</span>
-      <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-        <div 
-          className="h-full rounded-full transition-all duration-500"
-          style={{ 
-            width: `${Math.min(score, 100)}%`,
-            backgroundColor: cor 
-          }}
-        />
-      </div>
-      <span className="text-white/40 text-xs w-10 text-right flex-shrink-0">
-        {Math.round(score)}%
-      </span>
-    </div>
-  );
-};
-
-interface MissaoStatusLinhaProps {
-  missao: PerfilAlunoData['missoes'][0];
-}
-
-const MissaoStatusLinha = ({ missao }: MissaoStatusLinhaProps) => {
-  const statusConfig = {
-    aprovada: { color: '#22C55E', label: 'Aprovada' },
-    aguardando: { color: '#EAB308', label: 'Aguardando' },
-    pendente: { color: '#F97316', label: 'Pendente' },
-    nao_entregue: { color: '#EF4444', label: 'Não entregue' }
-  }[missao.status];
-
-  const titulo = missao.semana 
-    ? `Semana ${missao.semana} - ${missao.tipoMissao === 'geral' ? 'Geral' : 'Individual'}`
-    : missao.titulo;
-
-  const statusTexto = missao.status === 'aprovada' && missao.nota !== null
-    ? `${missao.nota}/10`
-    : statusConfig.label;
-
-  return (
-    <div className="flex items-center justify-between py-2.5 px-3 bg-white/5 rounded-lg">
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <div 
-          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-          style={{ backgroundColor: statusConfig.color }}
-        />
-        <span className="text-white/80 text-sm truncate">{titulo}</span>
-      </div>
-      <span 
-        className="text-sm flex-shrink-0 ml-2"
-        style={{ color: statusConfig.color }}
-      >
-        {statusTexto}
-      </span>
-    </div>
-  );
-};
-
-// ============ PÁGINA PRINCIPAL ============
+import { usePerfilAluno } from '@/hooks/usePerfilAluno';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 
 const PerfilAlunoPage = () => {
+  const { id: alunoId } = useParams();
   const navigate = useNavigate();
-  const { id } = useParams();
-  const { casaColor } = useProfessor();
-  const { data: aluno, isLoading, error, refetch } = usePerfilAluno(id);
+  const { profile: profProfile } = useProfessor();
 
-  // Estado para modal de registrar ação
-  const [modalRegistrarOpen, setModalRegistrarOpen] = useState(false);
-  
-  // Estado para modal de registrar conversa (celebração)
-  const [modalConversaOpen, setModalConversaOpen] = useState(false);
+  const { data: aluno, isLoading } = usePerfilAluno(alunoId);
 
-  // Estado para modal de sugestão ativa
-  const [modalSugestaoAtiva, setModalSugestaoAtiva] = useState(false);
+  // Cores das casas
+  const { data: casaCores = {} } = useQuery({
+    queryKey: ['casa-cores'],
+    queryFn: async () => {
+      const { data } = await supabase.from('inteligencias').select('id, cor_hex, nome');
+      const map: Record<number, { cor: string; nome: string }> = {};
+      (data || []).forEach((i: any) => { map[i.id] = { cor: i.cor_hex || '#444', nome: i.nome }; });
+      return map;
+    },
+    staleTime: 600000,
+  });
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-white/40 animate-spin" />
-      </div>
-    );
-  }
-
-  // Error state
-  if (error || !aluno) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <p className="text-white/40">Aluno não encontrado</p>
-        <button
-          onClick={() => navigate('/professor/alunos')}
-          className="text-blue-400 hover:underline text-sm"
-        >
-          Voltar para lista
-        </button>
-      </div>
-    );
-  }
-
-  const handleChatClick = () => {
+  // Iniciar DM com aluno
+  const iniciarConversa = async () => {
+    if (!profProfile?.id || !profProfile?.institution_id || !alunoId) return;
+    const { data: minhas } = await supabase.from('conversa_participantes').select('conversa_id').eq('usuario_id', profProfile.id);
+    if (minhas?.length) {
+      const { data: existente } = await supabase.from('conversa_participantes').select('conversa_id')
+        .eq('usuario_id', alunoId).in('conversa_id', minhas.map(c => c.conversa_id)).limit(1).maybeSingle();
+      if (existente) { navigate(`/professor/chat/dm/${existente.conversa_id}`); return; }
+    }
+    const id = crypto.randomUUID();
+    await supabase.from('conversas_privadas').insert({ id, institution_id: profProfile.institution_id });
+    await supabase.from('conversa_participantes').insert([
+      { conversa_id: id, usuario_id: profProfile.id },
+      { conversa_id: id, usuario_id: alunoId },
+    ]);
     navigate(`/professor/chat/dm/${id}`);
   };
 
-  const handleRegistrarAcao = () => {
-    setModalRegistrarOpen(true);
-  };
+  if (isLoading) {
+    return (
+      <div className="p-4 space-y-4">
+        <div className="h-10 bg-white/5 rounded-xl animate-pulse" />
+        <div className="h-32 bg-white/5 rounded-2xl animate-pulse" />
+        <div className="h-20 bg-white/5 rounded-xl animate-pulse" />
+        <div className="h-48 bg-white/5 rounded-xl animate-pulse" />
+      </div>
+    );
+  }
 
-  const handleRegistrarObservacao = () => {
-    // Se tem QUALQUER alerta ativo, mostrar modal de aviso primeiro
-    if (aluno.alertaAtivo) {
-      setModalSugestaoAtiva(true);
-    } else {
-      navigate(`/professor/circulo/aluno/${id}`);
-    }
-  };
+  if (!aluno) {
+    return (
+      <div className="p-4">
+        <button onClick={() => navigate(-1)} className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/[0.06]">
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <p className="text-white/40 text-center mt-12">Aluno nao encontrado</p>
+      </div>
+    );
+  }
 
-  const handleRegistrarConversa = () => {
-    setModalConversaOpen(true);
-  };
+  const casaInfo = casaCores[aluno.casaId];
+  const cor = casaInfo?.cor || '#444';
 
-  const handleSalvarAcao = () => {
-    refetch();
-  };
+  // Missoes separadas por status
+  const missoesAprovadas = aluno.missoes.filter(m => m.status === 'aprovada');
+  const missoesPendentes = aluno.missoes.filter(m => m.status === 'nao_entregue' || m.status === 'pendente');
+  const missoesAguardando = aluno.missoes.filter(m => m.status === 'aguardando');
 
-  const handleSalvarConversa = () => {
-    refetch();
-  };
-
-  const handleVerHistorico = () => {
-    navigate(`/professor/alunos/${id}/observacoes`);
-  };
-
-  const handleContinuarParaObservacao = () => {
-    setModalSugestaoAtiva(false);
-    navigate(`/professor/circulo/aluno/${id}`);
-  };
-
-  const handleAbrirRegistrarAcao = () => {
-    setModalSugestaoAtiva(false);
-    setModalRegistrarOpen(true);
-  };
-
-  const handleVerDetalhes = () => {
-    setModalSugestaoAtiva(false);
-    // Apenas fecha o modal para ver o card de feedback
-  };
-
-  // Extrair primeiro nome
-  const primeiroNome = aluno.nome.split(' ')[0];
-
-  // Mapear observações para o formato do HistoricoObservacoes
-  const observacoesHistorico = aluno.observacoes.map(obs => ({
-    id: obs.id,
-    data: obs.dataHora,
-    sinal: obs.sinalLabel,
-    valencia: obs.valencia || 'neutra'
-  }));
-
-  // Nome da fase atual para o histórico
-  const faseAtualNome = aluno.faseAtualNome || 'Fase Atual';
+  // Top inteligencias (ordenadas por score)
+  const topInteligencias = [...aluno.inteligencias].sort((a, b) => b.score - a.score).slice(0, 3);
 
   return (
-    <div className="space-y-4 pb-24">
+    <div className="p-4 space-y-5 pb-24">
       {/* Header */}
-      <div className="flex items-center justify-between pt-4">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-        >
-          <ArrowLeft size={20} className="text-white" />
+      <div className="flex items-center gap-3">
+        <button onClick={() => navigate(-1)} className="p-2 -ml-1 rounded-lg text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors">
+          <ArrowLeft className="w-5 h-5" />
         </button>
-        <button 
-          onClick={handleChatClick}
-          className="p-2 rounded-full hover:bg-white/10 transition-colors"
-          style={{ backgroundColor: `${aluno.casaCor}20` }}
-        >
-          <MessageCircle size={20} style={{ color: aluno.casaCor }} />
-        </button>
+        <h1 className="text-lg font-semibold text-white">Perfil do Aluno</h1>
       </div>
 
-      {/* Seção de Perfil */}
-      <div className="text-center py-2">
-        {/* Avatar Grande */}
-        {aluno.avatarUrl ? (
-          <img 
-            src={aluno.avatarUrl} 
-            alt={aluno.nome}
-            className="w-20 h-20 rounded-full object-cover mx-auto mb-4 border-2"
-            style={{ borderColor: aluno.casaCor }}
-          />
-        ) : (
-          <div 
-            className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4"
-            style={{ backgroundColor: `${aluno.casaCor}30` }}
+      {/* Card do aluno */}
+      <div className="relative overflow-hidden p-5 rounded-2xl bg-[rgba(26,26,30,0.85)] border border-white/10">
+        <div className="flex items-center gap-4">
+          {/* Avatar */}
+          <div className="w-16 h-16 rounded-full overflow-hidden border-2 shrink-0" style={{ borderColor: cor }}>
+            {aluno.avatarUrl ? (
+              <img src={aluno.avatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="flex items-center justify-center w-full h-full text-xl text-white/40" style={{ backgroundColor: `${cor}20` }}>
+                {aluno.nome.charAt(0).toUpperCase()}
+              </span>
+            )}
+          </div>
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold text-white truncate">{aluno.nome}</h2>
+            <p className="text-sm" style={{ color: cor }}>{aluno.casaNome}</p>
+            <p className="text-xs text-white/40 mt-0.5">{aluno.serie} - Turma {aluno.turma}</p>
+          </div>
+          {/* Botao mensagem */}
+          <button
+            onClick={iniciarConversa}
+            className="p-2.5 rounded-lg bg-white/[0.06] text-white/50 hover:text-white hover:bg-white/[0.1] transition-colors"
           >
-            {aluno.nome.charAt(0).toUpperCase()}
-          </div>
-        )}
-
-        {/* Nome */}
-        <h1 className="text-white text-xl font-semibold">{aluno.nome}</h1>
-        
-        {/* Série/Turma e Casa */}
-        <p className="text-white/50 text-sm mt-1">
-          {aluno.serie} {aluno.turma} • {aluno.casaNome}
-        </p>
-
-        {/* Cards de Pontos e Ranking */}
-        <div className="flex justify-center gap-4 mt-6">
-          <div className="bg-white/5 border border-white/10 rounded-xl px-6 py-3 text-center min-w-[100px]">
-            <p className="text-green-400 text-2xl font-bold">{aluno.pontosTotais}</p>
-            <p className="text-white/40 text-xs mt-1">Pontos</p>
-          </div>
-          <div className="bg-white/5 border border-white/10 rounded-xl px-6 py-3 text-center min-w-[100px]">
-            <p className="text-2xl font-bold" style={{ color: aluno.casaCor }}>
-              #{aluno.ranking}
-            </p>
-            <p className="text-white/40 text-xs mt-1">
-              de {aluno.totalAlunosCasa}
-            </p>
-          </div>
+            <MessageCircle className="w-5 h-5" />
+          </button>
         </div>
       </div>
 
-      {/* Card de Status */}
-      <div className="px-0">
-        <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
-          <BarChart3 className="w-3.5 h-3.5" strokeWidth={1.5} />
-          Status
-        </p>
-        <StatusCard 
-          status={aluno.status} 
-          percentual={aluno.percentualEntregas} 
-          media={aluno.mediaNotas} 
-        />
-      </div>
-
-      {/* OBSERVAÇÕES DO PROFESSOR */}
-      <div className="px-0">
-        <p className="text-white/40 text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
-          <Eye className="w-3.5 h-3.5" strokeWidth={1.5} />
-          Observações do Professor
-        </p>
-        
-        {/* Card de Feedback de Estado - Renderização condicional N8N vs Legado */}
-        {aluno.alertaAtivo?.geradoPorN8N ? (
-          // Card especializado para alertas do N8N com layout de slots fixos
-          <SugestaoN8NCard
-            estado={aluno.alertaAtivo.tipo as 'celebrar' | 'precisa_atencao' | 'aguardando_explicacao'}
-            tipoRecomendacao={aluno.alertaAtivo.tipoRecomendacao}
-            nomeRecomendacao={aluno.alertaAtivo.nomeRecomendacao}
-            prioridade={aluno.alertaAtivo.prioridade}
-            elementoPonte={aluno.alertaAtivo.elementoPonte ? {
-              forcas: Array.isArray(aluno.alertaAtivo.elementoPonte.forcas) 
-                ? aluno.alertaAtivo.elementoPonte.forcas.join(', ')
-                : aluno.alertaAtivo.elementoPonte.forcas,
-              areaDificuldade: aluno.alertaAtivo.elementoPonte.areaDificuldade
-            } : undefined}
-            padraoIdentificado={aluno.alertaAtivo.padrao ? {
-              nome: aluno.alertaAtivo.padrao.nome,
-              significado: aluno.alertaAtivo.padrao.significado
-            } : undefined}
-            porQueEsteTipo={aluno.alertaAtivo.porQueEsteTipo}
-            oQueFazerAgora={aluno.alertaAtivo.oQueFazerAgora}
-            useAForca={aluno.alertaAtivo.useAForca}
-            comoReagir={aluno.alertaAtivo.comoReagir}
-            oQueNaoFazer={aluno.alertaAtivo.oQueNaoFazer}
-            mensagemProfessor={aluno.alertaAtivo.mensagemProfessor}
-            onRegistrarAcao={aluno.alertaAtivo.tipo === 'celebrar' ? handleRegistrarConversa : handleRegistrarAcao}
-          />
-        ) : (
-          // Card legado para alertas internos (IA ou calculados)
-          <FeedbackEstadoCard
-            estado={aluno.alertaAtivo?.tipo || (aluno.temObsFaseAtual ? 'aguardando' : 'aguardando')}
-            nomeAluno={primeiroNome}
-            textoAcontecendo={
-              aluno.alertaAtivo?.textoAcontecendo || 
-              (aluno.temObsFaseAtual 
-                ? `Continue observando ${primeiroNome}.`
-                : `${primeiroNome} ainda não foi observado nesta fase.`)
-            }
-            sinalPrincipal={aluno.alertaAtivo?.sinalPredominante}
-            sinalSecundario={aluno.alertaAtivo?.sinalSecundario}
-            contexto={aluno.alertaAtivo?.contexto}
-            hipoteses={aluno.alertaAtivo?.hipoteses}
-            acoesSugeridas={aluno.alertaAtivo?.acoesSugeridas?.map(a => ({
-              acao: a.titulo,
-              prioridade: a.prioridade || 'media' as const
-            }))}
-            padrao={aluno.alertaAtivo?.padrao}
-            arquetipo={aluno.alertaAtivo?.arquetipo ? {
-              nome_arquetipo: aluno.alertaAtivo.arquetipo.nome,
-              tipo: aluno.alertaAtivo.subtipo === 'descoberta' ? 'Descoberta' : 'Confirmação',
-              significado: aluno.alertaAtivo.arquetipo.significado,
-              potencializar: aluno.alertaAtivo.arquetipo.potencializar
-            } : undefined}
-            onRegistrarAcao={handleRegistrarAcao}
-            onRegistrarObservacao={handleRegistrarObservacao}
-            onRegistrarConversa={handleRegistrarConversa}
-            casaColor={aluno.casaCor}
-            casaNome={aluno.casaNome}
-            faseNome={aluno.faseAtualNome}
-            celebracaoSubtipo={aluno.alertaAtivo?.subtipo as 'descoberta' | 'confirmacao' | undefined}
-            conversaRegistrada={aluno.conversaRegistrada}
-            mensagemProfessor={aluno.alertaAtivo?.mensagemProfessor}
-            oQueNaoFazer={aluno.alertaAtivo?.oQueNaoFazer}
-            comoReagir={aluno.alertaAtivo?.comoReagir}
-            elementoPonte={aluno.alertaAtivo?.elementoPonte}
-            geradoPorN8N={aluno.alertaAtivo?.geradoPorN8N}
-          />
-        )}
-        
-        {/* Histórico de Observações */}
-        {observacoesHistorico.length > 0 && (
-          <HistoricoObservacoes
-            observacoes={observacoesHistorico}
-            faseAtualNome={faseAtualNome}
-            onVerTudo={handleVerHistorico}
-            casaColor={aluno.casaCor}
-          />
-        )}
-        
-        {/* Botão Registrar Observação */}
-        <button
-          onClick={handleRegistrarObservacao}
-          className="w-full mt-4 py-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 flex items-center justify-center gap-2 hover:bg-green-500/20 transition-colors"
-        >
-          <PlusCircle className="w-4 h-4" strokeWidth={1.5} />
-          <span className="text-sm font-medium">Registrar observação</span>
-        </button>
-      </div>
-
-      {/* Inteligências */}
-      <div className="px-0">
-        <p className="text-white/40 text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
-          <Brain className="w-3.5 h-3.5" strokeWidth={1.5} />
-          Inteligências
-        </p>
-        <div className="space-y-2.5 bg-white/5 rounded-xl p-4 border border-white/10">
-          {aluno.inteligencias.map((intel) => (
-            <InteligenciaProgressBar 
-              key={intel.id}
-              emoji={intel.emoji}
-              nome={intel.nome}
-              score={intel.score}
-              cor={intel.cor}
-            />
-          ))}
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="p-3.5 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10">
+          <div className="flex items-center justify-center gap-1 mb-0.5">
+            <Trophy className="w-3.5 h-3.5 text-yellow-500" />
+            <span className="text-xl font-bold text-white">{aluno.pontosTotais}</span>
+          </div>
+          <p className="text-[10px] text-white/40">Pontos</p>
+        </div>
+        <div className="p-3.5 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10">
+          <span className="text-xl font-bold text-white">{aluno.ranking}</span>
+          <span className="text-white/40 text-xs align-top">o</span>
+          <span className="text-white/30 text-[10px]">/{aluno.totalAlunosCasa}</span>
+          <p className="text-[10px] text-white/40 mt-0.5">Na casa</p>
+        </div>
+        <div className="p-3.5 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10">
+          <div className="flex items-center justify-center gap-1 mb-0.5">
+            <Target className="w-3.5 h-3.5 text-blue-400" />
+            <span className="text-xl font-bold text-white">{aluno.percentualEntregas}%</span>
+          </div>
+          <p className="text-[10px] text-white/40">Entregas</p>
         </div>
       </div>
 
-      {/* Missões da Fase */}
-      {aluno.missoes.length > 0 && (
-        <div className="px-0">
-          <p className="text-white/40 text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
-            <ClipboardList className="w-3.5 h-3.5" strokeWidth={1.5} />
-            Missões da Fase
-          </p>
-          <div className="space-y-2">
-            {aluno.missoes.map((missao) => (
-              <MissaoStatusLinha key={missao.id} missao={missao} />
+      {/* Missoes */}
+      <div>
+        <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">Missoes</h3>
+        <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 overflow-hidden">
+          {aluno.missoes.length === 0 ? (
+            <p className="p-4 text-sm text-white/30 text-center">Nenhuma missao atribuida</p>
+          ) : (
+            <>
+              {/* Resumo em barras */}
+              <div className="p-3.5 flex items-center gap-3">
+                <div className="flex-1">
+                  <div className="flex h-2 rounded-full overflow-hidden bg-white/10">
+                    {missoesAprovadas.length > 0 && (
+                      <div className="bg-emerald-500 transition-all" style={{ width: `${(missoesAprovadas.length / aluno.missoes.length) * 100}%` }} />
+                    )}
+                    {missoesAguardando.length > 0 && (
+                      <div className="bg-amber-500 transition-all" style={{ width: `${(missoesAguardando.length / aluno.missoes.length) * 100}%` }} />
+                    )}
+                    {missoesPendentes.length > 0 && (
+                      <div className="bg-red-500/50 transition-all" style={{ width: `${(missoesPendentes.length / aluno.missoes.length) * 100}%` }} />
+                    )}
+                  </div>
+                </div>
+                <span className="text-[10px] text-white/40 shrink-0">
+                  {missoesAprovadas.length}/{aluno.missoes.length}
+                </span>
+              </div>
+              {/* Lista de missoes */}
+              {aluno.missoes.slice(0, 5).map(m => (
+                <div key={m.id} className="flex items-center gap-3 py-2.5 px-3.5 border-t border-white/5">
+                  <div className={cn(
+                    'w-2 h-2 rounded-full shrink-0',
+                    m.status === 'aprovada' && 'bg-emerald-500',
+                    m.status === 'aguardando' && 'bg-amber-500',
+                    (m.status === 'pendente' || m.status === 'nao_entregue') && 'bg-red-500/50',
+                  )} />
+                  <span className="text-sm text-white/70 flex-1 truncate">{m.titulo}</span>
+                  {m.nota != null && (
+                    <span className="text-xs text-white/40 shrink-0">Nota {m.nota}</span>
+                  )}
+                </div>
+              ))}
+              {aluno.missoes.length > 5 && (
+                <p className="py-2 text-center text-[10px] text-white/25">+{aluno.missoes.length - 5} missoes</p>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Top Inteligencias */}
+      {topInteligencias.length > 0 && topInteligencias.some(i => i.score > 0) && (
+        <div>
+          <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">Inteligencias</h3>
+          <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 p-3.5 space-y-2.5">
+            {topInteligencias.filter(i => i.score > 0).map(intel => (
+              <div key={intel.id} className="flex items-center gap-3">
+                <span className="text-xs text-white/50 w-24 truncate">{intel.nome}</span>
+                <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${Math.min(intel.score, 100)}%`, backgroundColor: intel.cor }}
+                  />
+                </div>
+                <span className="text-[10px] text-white/40 w-8 text-right">{Math.round(intel.score)}%</span>
+              </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Modal de Registrar Ação */}
-      <RegistrarAcaoModal
-        isOpen={modalRegistrarOpen}
-        onClose={() => setModalRegistrarOpen(false)}
-        nomeAluno={aluno.nome}
-        alunoId={aluno.id}
-        alertaId={aluno.alertaAtivo?.alertaId || ''}
-        onSalvar={handleSalvarAcao}
-        alunoData={{
-          matricula: aluno.matriculaExterna,
-          serie: aluno.serie,
-          turma: aluno.turma,
-          casaId: aluno.casaId,
-          turmaId: aluno.turmaId,
-          segmento: aluno.segmento,
-          institutionId: aluno.institutionId,
-          faseId: aluno.faseAtualId
-        }}
-      />
+      {/* Arvore de Talentos (placeholder) */}
+      <div>
+        <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">Arvore de Talentos</h3>
+        <div className="p-5 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+          <TreePine className="w-7 h-7 text-white/15 mx-auto mb-1.5" />
+          <p className="text-white/25 text-xs">Em breve — habilidades desenvolvidas</p>
+        </div>
+      </div>
 
-      {/* Modal de Registrar Conversa (Celebração) */}
-      <RegistrarConversaModal
-        isOpen={modalConversaOpen}
-        onClose={() => setModalConversaOpen(false)}
-        nomeAluno={primeiroNome}
-        alunoId={aluno.id}
-        alertaId={aluno.alertaAtivo?.alertaId}
-        subtipo={aluno.alertaAtivo?.subtipo as 'descoberta' | 'confirmacao' | undefined}
-        onSalvar={handleSalvarConversa}
-      />
-
-      {/* Modal de Sugestão Ativa */}
-      <SugestaoAtivaModal
-        isOpen={modalSugestaoAtiva}
-        onClose={() => setModalSugestaoAtiva(false)}
-        nomeAluno={primeiroNome}
-        textoAcontecendo={aluno.alertaAtivo?.textoAcontecendo || 'Este aluno precisa de atenção.'}
-        acoesSugeridas={aluno.alertaAtivo?.acoesSugeridas?.slice(0, 3).map(a => ({
-          titulo: a.titulo,
-          prioridade: a.prioridade
-        }))}
-        onRegistrarAcao={handleAbrirRegistrarAcao}
-        onRegistrarObservacao={handleContinuarParaObservacao}
-        onVerDetalhes={handleVerDetalhes}
-      />
+      {/* Conquistas (placeholder) */}
+      <div>
+        <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">Conquistas</h3>
+        <div className="p-5 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+          <Award className="w-7 h-7 text-white/15 mx-auto mb-1.5" />
+          <p className="text-white/25 text-xs">Em breve — badges desbloqueados</p>
+        </div>
+      </div>
     </div>
   );
 };

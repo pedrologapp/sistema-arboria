@@ -227,12 +227,12 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
           .lte('data_inicio', hoje)
           .gte('data_fim', hoje);
 
-        // Filter by serie if professor has turmas
+        // Filter by serie if professor has turmas (accept specific OR shared/null)
         if (serieDosProfessor != null) {
-          faseQuery = faseQuery.eq('serie', serieDosProfessor);
+          faseQuery = faseQuery.or(`serie.eq.${serieDosProfessor},serie.is.null`);
         }
         if (profileData.segmento) {
-          faseQuery = faseQuery.eq('segmento', profileData.segmento);
+          faseQuery = faseQuery.or(`segmento.eq.${profileData.segmento},segmento.is.null`);
         }
 
         let { data: faseData, error: faseError } = await faseQuery.order('numero_fase', { ascending: true }).limit(1).maybeSingle();
@@ -246,10 +246,10 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
             .gt('data_inicio', hoje);
 
           if (serieDosProfessor != null) {
-            fallbackQuery = fallbackQuery.eq('serie', serieDosProfessor);
+            fallbackQuery = fallbackQuery.or(`serie.eq.${serieDosProfessor},serie.is.null`);
           }
           if (profileData.segmento) {
-            fallbackQuery = fallbackQuery.eq('segmento', profileData.segmento);
+            fallbackQuery = fallbackQuery.or(`segmento.eq.${profileData.segmento},segmento.is.null`);
           }
 
           const fallback = await fallbackQuery.order('data_inicio', { ascending: true }).limit(1).maybeSingle();

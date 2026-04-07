@@ -1,17 +1,15 @@
 import { useState, KeyboardEvent, forwardRef } from 'react';
 import { Send } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 interface ChatInputProps {
   onEnviar: (conteudo: string) => Promise<void>;
-  casaColor: string;
+  casaColor?: string;
   disabled?: boolean;
   placeholder?: string;
 }
 
-export const ChatInput = forwardRef<HTMLDivElement, ChatInputProps>(({ 
-  onEnviar, 
-  casaColor, 
+export const ChatInput = forwardRef<HTMLDivElement, ChatInputProps>(({
+  onEnviar,
   disabled = false,
   placeholder = 'Digite sua mensagem...'
 }, ref) => {
@@ -20,7 +18,6 @@ export const ChatInput = forwardRef<HTMLDivElement, ChatInputProps>(({
 
   const handleEnviar = async () => {
     if (!mensagem.trim() || enviando || disabled) return;
-    
     setEnviando(true);
     try {
       await onEnviar(mensagem);
@@ -31,7 +28,6 @@ export const ChatInput = forwardRef<HTMLDivElement, ChatInputProps>(({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Enter para enviar, Shift+Enter para nova linha
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleEnviar();
@@ -39,7 +35,7 @@ export const ChatInput = forwardRef<HTMLDivElement, ChatInputProps>(({
   };
 
   return (
-    <div ref={ref} className="flex items-end gap-2 p-3 bg-white/5 rounded-xl border border-white/10">
+    <div ref={ref} className="flex items-end gap-2 px-3 py-2.5 bg-white/[0.06] rounded-xl border border-white/10">
       <textarea
         value={mensagem}
         onChange={(e) => setMensagem(e.target.value)}
@@ -47,11 +43,7 @@ export const ChatInput = forwardRef<HTMLDivElement, ChatInputProps>(({
         placeholder={placeholder}
         disabled={disabled || enviando}
         rows={1}
-        className="
-          flex-1 bg-transparent text-white placeholder:text-white/40
-          text-base resize-none outline-none
-          min-h-[24px] max-h-[120px]
-        "
+        className="flex-1 bg-transparent text-white placeholder:text-white/30 text-sm resize-none outline-none min-h-[22px] max-h-[120px]"
         style={{ height: 'auto' }}
         onInput={(e) => {
           const target = e.target as HTMLTextAreaElement;
@@ -59,19 +51,15 @@ export const ChatInput = forwardRef<HTMLDivElement, ChatInputProps>(({
           target.style.height = Math.min(target.scrollHeight, 120) + 'px';
         }}
       />
-      
-      <Button
+      <button
         onClick={handleEnviar}
         disabled={!mensagem.trim() || enviando || disabled}
-        size="icon"
-        className="h-8 w-8 rounded-full flex-shrink-0 transition-colors"
-        style={{ 
-          backgroundColor: mensagem.trim() ? casaColor : undefined,
-          opacity: mensagem.trim() ? 1 : 0.5
-        }}
+        className="h-8 w-8 rounded-full flex-shrink-0 flex items-center justify-center transition-all
+          disabled:opacity-30 disabled:cursor-not-allowed
+          bg-blue-600 hover:bg-blue-500 text-white"
       >
-        <Send className="h-4 w-4" />
-      </Button>
+        <Send className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 });

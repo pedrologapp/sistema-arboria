@@ -1,566 +1,608 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  ArrowLeft,
-  Calendar,
-  FileText,
-  Target,
-  Check,
-  Circle,
-  Loader2,
-  AlertTriangle
-} from 'lucide-react';
-import { addDays, differenceInDays, format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { useAuth } from '@/contexts/AuthContext';
+import { ArrowLeft, Check, X, Upload, FileText, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { agoraBrasil, parseDataLocal, formatarData } from '@/utils/timezone';
-import { CasaBrasao } from '@/components/CasaBrasao';
-import TabConteudo from '@/components/admin/TabConteudo';
-import TabMissoes from '@/components/admin/TabMissoes';
 
-type TabType = 'periodo' | 'conteudo' | 'missoes';
-type StatusType = 'bloqueada' | 'proxima' | 'em_andamento' | 'concluida';
+const mecanismos: Record<string, string> = {
+  linguistica: 'A experiencia chega narrada. O linguistico pensa em palavras antes de agir, enquanto age e depois de agir — o processamento verbal e anterior e simultaneo ao comportamento.',
+  logico_matematica: 'O mundo chega como sistema esperando ser decifrado. O logico-matematico percebe relacoes, padroes e inconsistencias automaticamente — antes de decidir procura-las.',
+  espacial: 'A realidade chega como imagem. O espacial ve antes de pensar — a solucao existe como representacao visual antes de poder ser descrita em palavras.',
+  musical: 'O mundo chega com textura sonora. O musical percebe padroes nos sons — ritmo, melodia, estrutura — de forma automatica, antes de qualquer analise consciente.',
+  corporal_cinestesica: 'O corpo pensa junto com a mente. O corporal-cinestesico nao planeja e depois move — ele move para descobrir. O gesto precede e produz a compreensao.',
+  naturalista: 'O mundo chega em categorias. O naturalista percebe distincoes, agrupa, classifica e nomeia espontaneamente — qualquer conjunto de coisas convoca o mecanismo de organizacao.',
+  interpessoal: 'O mundo chega atraves das pessoas. O interpessoal le estados internos, intencoes e dinamicas de grupo automaticamente — antes de qualquer decisao consciente de observar.',
+  intrapessoal: 'O mundo chega filtrado pelo estado interno. O intrapessoal acessa com precisao o que sente e por que sente — e usa esse autoconhecimento para orientar o comportamento.',
+};
+
+const dimLabels: Record<string, string> = {
+  cognitiva: 'Cognitiva', autorregulatoria: 'Autorregulatoria', social: 'Social', emocional: 'Emocional',
+};
 
 const FaseDetalhesPage = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id: faseId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
-  
-  const [tabAtiva, setTabAtiva] = useState<TabType>('periodo');
-  const [dataInicio, setDataInicio] = useState('');
-  const [dataFim, setDataFim] = useState('');
-  const [status, setStatus] = useState<StatusType>('bloqueada');
-  const [hasChanges, setHasChanges] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [semanaEditando, setSemanaEditando] = useState<number | null>(null);
+  const [habSelecionadas, setHabSelecionadas] = useState<Set<number>>(new Set());
+  const [salvandoHab, setSalvandoHab] = useState(false);
+  const [filtroHab, setFiltroHab] = useState<'mecanismo' | 'todas'>('mecanismo');
 
-  // Buscar dados da fase com inteligência
+  const { data: institutionId } = useQuery({
+    queryKey: ['admin-institution', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('institution_id').eq('id', user!.id).single();
+      return data?.institution_id;
+    },
+    enabled: !!user?.id,
+  });
+
   const { data: fase, isLoading } = useQuery({
-    queryKey: ['fase-detalhe', id],
+    queryKey: ['admin-fase-detalhe', faseId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('fases')
-        .select(`
-          id,
-          numero_fase,
-          data_inicio,
-          data_fim,
-          ativo,
-          semana_atual,
-          inteligencia_id,
-          institution_id,
-          ano_letivo,
-          segmento,
-          serie,
-          inteligencias (
-            id,
-            nome,
-            codigo,
-            emoji,
-            cor_hex,
-            brasao_url
-          )
-        `)
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
+      const { data } = await supabase.from('fases')
+        .select('*, inteligencia:inteligencias!inteligencia_id(id, nome, cor_hex, codigo, descricao)')
+        .eq('id', faseId).single();
       return data;
     },
-    enabled: !!id
+    enabled: !!faseId,
   });
 
-  // Buscar fase atualmente ativa (para detectar conflito) - filtrar por segmento E serie
-  const { data: faseAtivaAtual } = useQuery({
-    queryKey: ['fase-ativa', fase?.institution_id, fase?.ano_letivo, fase?.segmento, fase?.serie],
+  const { data: mapaAtivacao = { nucleo: [], suporte: [] } } = useQuery({
+    queryKey: ['admin-mapa-ativacao', fase?.inteligencia_id],
     queryFn: async () => {
-      let query = supabase
-        .from('fases')
-        .select(`
-          id, 
-          numero_fase,
-          inteligencias (nome)
-        `)
-        .eq('institution_id', fase?.institution_id)
-        .eq('ano_letivo', fase?.ano_letivo)
-        .eq('ativo', true)
-        .neq('id', id!);
-
-      if (fase?.segmento) {
-        query = query.eq('segmento', fase.segmento);
-      }
-      if (fase?.serie != null) {
-        query = query.eq('serie', fase.serie);
-      }
-
-      const { data, error } = await query.maybeSingle();
-      if (error) throw error;
-      return data;
+      if (!fase?.inteligencia_id) return { nucleo: [], suporte: [] };
+      const { data } = await supabase.from('habilidade_inteligencia')
+        .select('tipo, habilidade:habilidades!habilidade_inteligencia_habilidade_id_fkey(id, codigo, nome, dimensao)')
+        .eq('inteligencia_id', fase.inteligencia_id);
+      return {
+        nucleo: (data || []).filter(d => d.tipo === 'nucleo').map(d => d.habilidade as any),
+        suporte: (data || []).filter(d => d.tipo === 'suporte').map(d => d.habilidade as any),
+      };
     },
-    enabled: !!fase?.institution_id && !!fase?.ano_letivo
+    enabled: !!fase?.inteligencia_id,
   });
 
-  // Preencher campos quando carregar
-  useEffect(() => {
-    if (fase) {
-      setDataInicio(fase.data_inicio || '');
-      setDataFim(fase.data_fim || '');
-      // Determinar status baseado no campo ativo
-      if (fase.ativo) {
-        setStatus('em_andamento');
+  const { data: habPorSemana = {} } = useQuery({
+    queryKey: ['admin-hab-semana', faseId, institutionId],
+    queryFn: async () => {
+      if (!faseId || !institutionId) return {};
+      const { data } = await supabase.from('atividade_habilidades')
+        .select('semana, habilidade:habilidades!atividade_habilidades_habilidade_id_fkey(id, codigo, nome, dimensao)')
+        .eq('fase_id', faseId).eq('institution_id', institutionId);
+      const map: Record<number, any[]> = { 1: [], 2: [], 3: [], 4: [] };
+      (data || []).forEach(d => { if (map[d.semana]) map[d.semana].push(d.habilidade); });
+      return map;
+    },
+    enabled: !!faseId && !!institutionId,
+  });
+
+  const { data: todasHabilidades = [] } = useQuery({
+    queryKey: ['admin-todas-habilidades'],
+    queryFn: async () => {
+      const { data } = await supabase.from('habilidades').select('id, codigo, nome, dimensao').order('ordem');
+      return data || [];
+    },
+  });
+
+  // Conteudos (PDFs) por semana
+  const { data: conteudosPorSemana = {} } = useQuery({
+    queryKey: ['admin-conteudos-semana', faseId, institutionId],
+    queryFn: async () => {
+      if (!faseId || !institutionId) return {};
+      const { data } = await supabase.from('fase_conteudos')
+        .select('id, semana, titulo, arquivo_nome, arquivo_url')
+        .eq('fase_id', faseId).eq('institution_id', institutionId);
+      const map: Record<number, any> = {};
+      (data || []).forEach(c => { map[c.semana] = c; });
+      return map;
+    },
+    enabled: !!faseId && !!institutionId,
+  });
+
+  const [uploadingSemana, setUploadingSemana] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const missaoInputRef = useRef<HTMLInputElement>(null);
+  const [semanaParaUpload, setSemanaParaUpload] = useState<number | null>(null);
+  const [missaoUploadInfo, setMissaoUploadInfo] = useState<{ semana: number; tipo: string; casaId: number | null } | null>(null);
+  const [semanaExpandida, setSemanaExpandida] = useState<number | null>(null);
+
+  const handleUploadPdf = async (file: File, semana: number) => {
+    if (!faseId || !institutionId) return;
+    if (file.size > 10 * 1024 * 1024) { toast.error('PDF deve ter no maximo 10MB'); return; }
+    setUploadingSemana(semana);
+    try {
+      const timestamp = Date.now();
+      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const filePath = `fases/${faseId}/semana${semana}_${timestamp}_${safeName}`;
+
+      const session = (await supabase.auth.getSession()).data.session;
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/fase-conteudos/${filePath}`,
+        { method: 'POST', headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': file.type, 'x-upsert': 'true' }, body: file }
+      );
+      if (!response.ok) throw new Error('Falha no upload');
+
+      const { data: publicUrl } = supabase.storage.from('fase-conteudos').getPublicUrl(filePath);
+
+      // Upsert conteudo
+      const existente = conteudosPorSemana[semana];
+      if (existente) {
+        await supabase.from('fase_conteudos').update({
+          arquivo_nome: file.name, arquivo_url: publicUrl.publicUrl, arquivo_tamanho: file.size,
+        }).eq('id', existente.id);
       } else {
-        // Se não está ativo, verificar datas para determinar status
-        const agora = agoraBrasil();
-        const inicio = fase.data_inicio ? parseDataLocal(fase.data_inicio) : null;
-        const fim = fase.data_fim ? parseDataLocal(fase.data_fim) : null;
-        
-        if (fim && agora > fim) {
-          setStatus('concluida');
-        } else if (inicio && agora < inicio) {
-          setStatus('proxima');
-        } else {
-          setStatus('bloqueada');
-        }
+        await supabase.from('fase_conteudos').insert({
+          institution_id: institutionId, fase_id: faseId, semana,
+          titulo: `Conteudo Semana ${semana}`, arquivo_nome: file.name,
+          arquivo_url: publicUrl.publicUrl, arquivo_tamanho: file.size,
+        });
       }
-    }
-  }, [fase]);
-
-  // Calcular semanas automaticamente (considerando status)
-  const semanas = useMemo(() => {
-    if (!dataInicio || !dataFim) return [];
-
-    // USAR parseDataLocal para evitar bug de timezone
-    const inicio = parseDataLocal(dataInicio);
-    const fim = parseDataLocal(dataFim);
-    const totalDias = differenceInDays(fim, inicio) + 1;
-    const diasPorSemana = Math.ceil(totalDias / 4);
-    
-    const agora = agoraBrasil();
-    const resultado = [];
-
-    for (let i = 0; i < 4; i++) {
-      const semanaInicio = addDays(inicio, i * diasPorSemana);
-      const semanaFim = i === 3 
-        ? fim 
-        : addDays(semanaInicio, diasPorSemana - 1);
-
-      let statusSemana: 'concluida' | 'atual' | 'futura' = 'futura';
-      
-      // Só calcular status de semanas se fase está em andamento
-      if (status === 'em_andamento') {
-        // Comparar apenas datas (ignorar horas)
-        const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
-        const fimSemana = new Date(semanaFim.getFullYear(), semanaFim.getMonth(), semanaFim.getDate());
-        const inicioSemana = new Date(semanaInicio.getFullYear(), semanaInicio.getMonth(), semanaInicio.getDate());
-        
-        if (hoje > fimSemana) {
-          statusSemana = 'concluida';
-        } else if (hoje >= inicioSemana && hoje <= fimSemana) {
-          statusSemana = 'atual';
-        }
-      } else if (status === 'concluida') {
-        statusSemana = 'concluida';
-      }
-      // Se status é 'bloqueada' ou 'proxima', todas são 'futura'
-
-      resultado.push({
-        numero: i + 1,
-        inicio: semanaInicio,
-        fim: semanaFim,
-        status: statusSemana
-      });
-    }
-
-    return resultado;
-  }, [dataInicio, dataFim, status]);
-
-  // Handler para mudança de status
-  const handleStatusChange = (novoStatus: StatusType) => {
-    setStatus(novoStatus);
-    
-    // Se está tentando ativar e já existe outra fase ativa, mostrar aviso
-    if (novoStatus === 'em_andamento' && faseAtivaAtual) {
-      setShowConfirmDialog(true);
+      toast.success(`PDF da Semana ${semana} enviado!`);
+      queryClient.invalidateQueries({ queryKey: ['admin-conteudos-semana'] });
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao enviar PDF');
+    } finally {
+      setUploadingSemana(null);
     }
   };
 
-  // Mutation para salvar (com sincronização)
-  const salvarMutation = useMutation({
-    mutationFn: async () => {
-      const novoStatusAtivo = status === 'em_andamento';
-      
-      // CRÍTICO: Se vai ativar esta fase, desativar a anterior
-      if (novoStatusAtivo && faseAtivaAtual) {
-        const { error: errorDesativar } = await supabase
-          .from('fases')
-          .update({ ativo: false })
-          .eq('id', faseAtivaAtual.id);
-
-        if (errorDesativar) throw errorDesativar;
-      }
-
-      // Atualizar a fase atual
-      const { error } = await supabase
-        .from('fases')
-        .update({
-          data_inicio: dataInicio,
-          data_fim: dataFim,
-          ativo: novoStatusAtivo,
-        })
-        .eq('id', id);
-
-      if (error) throw error;
+  // Casas (para missoes individuais)
+  const { data: casas = [] } = useQuery({
+    queryKey: ['admin-casas-lista'],
+    queryFn: async () => {
+      const { data } = await supabase.from('inteligencias').select('id, nome, cor_hex, codigo').order('id');
+      return data || [];
     },
-    onSuccess: () => {
-      const mensagem = status === 'em_andamento' 
-        ? 'Fase ativada! Alunos e professores já podem acessar o novo conteúdo.'
-        : 'Fase atualizada com sucesso';
-      toast.success(mensagem);
-      setHasChanges(false);
-      setShowConfirmDialog(false);
-      
-      // Invalidar TODOS os caches relacionados
-      queryClient.invalidateQueries({ queryKey: ['fase-detalhe'] });
-      queryClient.invalidateQueries({ queryKey: ['fases-admin'] });
-      queryClient.invalidateQueries({ queryKey: ['fase-ativa'] });
-      queryClient.invalidateQueries({ queryKey: ['fase-atual'] });
-      queryClient.invalidateQueries({ queryKey: ['missoes'] });
-      queryClient.invalidateQueries({ queryKey: ['aluno-dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['professor-dashboard'] });
-    },
-    onError: (error) => {
-      toast.error('Erro ao salvar: ' + error.message);
-    }
   });
 
-  // Handler para salvar
-  const handleSalvar = () => {
-    // Se vai ativar e tem fase ativa, pedir confirmação
-    if (status === 'em_andamento' && faseAtivaAtual && !showConfirmDialog) {
-      setShowConfirmDialog(true);
-      return;
-    }
-    salvarMutation.mutate();
+  // Missoes pre-configuradas por semana
+  const { data: missoesPorSemana = {} } = useQuery({
+    queryKey: ['admin-missoes-fase', faseId, institutionId],
+    queryFn: async () => {
+      if (!faseId || !institutionId) return {};
+      const { data } = await supabase.from('missoes')
+        .select('id, semana, tipo_missao, casa_id, titulo, arquivo_pdf_nome, arquivo_pdf_url, status')
+        .eq('fase_id', faseId).eq('institution_id', institutionId).eq('origem', 'admin');
+      const map: Record<number, any[]> = { 1: [], 2: [], 3: [], 4: [] };
+      (data || []).forEach(m => { if (map[m.semana]) map[m.semana].push(m); });
+      return map;
+    },
+    enabled: !!faseId && !!institutionId,
+  });
+
+  // Confirmacoes de aula
+  const { data: confirmacoes = {} } = useQuery({
+    queryKey: ['admin-confirmacoes', faseId],
+    queryFn: async () => {
+      if (!faseId) return {};
+      const { data } = await supabase.from('aula_confirmacao')
+        .select('semana, confirmada, aula_nao_ocorreu, motivo_ausencia, professor:profiles!aula_confirmacao_professor_id_fkey(full_name)')
+        .eq('fase_id', faseId);
+      const map: Record<number, any[]> = {};
+      (data || []).forEach(c => { if (!map[c.semana]) map[c.semana] = []; map[c.semana].push(c); });
+      return map;
+    },
+    enabled: !!faseId,
+  });
+
+  const handleUploadMissao = async (file: File) => {
+    if (!faseId || !institutionId || !missaoUploadInfo) return;
+    if (file.size > 10 * 1024 * 1024) { toast.error('PDF max 10MB'); return; }
+    const { semana, tipo, casaId } = missaoUploadInfo;
+    try {
+      const ts = Date.now();
+      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const filePath = `missoes/admin/${faseId}/s${semana}_${tipo}_${ts}_${safeName}`;
+      const session = (await supabase.auth.getSession()).data.session;
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/fase-conteudos/${filePath}`,
+        { method: 'POST', headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': file.type, 'x-upsert': 'true' }, body: file });
+      if (!res.ok) throw new Error('Upload falhou');
+      const { data: pubUrl } = supabase.storage.from('fase-conteudos').getPublicUrl(filePath);
+
+      await supabase.from('missoes').insert({
+        institution_id: institutionId, fase_id: faseId, semana,
+        tipo_missao: tipo, casa_id: casaId,
+        titulo: `Missao S${semana} ${tipo === 'geral' ? 'Geral' : casas.find(c => c.id === casaId)?.nome || ''}`,
+        arquivo_pdf_url: pubUrl.publicUrl, arquivo_pdf_nome: file.name,
+        status: 'pre_configurada', origem: 'admin',
+        pontos_base: 100, requer_texto: true, requer_arquivo: false,
+        criado_por: user!.id,
+      });
+      toast.success('Missao adicionada!');
+      queryClient.invalidateQueries({ queryKey: ['admin-missoes-fase'] });
+    } catch (err: any) { toast.error(err.message || 'Erro'); }
+    setMissaoUploadInfo(null);
   };
 
-  // Detectar mudanças
-  useEffect(() => {
-    if (fase) {
-      const mudou = 
-        dataInicio !== (fase.data_inicio || '') ||
-        dataFim !== (fase.data_fim || '') ||
-        (status === 'em_andamento') !== fase.ativo;
-      setHasChanges(mudou);
-    }
-  }, [dataInicio, dataFim, status, fase]);
+  const removerMissao = async (missaoId: string) => {
+    await supabase.from('missoes').delete().eq('id', missaoId);
+    toast.success('Missao removida');
+    queryClient.invalidateQueries({ queryKey: ['admin-missoes-fase'] });
+  };
 
-  // Configuração das tabs
-  const tabs = [
-    { id: 'periodo' as TabType, label: 'Período', icon: Calendar },
-    { id: 'conteudo' as TabType, label: 'Conteúdo', icon: FileText },
-    { id: 'missoes' as TabType, label: 'Missões', icon: Target },
-  ];
+  const removerPdf = async (semana: number) => {
+    const conteudo = conteudosPorSemana[semana];
+    if (!conteudo) return;
+    await supabase.from('fase_conteudos').delete().eq('id', conteudo.id);
+    toast.success('PDF removido');
+    queryClient.invalidateQueries({ queryKey: ['admin-conteudos-semana'] });
+  };
 
-  // Status options
-  const statusOptions = [
-    { value: 'bloqueada', label: 'Bloqueada' },
-    { value: 'proxima', label: 'Próxima' },
-    { value: 'em_andamento', label: 'Em andamento' },
-    { value: 'concluida', label: 'Concluída' },
-  ];
+  const int = fase?.inteligencia as any;
+  const mecanismo = mecanismos[int?.codigo || ''] || '';
 
-  // Nome da inteligência da fase ativa atual (para exibir no aviso)
-  const nomeInteligenciaAtiva = faseAtivaAtual?.inteligencias?.nome || 'anterior';
+  const formatDate = (d: string) => {
+    if (!d) return '-';
+    return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-white/60 animate-spin" />
-      </div>
-    );
-  }
+  const getStatus = () => {
+    if (!fase) return 'futura';
+    const hoje = new Date(); hoje.setHours(12, 0, 0, 0);
+    if (fase.ativo && new Date(fase.data_inicio + 'T12:00:00') <= hoje && new Date(fase.data_fim + 'T12:00:00') >= hoje) return 'ativa';
+    if (hoje > new Date(fase.data_fim + 'T12:00:00')) return 'concluida';
+    return 'futura';
+  };
 
-  if (!fase) {
-    return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <p className="text-white/60">Fase não encontrada</p>
-      </div>
-    );
-  }
+  const habPorDimensao = (habs: any[]) => {
+    const dims: Record<string, any[]> = { cognitiva: [], autorregulatoria: [], social: [], emocional: [] };
+    habs.forEach(h => { if (dims[h.dimensao]) dims[h.dimensao].push(h); });
+    return dims;
+  };
 
-  const inteligencia = fase.inteligencias;
+  const abrirEditorSemana = (semana: number) => {
+    setHabSelecionadas(new Set((habPorSemana[semana] || []).map((h: any) => h.id)));
+    setFiltroHab('mecanismo');
+    setSemanaEditando(semana);
+  };
+
+  const toggleHab = (id: number) => {
+    setHabSelecionadas(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  };
+
+  const salvarHab = async () => {
+    if (!faseId || !institutionId || semanaEditando === null) return;
+    setSalvandoHab(true);
+    try {
+      await supabase.from('atividade_habilidades').delete().eq('fase_id', faseId).eq('institution_id', institutionId).eq('semana', semanaEditando);
+      if (habSelecionadas.size > 0) {
+        const { error } = await supabase.from('atividade_habilidades').insert(
+          Array.from(habSelecionadas).map(hId => ({ institution_id: institutionId, fase_id: faseId, semana: semanaEditando, habilidade_id: hId }))
+        );
+        if (error) throw error;
+      }
+      toast.success(`Semana ${semanaEditando} configurada!`);
+      setSemanaEditando(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-hab-semana'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-hab-config'] });
+    } catch (err: any) { toast.error(err.message || 'Erro'); } finally { setSalvandoHab(false); }
+  };
+
+  if (isLoading) return <div className="p-4 space-y-4"><div className="h-10 bg-white/5 rounded-xl animate-pulse" /><div className="h-48 bg-white/5 rounded-xl animate-pulse" /></div>;
+
+  if (!fase) return <div className="p-4"><button onClick={() => navigate(-1)} className="p-2 text-white/50"><ArrowLeft className="w-5 h-5" /></button><p className="text-white/40 text-center mt-12">Fase nao encontrada</p></div>;
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] pb-24">
+    <div className="p-4 space-y-5 pb-24">
       {/* Header */}
-      <div className="p-4">
-        <button
-          onClick={() => navigate('/admin/fases')}
-          className="flex items-center gap-2 text-white/60 hover:text-white mb-4 transition-colors"
-        >
+      <div className="flex items-center gap-3">
+        <button onClick={() => navigate('/admin/fases')} className="p-2 -ml-1 rounded-lg text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors">
           <ArrowLeft className="w-5 h-5" />
-          <span>Voltar</span>
         </button>
-        
-        <div className="flex items-center gap-4">
-          {inteligencia && (
-            <CasaBrasao 
-              brasaoUrl={inteligencia.brasao_url}
-              emoji={inteligencia.emoji}
-              nome={inteligencia.nome}
-              size="medium"
-            />
-          )}
-          <div>
-            <h1 className="text-xl font-bold text-white">
-              {inteligencia?.nome || 'Inteligência'}
-            </h1>
-            <p className="text-white/60 text-sm">
-              Fase {fase.numero_fase} de 8
-            </p>
-          </div>
+        <div>
+          <h1 className="text-lg font-semibold text-white">Fase {fase.numero_fase} — {int?.nome || '?'}</h1>
+          <p className="text-xs text-white/30">{formatDate(fase.data_inicio)} a {formatDate(fase.data_fim)} · {getStatus()}</p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-white/10 px-4">
-        {tabs.map((tab) => {
-          const IconTab = tab.icon;
-          const isActive = tabAtiva === tab.id;
-          
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setTabAtiva(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
-                isActive 
-                  ? 'text-white border-b-2 border-white' 
-                  : 'text-white/40 hover:text-white/60'
-              }`}
-            >
-              <IconTab className="w-4 h-4" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
+      {/* Mecanismo */}
+      {mecanismo && (
+        <div className="p-4 rounded-xl border" style={{ backgroundColor: `${int?.cor_hex || '#666'}10`, borderColor: `${int?.cor_hex || '#666'}25` }}>
+          <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: `${int?.cor_hex || '#666'}90` }}>O Mecanismo</p>
+          <p className="text-sm text-white/70 leading-relaxed italic">"{mecanismo}"</p>
+        </div>
+      )}
 
-      {/* Conteúdo da Tab */}
-      <div className="p-4 space-y-6">
-        {tabAtiva === 'periodo' && (
-          <>
-            {/* Datas */}
-            <div className="bg-[#1E293B] rounded-xl p-4 space-y-4">
-              <h2 className="text-white font-semibold text-sm uppercase tracking-wider">
-                Datas da Fase
-              </h2>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-white/60 text-sm">
-                    Data início
-                  </label>
-                  <input
-                    type="date"
-                    value={dataInicio}
-                    onChange={(e) => setDataInicio(e.target.value)}
-                    className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-white/60 text-sm">
-                    Data fim
-                  </label>
-                  <input
-                    type="date"
-                    value={dataFim}
-                    onChange={(e) => setDataFim(e.target.value)}
-                    className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Status */}
-            <div className="bg-[#1E293B] rounded-xl p-4 space-y-4">
-              <h2 className="text-white font-semibold text-sm uppercase tracking-wider">
-                Status
-              </h2>
-              
-              <select
-                value={status}
-                onChange={(e) => handleStatusChange(e.target.value as StatusType)}
-                className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20 appearance-none cursor-pointer"
-              >
-                {statusOptions.map((option) => (
-                  <option key={option.value} value={option.value} className="bg-[#1E293B]">
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-
-              {/* Aviso de sincronização quando há conflito */}
-              {status === 'em_andamento' && faseAtivaAtual && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
-                  <div className="flex gap-3">
-                    <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-amber-500 font-medium text-sm">
-                        Atenção
-                      </p>
-                      <p className="text-amber-500/80 text-xs mt-1">
-                        A fase "{nomeInteligenciaAtiva}" está em andamento. 
-                        Ao ativar esta fase, a anterior será automaticamente concluída.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Info sobre sincronização */}
-              <p className="text-white/40 text-xs">
-                A fase "em andamento" define o que alunos e professores veem no app.
-              </p>
-            </div>
-
-            {/* Semanas */}
-            {semanas.length > 0 && (
-              <div className="bg-[#1E293B] rounded-xl p-4 space-y-4">
-                <div>
-                  <h2 className="text-white font-semibold text-sm uppercase tracking-wider">
-                    Semanas
-                  </h2>
-                  <p className="text-white/40 text-xs mt-1">
-                    Calculadas automaticamente com base nas datas
-                  </p>
-                </div>
-                
-                <div className="space-y-3">
-                  {semanas.map((semana) => (
-                    <div
-                      key={semana.numero}
-                      className={`p-3 rounded-xl border transition-colors ${
-                        semana.status === 'atual'
-                          ? 'bg-green-500/10 border-green-500/30'
-                          : 'bg-white/5 border-white/10'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {/* Indicador de status */}
-                          {semana.status === 'concluida' ? (
-                            <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
-                              <Check className="w-4 h-4 text-green-500" />
-                            </div>
-                          ) : semana.status === 'atual' ? (
-                            <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center animate-pulse">
-                              <div className="w-2 h-2 rounded-full bg-white" />
-                            </div>
-                          ) : (
-                            <Circle className="w-6 h-6 text-white/20" />
-                          )}
-                          
-                          <div>
-                            <p className={`font-medium text-sm ${
-                              semana.status === 'atual' ? 'text-green-400' : 'text-white'
-                            }`}>
-                              Semana {semana.numero}
-                            </p>
-                            <p className={`text-xs ${
-                              semana.status === 'concluida' ? 'text-white/60' :
-                              semana.status === 'atual' ? 'text-green-400/80' :
-                              'text-white/40'
-                            }`}>
-                              {semana.status === 'concluida' && 'Concluída'}
-                              {semana.status === 'atual' && 'Atual'}
-                              {semana.status === 'futura' && 'Futura'}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <p className="text-white/60 text-sm">
-                          {formatarData(semana.inicio)} - {formatarData(semana.fim)}
-                        </p>
-                      </div>
-                    </div>
+      {/* Habilidades de Ativacao */}
+      <div>
+        <div className="flex items-center gap-2 mb-3 px-1">
+          <div className="w-1 h-3.5 rounded-full bg-amber-500" />
+          <p className="text-[10px] font-semibold text-amber-400/80 uppercase tracking-widest">Habilidades de Ativacao</p>
+        </div>
+        <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 p-4 space-y-3">
+          <p className="text-[10px] text-white/30">Habilidades que ativam esta inteligencia. Foco prioritario.</p>
+          {Object.entries(habPorDimensao(mapaAtivacao.nucleo)).map(([dim, habs]) => {
+            if (habs.length === 0) return null;
+            return (
+              <div key={dim}>
+                <p className="text-[9px] text-white/25 uppercase tracking-wider mb-1">{dimLabels[dim]}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {habs.map((h: any) => (
+                    <span key={h.id} className="px-2 py-1 rounded-md text-[10px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/20">
+                      {h.codigo} {h.nome}
+                    </span>
                   ))}
                 </div>
               </div>
-            )}
-
-            {/* Botão Salvar */}
-            {hasChanges && (
-              <button
-                onClick={handleSalvar}
-                disabled={salvarMutation.isPending}
-                className="w-full p-4 bg-white text-black font-medium rounded-xl hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {salvarMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  'Salvar Alterações'
-                )}
-              </button>
-            )}
-          </>
-        )}
-
-        {tabAtiva === 'conteudo' && fase && (
-          <TabConteudo 
-            faseId={fase.id}
-            institutionId={fase.institution_id}
-            dataInicio={dataInicio}
-            dataFim={dataFim}
-          />
-        )}
-
-        {tabAtiva === 'missoes' && fase && (
-          <TabMissoes 
-            faseId={fase.id}
-            institutionId={fase.institution_id}
-            dataInicio={dataInicio}
-            dataFim={dataFim}
-          />
-        )}
+            );
+          })}
+        </div>
       </div>
 
-      {/* Modal de Confirmação */}
-      {showConfirmDialog && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1E293B] rounded-2xl p-6 max-w-sm w-full space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-amber-500" />
-              </div>
-              <h3 className="text-white font-semibold">Confirmar Ativação</h3>
+      {/* Suporte */}
+      {mapaAtivacao.suporte.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <div className="w-1 h-3.5 rounded-full bg-white/20" />
+            <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest">Habilidades Suporte</p>
+          </div>
+          <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 p-4">
+            <p className="text-[10px] text-white/30 mb-2">Amplificam a inteligencia quando desenvolvidas.</p>
+            <div className="flex flex-wrap gap-1.5">
+              {mapaAtivacao.suporte.map((h: any) => (
+                <span key={h.id} className="px-2 py-1 rounded-md text-[10px] bg-white/[0.06] text-white/50 border border-white/10">{h.codigo} {h.nome}</span>
+              ))}
             </div>
-            
-            <p className="text-white/60 text-sm">
-              Ao ativar a fase "{inteligencia?.nome}", a fase "{nomeInteligenciaAtiva}" 
-              será automaticamente marcada como concluída. 
-            </p>
-            <p className="text-white/60 text-sm">
-              Alunos e professores passarão a ver o conteúdo da nova fase.
-            </p>
-            
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setShowConfirmDialog(false)}
-                className="flex-1 p-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors"
-              >
-                Cancelar
+          </div>
+        </div>
+      )}
+
+      {/* Semanas */}
+      <div>
+        <div className="flex items-center gap-2 mb-3 px-1">
+          <div className="w-1 h-3.5 rounded-full bg-violet-500" />
+          <p className="text-[10px] font-semibold text-violet-400/80 uppercase tracking-widest">Semanas</p>
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3, 4].map(semana => {
+            const habs = habPorSemana[semana] || [];
+            const conteudo = conteudosPorSemana[semana];
+            const isUploading = uploadingSemana === semana;
+            const missoes = missoesPorSemana[semana] || [];
+            const missaoGeral = missoes.find((m: any) => m.tipo_missao === 'geral');
+            const missoesIndiv = missoes.filter((m: any) => m.tipo_missao === 'individual');
+            const isExpanded = semanaExpandida === semana;
+            const confs = confirmacoes[semana] || [];
+            const aulaConfirmada = confs.some((c: any) => c.confirmada && !c.aula_nao_ocorreu);
+
+            return (
+              <div key={semana} className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 overflow-hidden">
+                {/* Header */}
+                <button onClick={() => setSemanaExpandida(isExpanded ? null : semana)}
+                  className="w-full p-3.5 text-left hover:bg-white/[0.02] transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-white">Semana {semana}</span>
+                      {aulaConfirmada && <span className="text-[8px] text-emerald-400 bg-emerald-500/15 px-1.5 py-0.5 rounded">Aula confirmada</span>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {habs.length > 0 && <span className="text-[9px] text-violet-400/60">{habs.length} hab</span>}
+                      {missoes.length > 0 && <span className="text-[9px] text-blue-400/60">{missoes.length} missao</span>}
+                      {conteudo && <FileText className="w-3 h-3 text-blue-400/40" />}
+                    </div>
+                  </div>
+                  {/* Preview habilidades */}
+                  {!isExpanded && habs.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {habs.slice(0, 6).map((h: any) => (
+                        <span key={h.id} className="px-1 py-0.5 rounded text-[8px] bg-violet-500/10 text-violet-300/60">{h.codigo}</span>
+                      ))}
+                      {habs.length > 6 && <span className="text-[8px] text-white/20">+{habs.length - 6}</span>}
+                    </div>
+                  )}
+                </button>
+
+                {/* Conteudo expandido */}
+                {isExpanded && (
+                  <div className="px-3.5 pb-3.5 space-y-3 border-t border-white/5 pt-3">
+                    {/* Habilidades */}
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] text-white/30">Habilidades</p>
+                      <button onClick={() => abrirEditorSemana(semana)}
+                        className="text-[10px] text-violet-400/70 hover:text-violet-300">{habs.length > 0 ? 'Editar' : 'Configurar'}</button>
+                    </div>
+                    {habs.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {habs.map((h: any) => (
+                          <span key={h.id} className="px-1.5 py-0.5 rounded text-[9px] bg-violet-500/15 text-violet-300/80 border border-violet-500/20">{h.codigo}</span>
+                        ))}
+                      </div>
+                    ) : <p className="text-[10px] text-white/15">Nenhuma configurada</p>}
+
+                    {/* PDF professor */}
+                    <div>
+                      <p className="text-[10px] text-white/30 mb-1">Conteudo do professor</p>
+                      {conteudo ? (
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                          <a href={conteudo.arquivo_url} target="_blank" rel="noopener noreferrer"
+                            className="text-[10px] text-blue-400/80 hover:text-blue-300 truncate flex-1">{conteudo.arquivo_nome || 'PDF'}</a>
+                          <button onClick={() => removerPdf(semana)} className="p-1 text-white/20 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                        </div>
+                      ) : (
+                        <button onClick={() => { setSemanaParaUpload(semana); fileInputRef.current?.click(); }}
+                          disabled={isUploading} className="flex items-center gap-1.5 text-[10px] text-white/25 hover:text-white/50 disabled:opacity-50">
+                          <Upload className="w-3 h-3" />{isUploading ? 'Enviando...' : 'Anexar PDF'}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Missoes */}
+                    <div>
+                      <p className="text-[10px] text-white/30 mb-1.5">Missoes</p>
+
+                      {/* Geral */}
+                      <div className="mb-2">
+                        <p className="text-[9px] text-white/20 uppercase tracking-wider mb-1">Geral</p>
+                        {missaoGeral ? (
+                          <div className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-white/[0.04]">
+                            <FileText className="w-3 h-3 text-emerald-400 shrink-0" />
+                            <a href={missaoGeral.arquivo_pdf_url} target="_blank" rel="noopener noreferrer"
+                              className="text-[10px] text-emerald-400/80 hover:text-emerald-300 truncate flex-1">{missaoGeral.arquivo_pdf_nome || missaoGeral.titulo}</a>
+                            <button onClick={() => removerMissao(missaoGeral.id)} className="p-0.5 text-white/20 hover:text-red-400"><Trash2 className="w-2.5 h-2.5" /></button>
+                          </div>
+                        ) : (
+                          <button onClick={() => { setMissaoUploadInfo({ semana, tipo: 'geral', casaId: null }); missaoInputRef.current?.click(); }}
+                            className="flex items-center gap-1.5 text-[10px] text-white/20 hover:text-white/40 py-1">
+                            <Upload className="w-3 h-3" />Adicionar missao geral
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Individuais por casa */}
+                      <div>
+                        <p className="text-[9px] text-white/20 uppercase tracking-wider mb-1">Por casa</p>
+                        <div className="space-y-1">
+                          {casas.map(casa => {
+                            const missaoCasa = missoesIndiv.find((m: any) => m.casa_id === casa.id);
+                            return (
+                              <div key={casa.id} className="flex items-center gap-2 py-1 px-2 rounded-lg hover:bg-white/[0.02]">
+                                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: casa.cor_hex }} />
+                                <span className="text-[10px] text-white/40 flex-1 truncate">{casa.nome}</span>
+                                {missaoCasa ? (
+                                  <>
+                                    <a href={missaoCasa.arquivo_pdf_url} target="_blank" rel="noopener noreferrer"
+                                      className="text-[9px] text-blue-400/60 hover:text-blue-300 truncate max-w-[80px]">{missaoCasa.arquivo_pdf_nome || 'PDF'}</a>
+                                    <button onClick={() => removerMissao(missaoCasa.id)} className="p-0.5 text-white/15 hover:text-red-400"><Trash2 className="w-2.5 h-2.5" /></button>
+                                  </>
+                                ) : (
+                                  <button onClick={() => { setMissaoUploadInfo({ semana, tipo: 'individual', casaId: casa.id }); missaoInputRef.current?.click(); }}
+                                    className="text-[9px] text-white/15 hover:text-white/30">+ PDF</button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status de aulas */}
+                    <div>
+                      <p className="text-[10px] text-white/30 mb-1.5">Status das aulas</p>
+                      {confs.length > 0 ? (
+                        <div className="space-y-1">
+                          {confs.map((c: any, i: number) => (
+                            <div key={i} className={cn('flex items-center gap-2 py-1 px-2 rounded-lg', c.aula_nao_ocorreu ? 'bg-red-500/10' : 'bg-emerald-500/10')}>
+                              <div className={cn('w-1.5 h-1.5 rounded-full', c.aula_nao_ocorreu ? 'bg-red-500' : 'bg-emerald-500')} />
+                              <span className="text-[10px] text-white/60 flex-1">{(c.professor as any)?.full_name || 'Professor'}</span>
+                              <span className={cn('text-[9px]', c.aula_nao_ocorreu ? 'text-red-400/60' : 'text-emerald-400/60')}>
+                                {c.aula_nao_ocorreu ? 'Nao ocorreu' : 'Confirmada'}
+                              </span>
+                            </div>
+                          ))}
+                          {confs.some((c: any) => c.aula_nao_ocorreu && c.motivo_ausencia) && (
+                            <div className="mt-1">
+                              {confs.filter((c: any) => c.aula_nao_ocorreu && c.motivo_ausencia).map((c: any, i: number) => (
+                                <p key={i} className="text-[9px] text-red-400/40 px-2">Motivo: {c.motivo_ausencia}</p>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-white/15 py-1 px-2">Nenhum professor confirmou aula nesta semana</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Inputs file ocultos */}
+          <input ref={fileInputRef} type="file" accept=".pdf" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f && semanaParaUpload) handleUploadPdf(f, semanaParaUpload); e.target.value = ''; }} />
+          <input ref={missaoInputRef} type="file" accept=".pdf" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f && missaoUploadInfo) handleUploadMissao(f); e.target.value = ''; }} />
+        </div>
+      </div>
+
+      {/* Modal seletor */}
+      {semanaEditando !== null && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-[#1a1a1e] border-t border-white/10 rounded-t-2xl p-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-white font-medium">Semana {semanaEditando}</p>
+                <p className="text-xs text-white/30">{habSelecionadas.size} habilidades</p>
+              </div>
+              <button onClick={() => setSemanaEditando(null)} className="p-1 text-white/30 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+
+            {/* Filtro tabs */}
+            <div className="flex gap-2 mb-3">
+              <button onClick={() => setFiltroHab('mecanismo')}
+                className={cn('flex-1 py-2 rounded-lg text-xs font-medium transition-colors',
+                  filtroHab === 'mecanismo' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-white/[0.04] text-white/40 border border-transparent'
+                )}>
+                {int?.nome || 'Mecanismo'}
               </button>
-              <button
-                onClick={() => salvarMutation.mutate()}
-                disabled={salvarMutation.isPending}
-                className="flex-1 p-3 bg-white text-black font-medium rounded-xl hover:bg-white/90 transition-colors disabled:opacity-50"
-              >
-                {salvarMutation.isPending ? 'Salvando...' : 'Confirmar'}
+              <button onClick={() => setFiltroHab('todas')}
+                className={cn('flex-1 py-2 rounded-lg text-xs font-medium transition-colors',
+                  filtroHab === 'todas' ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30' : 'bg-white/[0.04] text-white/40 border border-transparent'
+                )}>
+                Todas (52)
+              </button>
+            </div>
+
+            {/* Botao rapido */}
+            {filtroHab === 'mecanismo' && (
+              <button onClick={() => {
+                setHabSelecionadas(prev => new Set([...prev, ...mapaAtivacao.nucleo.map((h: any) => h.id)]));
+              }} className="w-full mb-3 py-2 rounded-lg text-xs font-medium bg-amber-500/15 text-amber-300 border border-amber-500/20 hover:bg-amber-500/25 transition-colors">
+                + Selecionar todas de ativacao
+              </button>
+            )}
+
+            {/* Lista de habilidades */}
+            {(() => {
+              const mecanismoIds = new Set([
+                ...mapaAtivacao.nucleo.map((h: any) => h.id),
+                ...mapaAtivacao.suporte.map((h: any) => h.id),
+              ]);
+              const habsFiltradas = filtroHab === 'mecanismo'
+                ? todasHabilidades.filter(h => mecanismoIds.has(h.id))
+                : todasHabilidades;
+
+              return Object.entries(dimLabels).map(([dim, label]) => {
+                const habs = habsFiltradas.filter(h => h.dimensao === dim);
+                if (!habs.length) return null;
+                return (
+                  <div key={dim} className="mb-3">
+                    <p className="text-[9px] text-white/25 uppercase tracking-wider mb-1.5">{label}</p>
+                    {habs.map(h => {
+                      const sel = habSelecionadas.has(h.id);
+                      const isNucleo = mapaAtivacao.nucleo.some((n: any) => n.id === h.id);
+                      const isSuporte = mapaAtivacao.suporte.some((s: any) => s.id === h.id);
+                      return (
+                        <button key={h.id} onClick={() => toggleHab(h.id)}
+                          className={cn('w-full flex items-center gap-2 py-2 px-3 rounded-lg text-left transition-colors',
+                            sel ? 'bg-violet-500/20 border border-violet-500/30' : 'hover:bg-white/[0.04] border border-transparent'
+                          )}>
+                          <div className={cn('w-4 h-4 rounded border flex items-center justify-center shrink-0',
+                            sel ? 'bg-violet-500 border-violet-500' : 'border-white/20'
+                          )}>{sel && <Check className="w-3 h-3 text-white" />}</div>
+                          <span className={cn('text-xs flex-1', sel ? 'text-white' : 'text-white/60')}>
+                            <span className="text-white/40 mr-1">{h.codigo}</span>{h.nome}
+                          </span>
+                          {isNucleo && <span className="text-[8px] text-amber-400/60 shrink-0">ativacao</span>}
+                          {isSuporte && <span className="text-[8px] text-white/20 shrink-0">suporte</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              });
+            })()}
+
+            <div className="sticky bottom-0 pt-3 bg-[#1a1a1e]">
+              <button onClick={salvarHab} disabled={salvandoHab}
+                className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors disabled:opacity-50">
+                {salvandoHab ? 'Salvando...' : `Salvar ${habSelecionadas.size} habilidades`}
               </button>
             </div>
           </div>
