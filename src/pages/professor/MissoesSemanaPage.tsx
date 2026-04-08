@@ -253,7 +253,7 @@ const MissoesSemanaPage = () => {
           </div>
 
           {/* Divisor */}
-          <div className="border-t border-white/10" />
+          <div className="border-t border-violet-500/10" />
 
           {/* Missões Individuais por Casa */}
           <div>

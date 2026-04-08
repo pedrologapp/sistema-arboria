@@ -278,7 +278,7 @@ const ConteudoInteligenciaAdminPage = () => {
   return (
     <div className="min-h-screen bg-[#0F172A] pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-[#0F172A]/95 backdrop-blur-lg border-b border-white/5">
+      <div className="sticky top-0 z-40 bg-[#0F172A]/95 backdrop-blur-lg border-b border-violet-500/5">
         <div className="px-4 py-4">
           <div className="flex items-center gap-3">
             <button 
@@ -371,7 +371,7 @@ const ConteudoInteligenciaAdminPage = () => {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent 
                             align="end" 
-                            className="bg-[#1E293B] border-white/10 min-w-[160px]"
+                            className="bg-[#252547] border-violet-500/10 min-w-[160px]"
                           >
                             <DropdownMenuItem 
                               onClick={() => abrirModal(semana, conteudo)}
@@ -436,8 +436,8 @@ const ConteudoInteligenciaAdminPage = () => {
       {/* Modal de Upload */}
       {modalAberto && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1E293B] rounded-2xl max-w-md w-full overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
+          <div className="bg-[#252547] rounded-2xl max-w-md w-full overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-violet-500/10">
               <h3 className="text-white font-semibold">
                 Semana {semanaAtual} — {SERIES.find(s => s.value === serieSelecionada)?.label}
               </h3>
@@ -493,7 +493,7 @@ const ConteudoInteligenciaAdminPage = () => {
                   value={titulo}
                   onChange={(e) => setTitulo(e.target.value)}
                   placeholder="Ex: Guia da Semana 1"
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20"
+                  className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20"
                 />
               </div>
 
@@ -504,12 +504,12 @@ const ConteudoInteligenciaAdminPage = () => {
                   onChange={(e) => setDescricao(e.target.value)}
                   placeholder="Breve descrição do conteúdo..."
                   rows={3}
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none"
+                  className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none"
                 />
               </div>
             </div>
 
-            <div className="flex gap-3 p-4 border-t border-white/10">
+            <div className="flex gap-3 p-4 border-t border-violet-500/10">
               <button
                 onClick={fecharModal}
                 className="flex-1 p-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors"

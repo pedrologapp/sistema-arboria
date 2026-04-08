@@ -166,7 +166,7 @@ const RelatoriosPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] px-4 py-6">
+    <div className="min-h-screen bg-[#1A1A2E] px-4 py-6">
       <div className="max-w-lg mx-auto space-y-6">
         {/* Header */}
         <div className="text-center">
@@ -178,7 +178,7 @@ const RelatoriosPage = () => {
         </div>
 
         {/* Card: Credenciais F2 */}
-        <div className="p-5 bg-white/5 border border-white/10 rounded-2xl space-y-4">
+        <div className="p-5 bg-white/5 border border-violet-500/10 rounded-2xl space-y-4">
           <div>
             <h2 className="text-base font-semibold text-white flex items-center gap-2">
               🔑 Credenciais dos Alunos — F2
@@ -211,7 +211,7 @@ const RelatoriosPage = () => {
               onClick={handleExportCSV}
               disabled={!!exportando || !institutionId}
               variant="outline"
-              className="flex-1 border-white/10 text-white hover:bg-white/10"
+              className="flex-1 border-violet-500/10 text-white hover:bg-white/10"
             >
               {exportando === 'csv' ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -224,7 +224,7 @@ const RelatoriosPage = () => {
         </div>
 
         {/* Placeholder para futuros relatórios */}
-        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl text-center">
+        <div className="p-4 bg-white/[0.02] border border-violet-500/5 rounded-2xl text-center">
           <p className="text-xs text-white/30">Mais relatórios em breve...</p>
         </div>
       </div>

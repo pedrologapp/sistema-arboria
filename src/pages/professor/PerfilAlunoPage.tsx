@@ -87,7 +87,7 @@ const PerfilAlunoPage = () => {
       </div>
 
       {/* Card do aluno */}
-      <div className="relative overflow-hidden p-5 rounded-2xl bg-[rgba(26,26,30,0.85)] border border-white/10">
+      <div className="relative overflow-hidden p-5 rounded-2xl bg-[#252547] border border-violet-500/10">
         <div className="flex items-center gap-4">
           {/* Avatar */}
           <div className="w-16 h-16 rounded-full overflow-hidden border-2 shrink-0" style={{ borderColor: cor }}>
@@ -117,20 +117,20 @@ const PerfilAlunoPage = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="p-3.5 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10">
+        <div className="p-3.5 rounded-xl text-center bg-[#252547] border border-violet-500/10">
           <div className="flex items-center justify-center gap-1 mb-0.5">
             <Trophy className="w-3.5 h-3.5 text-yellow-500" />
             <span className="text-xl font-bold text-white">{aluno.pontosTotais}</span>
           </div>
           <p className="text-[10px] text-white/40">Pontos</p>
         </div>
-        <div className="p-3.5 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10">
+        <div className="p-3.5 rounded-xl text-center bg-[#252547] border border-violet-500/10">
           <span className="text-xl font-bold text-white">{aluno.ranking}</span>
-          <span className="text-white/40 text-xs align-top">o</span>
+          <span className="text-white/40 text-xs align-top">º</span>
           <span className="text-white/30 text-[10px]">/{aluno.totalAlunosCasa}</span>
           <p className="text-[10px] text-white/40 mt-0.5">Na casa</p>
         </div>
-        <div className="p-3.5 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10">
+        <div className="p-3.5 rounded-xl text-center bg-[#252547] border border-violet-500/10">
           <div className="flex items-center justify-center gap-1 mb-0.5">
             <Target className="w-3.5 h-3.5 text-blue-400" />
             <span className="text-xl font-bold text-white">{aluno.percentualEntregas}%</span>
@@ -142,7 +142,7 @@ const PerfilAlunoPage = () => {
       {/* Missoes */}
       <div>
         <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">Missoes</h3>
-        <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 overflow-hidden">
+        <div className="rounded-xl bg-[#252547] border border-violet-500/10 overflow-hidden">
           {aluno.missoes.length === 0 ? (
             <p className="p-4 text-sm text-white/30 text-center">Nenhuma missao atribuida</p>
           ) : (
@@ -168,7 +168,7 @@ const PerfilAlunoPage = () => {
               </div>
               {/* Lista de missoes */}
               {aluno.missoes.slice(0, 5).map(m => (
-                <div key={m.id} className="flex items-center gap-3 py-2.5 px-3.5 border-t border-white/5">
+                <div key={m.id} className="flex items-center gap-3 py-2.5 px-3.5 border-t border-violet-500/5">
                   <div className={cn(
                     'w-2 h-2 rounded-full shrink-0',
                     m.status === 'aprovada' && 'bg-emerald-500',
@@ -193,7 +193,7 @@ const PerfilAlunoPage = () => {
       {topInteligencias.length > 0 && topInteligencias.some(i => i.score > 0) && (
         <div>
           <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">Inteligencias</h3>
-          <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 p-3.5 space-y-2.5">
+          <div className="rounded-xl bg-[#252547] border border-violet-500/10 p-3.5 space-y-2.5">
             {topInteligencias.filter(i => i.score > 0).map(intel => (
               <div key={intel.id} className="flex items-center gap-3">
                 <span className="text-xs text-white/50 w-24 truncate">{intel.nome}</span>
@@ -213,7 +213,7 @@ const PerfilAlunoPage = () => {
       {/* Arvore de Talentos (placeholder) */}
       <div>
         <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">Arvore de Talentos</h3>
-        <div className="p-5 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+        <div className="p-5 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
           <TreePine className="w-7 h-7 text-white/15 mx-auto mb-1.5" />
           <p className="text-white/25 text-xs">Em breve — habilidades desenvolvidas</p>
         </div>
@@ -222,7 +222,7 @@ const PerfilAlunoPage = () => {
       {/* Conquistas (placeholder) */}
       <div>
         <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">Conquistas</h3>
-        <div className="p-5 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+        <div className="p-5 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
           <Award className="w-7 h-7 text-white/15 mx-auto mb-1.5" />
           <p className="text-white/25 text-xs">Em breve — badges desbloqueados</p>
         </div>

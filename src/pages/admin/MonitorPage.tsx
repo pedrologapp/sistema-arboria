@@ -349,7 +349,7 @@ const MonitorPage = () => {
             <ChevronDown className="w-3 h-3" />
           </button>
           {showFaseSelect && (
-            <div className="absolute top-full left-0 mt-1 z-50 w-56 rounded-lg bg-[#1a1a1e] border border-white/10 shadow-xl overflow-hidden">
+            <div className="absolute top-full left-0 mt-1 z-50 w-56 rounded-lg bg-[#1E1E3A] border border-violet-500/10 shadow-xl overflow-hidden">
               {todasFases.map(f => {
                 const int = f.inteligencia as any;
                 return (
@@ -394,7 +394,7 @@ const MonitorPage = () => {
         </div>
         <div className="space-y-2">
           {/* Progresso da fase */}
-          <div className="p-3.5 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10">
+          <div className="p-3.5 rounded-xl bg-[#252547] border border-violet-500/10">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-white">Progresso da fase</span>
               <span className="text-sm font-bold text-white">Semana {semanaAtual}/4</span>
@@ -465,11 +465,11 @@ const MonitorPage = () => {
 
           {/* Missoes + Alunos */}
           <div className="grid grid-cols-2 gap-2">
-            <div className="p-3 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+            <div className="p-3 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
               <span className={cn('text-lg font-bold', missoesPendentes > 0 ? 'text-amber-400' : 'text-white')}>{missoesPendentes}</span>
               <p className="text-[10px] text-white/40">Sem entrega</p>
             </div>
-            <div className="p-3 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+            <div className="p-3 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
               <span className="text-lg font-bold text-white">{totalAlunos}</span>
               <p className="text-[10px] text-white/40">Alunos{serieFiltro ? ` ${serieFiltro}º Ano` : ' F2'}</p>
             </div>
@@ -484,7 +484,7 @@ const MonitorPage = () => {
           <p className="text-[10px] font-semibold text-violet-400/80 uppercase tracking-widest">Calibracao da Fase</p>
         </div>
         {distribuicao ? (
-          <div className="p-4 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 space-y-3">
+          <div className="p-4 rounded-xl bg-[#252547] border border-violet-500/10 space-y-3">
             {[
               { label: 'Foi alem', pct: distribuicao.foiAlem.pct, count: distribuicao.foiAlem.count, cor: 'bg-amber-500', ideal: '10-15%' },
               { label: 'Fez', pct: distribuicao.fez.pct, count: distribuicao.fez.count, cor: 'bg-emerald-500', ideal: '50-60%' },
@@ -504,7 +504,7 @@ const MonitorPage = () => {
             <p className="text-[10px] text-white/20 text-center">{distribuicao.total} registros na fase</p>
           </div>
         ) : (
-          <div className="p-4 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+          <div className="p-4 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
             <p className="text-white/30 text-sm">Nenhuma observacao semanal enviada nesta fase</p>
           </div>
         )}
@@ -527,7 +527,7 @@ const MonitorPage = () => {
               </div>
             )}
             {atencao.nuncaFoiAlem > 0 && (
-              <div className="p-3.5 rounded-xl bg-white/[0.04] border border-white/10">
+              <div className="p-3.5 rounded-xl bg-white/[0.04] border border-violet-500/10">
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4 text-white/40" />
                   <span className="text-sm text-white/70">{atencao.nuncaFoiAlem} alunos nunca "Foi alem"</span>
@@ -545,7 +545,7 @@ const MonitorPage = () => {
           <div className="w-1 h-3.5 rounded-full bg-emerald-500" />
           <p className="text-[10px] font-semibold text-emerald-400/80 uppercase tracking-widest">Casas</p>
         </div>
-        <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 overflow-hidden">
+        <div className="rounded-xl bg-[#252547] border border-violet-500/10 overflow-hidden">
           <div className="flex items-center gap-3 py-2 px-3.5 text-[9px] text-white/25 uppercase tracking-wider">
             <span className="flex-1">Casa</span>
             <span className="w-8 text-center">Qtd</span>
@@ -553,7 +553,7 @@ const MonitorPage = () => {
             <span className="w-20 text-center">Entregas</span>
           </div>
           {visaoCasas.map(casa => (
-            <div key={casa.id} className="flex items-center gap-3 py-2.5 px-3.5 border-t border-white/5">
+            <div key={casa.id} className="flex items-center gap-3 py-2.5 px-3.5 border-t border-violet-500/5">
               <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: casa.cor }} />
               <span className="text-sm text-white/70 flex-1 truncate">{casa.nome}</span>
               <span className="text-xs text-white/30 w-8 text-center">{casa.total}</span>
@@ -578,16 +578,16 @@ const MonitorPage = () => {
           </p>
         </div>
         {timeline.length > 0 ? (
-          <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 overflow-hidden">
+          <div className="rounded-xl bg-[#252547] border border-violet-500/10 overflow-hidden">
             {timeline.map((item, idx) => (
-              <div key={idx} className={cn('py-2.5 px-3.5', idx > 0 && 'border-t border-white/5')}>
+              <div key={idx} className={cn('py-2.5 px-3.5', idx > 0 && 'border-t border-violet-500/5')}>
                 <p className={cn('text-xs', item.cor)}>{item.texto}</p>
                 <p className="text-[10px] text-white/20 mt-0.5">{formatDistanceToNow(new Date(item.tempo), { addSuffix: true, locale: ptBR })}</p>
               </div>
             ))}
           </div>
         ) : (
-          <div className="p-4 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+          <div className="p-4 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
             <Activity className="w-6 h-6 text-white/15 mx-auto mb-2" />
             <p className="text-white/30 text-xs">Nenhuma atividade recente</p>
           </div>

@@ -166,20 +166,20 @@ const MissoesFasePage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] px-5 py-6">
+      <div className="min-h-screen bg-[#1A1A2E] px-5 py-6">
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-8 h-8 bg-[#1E293B] rounded-full animate-pulse" />
-          <div className="h-5 w-32 bg-[#1E293B] rounded animate-pulse" />
+          <div className="w-8 h-8 bg-[#252547] rounded-full animate-pulse" />
+          <div className="h-5 w-32 bg-[#252547] rounded animate-pulse" />
         </div>
         <div className="flex flex-col items-center gap-3 mb-8">
-          <div className="w-10 h-10 bg-[#1E293B] rounded-full animate-pulse" />
-          <div className="h-5 w-40 bg-[#1E293B] rounded animate-pulse" />
-          <div className="h-3 w-24 bg-[#1E293B] rounded animate-pulse" />
+          <div className="w-10 h-10 bg-[#252547] rounded-full animate-pulse" />
+          <div className="h-5 w-40 bg-[#252547] rounded animate-pulse" />
+          <div className="h-3 w-24 bg-[#252547] rounded animate-pulse" />
         </div>
-        <div className="h-3 w-32 bg-[#1E293B] rounded animate-pulse mb-4" />
+        <div className="h-3 w-32 bg-[#252547] rounded animate-pulse mb-4" />
         <div className="space-y-3">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-[76px] bg-[#1E293B] rounded-xl animate-pulse" />
+            <div key={i} className="h-[76px] bg-[#252547] rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -188,7 +188,7 @@ const MissoesFasePage = () => {
 
   if (error || !fase) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] px-5 py-6">
+      <div className="min-h-screen bg-[#1A1A2E] px-5 py-6">
         <button
           onClick={() => navigate('/aluno/missoes')}
           className="flex items-center gap-2 text-[#94A3B8] hover:text-white transition-colors mb-8"
@@ -200,7 +200,7 @@ const MissoesFasePage = () => {
           <p className="text-[#64748B] text-sm mb-4">{error || 'Fase não encontrada'}</p>
           <button
             onClick={fetchData}
-            className="px-4 py-2 rounded-lg bg-[#1E293B] hover:bg-[#283548] text-sm text-white transition-colors"
+            className="px-4 py-2 rounded-lg bg-[#252547] hover:bg-[#283548] text-sm text-white transition-colors"
           >
             Tentar novamente
           </button>
@@ -210,7 +210,7 @@ const MissoesFasePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] px-5 py-6 pb-24">
+    <div className="min-h-screen bg-[#1A1A2E] px-5 py-6 pb-24">
       {/* Back button */}
       <button
         onClick={() => navigate('/aluno/missoes')}
@@ -266,9 +266,9 @@ const MissoesFasePage = () => {
               disabled={isFutura}
               className={cn(
                 'w-full py-5 px-4 rounded-xl text-left transition-all relative',
-                isFutura && 'cursor-not-allowed bg-[#1E293B]/50 opacity-50',
-                isAtual && 'bg-[#1E293B] border border-[#3B82F6]/30 hover:bg-[#283548]',
-                isPassada && 'bg-[#1E293B] hover:bg-[#283548]'
+                isFutura && 'cursor-not-allowed bg-[#252547]/50 opacity-50',
+                isAtual && 'bg-[#252547] border border-[#3B82F6]/30 hover:bg-[#283548]',
+                isPassada && 'bg-[#252547] hover:bg-[#283548]'
               )}
             >
               {/* Badges no canto superior direito */}
@@ -343,7 +343,7 @@ const MissoesFasePage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
         onClick={handleExtraClick}
-        className="w-full py-5 px-4 rounded-xl bg-[#1E293B] border border-[#F59E0B]/10 
+        className="w-full py-5 px-4 rounded-xl bg-[#252547] border border-[#F59E0B]/10 
                    hover:bg-[#283548] transition-all text-left"
       >
         <div className="flex items-center justify-between">

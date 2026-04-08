@@ -159,7 +159,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="pl-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-indigo-500/20"
+                  className="pl-11 bg-white/5 border-violet-500/10 text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-indigo-500/20"
                 />
               </div>
             </div>
@@ -178,7 +178,7 @@ const Login = () => {
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
                   required
-                  className="pl-11 pr-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-indigo-500/20"
+                  className="pl-11 pr-11 bg-white/5 border-violet-500/10 text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-indigo-500/20"
                 />
                 <button
                   type="button"

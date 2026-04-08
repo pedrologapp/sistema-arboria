@@ -116,9 +116,9 @@ const FasesPage = () => {
           {[1,2,3,4].map(i => <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse" />)}
         </div>
       ) : (
-        <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 overflow-hidden">
+        <div className="rounded-xl bg-[#252547] border border-violet-500/10 overflow-hidden">
           {/* Header */}
-          <div className="grid grid-cols-12 gap-2 py-2 px-3 text-[9px] text-white/25 uppercase tracking-wider border-b border-white/5">
+          <div className="grid grid-cols-12 gap-2 py-2 px-3 text-[9px] text-white/25 uppercase tracking-wider border-b border-violet-500/5">
             <span className="col-span-4">Fase</span>
             <span className="col-span-2 text-center">Inicio</span>
             <span className="col-span-2 text-center">Fim</span>
@@ -134,7 +134,7 @@ const FasesPage = () => {
             const semanasConfig = habConfig[fase.id] || 0;
 
             return (
-              <div key={fase.id} className={cn('border-t border-white/5', status === 'ativa' && 'bg-emerald-500/[0.04]')}>
+              <div key={fase.id} className={cn('border-t border-violet-500/5', status === 'ativa' && 'bg-emerald-500/[0.04]')}>
                 {isEditing ? (
                   /* Modo edicao */
                   <div className="p-3 space-y-3">
@@ -149,7 +149,7 @@ const FasesPage = () => {
                           type="date"
                           value={editInicio}
                           onChange={e => setEditInicio(e.target.value)}
-                          className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white outline-none"
+                          className="w-full bg-white/[0.06] border border-violet-500/10 rounded-lg px-2 py-1.5 text-xs text-white outline-none"
                         />
                       </div>
                       <div>
@@ -158,7 +158,7 @@ const FasesPage = () => {
                           type="date"
                           value={editFim}
                           onChange={e => setEditFim(e.target.value)}
-                          className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white outline-none"
+                          className="w-full bg-white/[0.06] border border-violet-500/10 rounded-lg px-2 py-1.5 text-xs text-white outline-none"
                         />
                       </div>
                     </div>

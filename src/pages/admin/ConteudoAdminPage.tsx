@@ -88,7 +88,7 @@ const ConteudoAdminPage = () => {
   return (
     <div className="min-h-screen bg-[#0F172A] pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-[#0F172A]/95 backdrop-blur-lg border-b border-white/5">
+      <div className="sticky top-0 z-40 bg-[#0F172A]/95 backdrop-blur-lg border-b border-violet-500/5">
         <div className="px-4 py-4">
           <div className="flex items-center gap-3">
             <button 

@@ -25,7 +25,7 @@ const FeedbackRefazerModal = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"
+          className="fixed inset-0 bg-[#12122A]/95 flex items-center justify-center p-4 z-50"
           onClick={onClose}
         >
           <motion.div
@@ -34,7 +34,7 @@ const FeedbackRefazerModal = ({
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#1a1a1a] rounded-2xl p-6 max-w-sm w-full relative border border-yellow-500/30"
+            className="bg-[#1E1E3A] rounded-2xl p-6 max-w-sm w-full relative border border-yellow-500/30"
           >
             {/* Botão fechar */}
             <button
@@ -66,7 +66,7 @@ const FeedbackRefazerModal = ({
                 <p className="text-white/40 text-xs uppercase tracking-wide mb-2 flex items-center gap-2">
                   💬 Orientações do Professor
                 </p>
-                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
                   <p className="text-white/80 text-sm italic leading-relaxed">
                     "{feedbackProfessor}"
                   </p>

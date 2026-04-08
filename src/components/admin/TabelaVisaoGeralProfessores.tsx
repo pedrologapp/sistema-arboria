@@ -141,7 +141,7 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
   const isLoading = loadingTurmas || (segmentoVisao === 'fundamental2' && loadingCasas);
 
   return (
-    <div className="mt-8 bg-white/5 border border-white/10 rounded-xl p-4">
+    <div className="mt-8 bg-white/5 border border-violet-500/10 rounded-xl p-4">
       <div className="flex items-center gap-2 mb-4">
         <LayoutGrid className="w-5 h-5 text-white/60" />
         <h3 className="text-white font-medium">Visão Geral: Turmas e Professores</h3>
@@ -173,10 +173,10 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
           {/* Tabela para Infantil e Fund. I (Turmas) */}
           {segmentoVisao !== 'fundamental2' && (
             <>
-              <div className="overflow-x-auto rounded-lg border border-white/10">
+              <div className="overflow-x-auto rounded-lg border border-violet-500/10">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-white/10 hover:bg-transparent">
+                    <TableRow className="border-violet-500/10 hover:bg-transparent">
                       <TableHead className="text-white/60 text-xs uppercase">Turma</TableHead>
                       <TableHead className="text-white/60 text-xs uppercase">Regente</TableHead>
                       {segmentoVisao === 'infantil' && (
@@ -187,14 +187,14 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
                   </TableHeader>
                   <TableBody>
                     {turmasFiltradas.length === 0 ? (
-                      <TableRow className="border-white/10">
+                      <TableRow className="border-violet-500/10">
                         <TableCell colSpan={segmentoVisao === 'infantil' ? 4 : 3} className="text-center text-white/40 py-8">
                           Nenhuma turma cadastrada para este segmento
                         </TableCell>
                       </TableRow>
                     ) : (
                       turmasFiltradas.map(turma => (
-                        <TableRow key={turma.id} className="border-white/10 hover:bg-white/5">
+                        <TableRow key={turma.id} className="border-violet-500/10 hover:bg-white/5">
                           <TableCell className="text-white text-sm font-medium">
                             {turma.nome}
                           </TableCell>
@@ -259,10 +259,10 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
           {/* Tabela para Fundamental 2 (Casas) */}
           {segmentoVisao === 'fundamental2' && (
             <>
-              <div className="overflow-x-auto rounded-lg border border-white/10">
+              <div className="overflow-x-auto rounded-lg border border-violet-500/10">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-white/10 hover:bg-transparent">
+                    <TableRow className="border-violet-500/10 hover:bg-transparent">
                       <TableHead className="text-white/60 text-xs uppercase">Casa</TableHead>
                       <TableHead className="text-white/60 text-xs uppercase">Mentor</TableHead>
                       <TableHead className="text-white/60 text-xs uppercase text-center">Status</TableHead>
@@ -270,7 +270,7 @@ const TabelaVisaoGeralProfessores = ({ institutionId }: TabelaVisaoGeralProps) =
                   </TableHeader>
                   <TableBody>
                     {casasData?.map(casa => (
-                      <TableRow key={casa.id} className="border-white/10 hover:bg-white/5">
+                      <TableRow key={casa.id} className="border-violet-500/10 hover:bg-white/5">
                         <TableCell className="text-white text-sm font-medium">
                           <span className="mr-2">{casa.emoji}</span>
                           {casa.nome}

@@ -412,7 +412,7 @@ const MissoesPage = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-8 rounded-xl border border-white/10 bg-white/5 text-center"
+            className="p-8 rounded-xl border border-violet-500/10 bg-white/5 text-center"
           >
             <div className="text-5xl mb-4">
               {activeFilter === 'aprovadas' ? '🏆' : activeFilter === 'pendentes' ? '✅' : '📭'}
@@ -445,7 +445,7 @@ const MissoesPage = () => {
                       'hover:bg-white/10 active:scale-[0.98]',
                       missao.atrasada && !missao.ja_entregou 
                         ? 'border-red-500/50 bg-red-500/5' 
-                        : 'border-white/10'
+                        : 'border-violet-500/10'
                     )}
                   >
                     {/* Header: Type Badge + Points */}
@@ -504,7 +504,7 @@ const MissoesPage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="pt-4 border-t border-white/10 text-center text-sm text-white/50"
+            className="pt-4 border-t border-violet-500/10 text-center text-sm text-white/50"
           >
             {filterCounts.pendentes} pendente{filterCounts.pendentes !== 1 ? 's' : ''} • {filterCounts.aprovadas} aprovada{filterCounts.aprovadas !== 1 ? 's' : ''}
           </motion.div>

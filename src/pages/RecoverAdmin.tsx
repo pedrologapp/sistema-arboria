@@ -58,7 +58,7 @@ const RecoverAdmin = () => {
 
   return (
     <div className="min-h-screen w-full bg-black flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-white/5 border-white/10">
+      <Card className="w-full max-w-md bg-white/5 border-violet-500/10">
         <CardHeader className="text-center">
           <div className="mx-auto w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center mb-4">
             <Shield className="w-6 h-6 text-amber-500" />
@@ -81,7 +81,7 @@ const RecoverAdmin = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 bg-white/5 border-white/10 text-white"
+                  className="pl-10 bg-white/5 border-violet-500/10 text-white"
                   placeholder="admin@email.com"
                 />
               </div>
@@ -98,7 +98,7 @@ const RecoverAdmin = () => {
                   type="text"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="pl-10 bg-white/5 border-white/10 text-white"
+                  className="pl-10 bg-white/5 border-violet-500/10 text-white"
                   placeholder="Nova senha"
                 />
               </div>
@@ -115,7 +115,7 @@ const RecoverAdmin = () => {
                   type="password"
                   value={recoveryCode}
                   onChange={(e) => setRecoveryCode(e.target.value)}
-                  className="pl-10 bg-white/5 border-white/10 text-white"
+                  className="pl-10 bg-white/5 border-violet-500/10 text-white"
                   placeholder="Cole o código secreto aqui"
                 />
               </div>
@@ -130,7 +130,7 @@ const RecoverAdmin = () => {
             </Button>
           </form>
 
-          <div className="mt-6 pt-4 border-t border-white/10">
+          <div className="mt-6 pt-4 border-t border-violet-500/10">
             <Link 
               to="/login" 
               className="flex items-center justify-center gap-2 text-white/60 hover:text-white text-sm transition-colors"

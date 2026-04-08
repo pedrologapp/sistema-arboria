@@ -227,14 +227,14 @@ const MissoesSemanaPage = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#0F172A] px-5 py-6">
-        <div className="h-5 w-24 bg-[#1E293B] rounded animate-pulse mb-8" />
+        <div className="h-5 w-24 bg-[#252547] rounded animate-pulse mb-8" />
         <div className="flex flex-col items-center gap-3 mb-8">
-          <div className="w-10 h-10 bg-[#1E293B] rounded-full animate-pulse" />
-          <div className="h-5 w-40 bg-[#1E293B] rounded animate-pulse" />
+          <div className="w-10 h-10 bg-[#252547] rounded-full animate-pulse" />
+          <div className="h-5 w-40 bg-[#252547] rounded animate-pulse" />
         </div>
         <div className="space-y-3">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-16 bg-[#1E293B] rounded-xl animate-pulse" />
+            <div key={i} className="h-16 bg-[#252547] rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -243,11 +243,11 @@ const MissoesSemanaPage = () => {
 
   if (error || !fase) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] flex flex-col items-center justify-center p-5">
+      <div className="min-h-screen bg-[#1A1A2E] flex flex-col items-center justify-center p-5">
         <p className="text-[#64748B] text-sm mb-4">{error || 'Fase não encontrada'}</p>
         <button
           onClick={() => navigate(`/aluno/missoes/fase/${faseId}`)}
-          className="px-4 py-2 bg-[#1E293B] rounded-lg hover:bg-[#283548] text-sm text-white transition-colors"
+          className="px-4 py-2 bg-[#252547] rounded-lg hover:bg-[#283548] text-sm text-white transition-colors"
         >
           Voltar
         </button>
@@ -256,7 +256,7 @@ const MissoesSemanaPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] px-5 py-6 pb-24">
+    <div className="min-h-screen bg-[#1A1A2E] px-5 py-6 pb-24">
       {/* Back button */}
       <button
         onClick={() => navigate(`/aluno/missoes/fase/${faseId}`)}
@@ -293,7 +293,7 @@ const MissoesSemanaPage = () => {
         </div>
 
         {missoesGerais.length === 0 ? (
-          <div className="py-4 px-4 rounded-xl bg-[#1E293B] text-center">
+          <div className="py-4 px-4 rounded-xl bg-[#252547] text-center">
             <p className="text-[#64748B] text-sm">Nenhuma missão geral nesta semana</p>
           </div>
         ) : (
@@ -309,7 +309,7 @@ const MissoesSemanaPage = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.03 }}
                   onClick={() => handleMissaoClick(missao.id)}
-                  className="w-full py-4 px-4 rounded-xl bg-[#1E293B] hover:bg-[#283548] transition-all text-left relative"
+                  className="w-full py-4 px-4 rounded-xl bg-[#252547] hover:bg-[#283548] transition-all text-left relative"
                 >
                   {/* Badge de pendente */}
                   {precisaBadge && (
@@ -364,8 +364,8 @@ const MissoesSemanaPage = () => {
               className={cn(
                 'w-full py-4 px-4 rounded-xl transition-all text-left',
                 casa.ehMinhaCasa
-                  ? 'bg-[#1E293B] border border-[#3B82F6]/40 hover:bg-[#283548]'
-                  : 'bg-[#1E293B] hover:bg-[#283548]'
+                  ? 'bg-[#252547] border border-[#3B82F6]/40 hover:bg-[#283548]'
+                  : 'bg-[#252547] hover:bg-[#283548]'
               )}
             >
               <div className="flex items-center gap-4">

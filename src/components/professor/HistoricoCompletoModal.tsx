@@ -51,7 +51,7 @@ const HistoricoCompletoModal = ({
 }: HistoricoCompletoModalProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#1a1a2e] border-white/10 max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="bg-[#1a1a2e] border-violet-500/10 max-w-md max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-white flex items-center gap-2">
             <History className="w-5 h-5" style={{ color: casaColor }} />

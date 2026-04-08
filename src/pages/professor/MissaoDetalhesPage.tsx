@@ -263,7 +263,7 @@ const MissaoDetalhesPage = () => {
   return (
     <div className="pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#0d0d0d]/95 backdrop-blur-sm border-b border-white/10 px-4 py-3">
+      <div className="sticky top-0 z-10 bg-[#1A1A2E]/95 backdrop-blur-sm border-b border-violet-500/10 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate(-1)} className="p-2 rounded-lg bg-white/10 hover:bg-white/15 transition-colors">
@@ -286,7 +286,7 @@ const MissaoDetalhesPage = () => {
 
       <div className="p-4 space-y-4">
         {/* Card com título e descrição */}
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+        <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-lg bg-blue-500/20">
               <BookOpen size={24} className="text-blue-400" />
@@ -304,12 +304,12 @@ const MissaoDetalhesPage = () => {
 
         {/* PDF da Missão */}
         {missao.arquivo_pdf_url && (
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
             <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
               <BookOpen size={16} className="text-blue-400" />
               PDF da Missao
             </h3>
-            <div className="rounded-lg overflow-hidden bg-black/20 border border-white/5">
+            <div className="rounded-lg overflow-hidden bg-black/20 border border-violet-500/5">
               <iframe
                 src={`https://docs.google.com/gview?url=${encodeURIComponent(missao.arquivo_pdf_url)}&embedded=true`}
                 className="w-full h-[400px]"
@@ -334,7 +334,7 @@ const MissaoDetalhesPage = () => {
 
         {/* Contexto */}
         {missao.contexto && (
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
             <h3 className="text-sm font-semibold text-white mb-2">Contexto</h3>
             <div className="prose prose-sm prose-invert max-w-none text-white/60">
               <ReactMarkdown>{missao.contexto}</ReactMarkdown>
@@ -344,14 +344,14 @@ const MissaoDetalhesPage = () => {
 
         {/* Lente Especial */}
         {missao.lente_especial && (
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
             <h3 className="text-sm font-semibold text-white mb-2">Lente Especial</h3>
             <p className="text-white/60 text-sm">{missao.lente_especial}</p>
           </div>
         )}
 
         {/* Informações */}
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+        <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
           <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
             <Target size={16} className="text-blue-400" />
             Informações
@@ -397,7 +397,7 @@ const MissaoDetalhesPage = () => {
 
         {/* Instruções */}
         {missao.instrucoes && (
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
             <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
               📝 Instruções
             </h3>
@@ -412,7 +412,7 @@ const MissaoDetalhesPage = () => {
                   ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 mb-2">{children}</ol>,
                   li: ({ children }) => <li className="text-white/60">{children}</li>,
                   strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
-                  hr: () => <hr className="border-white/10 my-3" />,
+                  hr: () => <hr className="border-violet-500/10 my-3" />,
                 }}
               >
                 {missao.instrucoes}
@@ -423,7 +423,7 @@ const MissaoDetalhesPage = () => {
 
         {/* Progresso */}
         {checklist && (
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                 📊 Progresso
@@ -455,7 +455,7 @@ const MissaoDetalhesPage = () => {
             <Skeleton className="h-16 w-full bg-white/10" />
           </div>
         ) : checklist && (
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
             <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
               <Users size={16} className="text-blue-400" />
               Alunos
@@ -504,7 +504,7 @@ const MissaoDetalhesPage = () => {
 
         {/* Métricas de Engajamento */}
         {metricas && checklist && checklist.entregaram.length > 0 && (
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
             <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
               <Clock size={16} className="text-blue-400" />
               Métricas de Engajamento
@@ -569,7 +569,7 @@ const AlunoCard = ({ aluno, tipo, diasRestantes }: AlunoCardProps) => {
         "flex items-center justify-between p-3 rounded-lg border transition-colors",
         tipo === 'entregou' 
           ? "bg-green-500/10 border-green-500/20 cursor-pointer hover:bg-green-500/15" 
-          : "bg-white/5 border-white/10"
+          : "bg-white/5 border-violet-500/10"
       )}
     >
       <div className="flex items-center gap-3">

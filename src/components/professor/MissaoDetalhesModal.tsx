@@ -31,11 +31,11 @@ const MissaoDetalhesModal = ({ isOpen, onClose, missaoIds }: MissaoDetalhesModal
 
   return (
     <div 
-      className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-[#12122A]/95 flex items-center justify-center p-4 z-50"
       onClick={onClose}
     >
       <div 
-        className="bg-[#1a1a1a] rounded-xl p-5 max-w-md w-full max-h-[70vh] overflow-auto"
+        className="bg-[#1E1E3A] rounded-xl p-5 max-w-md w-full max-h-[70vh] overflow-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -66,7 +66,7 @@ const MissaoDetalhesModal = ({ isOpen, onClose, missaoIds }: MissaoDetalhesModal
             {missoes.map((missao, index) => (
               <div 
                 key={missao.id}
-                className="bg-white/5 border border-white/10 rounded-xl p-4"
+                className="bg-white/5 border border-violet-500/10 rounded-xl p-4"
               >
                 <div className="space-y-3">
                   {/* Badges */}
@@ -101,7 +101,7 @@ const MissaoDetalhesModal = ({ isOpen, onClose, missaoIds }: MissaoDetalhesModal
                   
                   {/* Instruções */}
                   {missao.instrucoes && (
-                    <div className="pt-2 border-t border-white/10">
+                    <div className="pt-2 border-t border-violet-500/10">
                       <p className="text-white/40 text-xs mb-1 font-medium">📋 Instruções:</p>
                       <div className="text-white/70 prose prose-invert prose-sm max-w-none text-sm">
                         <ReactMarkdown>{missao.instrucoes}</ReactMarkdown>
@@ -111,7 +111,7 @@ const MissaoDetalhesModal = ({ isOpen, onClose, missaoIds }: MissaoDetalhesModal
                   
                   {/* Dicas */}
                   {missao.dicas && (
-                    <div className="pt-2 border-t border-white/10">
+                    <div className="pt-2 border-t border-violet-500/10">
                       <p className="text-white/40 text-xs mb-1 font-medium">💡 Dicas:</p>
                       <div className="text-white/70 prose prose-invert prose-sm max-w-none text-sm">
                         <ReactMarkdown>{missao.dicas}</ReactMarkdown>
@@ -121,7 +121,7 @@ const MissaoDetalhesModal = ({ isOpen, onClose, missaoIds }: MissaoDetalhesModal
 
                   {/* Reflexão */}
                   {missao.reflexao && (
-                    <div className="pt-2 border-t border-white/10">
+                    <div className="pt-2 border-t border-violet-500/10">
                       <p className="text-white/40 text-xs mb-1 font-medium">🤔 Reflexão:</p>
                       <div className="text-white/70 prose prose-invert prose-sm max-w-none text-sm">
                         <ReactMarkdown>{missao.reflexao}</ReactMarkdown>
@@ -130,7 +130,7 @@ const MissaoDetalhesModal = ({ isOpen, onClose, missaoIds }: MissaoDetalhesModal
                   )}
                   
                   {/* Requisitos e Prazo */}
-                  <div className="pt-2 border-t border-white/10 flex flex-wrap gap-3 text-xs text-white/50">
+                  <div className="pt-2 border-t border-violet-500/10 flex flex-wrap gap-3 text-xs text-white/50">
                     <span className={missao.requer_texto ? 'text-green-400' : ''}>
                       📝 Texto: {missao.requer_texto ? 'Sim' : 'Não'}
                     </span>

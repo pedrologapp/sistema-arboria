@@ -37,6 +37,8 @@ import AdminChatPage from "./pages/admin/AdminChatPage";
 import AdminCanalChatPage from "./pages/admin/AdminCanalChatPage";
 import AtividadesPage from "./pages/admin/AtividadesPage";
 import DadosPage from "./pages/admin/DadosPage";
+import ArboriaPage from "./pages/admin/ArboriaPage";
+import RegistroVivoPage from "./pages/admin/RegistroVivoPage";
 
 // Aluno pages
 import HomePage from "./pages/aluno/HomePage";
@@ -217,6 +219,22 @@ const App = () => (
               <ProtectedRoute requireAdmin>
                 <AdminLayout>
                   <AtividadesPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+
+            {/* O Arboria */}
+            <Route path="/admin/arboria" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <ArboriaPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/arboria/aluno/:id" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <RegistroVivoPage />
                 </AdminLayout>
               </ProtectedRoute>
             } />

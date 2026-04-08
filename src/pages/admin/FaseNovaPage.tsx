@@ -52,7 +52,7 @@ const FaseNovaPage = () => {
   // Se não tiver state, voltar para a lista
   if (!state) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
+      <div className="min-h-screen bg-[#1A1A2E] flex items-center justify-center">
         <div className="text-center">
           <p className="text-white/60 mb-4">Dados da fase não encontrados</p>
           <button
@@ -148,7 +148,7 @@ const FaseNovaPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] pb-24">
+    <div className="min-h-screen bg-[#1A1A2E] pb-24">
       {/* Header */}
       <div className="p-4">
         <button
@@ -180,14 +180,14 @@ const FaseNovaPage = () => {
       {/* Formulário */}
       <div className="p-4 space-y-6">
         {/* Info do segmento */}
-        <div className="p-3 bg-white/5 border border-white/10 rounded-xl">
+        <div className="p-3 bg-white/5 border border-violet-500/10 rounded-xl">
           <p className="text-white/60 text-sm">
             Esta fase será criada para <strong className="text-white">{serieLabel}</strong> ({segmentoLabels[segmento]})
           </p>
         </div>
 
         {/* Datas */}
-        <div className="bg-[#1E293B] rounded-xl p-4 space-y-4">
+        <div className="bg-[#252547] rounded-xl p-4 space-y-4">
           <h2 className="text-white font-semibold text-sm uppercase tracking-wider">
             Período da Fase
           </h2>
@@ -201,7 +201,7 @@ const FaseNovaPage = () => {
                 type="date"
                 value={dataInicio}
                 onChange={(e) => setDataInicio(e.target.value)}
-                className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
+                className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
               />
             </div>
             
@@ -213,7 +213,7 @@ const FaseNovaPage = () => {
                 type="date"
                 value={dataFim}
                 onChange={(e) => setDataFim(e.target.value)}
-                className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
+                className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
               />
             </div>
           </div>

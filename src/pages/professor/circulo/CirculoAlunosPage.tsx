@@ -28,7 +28,7 @@ const estadoConfig: Record<string, { label: string; cor: string; bg: string; bor
   dificuldades: { label: 'Dificuldades', cor: 'text-red-400', bg: 'bg-red-500/15', border: 'border-red-500/30' },
   nao_conseguiu: { label: 'Nao fez', cor: 'text-white/60', bg: 'bg-white/[0.08]', border: 'border-white/20' },
   fez: { label: 'Fez', cor: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
-  faltou: { label: 'Faltou', cor: 'text-white/40', bg: 'bg-white/[0.04]', border: 'border-white/10' },
+  faltou: { label: 'Faltou', cor: 'text-white/40', bg: 'bg-white/[0.04]', border: 'border-violet-500/10' },
 };
 
 const CirculoAlunosPage = () => {
@@ -442,7 +442,7 @@ const CirculoAlunosPage = () => {
 
         <button
           onClick={() => navigate(`/professor/circulo/serie/${serieNumero}`)}
-          className="w-full py-3 rounded-xl bg-white/[0.08] border border-white/10 text-white/70 text-sm font-medium hover:bg-white/[0.12] transition-colors"
+          className="w-full py-3 rounded-xl bg-white/[0.08] border border-violet-500/10 text-white/70 text-sm font-medium hover:bg-white/[0.12] transition-colors"
         >
           Voltar para turmas
         </button>
@@ -513,7 +513,7 @@ const CirculoAlunosPage = () => {
           <button
             onClick={() => salvar(false)}
             disabled={salvando}
-            className="flex-1 py-3 rounded-xl bg-white/[0.08] border border-white/10 text-white/60 text-sm font-medium hover:bg-white/[0.12] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            className="flex-1 py-3 rounded-xl bg-white/[0.08] border border-violet-500/10 text-white/60 text-sm font-medium hover:bg-white/[0.12] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
             Rascunho
@@ -532,7 +532,7 @@ const CirculoAlunosPage = () => {
       {/* Modal de texto */}
       {modalAluno && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[#1a1a1e] border border-white/10 p-5 space-y-4">
+          <div className="w-full max-w-sm rounded-2xl bg-[#1E1E3A] border border-violet-500/10 p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-white font-medium">{modalAluno.full_name || modalAluno.nome || 'Aluno'}</p>
@@ -553,7 +553,7 @@ const CirculoAlunosPage = () => {
                     'flex-1 py-2 rounded-lg text-xs font-medium border transition-colors',
                     modalEstado === e
                       ? `${estadoConfig[e].bg} ${estadoConfig[e].border} ${estadoConfig[e].cor}`
-                      : 'bg-white/[0.04] border-white/10 text-white/40'
+                      : 'bg-white/[0.04] border-violet-500/10 text-white/40'
                   )}
                 >
                   {estadoConfig[e].label}
@@ -571,7 +571,7 @@ const CirculoAlunosPage = () => {
                       onChange={(e) => setModalTexto(e.target.value)}
                       placeholder={comentarioObrigatorio ? 'Descreva o que observou...' : 'O que voce observou? (opcional)'}
                       rows={3}
-                      className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 resize-none outline-none focus:border-white/20"
+                      className="w-full bg-white/[0.04] border border-violet-500/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 resize-none outline-none focus:border-white/20"
                     />
                     {comentarioObrigatorio && (
                       <p className="text-[10px] text-amber-400/60 mt-1">Comentario obrigatorio para este estado</p>

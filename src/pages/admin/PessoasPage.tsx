@@ -246,7 +246,7 @@ const PessoasPage = () => {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
         <Input placeholder="Buscar..." value={busca} onChange={e => setBusca(e.target.value)}
-          className="pl-10 bg-white/[0.04] border-white/10 text-white placeholder:text-white/30 h-9 text-sm" />
+          className="pl-10 bg-white/[0.04] border-violet-500/10 text-white placeholder:text-white/30 h-9 text-sm" />
         {busca && <button onClick={() => setBusca('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white"><X className="w-4 h-4" /></button>}
       </div>
 
@@ -273,7 +273,7 @@ const PessoasPage = () => {
                 const isOpen = casaExpandida === casa.id;
 
                 return (
-                  <div key={casa.id} className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 overflow-hidden">
+                  <div key={casa.id} className="rounded-xl bg-[#252547] border border-violet-500/10 overflow-hidden">
                     <button onClick={() => setCasaExpandida(isOpen ? null : casa.id)}
                       className="w-full p-3 text-left hover:bg-white/[0.02] transition-colors">
                       <div className="flex items-center justify-between">
@@ -343,7 +343,7 @@ const PessoasPage = () => {
           {loadingProfs ? (
             <div className="space-y-2">{[1,2].map(i => <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse" />)}</div>
           ) : professores.length === 0 ? (
-            <div className="p-6 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+            <div className="p-6 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
               <p className="text-white/30 text-sm">Nenhum professor cadastrado</p>
             </div>
           ) : (
@@ -351,7 +351,7 @@ const PessoasPage = () => {
               {professores.filter(p => !busca || (p.full_name || p.nome || '').toLowerCase().includes(busca.toLowerCase())).map(prof => {
                 const mentorDe = mentores.filter(m => m.professor_id === prof.id);
                 return (
-                  <div key={prof.id} className="flex items-center gap-3 p-3.5 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10">
+                  <div key={prof.id} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#252547] border border-violet-500/10">
                     <div className="w-10 h-10 rounded-full bg-violet-500/20 overflow-hidden shrink-0">
                       {prof.avatar_url ? <img src={prof.avatar_url} alt="" className="w-full h-full object-cover" /> :
                       <span className="flex items-center justify-center w-full h-full text-sm text-violet-300">
@@ -389,7 +389,7 @@ const PessoasPage = () => {
       {/* Modal: Novo Professor */}
       {showAddProfessor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[#1a1a1e] border border-white/10 p-5 space-y-4">
+          <div className="w-full max-w-sm rounded-2xl bg-[#1E1E3A] border border-violet-500/10 p-5 space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-white font-medium">Novo Professor</p>
               <button onClick={() => setShowAddProfessor(false)} className="p-1 text-white/30 hover:text-white"><X className="w-5 h-5" /></button>
@@ -399,22 +399,22 @@ const PessoasPage = () => {
               <div>
                 <label className="text-[10px] text-white/30 block mb-1">Nome completo</label>
                 <input value={profNome} onChange={e => setProfNome(e.target.value)} placeholder="Maria da Silva"
-                  className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none" />
+                  className="w-full bg-white/[0.06] border border-violet-500/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none" />
               </div>
               <div>
                 <label className="text-[10px] text-white/30 block mb-1">Email</label>
                 <input value={profEmail} onChange={e => setProfEmail(e.target.value)} placeholder="professor@arboria.com"
-                  className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none" />
+                  className="w-full bg-white/[0.06] border border-violet-500/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none" />
               </div>
               <div>
                 <label className="text-[10px] text-white/30 block mb-1">Senha</label>
                 <input value={profSenha} onChange={e => setProfSenha(e.target.value)} placeholder="senha123"
-                  className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none" />
+                  className="w-full bg-white/[0.06] border border-violet-500/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none" />
               </div>
               <div>
                 <label className="text-[10px] text-white/30 block mb-1">Mentor da casa (opcional)</label>
                 <select value={profCasa || ''} onChange={e => setProfCasa(e.target.value ? Number(e.target.value) : null)}
-                  className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none">
+                  className="w-full bg-white/[0.06] border border-violet-500/10 rounded-lg px-3 py-2 text-sm text-white outline-none">
                   <option value="">Nenhuma</option>
                   {casas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                 </select>

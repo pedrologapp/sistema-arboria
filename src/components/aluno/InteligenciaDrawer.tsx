@@ -139,8 +139,8 @@ const InteligenciaDrawer = ({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="bg-[#1a1a2e] border-white/10 max-h-[85vh]">
-        <DrawerHeader className="border-b border-white/10 pb-4">
+      <DrawerContent className="bg-[#1a1a2e] border-violet-500/10 max-h-[85vh]">
+        <DrawerHeader className="border-b border-violet-500/10 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <CasaBrasao

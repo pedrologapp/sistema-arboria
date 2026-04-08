@@ -84,7 +84,7 @@ const ConteudoGeralPage = () => {
           {pilares.map((pilar, index) => (
             <div 
               key={index}
-              className="p-3 rounded-xl bg-white/5 border border-white/10"
+              className="p-3 rounded-xl bg-white/5 border border-violet-500/10"
             >
               <pilar.icon className="w-5 h-5 text-emerald-400 mb-2" />
               <p className="text-white font-medium text-sm">{pilar.title}</p>
@@ -101,7 +101,7 @@ const ConteudoGeralPage = () => {
         <h2 className="text-white/50 text-xs uppercase tracking-wider px-1">
           Filosofia do Projeto
         </h2>
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-3">
+        <div className="p-4 rounded-xl bg-white/5 border border-violet-500/10 space-y-3">
           <p className="text-white/80 text-sm leading-relaxed">
             No Arboria, não existem crianças "melhores" ou "piores" - existem crianças 
             com diferentes combinações de inteligências. Nossa missão é ajudar cada 
@@ -125,7 +125,7 @@ const ConteudoGeralPage = () => {
           {guias.map((guia, index) => (
             <div 
               key={index}
-              className="p-3 rounded-xl bg-white/5 border border-white/10 
+              className="p-3 rounded-xl bg-white/5 border border-violet-500/10 
                 flex items-start gap-3"
             >
               <div className="w-10 h-10 rounded-lg bg-indigo-500/20 

@@ -16,7 +16,7 @@ export const ChatCasaCard = React.forwardRef<HTMLButtonElement, ChatCasaCardProp
       onClick={onClick}
       className="w-full p-4 rounded-xl text-left group
         bg-gradient-to-r from-white/[0.06] to-white/[0.02]
-        backdrop-blur-sm border border-white/10
+        backdrop-blur-sm border border-violet-500/10
         hover:scale-[1.02] hover:border-white/20
         transition-all duration-300 ease-out
         active:scale-[0.98]"

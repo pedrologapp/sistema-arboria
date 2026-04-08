@@ -46,9 +46,9 @@ const ModalInstrucoesImportacao = ({ tipo, onClose }: ModalInstrucoesImportacaoP
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4">
-      <div className="w-full max-w-lg bg-[#0A0A0A] border border-white/10 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
+      <div className="w-full max-w-lg bg-[#1A1A2E] border border-violet-500/10 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
+        <div className="flex items-center justify-between p-4 border-b border-violet-500/10">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
               <HelpCircle className="w-4 h-4 text-indigo-400" />
@@ -120,7 +120,7 @@ const ModalInstrucoesImportacao = ({ tipo, onClose }: ModalInstrucoesImportacaoP
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/10">
+                  <tr className="border-b border-violet-500/10">
                     <th className="text-left p-2 text-white/40 font-medium">#</th>
                     <th className="text-left p-2 text-white/40 font-medium">Coluna</th>
                     <th className="text-left p-2 text-white/40 font-medium">Obrig.</th>
@@ -128,7 +128,7 @@ const ModalInstrucoesImportacao = ({ tipo, onClose }: ModalInstrucoesImportacaoP
                 </thead>
                 <tbody>
                   {colunas.map((col) => (
-                    <tr key={col.num} className="border-b border-white/5">
+                    <tr key={col.num} className="border-b border-violet-500/5">
                       <td className="p-2 text-white/40">{col.num}</td>
                       <td className="p-2">
                         <span className="text-white font-mono text-xs">{col.nome}</span>
@@ -182,62 +182,62 @@ const ModalInstrucoesImportacao = ({ tipo, onClose }: ModalInstrucoesImportacaoP
               Exemplo no Excel/Sheets
             </h3>
             <div className="overflow-x-auto">
-              <table className="text-xs border border-white/10 rounded">
+              <table className="text-xs border border-violet-500/10 rounded">
                 <thead>
                   <tr className="bg-white/5">
-                    <th className="p-1.5 text-white/40 border border-white/10">A</th>
-                    <th className="p-1.5 text-white/40 border border-white/10">B</th>
-                    <th className="p-1.5 text-white/40 border border-white/10">C</th>
-                    <th className="p-1.5 text-white/40 border border-white/10">D</th>
-                    <th className="p-1.5 text-white/40 border border-white/10">E</th>
-                    <th className="p-1.5 text-white/40 border border-white/10">F</th>
+                    <th className="p-1.5 text-white/40 border border-violet-500/10">A</th>
+                    <th className="p-1.5 text-white/40 border border-violet-500/10">B</th>
+                    <th className="p-1.5 text-white/40 border border-violet-500/10">C</th>
+                    <th className="p-1.5 text-white/40 border border-violet-500/10">D</th>
+                    <th className="p-1.5 text-white/40 border border-violet-500/10">E</th>
+                    <th className="p-1.5 text-white/40 border border-violet-500/10">F</th>
                   </tr>
                 </thead>
                 <tbody>
                   {tipo === 'alunos' ? (
                     <>
                       <tr>
-                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">matricula</td>
-                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">nome</td>
-                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">sobrenome</td>
-                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">serie</td>
-                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">turma</td>
-                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">segmento</td>
+                        <td className="p-1.5 text-white/60 border border-violet-500/10 font-medium">matricula</td>
+                        <td className="p-1.5 text-white/60 border border-violet-500/10 font-medium">nome</td>
+                        <td className="p-1.5 text-white/60 border border-violet-500/10 font-medium">sobrenome</td>
+                        <td className="p-1.5 text-white/60 border border-violet-500/10 font-medium">serie</td>
+                        <td className="p-1.5 text-white/60 border border-violet-500/10 font-medium">turma</td>
+                        <td className="p-1.5 text-white/60 border border-violet-500/10 font-medium">segmento</td>
                       </tr>
                       <tr>
-                        <td className="p-1.5 text-white border border-white/10">2267.2026</td>
-                        <td className="p-1.5 text-white border border-white/10">Alice</td>
-                        <td className="p-1.5 text-white border border-white/10">Barros</td>
-                        <td className="p-1.5 text-white border border-white/10">Maternal</td>
-                        <td className="p-1.5 text-white border border-white/10">B</td>
-                        <td className="p-1.5 text-white border border-white/10">infantil</td>
+                        <td className="p-1.5 text-white border border-violet-500/10">2267.2026</td>
+                        <td className="p-1.5 text-white border border-violet-500/10">Alice</td>
+                        <td className="p-1.5 text-white border border-violet-500/10">Barros</td>
+                        <td className="p-1.5 text-white border border-violet-500/10">Maternal</td>
+                        <td className="p-1.5 text-white border border-violet-500/10">B</td>
+                        <td className="p-1.5 text-white border border-violet-500/10">infantil</td>
                       </tr>
                       <tr>
-                        <td className="p-1.5 text-white border border-white/10">2268.2026</td>
-                        <td className="p-1.5 text-white border border-white/10">João</td>
-                        <td className="p-1.5 text-white border border-white/10">Silva</td>
-                        <td className="p-1.5 text-white border border-white/10">1º ano</td>
-                        <td className="p-1.5 text-white border border-white/10">A</td>
-                        <td className="p-1.5 text-white border border-white/10">fund1</td>
+                        <td className="p-1.5 text-white border border-violet-500/10">2268.2026</td>
+                        <td className="p-1.5 text-white border border-violet-500/10">João</td>
+                        <td className="p-1.5 text-white border border-violet-500/10">Silva</td>
+                        <td className="p-1.5 text-white border border-violet-500/10">1º ano</td>
+                        <td className="p-1.5 text-white border border-violet-500/10">A</td>
+                        <td className="p-1.5 text-white border border-violet-500/10">fund1</td>
                       </tr>
                     </>
                   ) : (
                     <>
                       <tr>
-                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">nome</td>
-                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">sobrenome</td>
-                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">email</td>
-                        <td className="p-1.5 text-white/60 border border-white/10 font-medium">casa_id</td>
-                        <td className="p-1.5 text-white/10 border border-white/10">-</td>
-                        <td className="p-1.5 text-white/10 border border-white/10">-</td>
+                        <td className="p-1.5 text-white/60 border border-violet-500/10 font-medium">nome</td>
+                        <td className="p-1.5 text-white/60 border border-violet-500/10 font-medium">sobrenome</td>
+                        <td className="p-1.5 text-white/60 border border-violet-500/10 font-medium">email</td>
+                        <td className="p-1.5 text-white/60 border border-violet-500/10 font-medium">casa_id</td>
+                        <td className="p-1.5 text-white/10 border border-violet-500/10">-</td>
+                        <td className="p-1.5 text-white/10 border border-violet-500/10">-</td>
                       </tr>
                       <tr>
-                        <td className="p-1.5 text-white border border-white/10">Ana</td>
-                        <td className="p-1.5 text-white border border-white/10">Paula</td>
-                        <td className="p-1.5 text-white border border-white/10">ana@...</td>
-                        <td className="p-1.5 text-white border border-white/10">1</td>
-                        <td className="p-1.5 text-white/10 border border-white/10">-</td>
-                        <td className="p-1.5 text-white/10 border border-white/10">-</td>
+                        <td className="p-1.5 text-white border border-violet-500/10">Ana</td>
+                        <td className="p-1.5 text-white border border-violet-500/10">Paula</td>
+                        <td className="p-1.5 text-white border border-violet-500/10">ana@...</td>
+                        <td className="p-1.5 text-white border border-violet-500/10">1</td>
+                        <td className="p-1.5 text-white/10 border border-violet-500/10">-</td>
+                        <td className="p-1.5 text-white/10 border border-violet-500/10">-</td>
                       </tr>
                     </>
                   )}
@@ -272,7 +272,7 @@ const ModalInstrucoesImportacao = ({ tipo, onClose }: ModalInstrucoesImportacaoP
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/10">
+        <div className="p-4 border-t border-violet-500/10">
           <button
             onClick={onClose}
             className="w-full p-3 bg-white text-black font-medium rounded-xl"

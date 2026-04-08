@@ -151,7 +151,7 @@ const Setup = () => {
         />
       </div>
 
-      <Card className="relative z-10 w-full max-w-md bg-black/50 border-white/10 backdrop-blur-lg">
+      <Card className="relative z-10 w-full max-w-md bg-black/50 border-violet-500/10 backdrop-blur-lg">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
             <div className="p-4 rounded-full bg-indigo-500/20 border border-indigo-500/30">
@@ -183,7 +183,7 @@ const Setup = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="pl-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-indigo-500/20"
+                  className="pl-11 bg-white/5 border-violet-500/10 text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-indigo-500/20"
                 />
               </div>
             </div>
@@ -202,7 +202,7 @@ const Setup = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="pl-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-indigo-500/20"
+                  className="pl-11 bg-white/5 border-violet-500/10 text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-indigo-500/20"
                 />
               </div>
             </div>
@@ -221,7 +221,7 @@ const Setup = () => {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="pl-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-indigo-500/20"
+                  className="pl-11 bg-white/5 border-violet-500/10 text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-indigo-500/20"
                 />
               </div>
             </div>

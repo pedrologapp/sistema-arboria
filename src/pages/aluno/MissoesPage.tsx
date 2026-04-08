@@ -163,15 +163,15 @@ const MissoesPage = () => {
 
   if (contextLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] px-5 py-6">
+      <div className="min-h-screen bg-[#1A1A2E] px-5 py-6">
         <div className="flex items-center justify-between mb-6">
-          <div className="h-6 w-24 bg-[#1E293B] rounded animate-pulse" />
-          <div className="h-8 w-8 bg-[#1E293B] rounded-full animate-pulse" />
+          <div className="h-6 w-24 bg-[#252547] rounded animate-pulse" />
+          <div className="h-8 w-8 bg-[#252547] rounded-full animate-pulse" />
         </div>
-        <div className="h-4 w-32 bg-[#1E293B] rounded animate-pulse mb-4" />
-        <div className="space-y-3">
+        <div className="h-4 w-32 bg-[#252547] rounded animate-pulse mb-4" />
+        <div className="grid grid-cols-2 gap-3">
           {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-            <div key={i} className="h-[72px] bg-[#1E293B] rounded-xl animate-pulse" />
+            <div key={i} className="h-[140px] bg-[#252547] rounded-2xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -180,8 +180,8 @@ const MissoesPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] px-5 py-6">
-        <div className="p-6 rounded-xl border border-red-500/20 bg-[#1E293B] text-center">
+      <div className="min-h-screen bg-[#1A1A2E] px-5 py-6">
+        <div className="p-6 rounded-xl border border-red-500/20 bg-[#252547] text-center">
           <AlertCircle className="w-8 h-8 mx-auto mb-3 text-red-400" />
           <p className="text-[#94A3B8] text-sm mb-4">{error}</p>
           <Button 
@@ -198,7 +198,7 @@ const MissoesPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] px-5 py-6 pb-24">
+    <div className="min-h-screen bg-[#1A1A2E] px-5 py-6 pb-24">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold text-white tracking-tight">Missões</h1>
@@ -206,7 +206,7 @@ const MissoesPage = () => {
           onClick={handleRefresh}
           disabled={refreshing}
           className={cn(
-            'p-2 rounded-full hover:bg-[#1E293B] transition-colors',
+            'p-2 rounded-full hover:bg-[#252547] transition-colors',
             refreshing && 'opacity-50'
           )}
         >
@@ -219,130 +219,103 @@ const MissoesPage = () => {
         Selecione a Fase
       </p>
 
-      {/* List */}
-      <div className="space-y-3">
+      {/* Grid 2x4 */}
+      <div className="grid grid-cols-2 gap-3">
         {itensOrdenados.map((item, index) => {
           const isFutura = item.status === 'futura';
           const isAtual = item.status === 'atual';
           const isPassada = item.status === 'passada';
-          
-          // Buscar notificações para esta fase
+
           const notificacoes = item.fase ? getNotificacoesFase(item.fase.id) : null;
           const pendentes = notificacoes?.pendentes || 0;
           const aprovadas = notificacoes?.aprovadas || 0;
 
-          // Cor da inteligência para usar em elementos dinâmicos
           const corInteligencia = item.inteligencia.cor_hex || '#22C55E';
 
           return (
             <motion.button
               key={item.inteligencia.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.03 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.04 }}
               onClick={() => handleFaseClick(item)}
               disabled={isFutura}
-              style={isAtual ? {
-                background: `linear-gradient(to right, ${corInteligencia}18, #1E293B)`,
-                borderColor: `${corInteligencia}50`
-              } : undefined}
+              style={{
+                background: isAtual
+                  ? `linear-gradient(160deg, ${corInteligencia}20, #1E293B)`
+                  : undefined,
+                borderColor: isAtual ? `${corInteligencia}50` : undefined,
+              }}
               className={cn(
-                'w-full py-5 px-4 rounded-xl text-left transition-all relative overflow-hidden border',
-                isFutura && 'cursor-not-allowed bg-[#1E293B]/50 opacity-50 border-transparent',
-                isAtual && 'border hover:brightness-110',
-                isPassada && 'bg-[#1E293B] hover:bg-[#283548] border-transparent'
+                'relative flex flex-col items-center gap-2.5 p-4 pt-5 pb-4 rounded-2xl text-center transition-all border overflow-hidden',
+                isFutura && 'cursor-not-allowed bg-[#252547]/50 opacity-50 border-transparent',
+                isAtual && 'border',
+                isPassada && 'bg-[#252547] hover:bg-[#283548] border-transparent'
               )}
             >
-              {/* Badges de notificação - posição melhorada */}
+              {/* Badges */}
               {!isFutura && (pendentes > 0 || aprovadas > 0) && (
-                <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
+                <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
                   {pendentes > 0 && (
-                    <span className="min-w-[22px] h-[22px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1.5 shadow-lg shadow-red-500/30">
+                    <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold px-1 shadow-lg shadow-red-500/30">
                       {pendentes > 99 ? '99+' : pendentes}
                     </span>
                   )}
                   {aprovadas > 0 && (
-                    <span className="min-w-[22px] h-[22px] flex items-center justify-center rounded-full bg-emerald-500 text-white text-[10px] font-bold px-1.5 shadow-lg shadow-emerald-500/30">
+                    <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-emerald-500 text-white text-[9px] font-bold px-1 shadow-lg shadow-emerald-500/30">
                       {aprovadas > 99 ? '99+' : aprovadas}
                     </span>
                   )}
                 </div>
               )}
 
-              <div className="flex items-center gap-4">
-                {/* Brasão com ring na cor da inteligência */}
-                <div 
-                  className={cn('transition-all rounded-full', isFutura && 'opacity-40 grayscale')}
-                  style={isAtual ? {
-                    boxShadow: `0 0 0 2px #0A0A0A, 0 0 0 4px ${corInteligencia}60`
-                  } : undefined}
-                >
-                  <CasaBrasao
-                    brasaoUrl={item.inteligencia.brasao_url}
-                    emoji={item.inteligencia.emoji}
-                    nome={item.inteligencia.nome}
-                    size="medium"
-                  />
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={cn(
-                      'text-[15px] font-medium',
-                      isFutura && 'text-[#64748B]',
-                      (isAtual || isPassada) && 'text-white'
-                    )}>
-                      {item.inteligencia.nome}
-                    </span>
-                    {isAtual && (
-                      <span 
-                        className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md backdrop-blur-sm border"
-                        style={{
-                          backgroundColor: `${corInteligencia}15`,
-                          color: corInteligencia,
-                          borderColor: `${corInteligencia}30`
-                        }}
-                      >
-                        <span className="relative flex h-1.5 w-1.5">
-                          <span 
-                            className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                            style={{ backgroundColor: corInteligencia }}
-                          />
-                          <span 
-                            className="relative inline-flex rounded-full h-1.5 w-1.5"
-                            style={{ backgroundColor: corInteligencia }}
-                          />
-                        </span>
-                        ATIVA
-                      </span>
-                    )}
-                  </div>
-                  
-                  <p className={cn(
-                    'text-[13px] mt-0.5',
-                    isFutura && 'text-[#475569]',
-                    isAtual && 'text-[#94A3B8]',
-                    isPassada && 'text-[#64748B]'
-                  )}>
-                    {isFutura && 'Fase futura'}
-                    {isAtual && item.fase && `Fase atual — Semana ${item.semanaCalculada || 1} de 4`}
-                    {isPassada && 'Concluída'}
-                  </p>
-                </div>
-
-                {/* Status icons */}
-                <div className="flex-shrink-0">
-                  {isFutura && <Lock className="w-4 h-4 text-[#475569]" />}
-                  {isAtual && <ChevronRight className="w-5 h-5" style={{ color: corInteligencia }} />}
-                  {isPassada && (
-                    <div className="flex items-center gap-1">
-                      <CheckCircle className="w-4 h-4 text-emerald-500" />
-                      <ChevronRight className="w-4 h-4 text-[#64748B]" />
-                    </div>
-                  )}
-                </div>
+              {/* Brasão */}
+              <div
+                className={cn('transition-all rounded-full', isFutura && 'opacity-40 grayscale')}
+                style={isAtual ? {
+                  boxShadow: `0 0 0 2px #1A1A2E, 0 0 0 3px ${corInteligencia}60`
+                } : undefined}
+              >
+                <CasaBrasao
+                  brasaoUrl={item.inteligencia.brasao_url}
+                  emoji={item.inteligencia.emoji}
+                  nome={item.inteligencia.nome}
+                  size="medium"
+                />
               </div>
+
+              {/* Nome */}
+              <span className={cn(
+                'text-[13px] font-semibold leading-tight',
+                isFutura && 'text-[#64748B]',
+                (isAtual || isPassada) && 'text-white'
+              )}>
+                {item.inteligencia.nome}
+              </span>
+
+              {/* Status */}
+              {isAtual && (
+                <span
+                  className="inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md border"
+                  style={{
+                    backgroundColor: `${corInteligencia}15`,
+                    color: corInteligencia,
+                    borderColor: `${corInteligencia}30`
+                  }}
+                >
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: corInteligencia }} />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ backgroundColor: corInteligencia }} />
+                  </span>
+                  S{item.semanaCalculada || 1}/4
+                </span>
+              )}
+              {isPassada && (
+                <CheckCircle className="w-4 h-4 text-emerald-500" />
+              )}
+              {isFutura && (
+                <Lock className="w-3.5 h-3.5 text-[#475569]" />
+              )}
             </motion.button>
           );
         })}
@@ -353,7 +326,7 @@ const MissoesPage = () => {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-8 rounded-xl bg-[#1E293B] text-center"
+          className="p-8 rounded-xl bg-[#252547] text-center"
         >
           <h3 className="font-medium text-[15px] text-white mb-2">
             Nenhuma fase disponível

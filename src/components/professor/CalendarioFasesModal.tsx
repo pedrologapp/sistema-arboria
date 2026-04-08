@@ -59,7 +59,7 @@ const CalendarioFasesModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#0F172A] border-white/10 max-w-md max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="bg-[#0F172A] border-violet-500/10 max-w-md max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle className="text-white text-center text-lg">
             Calendário {anoLetivo}
@@ -88,8 +88,8 @@ const CalendarioFasesModal = ({
                   className={cn(
                     "w-full p-4 rounded-xl border text-left transition-all",
                     status === 'ativa' && "border-green-500/50 bg-green-500/10",
-                    status === 'passada' && "border-white/5 bg-white/[0.02] opacity-60",
-                    status === 'futura' && "border-white/10 bg-white/[0.04] opacity-80",
+                    status === 'passada' && "border-violet-500/5 bg-white/[0.02] opacity-60",
+                    status === 'futura' && "border-violet-500/10 bg-white/[0.04] opacity-80",
                     modoEdicao && "hover:bg-white/5 cursor-pointer",
                     !modoEdicao && "cursor-default"
                   )}

@@ -129,23 +129,35 @@ const ConquistasPage = () => {
           {conquistas.map(c => {
             const desbloqueada = pontosCasa >= c.pontos_necessarios;
             const pct = Math.min(Math.round((pontosCasa / c.pontos_necessarios) * 100), 100);
+            const faltam = c.pontos_necessarios - pontosCasa;
 
             return (
               <div key={c.id} className={cn(
                 'rounded-xl border p-4 flex flex-col items-center text-center',
-                desbloqueada ? 'border-white/20 bg-white/[0.08]' : 'border-white/[0.08] bg-[rgba(26,26,30,0.85)]'
-              )}>
-                <div className={cn('w-14 h-14 rounded-xl flex items-center justify-center mb-2', desbloqueada ? '' : 'opacity-30')}
-                  style={{ backgroundColor: desbloqueada ? `${c.cor}20` : 'rgba(255,255,255,0.05)' }}>
-                  {desbloqueada ? <Shirt className="w-7 h-7" style={{ color: c.cor }} /> : <Lock className="w-6 h-6 text-white/25" />}
+                desbloqueada ? 'border-white/20 bg-white/[0.08]' : 'border-white/[0.08] bg-[#252547]'
+              )}
+              style={!desbloqueada ? { borderColor: `${c.cor}20` } : undefined}
+              >
+                <div className={cn('w-14 h-14 rounded-xl flex items-center justify-center mb-2')}
+                  style={{ backgroundColor: desbloqueada ? `${c.cor}25` : `${c.cor}10` }}>
+                  {desbloqueada ? <Shirt className="w-7 h-7" style={{ color: c.cor }} /> : <Lock className="w-6 h-6" style={{ color: `${c.cor}60` }} />}
                 </div>
-                <p className={cn('text-xs font-semibold mb-1.5', desbloqueada ? 'text-white' : 'text-white/50')}>{c.nome}</p>
+                <p className={cn('text-xs font-semibold mb-1', desbloqueada ? 'text-white' : 'text-white/70')}>{c.nome}</p>
+
+                {/* Pontuação */}
+                <p className="text-[10px] font-bold mb-2" style={{ color: desbloqueada ? c.cor : `${c.cor}90` }}>
+                  {desbloqueada
+                    ? `${pontosCasa.toLocaleString('pt-BR')} / ${c.pontos_necessarios.toLocaleString('pt-BR')} pts`
+                    : `${pontosCasa.toLocaleString('pt-BR')} / ${c.pontos_necessarios.toLocaleString('pt-BR')} pts`
+                  }
+                </p>
+
                 <div className="w-full">
-                  <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: `${c.cor}15` }}>
                     <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: c.cor }} />
                   </div>
-                  <p className="text-[9px] text-white/20 mt-1">
-                    {desbloqueada ? `Desbloqueada! · ${new Date().getFullYear()}` : `${pct}% · faltam ${(c.pontos_necessarios - pontosCasa).toLocaleString('pt-BR')}`}
+                  <p className="text-[9px] mt-1.5" style={{ color: desbloqueada ? '#10b981' : `${c.cor}70` }}>
+                    {desbloqueada ? `Desbloqueada! · ${new Date().getFullYear()}` : `Faltam ${faltam.toLocaleString('pt-BR')} pts`}
                   </p>
                 </div>
               </div>
@@ -175,34 +187,44 @@ const ConquistasPage = () => {
           {inteligencias.map(int => {
             const dados = pontosPorFase[int.id];
             const pct = dados?.pct || 0;
+            const pts = dados?.pontos || 0;
+            const max = dados?.max || 300;
             const concluida = pct >= 100;
             const conquista = conquistasPessoais[int.codigo] || { nome: int.nome, descricao: '' };
 
             return (
               <div key={int.id} className={cn(
                 'rounded-xl border p-3.5 flex flex-col items-center text-center',
-                concluida ? 'border-white/20 bg-white/[0.08]' : 'border-white/[0.08] bg-[rgba(26,26,30,0.85)]'
-              )}>
-                <div className={cn('w-11 h-11 rounded-lg flex items-center justify-center mb-2', concluida ? '' : 'opacity-25')}
-                  style={{ backgroundColor: concluida ? `${int.cor_hex}20` : 'rgba(255,255,255,0.05)' }}>
+                concluida ? 'border-white/20 bg-white/[0.08]' : 'border-white/[0.08] bg-[#252547]'
+              )}
+              style={!concluida ? { borderColor: `${int.cor_hex}15` } : undefined}
+              >
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center mb-2"
+                  style={{ backgroundColor: concluida ? `${int.cor_hex}25` : `${int.cor_hex}10` }}>
                   {concluida ? (
                     <Star className="w-5 h-5" style={{ color: int.cor_hex }} />
                   ) : (
-                    <Lock className="w-4 h-4 text-white/25" />
+                    <Lock className="w-4 h-4" style={{ color: `${int.cor_hex}50` }} />
                   )}
                 </div>
-                <p className={cn('text-[11px] font-semibold mb-0.5', concluida ? 'text-white' : 'text-white/40')}>
+                <p className={cn('text-[11px] font-semibold mb-0.5', concluida ? 'text-white' : 'text-white/60')}>
                   {conquista.nome}
                 </p>
-                <p className={cn('text-[8px] mb-2 leading-tight', concluida ? 'text-white/50' : 'text-white/15')}>
+                <p className={cn('text-[8px] mb-1.5 leading-tight', concluida ? 'text-white/50' : 'text-white/30')}>
                   {conquista.descricao}
                 </p>
+
+                {/* Pontuação */}
+                <p className="text-[9px] font-bold mb-1.5" style={{ color: concluida ? int.cor_hex : `${int.cor_hex}80` }}>
+                  {pts} / {max} pts
+                </p>
+
                 <div className="w-full">
-                  <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: int.cor_hex }} />
+                  <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${int.cor_hex}12` }}>
+                    <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: int.cor_hex }} />
                   </div>
-                  <p className="text-[8px] text-white/15 mt-0.5">
-                    {concluida ? `Dominio alcancado · ${new Date().getFullYear()}` : dados ? `${pct}%` : int.nome}
+                  <p className="text-[8px] mt-1" style={{ color: concluida ? '#10b981' : `${int.cor_hex}60` }}>
+                    {concluida ? `Dominio alcancado · ${new Date().getFullYear()}` : `${pct}%`}
                   </p>
                 </div>
               </div>

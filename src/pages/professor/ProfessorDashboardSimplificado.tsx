@@ -185,7 +185,7 @@ const ProfessorDashboardSimplificado = () => {
                 onClick={() => navigate(`/professor/circulo/turma/${turma.id}`)}
                 className="p-4 rounded-xl text-center
                   bg-gradient-to-br from-white/[0.06] to-white/[0.02]
-                  backdrop-blur-sm border border-white/10
+                  backdrop-blur-sm border border-violet-500/10
                   hover:scale-[1.02] transition-all duration-300
                   active:scale-[0.98]"
                 style={{
@@ -221,7 +221,7 @@ const ProfessorDashboardSimplificado = () => {
               onClick={() => handleActionClick(action)}
               className="relative flex items-center gap-4 p-4 rounded-xl text-left group
                 bg-gradient-to-r from-white/[0.06] to-white/[0.02]
-                backdrop-blur-sm border border-white/10
+                backdrop-blur-sm border border-violet-500/10
                 hover:scale-[1.02] hover:border-white/20
                 transition-all duration-300 ease-out
                 active:scale-[0.98]"

@@ -109,7 +109,7 @@ const CirculoPessoalPage = () => {
         <div className="flex gap-3">
           <button
             onClick={() => { setAlunoSelecionado(null); setTexto(''); setSalvo(false); }}
-            className="flex-1 py-3 rounded-xl bg-white/[0.08] border border-white/10 text-white/60 text-sm hover:bg-white/[0.12] transition-colors"
+            className="flex-1 py-3 rounded-xl bg-white/[0.08] border border-violet-500/10 text-white/60 text-sm hover:bg-white/[0.12] transition-colors"
           >
             Nova observacao
           </button>
@@ -137,7 +137,7 @@ const CirculoPessoalPage = () => {
         </div>
 
         {/* Aluno card */}
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10">
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-[#252547] border border-violet-500/10">
           <div className="w-12 h-12 rounded-full overflow-hidden border-2" style={{ borderColor: cor }}>
             {alunoSelecionado.avatar_url ? (
               <img src={alunoSelecionado.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -161,7 +161,7 @@ const CirculoPessoalPage = () => {
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Descreva o que observou sobre este aluno..."
             rows={6}
-            className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3
+            className="w-full bg-white/[0.04] border border-violet-500/10 rounded-xl px-4 py-3
               text-sm text-white placeholder:text-white/20 resize-none outline-none
               focus:border-white/20 transition-colors"
           />
@@ -200,7 +200,7 @@ const CirculoPessoalPage = () => {
           placeholder="Buscar aluno..."
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          className="pl-10 bg-white/[0.04] border-white/10 text-white placeholder:text-white/30 h-10 text-sm"
+          className="pl-10 bg-white/[0.04] border-violet-500/10 text-white placeholder:text-white/30 h-10 text-sm"
         />
       </div>
 

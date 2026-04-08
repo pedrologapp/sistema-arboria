@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 import { calcularSemanaAtualDaFase } from '@/utils/timezone';
+import { applyTheme } from '@/utils/theme';
 
 interface Profile {
   id: string;
@@ -162,7 +163,10 @@ export const StudentProvider = ({ children }: StudentProviderProps) => {
       ]);
 
       // Process casa
-      if (casaRes.data) setCasa(casaRes.data);
+      if (casaRes.data) {
+        setCasa(casaRes.data);
+        if (casaRes.data.cor_hex) applyTheme(casaRes.data.cor_hex);
+      }
 
       // Process institution
       if (instRes.data) setInstitutionName((instRes.data as any).name);

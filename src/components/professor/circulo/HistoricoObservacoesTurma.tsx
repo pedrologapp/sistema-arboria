@@ -108,7 +108,7 @@ const HistoricoObservacoesTurma = ({
 
       {/* Empty State */}
       {obsFiltradas.length === 0 && (
-        <div className="rounded-xl bg-white/5 border border-white/10 p-6 text-center">
+        <div className="rounded-xl bg-white/5 border border-violet-500/10 p-6 text-center">
           <Eye className="w-8 h-8 text-white/20 mx-auto mb-2" />
           <p className="text-white/40 text-sm">
             Nenhuma observação registrada nesta semana ainda.
@@ -130,7 +130,7 @@ const HistoricoObservacoesTurma = ({
             return (
               <div
                 key={obs.id}
-                className="rounded-xl bg-white/5 border border-white/10 p-3 space-y-1.5"
+                className="rounded-xl bg-white/5 border border-violet-500/10 p-3 space-y-1.5"
               >
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-base">{sinal.emoji}</span>

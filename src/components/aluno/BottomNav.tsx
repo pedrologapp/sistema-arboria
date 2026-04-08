@@ -61,7 +61,7 @@ const BottomNav = () => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 pb-safe">
       <div className="mx-4 mb-4">
-        <div className="relative flex items-center justify-around rounded-full border border-white/10 bg-black/80 backdrop-blur-lg shadow-lg max-w-md mx-auto">
+        <div className="relative flex items-center justify-around rounded-full border border-violet-500/10 bg-[#12122A]/95 backdrop-blur-lg shadow-lg max-w-md mx-auto">
           {navItems.map((item, index) => {
             const isActive = index === activeIndex;
             const Icon = item.icon;
@@ -82,7 +82,7 @@ const BottomNav = () => {
                   <div className={cn('w-5 h-5 transition-all duration-200', isActive && !isLocked ? 'scale-110' : 'scale-100')}>
                     <Icon
                       className="w-full h-full"
-                      style={{ color: isActive && !isLocked ? item.color : 'rgba(255,255,255,0.35)' }}
+                      style={{ color: isActive && !isLocked ? (casa?.cor_hex || item.color) : 'rgba(255,255,255,0.35)' }}
                     />
                   </div>
                   {isLocked && (
@@ -97,7 +97,7 @@ const BottomNav = () => {
                 <span
                   className="text-[8px] mt-0.5 transition-all duration-200"
                   style={{
-                    color: isActive && !isLocked ? item.color : 'rgba(255,255,255,0.3)',
+                    color: isActive && !isLocked ? (casa?.cor_hex || item.color) : 'rgba(255,255,255,0.3)',
                     fontWeight: isActive ? 500 : 400,
                   }}
                 >
@@ -110,14 +110,14 @@ const BottomNav = () => {
           <div
             className="pointer-events-none absolute -top-1.5 z-10 h-1.5 w-8 rounded-full blur-sm transition-all duration-300 ease-out"
             style={{
-              backgroundColor: `${navItems[activeIndex].color}50`,
+              backgroundColor: `${casa?.cor_hex || navItems[activeIndex].color}50`,
               left: `calc(${(activeIndex * 100) / navItems.length}% + ${100 / navItems.length / 2}% - 16px)`,
             }}
           />
           <div
             className="pointer-events-none absolute -bottom-0.5 z-10 h-1 w-6 rounded-full transition-all duration-300 ease-out"
             style={{
-              backgroundColor: navItems[activeIndex].locked ? 'transparent' : navItems[activeIndex].color,
+              backgroundColor: navItems[activeIndex].locked ? 'transparent' : (casa?.cor_hex || navItems[activeIndex].color),
               left: `calc(${(activeIndex * 100) / navItems.length}% + ${100 / navItems.length / 2}% - 12px)`,
             }}
           />

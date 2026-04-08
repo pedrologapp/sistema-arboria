@@ -314,7 +314,7 @@ const FaseDetalhesPage = () => {
           <div className="w-1 h-3.5 rounded-full bg-amber-500" />
           <p className="text-[10px] font-semibold text-amber-400/80 uppercase tracking-widest">Habilidades de Ativacao</p>
         </div>
-        <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 p-4 space-y-3">
+        <div className="rounded-xl bg-[#252547] border border-violet-500/10 p-4 space-y-3">
           <p className="text-[10px] text-white/30">Habilidades que ativam esta inteligencia. Foco prioritario.</p>
           {Object.entries(habPorDimensao(mapaAtivacao.nucleo)).map(([dim, habs]) => {
             if (habs.length === 0) return null;
@@ -341,11 +341,11 @@ const FaseDetalhesPage = () => {
             <div className="w-1 h-3.5 rounded-full bg-white/20" />
             <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest">Habilidades Suporte</p>
           </div>
-          <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 p-4">
+          <div className="rounded-xl bg-[#252547] border border-violet-500/10 p-4">
             <p className="text-[10px] text-white/30 mb-2">Amplificam a inteligencia quando desenvolvidas.</p>
             <div className="flex flex-wrap gap-1.5">
               {mapaAtivacao.suporte.map((h: any) => (
-                <span key={h.id} className="px-2 py-1 rounded-md text-[10px] bg-white/[0.06] text-white/50 border border-white/10">{h.codigo} {h.nome}</span>
+                <span key={h.id} className="px-2 py-1 rounded-md text-[10px] bg-white/[0.06] text-white/50 border border-violet-500/10">{h.codigo} {h.nome}</span>
               ))}
             </div>
           </div>
@@ -371,7 +371,7 @@ const FaseDetalhesPage = () => {
             const aulaConfirmada = confs.some((c: any) => c.confirmada && !c.aula_nao_ocorreu);
 
             return (
-              <div key={semana} className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 overflow-hidden">
+              <div key={semana} className="rounded-xl bg-[#252547] border border-violet-500/10 overflow-hidden">
                 {/* Header */}
                 <button onClick={() => setSemanaExpandida(isExpanded ? null : semana)}
                   className="w-full p-3.5 text-left hover:bg-white/[0.02] transition-colors">
@@ -399,7 +399,7 @@ const FaseDetalhesPage = () => {
 
                 {/* Conteudo expandido */}
                 {isExpanded && (
-                  <div className="px-3.5 pb-3.5 space-y-3 border-t border-white/5 pt-3">
+                  <div className="px-3.5 pb-3.5 space-y-3 border-t border-violet-500/5 pt-3">
                     {/* Habilidades */}
                     <div className="flex items-center justify-between">
                       <p className="text-[10px] text-white/30">Habilidades</p>
@@ -524,7 +524,7 @@ const FaseDetalhesPage = () => {
       {/* Modal seletor */}
       {semanaEditando !== null && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-[#1a1a1e] border-t border-white/10 rounded-t-2xl p-4 max-h-[80vh] overflow-y-auto">
+          <div className="w-full max-w-lg bg-[#1E1E3A] border-t border-violet-500/10 rounded-t-2xl p-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-white font-medium">Semana {semanaEditando}</p>
@@ -599,7 +599,7 @@ const FaseDetalhesPage = () => {
               });
             })()}
 
-            <div className="sticky bottom-0 pt-3 bg-[#1a1a1e]">
+            <div className="sticky bottom-0 pt-3 bg-[#1E1E3A]">
               <button onClick={salvarHab} disabled={salvandoHab}
                 className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors disabled:opacity-50">
                 {salvandoHab ? 'Salvando...' : `Salvar ${habSelecionadas.size} habilidades`}

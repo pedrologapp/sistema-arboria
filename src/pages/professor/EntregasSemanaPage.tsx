@@ -95,9 +95,9 @@ const EntregasSemanaPage = () => {
   });
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] pb-24">
+    <div className="min-h-screen bg-[#1A1A2E] pb-24">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-white/10">
+      <div className="flex items-center justify-between p-4 border-b border-violet-500/10">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => navigate(`/professor/entregas/serie/${serie}`)} 
@@ -140,7 +140,7 @@ const EntregasSemanaPage = () => {
                   "w-full p-4 rounded-xl text-left transition-colors flex items-center justify-between border",
                   hasPendentes
                     ? "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20"
-                    : "bg-white/5 border-white/10 hover:bg-white/10 opacity-60"
+                    : "bg-white/5 border-violet-500/10 hover:bg-white/10 opacity-60"
                 )}
               >
                 <div>
@@ -168,7 +168,7 @@ const EntregasSemanaPage = () => {
           })()}
 
           {/* INDIVIDUAL (por Casa) */}
-          <div className="border-t border-white/10 pt-4">
+          <div className="border-t border-violet-500/10 pt-4">
             <p className="text-white/40 text-sm uppercase tracking-wide mb-3">
               🏠 Individual (por Casa)
             </p>
@@ -186,7 +186,7 @@ const EntregasSemanaPage = () => {
                       "w-full p-3 rounded-xl text-left flex items-center justify-between border transition-colors",
                       hasPendentes 
                         ? "bg-white/10 border-white/20 hover:bg-white/15" 
-                        : "bg-white/5 border-white/5 hover:bg-white/10 opacity-60"
+                        : "bg-white/5 border-violet-500/5 hover:bg-white/10 opacity-60"
                     )}
                   >
                     <div className="flex items-center gap-3">

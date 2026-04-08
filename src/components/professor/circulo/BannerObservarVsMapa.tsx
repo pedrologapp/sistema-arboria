@@ -31,7 +31,7 @@ export const BannerObservarVsMapa = () => {
   }
 
   return (
-    <div className="relative rounded-xl border border-white/10 overflow-hidden"
+    <div className="relative rounded-xl border border-violet-500/10 overflow-hidden"
       style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(59,130,246,0.06) 100%)' }}
     >
       {/* Close */}

@@ -396,7 +396,7 @@ const ConteudoInteligenciaPage = () => {
             Objetivos da Fase
           </h2>
         </div>
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
+        <div className="p-4 rounded-xl bg-white/5 border border-violet-500/10 space-y-2">
           {conteudo.objetivos.map((objetivo, index) => (
             <div key={index} className="flex items-start gap-2">
               <div 
@@ -421,7 +421,7 @@ const ConteudoInteligenciaPage = () => {
           {conteudo.atividades.map((atividade, index) => (
             <div 
               key={index} 
-              className="p-3 rounded-xl bg-white/5 border border-white/10
+              className="p-3 rounded-xl bg-white/5 border border-violet-500/10
                 flex items-center gap-3"
             >
               <div 
@@ -444,7 +444,7 @@ const ConteudoInteligenciaPage = () => {
             Sinais para Observar
           </h2>
         </div>
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
+        <div className="p-4 rounded-xl bg-white/5 border border-violet-500/10 space-y-2">
           {conteudo.sinais.map((sinal, index) => (
             <div key={index} className="flex items-start gap-2">
               <Eye 
@@ -476,7 +476,7 @@ const ConteudoInteligenciaPage = () => {
                 className="appearance-none bg-white/10 text-white text-sm px-3 py-1.5 pr-8 rounded-lg border border-white/20 focus:outline-none focus:border-white/40"
               >
                 {professorData.series.map((serie) => (
-                  <option key={serie} value={serie} className="bg-[#1E293B] text-white">
+                  <option key={serie} value={serie} className="bg-[#252547] text-white">
                     {SERIES_LABELS[serie]}
                   </option>
                 ))}
@@ -504,14 +504,14 @@ const ConteudoInteligenciaPage = () => {
               
               if (!pdf) {
                 return (
-                  <div key={semana} className="p-3 rounded-xl bg-white/5 border border-white/10">
+                  <div key={semana} className="p-3 rounded-xl bg-white/5 border border-violet-500/10">
                     <p className="text-white/40 text-sm">Semana {semana} — Nenhum material</p>
                   </div>
                 );
               }
               
               return (
-                <div key={semana} className="p-4 rounded-xl bg-white/5 border border-white/10">
+                <div key={semana} className="p-4 rounded-xl bg-white/5 border border-violet-500/10">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div 

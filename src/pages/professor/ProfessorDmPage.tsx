@@ -186,7 +186,7 @@ const ProfessorDmPage = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-140px)]">
       {/* Header */}
-      <div className="flex items-center justify-between py-3 border-b border-white/10">
+      <div className="flex items-center justify-between py-3 border-b border-violet-500/10">
         <div className="flex items-center gap-3">
           <Button 
             variant="ghost" 
@@ -271,7 +271,7 @@ const ProfessorDmPage = () => {
       </ScrollArea>
 
       {/* Input - Professor PODE enviar DMs */}
-      <div className="pt-3 pb-2 border-t border-white/10">
+      <div className="pt-3 pb-2 border-t border-violet-500/10">
         <ChatInput
           onEnviar={enviarMensagem}
           casaColor={casaColor}

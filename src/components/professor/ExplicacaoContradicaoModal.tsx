@@ -357,9 +357,9 @@ export const ExplicacaoContradicaoModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#1a1a1a] border-white/10 text-white max-w-md p-0 max-h-[90vh]" hideCloseButton>
+      <DialogContent className="bg-[#1E1E3A] border-violet-500/10 text-white max-w-md p-0 max-h-[90vh]" hideCloseButton>
         {/* Header */}
-        <div className="p-4 border-b border-white/10 bg-purple-900/20">
+        <div className="p-4 border-b border-violet-500/10 bg-purple-900/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
@@ -479,7 +479,7 @@ export const ExplicacaoContradicaoModal = ({
                       p-3 rounded-lg cursor-pointer transition-all
                       ${acaoSelecionada === opcao.id
                         ? 'bg-purple-900/40 border-2 border-purple-500 ring-1 ring-purple-500/30'
-                        : 'bg-white/5 border border-white/10 hover:border-white/30'
+                        : 'bg-white/5 border border-violet-500/10 hover:border-white/30'
                       }
                       ${isSending ? 'opacity-50 cursor-not-allowed' : ''}
                     `}
@@ -497,7 +497,7 @@ export const ExplicacaoContradicaoModal = ({
         </ScrollArea>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/10 flex gap-3">
+        <div className="p-4 border-t border-violet-500/10 flex gap-3">
           <Button
             variant="outline"
             onClick={onClose}

@@ -15,15 +15,15 @@ const MissoesAtivasModal = ({ isOpen, onClose, dados }: MissoesAtivasModalProps)
 
   return (
     <div 
-      className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-[#12122A]/95 flex items-center justify-center p-4 z-50"
       onClick={onClose}
     >
       <div 
-        className="bg-[#1a1a1a] rounded-2xl w-full max-w-sm overflow-hidden"
+        className="bg-[#1E1E3A] rounded-2xl w-full max-w-sm overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
+        <div className="flex items-center justify-between p-4 border-b border-violet-500/10">
           <h3 className="text-white font-semibold flex items-center gap-2">
             📋 Missões Ativas
           </h3>
@@ -40,7 +40,7 @@ const MissoesAtivasModal = ({ isOpen, onClose, dados }: MissoesAtivasModalProps)
           {dados.map(item => (
             <div 
               key={item.serie}
-              className="bg-white/5 border border-white/10 rounded-xl p-4"
+              className="bg-white/5 border border-violet-500/10 rounded-xl p-4"
             >
               <div className="flex justify-between items-start">
                 <div>
@@ -65,7 +65,7 @@ const MissoesAtivasModal = ({ isOpen, onClose, dados }: MissoesAtivasModalProps)
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/10">
+        <div className="p-4 border-t border-violet-500/10">
           <button
             onClick={onClose}
             className="w-full py-3 bg-white/10 text-white rounded-xl font-medium hover:bg-white/20 transition-colors"

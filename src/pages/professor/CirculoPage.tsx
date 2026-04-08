@@ -39,7 +39,7 @@ const CirculoPage = () => {
             <button
               key={serie.numero}
               onClick={() => navigate(`/professor/circulo/serie/${serie.numero}`)}
-              className="p-5 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10
+              className="p-5 rounded-xl text-center bg-[#252547] border border-violet-500/10
                 hover:border-violet-500/30 hover:bg-violet-500/[0.06]
                 transition-all active:scale-[0.97]"
             >
@@ -66,7 +66,7 @@ const CirculoPage = () => {
         <button
           onClick={() => navigate('/professor/circulo/pessoal')}
           className="w-full flex items-center gap-4 p-4 rounded-xl text-left
-            bg-[rgba(26,26,30,0.85)] border border-white/10
+            bg-[#252547] border border-violet-500/10
             hover:border-amber-500/30 hover:bg-amber-500/[0.06]
             transition-all active:scale-[0.98]"
         >

@@ -69,7 +69,7 @@ const CirculoTurmaPage = () => {
             <button
               key={turma.turma_letra}
               onClick={() => navigate(`/professor/circulo/serie/${serieNumero}/turma/${turma.turma_letra}`)}
-              className="p-5 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10
+              className="p-5 rounded-xl text-center bg-[#252547] border border-violet-500/10
                 hover:border-white/20 hover:bg-white/[0.06] transition-all active:scale-[0.97]"
             >
               <p className="text-2xl font-bold text-white">Turma {turma.turma_letra}</p>
@@ -78,7 +78,7 @@ const CirculoTurmaPage = () => {
           ))}
         </div>
       ) : (
-        <div className="p-8 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+        <div className="p-8 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
           <p className="text-white/40 text-sm">Nenhuma turma encontrada</p>
         </div>
       )}

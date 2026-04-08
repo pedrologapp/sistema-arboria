@@ -69,10 +69,10 @@ const ModalGerarContas = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-      <div className="w-full max-w-md bg-[#0A0A0A] border border-white/10 rounded-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#12122A]/95 p-4">
+      <div className="w-full max-w-md bg-[#1A1A2E] border border-violet-500/10 rounded-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
+        <div className="flex items-center justify-between p-4 border-b border-violet-500/10">
           <div className="flex items-center gap-2">
             <Key className="w-5 h-5 text-amber-400" />
             <h2 className="text-lg font-semibold text-white">Gerar Contas de Acesso</h2>
@@ -108,7 +108,7 @@ const ModalGerarContas = ({
                 value={segmentoSelecionado}
                 onChange={(e) => setSegmentoSelecionado(e.target.value)}
                 disabled={processando}
-                className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white"
+                className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white"
               >
                 <option value="">Todos os segmentos</option>
                 {segmentos.map(seg => (
@@ -188,7 +188,7 @@ const ModalGerarContas = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/10 flex gap-3">
+        <div className="p-4 border-t border-violet-500/10 flex gap-3">
           <button
             onClick={onClose}
             disabled={processando}

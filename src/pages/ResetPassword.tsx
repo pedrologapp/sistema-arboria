@@ -84,7 +84,7 @@ const ResetPassword = () => {
   if (isSuccess) {
     return (
       <div className="min-h-screen w-full bg-black flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-white/5 border-white/10">
+        <Card className="w-full max-w-md bg-white/5 border-violet-500/10">
           <CardContent className="pt-8 text-center">
             <div className="mx-auto w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
               <CheckCircle className="w-8 h-8 text-green-500" />
@@ -105,7 +105,7 @@ const ResetPassword = () => {
   if (!isValidSession) {
     return (
       <div className="min-h-screen w-full bg-black flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-white/5 border-white/10">
+        <Card className="w-full max-w-md bg-white/5 border-violet-500/10">
           <CardContent className="pt-8 text-center">
             <h2 className="text-xl font-semibold text-white mb-2">Link Inválido</h2>
             <p className="text-white/60 mb-6">
@@ -122,7 +122,7 @@ const ResetPassword = () => {
 
   return (
     <div className="min-h-screen w-full bg-black flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-white/5 border-white/10">
+      <Card className="w-full max-w-md bg-white/5 border-violet-500/10">
         <CardHeader className="text-center">
           <div className="mx-auto w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center mb-4">
             <Lock className="w-6 h-6 text-indigo-500" />
@@ -145,7 +145,7 @@ const ResetPassword = () => {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10 bg-white/5 border-white/10 text-white"
+                  className="pl-10 pr-10 bg-white/5 border-violet-500/10 text-white"
                   placeholder="Mínimo 6 caracteres"
                 />
                 <button
@@ -169,7 +169,7 @@ const ResetPassword = () => {
                   type={showPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pl-10 bg-white/5 border-white/10 text-white"
+                  className="pl-10 bg-white/5 border-violet-500/10 text-white"
                   placeholder="Repita a senha"
                 />
               </div>
@@ -184,7 +184,7 @@ const ResetPassword = () => {
             </Button>
           </form>
 
-          <div className="mt-6 pt-4 border-t border-white/10">
+          <div className="mt-6 pt-4 border-t border-violet-500/10">
             <Link 
               to="/login" 
               className="flex items-center justify-center gap-2 text-white/60 hover:text-white text-sm transition-colors"

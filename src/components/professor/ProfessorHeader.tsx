@@ -5,7 +5,7 @@ const ProfessorHeader = () => {
   const { faseAtual, institutionName, isLoading } = useProfessor();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#0d0d0d] border-b border-white/10">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#1A1A2E] border-b border-violet-500/10">
       <div className="flex flex-col px-4 py-2 max-w-lg mx-auto">
         {/* Linha 1: Logo + Fase + Notificações */}
         <div className="flex items-center justify-between">

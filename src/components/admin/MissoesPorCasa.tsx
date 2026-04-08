@@ -465,7 +465,7 @@ const MissoesPorCasa = ({
               onClick={() => abrirModal(casa, missao || undefined)}
               className={`w-full p-4 rounded-xl border text-left transition-colors hover:bg-white/5 ${
                 configurada 
-                  ? 'bg-white/5 border-white/10' 
+                  ? 'bg-white/5 border-violet-500/10' 
                   : 'border-dashed border-white/20'
               }`}
             >
@@ -512,10 +512,10 @@ const MissoesPorCasa = ({
 
       {/* Modal de Missão */}
       {modalAberto && casaAtual && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#12122A]/95 p-4">
           <div className="w-full max-w-lg bg-slate-800 rounded-xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="flex items-center justify-between p-4 border-b border-violet-500/10">
               <div className="flex items-center gap-3">
                 <div 
                   className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -552,7 +552,7 @@ const MissoesPorCasa = ({
                   value={titulo}
                   onChange={(e) => setTitulo(e.target.value)}
                   placeholder="Ex: Diário de emoções"
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20"
+                  className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20"
                 />
               </div>
 
@@ -566,7 +566,7 @@ const MissoesPorCasa = ({
                   onChange={(e) => setContexto(e.target.value)}
                   placeholder="Explique o cenário ou situação para o aluno..."
                   rows={3}
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none"
+                  className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none"
                 />
               </div>
 
@@ -580,7 +580,7 @@ const MissoesPorCasa = ({
                   onChange={(e) => setInstrucoes(e.target.value)}
                   placeholder="Descreva o que o aluno deve fazer..."
                   rows={4}
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none"
+                  className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none"
                 />
               </div>
 
@@ -594,7 +594,7 @@ const MissoesPorCasa = ({
                 </p>
 
                 {pdfFile ? (
-                  <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl">
+                  <div className="flex items-center gap-3 p-3 bg-white/5 border border-violet-500/10 rounded-xl">
                     <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
                       <FileText className="w-5 h-5 text-red-400" />
                     </div>
@@ -612,7 +612,7 @@ const MissoesPorCasa = ({
                     </button>
                   </div>
                 ) : pdfExistente ? (
-                  <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl">
+                  <div className="flex items-center gap-3 p-3 bg-white/5 border border-violet-500/10 rounded-xl">
                     <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
                       <FileText className="w-5 h-5 text-red-400" />
                     </div>
@@ -670,7 +670,7 @@ const MissoesPorCasa = ({
                   onChange={(e) => setPontos(Number(e.target.value))}
                   min={1}
                   max={100}
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
+                  className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
                 />
               </div>
 
@@ -685,9 +685,9 @@ const MissoesPorCasa = ({
                     type="date"
                     value={dataPrazo}
                     onChange={(e) => setDataPrazo(e.target.value)}
-                    className="flex-1 p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
+                    className="flex-1 p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
                   />
-                  <div className="flex items-center gap-1.5 p-3 bg-white/5 border border-white/10 rounded-xl">
+                  <div className="flex items-center gap-1.5 p-3 bg-white/5 border border-violet-500/10 rounded-xl">
                     <Clock className="w-4 h-4 text-white/40" />
                     <input
                       type="time"
@@ -712,7 +712,7 @@ const MissoesPorCasa = ({
                       className={`w-full p-3 rounded-xl border text-left transition-colors flex items-center gap-3 ${
                         tiposEntrega.includes(tipo.id)
                           ? 'bg-white/10 border-white/20 text-white'
-                          : 'bg-white/5 border-white/10 text-white/40'
+                          : 'bg-white/5 border-violet-500/10 text-white/40'
                       }`}
                     >
                       <div className={`w-5 h-5 rounded border flex items-center justify-center ${
@@ -732,7 +732,7 @@ const MissoesPorCasa = ({
             </div>
 
             {/* Footer */}
-            <div className="flex gap-3 p-4 border-t border-white/10 bg-[#1a1a1a] flex-shrink-0">
+            <div className="flex gap-3 p-4 border-t border-violet-500/10 bg-[#1E1E3A] flex-shrink-0">
               {missaoEditando && (
                 <button
                   onClick={() => excluirMutation.mutate(missaoEditando.id)}

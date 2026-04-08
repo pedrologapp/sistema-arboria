@@ -247,9 +247,9 @@ const AvaliarEntregaPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d]">
+    <div className="min-h-screen bg-[#1A1A2E]">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-white/10">
+      <div className="flex items-center gap-3 p-4 border-b border-violet-500/10">
         <button 
           onClick={() => {
             if (entrega?.missao?.id) {
@@ -267,7 +267,7 @@ const AvaliarEntregaPage = () => {
 
       <div className="p-4 space-y-4 pb-8">
         {/* Card da Missão */}
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+        <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
           <p className="text-xs text-white/40 uppercase tracking-wider mb-2">📋 Missão</p>
           <h2 className="text-lg font-semibold text-white mb-1">
             {entrega.missao?.titulo}
@@ -281,7 +281,7 @@ const AvaliarEntregaPage = () => {
         </div>
 
         {/* Card do Aluno */}
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+        <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
           <p className="text-xs text-white/40 uppercase tracking-wider mb-3">👤 Aluno</p>
           
           <div className="flex items-center gap-3 mb-3">
@@ -332,7 +332,7 @@ const AvaliarEntregaPage = () => {
         </div>
 
         {/* Resposta do Aluno */}
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+        <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
           <p className="text-xs text-white/40 uppercase tracking-wider mb-3">📝 Resposta do Aluno</p>
           
           {/* Respostas por item (novo formato) */}
@@ -374,7 +374,7 @@ const AvaliarEntregaPage = () => {
 
         {/* Arquivos Anexados */}
         {arquivos && arquivos.length > 0 && (
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
             <p className="text-xs text-white/40 uppercase tracking-wider mb-3">📎 Arquivos Anexados</p>
             <div className="space-y-2">
               {arquivos.map((arquivo) => (
@@ -418,7 +418,7 @@ const AvaliarEntregaPage = () => {
                 <strong>Pontos concedidos:</strong> {entrega.pontos_concedidos} pts
               </p>
               {entrega.feedback_professor && (
-                <div className="mt-3 pt-3 border-t border-white/10">
+                <div className="mt-3 pt-3 border-t border-violet-500/10">
                   <p className="text-white/60 text-xs uppercase mb-1">Feedback:</p>
                   <p className="text-white/80">{entrega.feedback_professor}</p>
                 </div>
@@ -427,7 +427,7 @@ const AvaliarEntregaPage = () => {
           </div>
         ) : (
           // Entrega pendente ou refazer - mostrar formulário completo
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-4">
+          <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4 space-y-4">
             <p className="text-xs text-white/40 uppercase tracking-wider">⭐ Avaliação</p>
             
             {/* Seletor de Nota */}
@@ -473,7 +473,7 @@ const AvaliarEntregaPage = () => {
                 onChange={(e) => setFeedback(e.target.value)}
                 placeholder="Escreva um comentário sobre o trabalho do aluno..."
                 rows={3}
-                className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/30 resize-none focus:outline-none focus:border-white/30"
+                className="w-full bg-black/20 border border-violet-500/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/30 resize-none focus:outline-none focus:border-white/30"
               />
             </div>
 

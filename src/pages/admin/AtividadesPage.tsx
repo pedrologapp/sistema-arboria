@@ -239,7 +239,7 @@ const AtividadesPage = () => {
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
         <Select value={actionFilter} onValueChange={setActionFilter}>
-          <SelectTrigger className="w-[140px] bg-white/5 border-white/10 text-white">
+          <SelectTrigger className="w-[140px] bg-white/5 border-violet-500/10 text-white">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -252,7 +252,7 @@ const AtividadesPage = () => {
         </Select>
 
         <Select value={periodFilter} onValueChange={setPeriodFilter}>
-          <SelectTrigger className="w-[120px] bg-white/5 border-white/10 text-white">
+          <SelectTrigger className="w-[120px] bg-white/5 border-violet-500/10 text-white">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -270,7 +270,7 @@ const AtividadesPage = () => {
             placeholder="Buscar aluno..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/30"
+            className="pl-9 bg-white/5 border-violet-500/10 text-white placeholder:text-white/30"
           />
         </div>
       </div>
@@ -286,7 +286,7 @@ const AtividadesPage = () => {
               className="text-left"
             >
               <Card className={cn(
-                "bg-white/5 border-white/10 transition-all",
+                "bg-white/5 border-violet-500/10 transition-all",
                 isActive && "ring-2 ring-offset-0",
               )} style={isActive ? { borderColor: card.color, boxShadow: `0 0 12px ${card.color}30` } : undefined}>
                 <CardContent className="p-4 flex items-center gap-3">
@@ -376,7 +376,7 @@ const AtividadesPage = () => {
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="ml-11 mb-3 p-3 rounded-lg bg-white/5 border border-white/10 text-xs space-y-1">
+                      <div className="ml-11 mb-3 p-3 rounded-lg bg-white/5 border border-violet-500/10 text-xs space-y-1">
                         <p className="text-white/50">📅 {fullDate}</p>
                         <p className="text-white/50">🏷️ Ação: <span className="text-white/70">{config.label}</span></p>
                         {log.ip_address && (
@@ -410,7 +410,7 @@ const AtividadesPage = () => {
             variant="outline"
             onClick={() => fetchLogs(true)}
             disabled={loadingMore}
-            className="border-white/10 text-white/60 hover:text-white hover:bg-white/5"
+            className="border-violet-500/10 text-white/60 hover:text-white hover:bg-white/5"
           >
             {loadingMore ? 'Carregando...' : 'Carregar mais'}
           </Button>

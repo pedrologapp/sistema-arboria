@@ -299,8 +299,8 @@ const ProfessorDashboard = () => {
       {casaMentor && (
         <div
           className="relative overflow-hidden p-5 rounded-2xl
-            bg-[rgba(26,26,30,0.85)] backdrop-blur-xl
-            border border-white/10"
+            bg-[#252547] backdrop-blur-xl
+            border border-violet-500/10"
           style={{ boxShadow: `0 16px 32px -8px ${casaColor}25` }}
         >
           {/* Glow decorativo */}
@@ -350,7 +350,7 @@ const ProfessorDashboard = () => {
 
       {/* Organize sua Fase — Card expansivel */}
       {faseAtual && (
-        <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 overflow-hidden">
+        <div className="rounded-xl bg-[#252547] border border-violet-500/10 overflow-hidden">
           {/* Header colapsavel */}
           <button
             onClick={() => setExpandirOrganizar(!expandirOrganizar)}
@@ -378,7 +378,7 @@ const ProfessorDashboard = () => {
 
           {/* Conteudo expandido */}
           {expandirOrganizar && (
-            <div className="px-4 pb-4 space-y-3 border-t border-white/5 pt-3">
+            <div className="px-4 pb-4 space-y-3 border-t border-violet-500/5 pt-3">
               <p className="text-[10px] text-white/30 leading-relaxed">
                 Abaixo estao todas as turmas da instituicao. Configure o dia e horario da sua aula em cada turma. Ao confirmar que deu a aula, as missoes serao liberadas automaticamente para os alunos as 18h daquele dia.
               </p>
@@ -470,7 +470,7 @@ const ProfessorDashboard = () => {
       {/* Modal: Definir horario */}
       {showAgendaModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[#1a1a1e] border border-white/10 p-5 space-y-4">
+          <div className="w-full max-w-sm rounded-2xl bg-[#1E1E3A] border border-violet-500/10 p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-white font-medium">Definir horario</p>
@@ -482,14 +482,14 @@ const ProfessorDashboard = () => {
               <div>
                 <label className="text-[10px] text-white/30 block mb-1">Dia da semana</label>
                 <select value={agendaDia} onChange={e => setAgendaDia(Number(e.target.value))}
-                  className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-2 py-2 text-xs text-white outline-none">
+                  className="w-full bg-white/[0.06] border border-violet-500/10 rounded-lg px-2 py-2 text-xs text-white outline-none">
                   {[1, 2, 3, 4, 5].map(d => <option key={d} value={d}>{diasSemana[d]}a-feira</option>)}
                 </select>
               </div>
               <div>
                 <label className="text-[10px] text-white/30 block mb-1">Horario</label>
                 <input type="time" value={agendaHorario} onChange={e => setAgendaHorario(e.target.value)}
-                  className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-2 py-2 text-xs text-white outline-none" />
+                  className="w-full bg-white/[0.06] border border-violet-500/10 rounded-lg px-2 py-2 text-xs text-white outline-none" />
               </div>
             </div>
             <button onClick={salvarAgenda}
@@ -503,7 +503,7 @@ const ProfessorDashboard = () => {
       {/* Modal: Motivo ausencia */}
       {showMotivoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[#1a1a1e] border border-white/10 p-5 space-y-4">
+          <div className="w-full max-w-sm rounded-2xl bg-[#1E1E3A] border border-violet-500/10 p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-white font-medium">Aula nao ocorreu</p>
@@ -514,7 +514,7 @@ const ProfessorDashboard = () => {
             <div>
               <label className="text-[10px] text-white/30 block mb-1">Motivo</label>
               <textarea value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Informe o motivo..."
-                rows={3} className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 resize-none outline-none" />
+                rows={3} className="w-full bg-white/[0.04] border border-violet-500/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 resize-none outline-none" />
             </div>
             <p className="text-[10px] text-amber-400/60">O coordenador Arboria sera notificado sobre esta ausencia.</p>
             <button onClick={informarAusencia} disabled={!motivo.trim() || confirmando}
@@ -530,7 +530,7 @@ const ProfessorDashboard = () => {
         <button
           onClick={() => navigate('/professor/missoes')}
           className="p-4 rounded-xl text-center
-            bg-[rgba(26,26,30,0.85)] border border-white/10
+            bg-[#252547] border border-violet-500/10
             hover:border-white/20 hover:scale-[1.02]
             transition-all duration-200 active:scale-[0.98]"
         >
@@ -542,7 +542,7 @@ const ProfessorDashboard = () => {
         <button
           onClick={() => navigate('/professor/entregas')}
           className="p-4 rounded-xl text-center
-            bg-[rgba(26,26,30,0.85)] border border-white/10
+            bg-[#252547] border border-violet-500/10
             hover:border-white/20 hover:scale-[1.02]
             transition-all duration-200 active:scale-[0.98]"
         >
@@ -570,7 +570,7 @@ const ProfessorDashboard = () => {
               key={action.label}
               onClick={() => handleActionClick(action)}
               className="relative flex flex-col items-center gap-2.5 p-4 rounded-xl text-center group
-                bg-[rgba(26,26,30,0.85)] border border-white/10
+                bg-[#252547] border border-violet-500/10
                 hover:border-white/20 hover:bg-white/[0.06]
                 transition-all duration-200 active:scale-[0.97]"
             >

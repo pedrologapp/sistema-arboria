@@ -155,7 +155,7 @@ const CanalChatPage = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-140px)]">
       {/* Header */}
-      <div className="flex items-center justify-between py-3 px-1 border-b border-white/10">
+      <div className="flex items-center justify-between py-3 px-1 border-b border-violet-500/10">
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => navigate('/aluno/chat')}
@@ -181,7 +181,7 @@ const CanalChatPage = () => {
 
       {/* Mensagens Fixadas */}
       {mensagensFixadas.length > 0 && (
-        <div className="py-2 px-2 space-y-1.5 border-b border-white/5">
+        <div className="py-2 px-2 space-y-1.5 border-b border-violet-500/5">
           {mensagensFixadas.map(msg => (
             <MensagemFixada key={msg.id} mensagem={msg} casaColor="#6366f1" />
           ))}

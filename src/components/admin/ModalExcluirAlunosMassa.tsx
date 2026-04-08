@@ -94,7 +94,7 @@ const ModalExcluirAlunosMassa = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="bg-[#1A1A1A] border-white/10 text-white max-w-md">
+      <DialogContent className="bg-[#1A1A1A] border-violet-500/10 text-white max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-red-400">
             <AlertTriangle className="w-5 h-5" />
@@ -140,7 +140,7 @@ const ModalExcluirAlunosMassa = ({
 
         {step === 'type' && (
           <div className="space-y-4">
-            <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+            <div className="bg-white/5 border border-violet-500/10 rounded-lg p-4">
               <p className="text-white/80 text-sm mb-3">
                 Para confirmar, digite <span className="font-bold text-white">EXCLUIR</span>{' '}
                 no campo abaixo:

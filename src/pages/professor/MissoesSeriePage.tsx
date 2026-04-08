@@ -157,7 +157,7 @@ const MissoesSeriePage = () => {
                       "w-full p-4 rounded-xl text-left transition-colors flex items-center justify-between",
                       isAtiva 
                         ? "bg-blue-500/10 border border-blue-500/30" 
-                        : "bg-white/5 border border-white/5 hover:bg-white/10"
+                        : "bg-white/5 border border-violet-500/5 hover:bg-white/10"
                     )}
                   >
                     <div>
@@ -187,7 +187,7 @@ const MissoesSeriePage = () => {
           </div>
 
           {/* Separador */}
-          <div className="border-t border-white/10" />
+          <div className="border-t border-violet-500/10" />
 
           {/* Card Extra */}
           <button

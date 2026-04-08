@@ -208,17 +208,17 @@ const MissoesCasaPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] px-5 py-6">
-        <div className="h-5 w-40 bg-[#1E293B] rounded animate-pulse mb-8" />
+      <div className="min-h-screen bg-[#1A1A2E] px-5 py-6">
+        <div className="h-5 w-40 bg-[#252547] rounded animate-pulse mb-8" />
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-10 h-10 bg-[#1E293B] rounded-full animate-pulse" />
+          <div className="w-10 h-10 bg-[#252547] rounded-full animate-pulse" />
           <div className="space-y-2">
-            <div className="h-4 w-32 bg-[#1E293B] rounded animate-pulse" />
-            <div className="h-3 w-40 bg-[#1E293B] rounded animate-pulse" />
+            <div className="h-4 w-32 bg-[#252547] rounded animate-pulse" />
+            <div className="h-3 w-40 bg-[#252547] rounded animate-pulse" />
           </div>
         </div>
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-24 bg-[#1E293B] rounded-xl animate-pulse mb-3" />
+          <div key={i} className="h-24 bg-[#252547] rounded-xl animate-pulse mb-3" />
         ))}
       </div>
     );
@@ -226,7 +226,7 @@ const MissoesCasaPage = () => {
 
   if (error || !fase || !casa) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center p-5">
+      <div className="min-h-screen bg-[#1A1A2E] flex items-center justify-center p-5">
         <div className="text-center">
           <p className="text-[#64748B] text-sm mb-4">{error || 'Dados não encontrados'}</p>
           <Button variant="outline" onClick={handleVoltar} className="border-[#334155]">
@@ -238,7 +238,7 @@ const MissoesCasaPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] px-5 py-6 pb-24">
+    <div className="min-h-screen bg-[#1A1A2E] px-5 py-6 pb-24">
       {/* Back button */}
       <button
         onClick={handleVoltar}
@@ -253,7 +253,7 @@ const MissoesCasaPage = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 rounded-xl bg-[#1E293B] border border-[#3B82F6]/20 mb-6"
+          className="p-4 rounded-xl bg-[#252547] border border-[#3B82F6]/20 mb-6"
         >
           <div className="flex items-start gap-3">
             <Info className="w-4 h-4 text-[#3B82F6] mt-0.5 flex-shrink-0" />
@@ -314,8 +314,8 @@ const MissoesCasaPage = () => {
               className={cn(
                 'p-4 rounded-xl transition-all cursor-pointer',
                 ehMinhaCasa
-                  ? 'bg-[#1E293B] hover:bg-[#283548]'
-                  : 'bg-[#1E293B]/50'
+                  ? 'bg-[#252547] hover:bg-[#283548]'
+                  : 'bg-[#252547]/50'
               )}
             >
               <div className="flex items-start gap-3">

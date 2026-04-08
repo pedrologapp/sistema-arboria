@@ -183,8 +183,8 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
   // Tela de sucesso com senha
   if (senhaGerada) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-        <div className="w-full max-w-md bg-[#0A0A0A] border border-white/10 rounded-2xl overflow-hidden">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#12122A]/95 p-4">
+        <div className="w-full max-w-md bg-[#1A1A2E] border border-violet-500/10 rounded-2xl overflow-hidden">
           <div className="p-6 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
               <Check className="w-8 h-8 text-green-400" />
@@ -247,10 +247,10 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-      <div className="w-full max-w-md bg-[#0A0A0A] border border-white/10 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#12122A]/95 p-4">
+      <div className="w-full max-w-md bg-[#1A1A2E] border border-violet-500/10 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
+        <div className="flex items-center justify-between p-4 border-b border-violet-500/10">
           <h2 className="text-lg font-semibold text-white">
             Adicionar {tipo === 'aluno' ? 'Aluno' : tipo === 'professor' ? 'Professor' : 'Admin'}
           </h2>
@@ -269,7 +269,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 placeholder="João"
-                className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/30"
+                className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white placeholder:text-white/30"
               />
             </div>
             <div>
@@ -279,7 +279,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
                 value={sobrenome}
                 onChange={(e) => setSobrenome(e.target.value)}
                 placeholder="Silva"
-                className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/30"
+                className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white placeholder:text-white/30"
               />
             </div>
           </div>
@@ -291,7 +291,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="joao@escola.com"
-              className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/30"
+              className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white placeholder:text-white/30"
             />
           </div>
 
@@ -309,7 +309,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
                     setTurma('');
                     setCasaId('');
                   }}
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white"
+                  className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white"
                 >
                   {Object.entries(segmentoLabels).map(([value, label]) => (
                     <option key={value} value={value}>{label}</option>
@@ -323,7 +323,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
                   <select
                     value={serie}
                     onChange={(e) => setSerie(e.target.value)}
-                    className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white"
+                    className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white"
                   >
                     <option value="">Selecione</option>
                     {series.map(s => (
@@ -336,7 +336,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
                   <select
                     value={turma}
                     onChange={(e) => setTurma(e.target.value)}
-                    className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white"
+                    className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white"
                   >
                     <option value="">Selecione</option>
                     {turmasLetras.map(t => (
@@ -353,7 +353,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
                   <select
                     value={casaId}
                     onChange={(e) => setCasaId(e.target.value)}
-                    className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white"
+                    className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white"
                   >
                     <option value="">Selecione a casa</option>
                     {casas?.map(c => (
@@ -381,7 +381,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
                       setTurmasSelecionadas([]);
                     }
                   }}
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white"
+                  className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white"
                 >
                   {Object.entries(segmentoLabels).map(([value, label]) => (
                     <option key={value} value={value}>{label}</option>
@@ -398,7 +398,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
                   <select
                     value={casaId}
                     onChange={(e) => setCasaId(e.target.value)}
-                    className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white"
+                    className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white"
                   >
                     <option value="">Selecione a casa</option>
                     {casas?.map(c => (
@@ -422,7 +422,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
                       className={`flex-1 p-3 rounded-xl border text-sm font-medium transition-colors ${
                         ehRegente
                           ? 'bg-white/20 border-white text-white'
-                          : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
+                          : 'bg-white/5 border-violet-500/10 text-white/60 hover:bg-white/10'
                       }`}
                     >
                       👩‍🏫 Regente
@@ -433,7 +433,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
                       className={`flex-1 p-3 rounded-xl border text-sm font-medium transition-colors ${
                         !ehRegente
                           ? 'bg-white/20 border-white text-white'
-                          : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
+                          : 'bg-white/5 border-violet-500/10 text-white/60 hover:bg-white/10'
                       }`}
                     >
                       🤝 Auxiliar
@@ -452,7 +452,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
                     Turmas Vinculadas
                   </label>
                   {turmasDisponiveis && turmasDisponiveis.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 bg-white/5 rounded-xl border border-white/10">
+                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 bg-white/5 rounded-xl border border-violet-500/10">
                       {turmasDisponiveis.map(t => (
                         <button
                           key={t.id}
@@ -461,7 +461,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
                           className={`p-2 rounded-lg border text-sm flex items-center gap-2 transition-colors ${
                             turmasSelecionadas.includes(t.id)
                               ? 'bg-white/20 border-white text-white'
-                              : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
+                              : 'bg-white/5 border-violet-500/10 text-white/60 hover:bg-white/10'
                           }`}
                         >
                           <CheckSquare className={`w-4 h-4 ${
@@ -498,7 +498,7 @@ const ModalAdicionarUsuario = ({ tipo, institutionId, onClose }: ModalAdicionarU
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/10 flex gap-3">
+        <div className="p-4 border-t border-violet-500/10 flex gap-3">
           <button
             onClick={onClose}
             className="flex-1 p-3 bg-white/5 text-white rounded-xl hover:bg-white/10 transition-colors"

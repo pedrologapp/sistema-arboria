@@ -81,9 +81,9 @@ export const AlertaDetalheModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#1a1a1a] border-white/10 text-white max-w-md p-0" hideCloseButton>
+      <DialogContent className="bg-[#1E1E3A] border-violet-500/10 text-white max-w-md p-0" hideCloseButton>
         {/* Header */}
-        <div className="p-4 border-b border-white/10">
+        <div className="p-4 border-b border-violet-500/10">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-white font-medium text-base flex items-center gap-2">
@@ -104,7 +104,7 @@ export const AlertaDetalheModal = ({
         </div>
 
         {/* Cabeçalho de colunas */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-violet-500/5">
           <span className="text-white/30 text-xs uppercase tracking-wider">Aluno</span>
           <span className="text-white/30 text-xs uppercase tracking-wider">
             {isExplicacao ? 'Situação' : 'Motivo'}
@@ -246,7 +246,7 @@ export const AlertaDetalheModal = ({
         </ScrollArea>
 
         {/* Footer */}
-        <div className="p-3 border-t border-white/10">
+        <div className="p-3 border-t border-violet-500/10">
           <p className="text-white/40 text-xs text-center">
             {count} {count === 1 ? 'aluno' : 'alunos'}
           </p>

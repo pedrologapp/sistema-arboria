@@ -102,7 +102,7 @@ const HistoricoObservacoes = ({
       </div>
       
       {/* Card com Resumo Visual */}
-      <div className="rounded-xl bg-white/5 border border-white/10 p-4">
+      <div className="rounded-xl bg-white/5 border border-violet-500/10 p-4">
         {/* Total */}
         <p className="text-white/60 text-sm mb-3">
           Total: <span className="text-white/80 font-medium">{total} observações</span>

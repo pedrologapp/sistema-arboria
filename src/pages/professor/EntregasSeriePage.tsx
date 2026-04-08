@@ -71,9 +71,9 @@ const EntregasSeriePage = () => {
   });
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] pb-24">
+    <div className="min-h-screen bg-[#1A1A2E] pb-24">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-white/10">
+      <div className="flex items-center justify-between p-4 border-b border-violet-500/10">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => navigate('/professor/entregas')} 
@@ -97,7 +97,7 @@ const EntregasSeriePage = () => {
       <div className="p-4">
         {/* Fase atual */}
         {faseAtual && (
-          <div className="mb-4 p-3 bg-white/5 rounded-lg border border-white/10">
+          <div className="mb-4 p-3 bg-white/5 rounded-lg border border-violet-500/10">
             <p className="text-white/60 text-xs uppercase tracking-wide">Fase Atual</p>
             <p className="text-white font-medium">
               {faseAtual.inteligencia?.emoji} {faseAtual.inteligencia?.nome}
@@ -129,7 +129,7 @@ const EntregasSeriePage = () => {
                     "w-full p-4 rounded-xl text-left transition-colors flex items-center justify-between",
                     isAtiva 
                       ? "bg-blue-500/10 border border-blue-500/30" 
-                      : "bg-white/5 border border-white/10 hover:bg-white/10"
+                      : "bg-white/5 border border-violet-500/10 hover:bg-white/10"
                   )}
                 >
                   <div>
@@ -165,7 +165,7 @@ const EntregasSeriePage = () => {
             })}
 
             {/* Separador */}
-            <div className="my-4 border-t border-white/10" />
+            <div className="my-4 border-t border-violet-500/10" />
 
             {/* Card Extra */}
             {(() => {

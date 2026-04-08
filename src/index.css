@@ -101,7 +101,44 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    background-color: #1A1A2E;
+    color: #E2E8F0;
   }
+
+  /* Arboria Theme */
+  :root {
+    --arboria-bg: #1A1A2E;
+    --arboria-card: #252547;
+    --arboria-card-hover: #2D2D5E;
+    --arboria-border: rgba(124, 58, 237, 0.15);
+    --arboria-accent: #7C3AED;
+    --arboria-accent-light: rgba(124, 58, 237, 0.15);
+    --arboria-text: #E2E8F0;
+    --casa-color: #7C3AED;
+    --casa-color-10: rgba(124, 58, 237, 0.1);
+    --casa-color-15: rgba(124, 58, 237, 0.15);
+    --casa-color-20: rgba(124, 58, 237, 0.2);
+    --casa-color-30: rgba(124, 58, 237, 0.3);
+    --arboria-text-muted: #94A3B8;
+    --arboria-text-dim: #64748B;
+  }
+
+  /* Animacao de entrada suave */
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-fade-in {
+    animation: fadeSlideUp 0.3s ease-out forwards;
+    opacity: 0;
+  }
+
+  .animate-fade-in-d1 { animation-delay: 0.05s; }
+  .animate-fade-in-d2 { animation-delay: 0.1s; }
+  .animate-fade-in-d3 { animation-delay: 0.15s; }
+  .animate-fade-in-d4 { animation-delay: 0.2s; }
+  .animate-fade-in-d5 { animation-delay: 0.25s; }
 
   /* Prevenir zoom automático em inputs no iOS */
   input,

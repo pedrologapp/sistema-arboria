@@ -88,9 +88,9 @@ const EntregasAlunoPage = () => {
     : `/professor/entregas/serie/${serie}/semana/${semana}/geral`;
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] pb-24">
+    <div className="min-h-screen bg-[#1A1A2E] pb-24">
       {/* Header com dados do aluno */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-violet-500/10">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => navigate(voltarUrl)}

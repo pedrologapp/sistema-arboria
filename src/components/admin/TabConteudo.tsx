@@ -362,7 +362,7 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
         {(() => {
           const conteudoGeral = getConteudoSemana(0);
           return (
-            <div className="bg-[#1E293B] rounded-xl p-4 space-y-3">
+            <div className="bg-[#252547] rounded-xl p-4 space-y-3">
               <div>
                 <p className="text-white font-medium text-sm">
                   Conteúdo Geral da Fase
@@ -394,7 +394,7 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
                           <MoreVertical className="w-4 h-4" />
                         </button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-[#1E293B] border-white/10 min-w-[160px]">
+                      <DropdownMenuContent align="end" className="bg-[#252547] border-violet-500/10 min-w-[160px]">
                         <DropdownMenuItem onClick={() => copiarLink(conteudoGeral.arquivo_url)} className="text-white/70 hover:text-white hover:bg-white/10 cursor-pointer">
                           <Copy className="w-4 h-4 mr-2" />
                           Copiar link
@@ -454,7 +454,7 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
           return (
             <div 
               key={semana.numero}
-              className="bg-[#1E293B] rounded-xl p-4 space-y-3"
+              className="bg-[#252547] rounded-xl p-4 space-y-3"
             >
               {/* Header da Semana */}
               <div className="flex items-center justify-between">
@@ -499,7 +499,7 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
                       </DropdownMenuTrigger>
                       <DropdownMenuContent 
                         align="end" 
-                        className="bg-[#1E293B] border-white/10 min-w-[160px]"
+                        className="bg-[#252547] border-violet-500/10 min-w-[160px]"
                       >
                         <DropdownMenuItem 
                           onClick={() => copiarLink(conteudo.arquivo_url)}
@@ -574,10 +574,10 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
 
       {/* Modal de Upload */}
       {modalAberto && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1E293B] rounded-2xl max-w-md w-full overflow-hidden">
+        <div className="fixed inset-0 bg-[#12122A]/95 z-50 flex items-center justify-center p-4">
+          <div className="bg-[#252547] rounded-2xl max-w-md w-full overflow-hidden">
             {/* Header Modal */}
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="flex items-center justify-between p-4 border-b border-violet-500/10">
               <h3 className="text-white font-semibold">
                 {semanaAtual === 0 ? 'Adicionar Conteúdo Geral' : `Adicionar Conteúdo — Semana ${semanaAtual}`}
               </h3>
@@ -642,7 +642,7 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
                   value={titulo}
                   onChange={(e) => setTitulo(e.target.value)}
                   placeholder="Ex: Introdução à inteligência intrapessoal"
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20"
+                  className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20"
                 />
               </div>
 
@@ -656,13 +656,13 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
                   onChange={(e) => setDescricao(e.target.value)}
                   placeholder="Breve descrição do conteúdo..."
                   rows={3}
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none"
+                  className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none"
                 />
               </div>
             </div>
 
             {/* Footer Modal */}
-            <div className="flex gap-3 p-4 border-t border-white/10">
+            <div className="flex gap-3 p-4 border-t border-violet-500/10">
               <button
                 onClick={fecharModal}
                 className="flex-1 p-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors"

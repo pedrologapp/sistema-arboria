@@ -371,7 +371,7 @@ export function FeedbackEstadoCard({
             
             {/* Padrão identificado - destaque para N8N */}
             {padrao && (
-              <div className="mt-4 p-3 bg-black/30 rounded-lg border border-white/10">
+              <div className="mt-4 p-3 bg-black/30 rounded-lg border border-violet-500/10">
                 <div className="flex items-center gap-2 mb-1">
                   <Target className="w-4 h-4 text-amber-400" />
                   <span className="text-xs font-semibold text-amber-400 uppercase tracking-wide">
@@ -758,7 +758,7 @@ export function FeedbackEstadoCard({
                               
                               {/* Conteúdo expandido com dados ricos */}
                               {isExpanded && (temConteudoRico || descricao) && (
-                                <div className="px-3 pb-3 space-y-3 border-t border-white/10">
+                                <div className="px-3 pb-3 space-y-3 border-t border-violet-500/10">
                                   {/* Descrição completa */}
                                   {descricao && (
                                     <p className="text-white/80 text-sm pt-3">

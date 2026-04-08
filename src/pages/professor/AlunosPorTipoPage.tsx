@@ -203,9 +203,9 @@ const AlunosPorTipoPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d]">
+    <div className="min-h-screen bg-[#1A1A2E]">
       {/* Header */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-violet-500/10">
         <div className="flex items-center justify-between">
           {/* Lado esquerdo */}
           <div className="flex items-center gap-3">
@@ -236,7 +236,7 @@ const AlunosPorTipoPage = () => {
           <button
             onClick={() => setShowMissaoModal(true)}
             disabled={missaoIds.length === 0}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-violet-500/10 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Eye className="w-4 h-4" />
             <span className="text-xs">Ver Missão</span>
@@ -245,7 +245,7 @@ const AlunosPorTipoPage = () => {
       </div>
 
       {/* Filtro de Turma - sempre visível */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-violet-500/10">
         <p className="text-white/40 text-xs uppercase tracking-wide mb-2">Turma</p>
         <div className="flex gap-2 flex-wrap">
           <button
@@ -347,7 +347,7 @@ const AlunosPorTipoPage = () => {
                     aluno.status === 'completou' && "bg-green-500/20 text-green-400 border-green-500/30",
                     aluno.status === 'aguardando' && "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
                     aluno.status === 'pendente' && "bg-red-500/20 text-red-400 border-red-500/30",
-                    aluno.status === 'sem_missao' && "bg-white/10 text-white/40 border-white/10"
+                    aluno.status === 'sem_missao' && "bg-white/10 text-white/40 border-violet-500/10"
                   )}>
                     {aluno.entregou}/{aluno.total}
                   </span>

@@ -57,7 +57,7 @@ const ConfiguracoesPage = () => {
           Meu Perfil
         </p>
 
-        <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 p-5">
+        <div className="rounded-xl bg-[#252547] border border-violet-500/10 p-5">
           {/* Avatar + Info */}
           <div className="flex items-center gap-4 mb-4">
             <div className="shrink-0">
@@ -91,7 +91,7 @@ const ConfiguracoesPage = () => {
               placeholder="Escreva algo sobre voce..."
               maxLength={120}
               rows={2}
-              className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2
+              className="w-full bg-white/[0.04] border border-violet-500/10 rounded-lg px-3 py-2
                 text-sm text-white placeholder:text-white/20 resize-none outline-none
                 focus:border-white/20 transition-colors"
             />
@@ -106,9 +106,9 @@ const ConfiguracoesPage = () => {
           Conta
         </p>
 
-        <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 overflow-hidden">
+        <div className="rounded-xl bg-[#252547] border border-violet-500/10 overflow-hidden">
           {/* Email */}
-          <div className="flex items-center justify-between py-3.5 px-4 border-b border-white/5">
+          <div className="flex items-center justify-between py-3.5 px-4 border-b border-violet-500/5">
             <div className="flex items-center gap-3">
               <Mail className="w-4 h-4 text-white/30" />
               <span className="text-sm text-white/60">Email</span>
@@ -136,7 +136,7 @@ const ConfiguracoesPage = () => {
           Sobre
         </p>
 
-        <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 p-4">
+        <div className="rounded-xl bg-[#252547] border border-violet-500/10 p-4">
           <div className="flex items-start gap-3">
             <Info className="w-4 h-4 text-white/20 mt-0.5 shrink-0" />
             <div>

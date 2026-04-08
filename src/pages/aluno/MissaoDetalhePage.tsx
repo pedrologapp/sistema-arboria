@@ -121,7 +121,7 @@ const PdfViewerInline = ({ pdfUrl, pdfNome, casaColor, onBaixar }: {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-xl border border-white/10 bg-white/5 p-6 space-y-4"
+        className="rounded-xl border border-violet-500/10 bg-white/5 p-6 space-y-4"
       >
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ background: `${casaColor}20` }}>
@@ -151,14 +151,14 @@ const PdfViewerInline = ({ pdfUrl, pdfNome, casaColor, onBaixar }: {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="space-y-3">
       {status === 'loading' && (
-        <div className="rounded-xl border border-white/10 bg-white/5 flex items-center justify-center" style={{ height: '70vh', minHeight: '400px' }}>
+        <div className="rounded-xl border border-violet-500/10 bg-white/5 flex items-center justify-center" style={{ height: '70vh', minHeight: '400px' }}>
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="w-8 h-8 animate-spin" style={{ color: casaColor }} />
             <p className="text-white/50 text-sm">Carregando PDF...</p>
           </div>
         </div>
       )}
-      <div className="rounded-xl overflow-hidden shadow-lg border border-white/10" style={{ boxShadow: `0 0 20px ${casaColor}10`, display: status === 'loading' ? 'none' : 'block' }}>
+      <div className="rounded-xl overflow-hidden shadow-lg border border-violet-500/10" style={{ boxShadow: `0 0 20px ${casaColor}10`, display: status === 'loading' ? 'none' : 'block' }}>
         <iframe
           src={googleViewerUrl}
           className="w-full bg-white"
@@ -833,7 +833,7 @@ const MissaoDetalhePage = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="rounded-xl border border-white/10 bg-white/5 p-4"
+              className="rounded-xl border border-violet-500/10 bg-white/5 p-4"
             >
               <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-3">
                 📖 CONTEXTO
@@ -868,7 +868,7 @@ const MissaoDetalhePage = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="rounded-xl border border-white/10 bg-white/5 p-4"
+              className="rounded-xl border border-violet-500/10 bg-white/5 p-4"
             >
               <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-3">
                 🎯 SUA MISSÃO
@@ -897,7 +897,7 @@ const MissaoDetalhePage = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
-              className="rounded-xl border border-white/10 bg-white/5 p-4"
+              className="rounded-xl border border-violet-500/10 bg-white/5 p-4"
             >
               <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-2 mb-4">
                 📝 O QUE REGISTRAR
@@ -1009,7 +1009,7 @@ const MissaoDetalhePage = () => {
 
           {/* Resposta enviada */}
           {entrega.texto_resposta && (
-            <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+            <div className="p-4 rounded-xl bg-white/5 border border-violet-500/10">
               <h4 className="text-sm text-white/60 mb-2">Sua resposta:</h4>
               <p className="text-white/80 whitespace-pre-wrap text-sm">{entrega.texto_resposta}</p>
             </div>
@@ -1078,7 +1078,7 @@ const MissaoDetalhePage = () => {
                 type="button"
                 onClick={() => photoInputRef.current?.click()}
                 disabled={enviando}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-white/70"
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg bg-white/5 border border-violet-500/10 hover:bg-white/10 transition-colors text-white/70"
               >
                 <Camera className="w-5 h-5" />
                 <span className="text-sm">Foto</span>
@@ -1087,7 +1087,7 @@ const MissaoDetalhePage = () => {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={enviando}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-white/70"
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg bg-white/5 border border-violet-500/10 hover:bg-white/10 transition-colors text-white/70"
               >
                 <File className="w-5 h-5" />
                 <span className="text-sm">Arquivo</span>
@@ -1123,7 +1123,7 @@ const MissaoDetalhePage = () => {
                     key={arquivo.id}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="relative rounded-lg overflow-hidden bg-white/5 border border-white/10 aspect-square"
+                    className="relative rounded-lg overflow-hidden bg-white/5 border border-violet-500/10 aspect-square"
                   >
                     {arquivo.preview ? (
                       <img 
@@ -1162,7 +1162,7 @@ const MissaoDetalhePage = () => {
                   placeholder="Escreva um comentário ou sua resposta..."
                   rows={4}
                   disabled={enviando}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-none"
+                  className="bg-white/5 border-violet-500/10 text-white placeholder:text-white/30 resize-none"
                 />
                 {textoResposta.length > 0 && (
                   <span className="absolute bottom-3 right-3 text-xs text-white/40">

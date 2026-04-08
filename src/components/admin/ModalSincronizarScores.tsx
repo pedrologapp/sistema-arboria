@@ -311,7 +311,7 @@ const ModalSincronizarScores = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md bg-[#111111] border-white/10 text-white">
+      <DialogContent className="sm:max-w-md bg-[#111111] border-violet-500/10 text-white">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             <RefreshCw className="w-5 h-5 text-indigo-400" />
@@ -338,10 +338,10 @@ const ModalSincronizarScores = ({
                 </Label>
                 {tipoFiltro === 'aluno' && (
                   <Select value={alunoSelecionado} onValueChange={setAlunoSelecionado}>
-                    <SelectTrigger className="w-48 bg-white/5 border-white/10 text-white">
+                    <SelectTrigger className="w-48 bg-white/5 border-violet-500/10 text-white">
                       <SelectValue placeholder="Selecionar aluno..." />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1a1a1a] border-white/10">
+                    <SelectContent className="bg-[#1E1E3A] border-violet-500/10">
                       {alunos.map((aluno) => (
                         <SelectItem
                           key={aluno.id}
@@ -363,10 +363,10 @@ const ModalSincronizarScores = ({
                 </Label>
                 {tipoFiltro === 'turma' && (
                   <Select value={turmaSelecionada} onValueChange={setTurmaSelecionada}>
-                    <SelectTrigger className="w-48 bg-white/5 border-white/10 text-white">
+                    <SelectTrigger className="w-48 bg-white/5 border-violet-500/10 text-white">
                       <SelectValue placeholder="Selecionar turma..." />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1a1a1a] border-white/10">
+                    <SelectContent className="bg-[#1E1E3A] border-violet-500/10">
                       {turmas.map((turma) => (
                         <SelectItem
                           key={turma}
@@ -388,10 +388,10 @@ const ModalSincronizarScores = ({
                 </Label>
                 {tipoFiltro === 'serie' && (
                   <Select value={serieSelecionada} onValueChange={setSerieSelecionada}>
-                    <SelectTrigger className="w-48 bg-white/5 border-white/10 text-white">
+                    <SelectTrigger className="w-48 bg-white/5 border-violet-500/10 text-white">
                       <SelectValue placeholder="Selecionar série..." />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1a1a1a] border-white/10">
+                    <SelectContent className="bg-[#1E1E3A] border-violet-500/10">
                       {series.map((serie) => (
                         <SelectItem
                           key={serie}
@@ -422,10 +422,10 @@ const ModalSincronizarScores = ({
               value={anoLetivo.toString()}
               onValueChange={(v) => setAnoLetivo(parseInt(v))}
             >
-              <SelectTrigger className="w-32 bg-white/5 border-white/10 text-white">
+              <SelectTrigger className="w-32 bg-white/5 border-violet-500/10 text-white">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#1a1a1a] border-white/10">
+              <SelectContent className="bg-[#1E1E3A] border-violet-500/10">
                 <SelectItem value="2025" className="text-white hover:bg-white/10">
                   2025
                 </SelectItem>
@@ -437,7 +437,7 @@ const ModalSincronizarScores = ({
           </div>
 
           {/* Preview card */}
-          <Card className="bg-white/5 border-white/10">
+          <Card className="bg-white/5 border-violet-500/10">
             <CardContent className="p-4">
               <div className="flex items-center gap-3 text-white/80">
                 <Database className="w-5 h-5 text-indigo-400" />

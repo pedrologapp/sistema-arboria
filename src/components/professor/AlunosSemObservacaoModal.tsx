@@ -45,9 +45,9 @@ export const AlunosSemObservacaoModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-[#1a1a1a] border-white/10 p-0" hideCloseButton>
+      <DialogContent className="sm:max-w-md bg-[#1E1E3A] border-violet-500/10 p-0" hideCloseButton>
         {/* Header */}
-        <div className="p-4 border-b border-white/10">
+        <div className="p-4 border-b border-violet-500/10">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-white font-medium text-base flex items-center gap-2">
@@ -68,7 +68,7 @@ export const AlunosSemObservacaoModal = ({
         </div>
 
         {/* Cabeçalho de colunas */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-violet-500/5">
           <span className="text-white/30 text-xs uppercase tracking-wider">Aluno</span>
         </div>
 
@@ -106,7 +106,7 @@ export const AlunosSemObservacaoModal = ({
         </ScrollArea>
 
         {/* Footer */}
-        <div className="p-3 border-t border-white/10">
+        <div className="p-3 border-t border-violet-500/10">
           <p className="text-white/40 text-xs text-center">
             {alunos.length} {alunos.length === 1 ? 'aluno aguardando' : 'alunos aguardando'}
           </p>

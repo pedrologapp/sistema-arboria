@@ -151,21 +151,21 @@ const CasasPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] px-4 py-6 flex items-center justify-center">
+      <div className="min-h-screen bg-[#1A1A2E] px-4 py-6 flex items-center justify-center">
         <p className="text-white/40 text-sm">Carregando casas...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] px-4 py-6">
+    <div className="min-h-screen bg-[#1A1A2E] px-4 py-6">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-xl font-bold text-white mb-4">Casas</h1>
 
         {/* Filtros */}
         <div className="flex gap-3 mb-6">
           <Select value={serieFiltro} onValueChange={(v) => { setSerieFiltro(v === 'all' ? '' : v); setTurmaFiltro(''); }}>
-            <SelectTrigger className="w-[140px] bg-white/5 border-white/10 text-white text-sm h-9">
+            <SelectTrigger className="w-[140px] bg-white/5 border-violet-500/10 text-white text-sm h-9">
               <SelectValue placeholder="Todas séries" />
             </SelectTrigger>
             <SelectContent>
@@ -177,7 +177,7 @@ const CasasPage = () => {
           </Select>
 
           <Select value={turmaFiltro} onValueChange={(v) => setTurmaFiltro(v === 'all' ? '' : v)} disabled={!serieFiltro}>
-            <SelectTrigger className="w-[140px] bg-white/5 border-white/10 text-white text-sm h-9">
+            <SelectTrigger className="w-[140px] bg-white/5 border-violet-500/10 text-white text-sm h-9">
               <SelectValue placeholder="Todas turmas" />
             </SelectTrigger>
             <SelectContent>
@@ -198,7 +198,7 @@ const CasasPage = () => {
             return (
               <div
                 key={casa.id}
-                className="rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden"
+                className="rounded-xl border border-violet-500/10 bg-white/[0.03] overflow-hidden"
               >
                 {/* Header colorido */}
                 <div
@@ -264,7 +264,7 @@ const CasasPage = () => {
 
                 {/* Accordion para membros */}
                 <Accordion type="single" collapsible>
-                  <AccordionItem value="membros" className="border-t border-white/5 border-b-0">
+                  <AccordionItem value="membros" className="border-t border-violet-500/5 border-b-0">
                     <AccordionTrigger className="px-4 py-2 text-xs text-white/40 hover:text-white/60 hover:no-underline">
                       Ver todos os membros
                     </AccordionTrigger>

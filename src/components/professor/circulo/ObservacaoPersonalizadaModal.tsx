@@ -57,7 +57,7 @@ export function ObservacaoPersonalizadaModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="bg-[#1A1F2C] border-white/10 text-white max-w-md mx-auto">
+      <DialogContent className="bg-[#1A1F2C] border-violet-500/10 text-white max-w-md mx-auto">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-white">
             Observação {isPositivo ? 'Positiva' : 'de Atenção'} Personalizada
@@ -74,7 +74,7 @@ export function ObservacaoPersonalizadaModal({
               value={texto}
               onChange={(e) => setTexto(e.target.value.slice(0, maxChars))}
               placeholder={placeholder}
-              className="bg-white/5 border-white/10 text-white placeholder:text-white/40 
+              className="bg-white/5 border-violet-500/10 text-white placeholder:text-white/40 
                          min-h-[100px] resize-none focus:border-white/30"
               disabled={saving}
             />

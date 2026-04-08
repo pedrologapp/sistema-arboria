@@ -65,9 +65,9 @@ const SugestaoAtivaModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#1a1a2e] border-white/10 max-w-[90vw] sm:max-w-md p-0 gap-0" hideCloseButton>
+      <DialogContent className="bg-[#1a1a2e] border-violet-500/10 max-w-[90vw] sm:max-w-md p-0 gap-0" hideCloseButton>
         {/* Header */}
-        <DialogHeader className="p-4 pb-3 border-b border-white/10">
+        <DialogHeader className="p-4 pb-3 border-b border-violet-500/10">
           <DialogTitle className="flex items-center gap-2 text-amber-400">
             <AlertTriangle className="w-5 h-5" strokeWidth={2} />
             <span className="text-base font-medium">Já existem sugestões para {nomeAluno}</span>
@@ -77,7 +77,7 @@ const SugestaoAtivaModal = ({
         {/* Body */}
         <div className="p-4 space-y-4">
           {/* Texto acontecendo */}
-          <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+          <div className="bg-white/5 rounded-xl p-3 border border-violet-500/10">
             <p className="text-white/80 text-sm leading-relaxed">
               "{textoAcontecendo}"
             </p>
@@ -104,7 +104,7 @@ const SugestaoAtivaModal = ({
           )}
 
           {/* Divider e Botões */}
-          <div className="border-t border-white/10 pt-3 space-y-3">
+          <div className="border-t border-violet-500/10 pt-3 space-y-3">
             {/* Ação principal - Registrar minha ação (largura total) */}
             <button
               onClick={handleRegistrarAcao}
@@ -119,7 +119,7 @@ const SugestaoAtivaModal = ({
               {/* Ver detalhes */}
               <button
                 onClick={handleVerDetalhes}
-                className="py-2.5 px-3 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm transition-colors flex items-center justify-center gap-2 hover:bg-white/10"
+                className="py-2.5 px-3 rounded-xl bg-white/5 border border-violet-500/10 text-white/70 text-sm transition-colors flex items-center justify-center gap-2 hover:bg-white/10"
               >
                 <Eye className="w-4 h-4" strokeWidth={1.5} />
                 <span>Ver detalhes</span>
@@ -128,7 +128,7 @@ const SugestaoAtivaModal = ({
               {/* Nova observação */}
               <button
                 onClick={handleRegistrarObservacao}
-                className="py-2.5 px-3 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm transition-colors flex items-center justify-center gap-2 hover:bg-white/10"
+                className="py-2.5 px-3 rounded-xl bg-white/5 border border-violet-500/10 text-white/70 text-sm transition-colors flex items-center justify-center gap-2 hover:bg-white/10"
               >
                 <Plus className="w-4 h-4" strokeWidth={1.5} />
                 <span>Nova observação</span>

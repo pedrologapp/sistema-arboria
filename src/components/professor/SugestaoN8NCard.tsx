@@ -136,7 +136,7 @@ export function SugestaoN8NCard({
         
         {/* SLOT: PADRÃO DETECTADO */}
         {temPadrao && (
-          <div className="mb-4 p-3 bg-black/30 rounded-lg border border-white/10">
+          <div className="mb-4 p-3 bg-black/30 rounded-lg border border-violet-500/10">
             <p className="text-xs font-semibold text-amber-400 uppercase tracking-wide mb-1">
               📊 Padrão Detectado
             </p>
@@ -235,7 +235,7 @@ export function SugestaoN8NCard({
               )}
             </button>
             {opcaoAAberta && (
-              <div className="px-3 pb-3 space-y-2 border-t border-white/10">
+              <div className="px-3 pb-3 space-y-2 border-t border-violet-500/10">
                 {useAForca!.opcaoA!.script && (
                   <div className="p-3 bg-blue-900/40 rounded-lg border border-blue-500/30 mt-3">
                     <p className="text-blue-400 text-xs font-semibold mb-1">💬 SCRIPT:</p>
@@ -273,7 +273,7 @@ export function SugestaoN8NCard({
               )}
             </button>
             {opcaoBAberta && (
-              <div className="px-3 pb-3 space-y-2 border-t border-white/10">
+              <div className="px-3 pb-3 space-y-2 border-t border-violet-500/10">
                 {useAForca!.opcaoB!.script && (
                   <div className="p-3 bg-blue-900/40 rounded-lg border border-blue-500/30 mt-3">
                     <p className="text-blue-400 text-xs font-semibold mb-1">💬 SCRIPT:</p>
@@ -341,7 +341,7 @@ export function SugestaoN8NCard({
               )}
             </button>
             {oQueNaoFazerAberto && (
-              <ul className="px-3 pb-3 space-y-1 border-t border-white/10 pt-2">
+              <ul className="px-3 pb-3 space-y-1 border-t border-violet-500/10 pt-2">
                 {oQueNaoFazer!.map((item, i) => (
                   <li key={i} className="text-sm text-white/80 flex items-start gap-2">
                     <span className="text-red-400 flex-shrink-0">✗</span>

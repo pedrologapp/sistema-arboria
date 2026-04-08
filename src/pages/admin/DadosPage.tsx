@@ -139,7 +139,7 @@ const DadosPage = () => {
               const comEntrega = alunosDaCasa.filter(a => (entregasMap[a.id] || 0) > 0).length;
 
               return (
-                <div key={casa.id} className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 overflow-hidden">
+                <div key={casa.id} className="rounded-xl bg-[#252547] border border-violet-500/10 overflow-hidden">
                   <button
                     onClick={() => setCasaExpandida(isOpen ? null : casa.id)}
                     className="w-full p-3.5 text-left hover:bg-white/[0.04] transition-colors"
@@ -214,7 +214,7 @@ const DadosPage = () => {
 
       {/* Tab: Arvore de Talentos */}
       {tab === 'arvore' && (
-        <div className="p-8 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+        <div className="p-8 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
           <TreePine className="w-10 h-10 text-white/15 mx-auto mb-3" />
           <p className="text-white/40 text-sm">Arvore de Talentos</p>
           <p className="text-white/20 text-xs mt-1">Configure as habilidades por semana na aba Fases para comecar a gerar dados</p>
@@ -223,7 +223,7 @@ const DadosPage = () => {
 
       {/* Tab: Cross-IM */}
       {tab === 'crossim' && (
-        <div className="p-8 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+        <div className="p-8 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
           <Target className="w-10 h-10 text-white/15 mx-auto mb-3" />
           <p className="text-white/40 text-sm">Circulos Cross-IM</p>
           <p className="text-white/20 text-xs mt-1">Dados de Cross-IM aparecerão quando as observacoes semanais forem processadas</p>

@@ -1,12 +1,13 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Calendar, Users, BarChart3, Settings } from 'lucide-react';
+import { LayoutDashboard, Calendar, Users, BarChart3, Settings, TreePine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/admin/monitor', color: '#3b82f6' },
   { id: 'fases', icon: Calendar, label: 'Fases', path: '/admin/fases', color: '#8b5cf6' },
   { id: 'pessoas', icon: Users, label: 'Pessoas', path: '/admin/pessoas', color: '#10b981' },
-  { id: 'dados', icon: BarChart3, label: 'Dados', path: '/admin/dados', color: '#f59e0b' },
+  { id: 'arboria', icon: TreePine, label: 'Arboria', path: '/admin/arboria', color: '#f59e0b' },
+  { id: 'dados', icon: BarChart3, label: 'Dados', path: '/admin/dados', color: '#64748b' },
   { id: 'config', icon: Settings, label: 'Config', path: '/admin/config', color: '#ec4899' },
 ];
 
@@ -19,8 +20,9 @@ const AdminBottomNav = () => {
     if (p.startsWith('/admin/monitor')) return 0;
     if (p.startsWith('/admin/fases')) return 1;
     if (p.startsWith('/admin/pessoas') || p.startsWith('/admin/casas')) return 2;
-    if (p.startsWith('/admin/dados') || p.startsWith('/admin/relatorios')) return 3;
-    if (p.startsWith('/admin/config') || p.startsWith('/admin/atividades')) return 4;
+    if (p.startsWith('/admin/arboria')) return 3;
+    if (p.startsWith('/admin/dados') || p.startsWith('/admin/relatorios')) return 4;
+    if (p.startsWith('/admin/config') || p.startsWith('/admin/atividades')) return 5;
     return 0;
   };
 
@@ -29,7 +31,7 @@ const AdminBottomNav = () => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 pb-safe">
       <div className="mx-4 mb-4">
-        <div className="relative flex items-center justify-around rounded-full border border-white/10 bg-black/80 backdrop-blur-lg shadow-lg max-w-lg mx-auto">
+        <div className="relative flex items-center justify-around rounded-full border border-violet-500/10 bg-[#12122A]/95 backdrop-blur-lg shadow-lg max-w-lg mx-auto">
           {navItems.map((item, index) => {
             const isActive = index === activeIndex;
             const Icon = item.icon;

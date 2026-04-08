@@ -128,9 +128,9 @@ const EntregasPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] pb-24">
+    <div className="min-h-screen bg-[#1A1A2E] pb-24">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-white/10">
+      <div className="flex items-center justify-between p-4 border-b border-violet-500/10">
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
             ✏️ Entregas para Avaliar
@@ -187,7 +187,7 @@ const EntregasPage = () => {
                 <button
                   key={serie}
                   onClick={() => navigate(`/professor/entregas/serie/${serie}`)}
-                  className="p-6 bg-white/5 border border-white/10 rounded-xl text-center hover:bg-white/10 transition-colors relative"
+                  className="p-6 bg-white/5 border border-violet-500/10 rounded-xl text-center hover:bg-white/10 transition-colors relative"
                 >
                   <p className="text-3xl font-bold text-white">{serie}º</p>
                   <p className="text-white/40 text-sm">ano</p>

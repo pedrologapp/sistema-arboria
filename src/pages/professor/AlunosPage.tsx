@@ -132,7 +132,7 @@ const AlunosPage = () => {
           placeholder="Buscar aluno..."
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          className="pl-10 bg-white/[0.04] border-white/10 text-white placeholder:text-white/30 h-9 text-sm"
+          className="pl-10 bg-white/[0.04] border-violet-500/10 text-white placeholder:text-white/30 h-9 text-sm"
         />
         {busca && (
           <button onClick={() => setBusca('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white">
@@ -147,7 +147,7 @@ const AlunosPage = () => {
           {[1, 2, 3].map(i => <div key={i} className="h-20 bg-white/5 rounded-xl animate-pulse" />)}
         </div>
       ) : grupos.length === 0 ? (
-        <div className="p-8 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+        <div className="p-8 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
           <p className="text-white/40 text-sm">Nenhum aluno encontrado</p>
         </div>
       ) : (
@@ -157,7 +157,7 @@ const AlunosPage = () => {
             const preview = grupo.alunos.slice(0, 8);
 
             return (
-              <div key={grupo.key} className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 overflow-hidden">
+              <div key={grupo.key} className="rounded-xl bg-[#252547] border border-violet-500/10 overflow-hidden">
                 {/* Header do grupo */}
                 <button
                   onClick={() => toggleGrupo(grupo.key)}

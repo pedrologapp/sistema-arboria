@@ -51,7 +51,7 @@ const ConteudoPage = () => {
       </button>
 
       {/* Divisor */}
-      <div className="border-t border-white/10" />
+      <div className="border-t border-violet-500/10" />
 
       {/* Lista de Inteligências */}
       <div className="space-y-2">

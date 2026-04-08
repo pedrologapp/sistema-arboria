@@ -136,7 +136,7 @@ const AlertaAtivoCard = ({
         </div>
         
         {/* Divider */}
-        <div className="border-t border-white/10 my-4" />
+        <div className="border-t border-violet-500/10 my-4" />
         
         {/* PARA PRECISA_ATENCAO: Contexto */}
         {isPrecisaAtencao && contexto.length > 0 && (
@@ -153,7 +153,7 @@ const AlertaAtivoCard = ({
                 </li>
               ))}
             </ul>
-            <div className="border-t border-white/10 my-4" />
+            <div className="border-t border-violet-500/10 my-4" />
           </>
         )}
         
@@ -190,7 +190,7 @@ const AlertaAtivoCard = ({
                 Arquétipo possível: <span className="font-medium">"{arquetipo.nome}"</span>
               </p>
             )}
-            <div className="border-t border-white/10 my-4" />
+            <div className="border-t border-violet-500/10 my-4" />
           </>
         )}
         

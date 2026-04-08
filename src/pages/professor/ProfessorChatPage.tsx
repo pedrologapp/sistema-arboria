@@ -291,7 +291,7 @@ const ProfessorChatPage = () => {
           placeholder="Buscar canais ou alunos..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 bg-white/[0.04] border-white/10 text-white placeholder:text-white/30 h-9 text-sm"
+          className="pl-10 bg-white/[0.04] border-violet-500/10 text-white placeholder:text-white/30 h-9 text-sm"
         />
       </div>
 

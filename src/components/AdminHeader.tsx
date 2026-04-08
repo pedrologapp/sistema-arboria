@@ -60,7 +60,7 @@ export function AdminHeader() {
       className={cn(
         'sticky top-0 z-50 w-full transition-all duration-300',
         scrolled
-          ? 'border-b border-white/10 bg-black/80 backdrop-blur-lg shadow-lg'
+          ? 'border-b border-violet-500/10 bg-[#12122A]/95 backdrop-blur-lg shadow-lg'
           : 'bg-transparent'
       )}
     >
@@ -134,7 +134,7 @@ export function AdminHeader() {
             </Link>
           ))}
         </div>
-        <div className="mt-auto p-6 border-t border-white/10">
+        <div className="mt-auto p-6 border-t border-violet-500/10">
           <Button
             variant="ghost"
             onClick={() => {

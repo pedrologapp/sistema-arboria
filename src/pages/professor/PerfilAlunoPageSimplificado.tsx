@@ -206,7 +206,7 @@ const PerfilAlunoPageSimplificado = () => {
           <Brain className="w-3.5 h-3.5" strokeWidth={1.5} />
           Inteligências
         </p>
-        <div className="space-y-2.5 bg-white/5 rounded-xl p-4 border border-white/10">
+        <div className="space-y-2.5 bg-white/5 rounded-xl p-4 border border-violet-500/10">
           {aluno.inteligencias.map((intel) => (
             <InteligenciaProgressBar 
               key={intel.id}

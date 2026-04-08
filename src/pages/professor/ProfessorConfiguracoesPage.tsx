@@ -87,7 +87,7 @@ const ProfessorConfiguracoesPage = () => {
         
         <button
           onClick={() => navigate('/alterar-senha')}
-          className="w-full flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-left group"
+          className="w-full flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-violet-500/10 hover:bg-white/10 transition-all text-left group"
         >
           <div className="p-3 rounded-lg bg-amber-500/20 text-amber-400">
             <Lock className="w-5 h-5" />
@@ -106,7 +106,7 @@ const ProfessorConfiguracoesPage = () => {
           Notificações
         </h2>
         
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex items-center gap-4">
+        <div className="p-4 rounded-xl bg-white/5 border border-violet-500/10 flex items-center gap-4">
           <div className="p-3 rounded-lg bg-blue-500/20 text-blue-400">
             <Bell className="w-5 h-5" />
           </div>
@@ -123,7 +123,7 @@ const ProfessorConfiguracoesPage = () => {
           Aparência
         </h2>
         
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex items-center gap-4">
+        <div className="p-4 rounded-xl bg-white/5 border border-violet-500/10 flex items-center gap-4">
           <div className="p-3 rounded-lg bg-purple-500/20 text-purple-400">
             <Palette className="w-5 h-5" />
           </div>

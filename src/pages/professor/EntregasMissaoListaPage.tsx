@@ -48,7 +48,7 @@ const AlunoLinha = ({
       default: return {
         bolinha: 'bg-white/20',
         texto: 'text-white/40',
-        badge: 'bg-white/10 text-white/40 border-white/10'
+        badge: 'bg-white/10 text-white/40 border-violet-500/10'
       };
     }
   };
@@ -298,9 +298,9 @@ const EntregasMissaoListaPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] pb-24">
+    <div className="min-h-screen bg-[#1A1A2E] pb-24">
       {/* Header */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-violet-500/10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -323,7 +323,7 @@ const EntregasMissaoListaPage = () => {
           {missoes && missoes.length > 0 && (
             <button
               onClick={handleVerMissao}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-violet-500/10 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
             >
               <Eye className="w-4 h-4" />
               <span className="text-xs">Ver Missão</span>
@@ -343,7 +343,7 @@ const EntregasMissaoListaPage = () => {
 
       {/* Filtro por Turma */}
       {turmasDisponiveis.length > 1 && (
-        <div className="p-4 border-b border-white/10">
+        <div className="p-4 border-b border-violet-500/10">
           <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Turma</p>
           <div className="flex gap-2 flex-wrap">
             <button
@@ -400,7 +400,7 @@ const EntregasMissaoListaPage = () => {
       </div>
 
       {/* Legenda */}
-      <div className="p-4 border-t border-white/10">
+      <div className="p-4 border-t border-violet-500/10">
         <div className="flex flex-wrap gap-4 justify-center text-xs text-white/40">
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-green-500" /> Completou

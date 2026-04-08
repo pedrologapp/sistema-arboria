@@ -382,7 +382,7 @@ const PerfilProfessorAdminPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
+      <div className="min-h-screen bg-[#1A1A2E] flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-white animate-spin" />
       </div>
     );
@@ -390,7 +390,7 @@ const PerfilProfessorAdminPage = () => {
 
   if (!professor) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
+      <div className="min-h-screen bg-[#1A1A2E] flex items-center justify-center">
         <p className="text-white/60">Professor não encontrado</p>
       </div>
     );
@@ -412,7 +412,7 @@ const PerfilProfessorAdminPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] pb-24">
+    <div className="min-h-screen bg-[#1A1A2E] pb-24">
       {/* Header */}
       <div className="p-4">
         <button
@@ -444,7 +444,7 @@ const PerfilProfessorAdminPage = () => {
 
       <div className="p-4 space-y-6">
         {/* Informações Básicas */}
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+        <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
           <h2 className="text-white font-medium mb-4">
             Informações
           </h2>
@@ -456,7 +456,7 @@ const PerfilProfessorAdminPage = () => {
                 type="email"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setHasChanges(true); }}
-                className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm"
+                className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm"
               />
             </div>
 
@@ -466,7 +466,7 @@ const PerfilProfessorAdminPage = () => {
                 type="text"
                 value={nome}
                 onChange={(e) => { setNome(e.target.value); setHasChanges(true); }}
-                className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm"
+                className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm"
               />
             </div>
 
@@ -476,14 +476,14 @@ const PerfilProfessorAdminPage = () => {
                 type="text"
                 value={sobrenome}
                 onChange={(e) => { setSobrenome(e.target.value); setHasChanges(true); }}
-                className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm"
+                className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm"
               />
             </div>
           </div>
         </div>
 
         {/* Segmento */}
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+        <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
           <h2 className="text-white font-medium mb-4">
             Segmento
           </h2>
@@ -501,7 +501,7 @@ const PerfilProfessorAdminPage = () => {
               }
               setHasChanges(true);
             }}
-            className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm"
+            className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm"
           >
             {Object.entries(segmentoLabels).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
@@ -511,7 +511,7 @@ const PerfilProfessorAdminPage = () => {
 
         {/* Casa Vinculada (apenas F2) */}
         {segmento === 'fundamental2' && (
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
             <h2 className="text-white font-medium mb-4">
               Casa Vinculada
             </h2>
@@ -522,7 +522,7 @@ const PerfilProfessorAdminPage = () => {
                 <select
                   value={casaId || ''}
                   onChange={(e) => { setCasaId(Number(e.target.value) || null); setHasChanges(true); }}
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm"
+                  className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm"
                 >
                   <option value="">Sem casa atribuída</option>
                   {casas?.map(c => (
@@ -534,7 +534,7 @@ const PerfilProfessorAdminPage = () => {
               {casaId && (
                 <button
                   onClick={() => { setEhMentorPrincipal(!ehMentorPrincipal); setHasChanges(true); }}
-                  className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl w-full text-left"
+                  className="flex items-center gap-3 p-3 bg-white/5 border border-violet-500/10 rounded-xl w-full text-left"
                 >
                   <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
                     ehMentorPrincipal ? 'bg-white border-white' : 'border-white/30'
@@ -550,7 +550,7 @@ const PerfilProfessorAdminPage = () => {
 
         {/* Turmas Vinculadas (Infantil / F1) */}
         {segmento !== 'fundamental2' && (
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
             <h2 className="text-white font-medium mb-4">
               Turmas Vinculadas
             </h2>
@@ -565,7 +565,7 @@ const PerfilProfessorAdminPage = () => {
                     className={`p-3 rounded-lg border text-sm flex items-center gap-2 transition-colors ${
                       turmasSelecionadas.includes(t.id)
                         ? 'bg-white/20 border-white text-white'
-                        : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
+                        : 'bg-white/5 border-violet-500/10 text-white/60 hover:bg-white/10'
                     }`}
                   >
                     <CheckSquare className={`w-4 h-4 ${
@@ -592,7 +592,7 @@ const PerfilProfessorAdminPage = () => {
         )}
 
         {/* Ações */}
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+        <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
           <h2 className="text-white font-medium mb-4">
             Ações
           </h2>
@@ -600,7 +600,7 @@ const PerfilProfessorAdminPage = () => {
           <div className="space-y-3">
             <button
               onClick={() => setShowConfirmReset(true)}
-              className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-left hover:bg-white/10 transition-colors"
+              className="w-full p-4 bg-white/5 border border-violet-500/10 rounded-xl text-left hover:bg-white/10 transition-colors"
             >
               <div className="flex items-center gap-3">
                 <Key className="w-5 h-5 text-yellow-500" />

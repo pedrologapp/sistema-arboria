@@ -47,7 +47,7 @@ const ProfessorBottomNavSimplificado = () => {
     <nav className="fixed bottom-0 left-0 right-0 z-50 pb-safe">
       <div className="mx-4 mb-4 max-w-lg mx-auto">
         <div 
-          className="relative flex justify-around items-center py-3 px-2 rounded-full border border-white/10 bg-black/80 backdrop-blur-lg shadow-lg"
+          className="relative flex justify-around items-center py-3 px-2 rounded-full border border-violet-500/10 bg-[#12122A]/95 backdrop-blur-lg shadow-lg"
         >
           {/* Limelight effect */}
           <div

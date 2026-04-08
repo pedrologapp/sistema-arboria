@@ -268,13 +268,13 @@ const MembrosPage = () => {
           placeholder="Buscar por nome ou cargo..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40"
+          className="pl-10 bg-white/5 border-violet-500/10 text-white placeholder:text-white/40"
         />
       </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white/50" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500/50" />
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">

@@ -77,7 +77,7 @@ const AdminChatPage = () => {
       </div>
 
       <Tabs defaultValue="conselho" className="w-full">
-        <TabsList className="w-full bg-white/5 border border-white/10">
+        <TabsList className="w-full bg-white/5 border border-violet-500/10">
           <TabsTrigger value="conselho" className="flex-1 gap-1.5 data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400">
             <Crown className="w-4 h-4" />
             Conselho
@@ -121,7 +121,7 @@ const AdminChatPage = () => {
                   <button
                     key={casa.id}
                     onClick={() => setCasaSelecionada(casa.id)}
-                    className="flex items-center gap-2 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-[0.98]"
+                    className="flex items-center gap-2 p-3 rounded-xl bg-white/5 border border-violet-500/10 hover:bg-white/10 transition-all active:scale-[0.98]"
                   >
                     <span className="text-xl">{casa.emoji}</span>
                     <span className="text-white/80 text-sm font-medium truncate">{casa.nome}</span>

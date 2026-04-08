@@ -654,7 +654,7 @@ const NovaMissaoPage = () => {
                       value={buscaAluno}
                       onChange={(e) => setBuscaAluno(e.target.value)}
                       placeholder="Buscar aluno por nome..."
-                      className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/50"
+                      className="w-full bg-white/5 border border-violet-500/10 rounded-lg pl-10 pr-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/50"
                     />
                   </div>
 
@@ -799,13 +799,13 @@ const NovaMissaoPage = () => {
                   type="date"
                   value={form.data_liberacao}
                   onChange={(e) => setForm(f => ({ ...f, data_liberacao: e.target.value }))}
-                  className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500/50"
+                  className="bg-white/5 border border-violet-500/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500/50"
                 />
                 <input
                   type="time"
                   value={form.hora_liberacao}
                   onChange={(e) => setForm(f => ({ ...f, hora_liberacao: e.target.value }))}
-                  className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500/50"
+                  className="bg-white/5 border border-violet-500/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500/50"
                 />
               </div>
             </div>
@@ -819,13 +819,13 @@ const NovaMissaoPage = () => {
                 type="date"
                 value={form.data_prazo}
                 onChange={(e) => setForm(f => ({ ...f, data_prazo: e.target.value }))}
-                className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500/50"
+                className="bg-white/5 border border-violet-500/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500/50"
               />
               <input
                 type="time"
                 value={form.hora_prazo}
                 onChange={(e) => setForm(f => ({ ...f, hora_prazo: e.target.value }))}
-                className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500/50"
+                className="bg-white/5 border border-violet-500/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500/50"
               />
             </div>
           </div>
@@ -847,7 +847,7 @@ const NovaMissaoPage = () => {
               value={form.titulo}
               onChange={(e) => setForm(f => ({ ...f, titulo: e.target.value }))}
               placeholder="Ex: A Voz do Personagem"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/50"
+              className="w-full bg-white/5 border border-violet-500/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/50"
             />
           </div>
 
@@ -959,12 +959,12 @@ const NovaMissaoPage = () => {
               onChange={(e) => setForm(f => ({ ...f, descricao: e.target.value }))}
               placeholder="Breve descrição da missão..."
               rows={2}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
+              className="w-full bg-white/5 border border-violet-500/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
             />
           </div>
 
           {/* Campos avançados (colapsável) */}
-          <div className="border border-white/10 rounded-lg overflow-hidden">
+          <div className="border border-violet-500/10 rounded-lg overflow-hidden">
             <button
               type="button"
               onClick={() => setShowAdvanced(!showAdvanced)}
@@ -975,7 +975,7 @@ const NovaMissaoPage = () => {
             </button>
             
             {showAdvanced && (
-              <div className="p-4 space-y-4 border-t border-white/10">
+              <div className="p-4 space-y-4 border-t border-violet-500/10">
                 {/* Contexto */}
                 <div>
                   <label className="text-white/60 text-sm block mb-1">📖 Contexto</label>
@@ -985,7 +985,7 @@ const NovaMissaoPage = () => {
                     onChange={(e) => setForm(f => ({ ...f, contexto: e.target.value }))}
                     placeholder="Explique o cenário ou situação para o aluno..."
                     rows={3}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
+                    className="w-full bg-white/5 border border-violet-500/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
                   />
                 </div>
 
@@ -997,7 +997,7 @@ const NovaMissaoPage = () => {
                     value={form.lente_especial}
                     onChange={(e) => setForm(f => ({ ...f, lente_especial: e.target.value }))}
                     placeholder="Qual pergunta ou ângulo guia esta missão?"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/50"
+                    className="w-full bg-white/5 border border-violet-500/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/50"
                   />
                 </div>
 
@@ -1009,7 +1009,7 @@ const NovaMissaoPage = () => {
                     onChange={(e) => setForm(f => ({ ...f, instrucoes: e.target.value }))}
                     placeholder="Descreva a tarefa principal"
                     rows={3}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
+                    className="w-full bg-white/5 border border-violet-500/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
                   />
                 </div>
 
@@ -1018,7 +1018,7 @@ const NovaMissaoPage = () => {
                   <label className="text-white/60 text-sm block mb-1">📝 Itens para Registrar</label>
                   <div className="space-y-3 mb-3">
                     {form.itens.map((item, index) => (
-                      <div key={index} className="bg-white/5 border border-white/10 rounded-lg p-3 space-y-2">
+                      <div key={index} className="bg-white/5 border border-violet-500/10 rounded-lg p-3 space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-white/40 text-xs font-medium">Item {index + 1}</span>
                           <button
@@ -1034,14 +1034,14 @@ const NovaMissaoPage = () => {
                           value={item.nome}
                           onChange={(e) => setForm(f => ({ ...f, itens: f.itens.map((it, i) => i === index ? { ...it, nome: e.target.value } : it) }))}
                           placeholder="Nome do item"
-                          className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-blue-500/50 font-medium"
+                          className="w-full bg-black/20 border border-violet-500/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-blue-500/50 font-medium"
                         />
                         <textarea
                           value={item.descricao}
                           onChange={(e) => setForm(f => ({ ...f, itens: f.itens.map((it, i) => i === index ? { ...it, descricao: e.target.value } : it) }))}
                           placeholder="Descrição / orientação"
                           rows={2}
-                          className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/20 resize-none focus:outline-none focus:border-blue-500/50"
+                          className="w-full bg-black/20 border border-violet-500/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/20 resize-none focus:outline-none focus:border-blue-500/50"
                         />
                       </div>
                     ))}
@@ -1063,7 +1063,7 @@ const NovaMissaoPage = () => {
                     onChange={(e) => setForm(f => ({ ...f, reflexao: e.target.value }))}
                     placeholder="Pergunta reflexiva para o aluno"
                     rows={3}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
+                    className="w-full bg-white/5 border border-violet-500/10 rounded-lg px-4 py-3 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-blue-500/50"
                   />
                 </div>
               </div>
@@ -1170,7 +1170,7 @@ const NovaMissaoPage = () => {
       {/* Modal de Preview */}
       {showPreview && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-[#1a1a1a] rounded-xl p-5 max-w-md w-full max-h-[85vh] overflow-auto">
+          <div className="bg-[#1E1E3A] rounded-xl p-5 max-w-md w-full max-h-[85vh] overflow-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-white font-bold">Preview da Missão</h3>
               <button 
@@ -1265,7 +1265,7 @@ const NovaMissaoPage = () => {
               )}
               
               {/* Info de datas */}
-              <div className="pt-2 border-t border-white/10 space-y-1">
+              <div className="pt-2 border-t border-violet-500/10 space-y-1">
                 {!form.liberar_agora && form.data_liberacao && (
                   <p className="text-white/40 text-sm">
                     📅 Liberação: {new Date(`${form.data_liberacao}T${form.hora_liberacao}`).toLocaleString('pt-BR')}

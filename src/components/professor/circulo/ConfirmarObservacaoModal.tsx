@@ -72,7 +72,7 @@ const ConfirmarObservacaoModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="bg-[#1a1a2e] border-white/10 text-white max-w-sm" hideCloseButton>
+      <DialogContent className="bg-[#1a1a2e] border-violet-500/10 text-white max-w-sm" hideCloseButton>
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold flex items-center justify-between">
             Adicionar observação?
@@ -117,7 +117,7 @@ const ConfirmarObservacaoModal = ({
               value={nota}
               onChange={(e) => setNota(e.target.value)}
               placeholder="Ex: Participou muito da discussão sobre poesia..."
-              className="bg-white/5 border-white/10 text-white placeholder:text-white/40 min-h-[80px] resize-none"
+              className="bg-white/5 border-violet-500/10 text-white placeholder:text-white/40 min-h-[80px] resize-none"
               disabled={saving}
             />
           </div>

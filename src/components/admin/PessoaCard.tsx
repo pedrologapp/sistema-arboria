@@ -11,7 +11,7 @@ const PessoaCard = ({ nome, avatarUrl, subtitulo, onClick }: PessoaCardProps) =>
   return (
     <button
       onClick={onClick}
-      className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-left hover:bg-white/10 transition-colors flex items-center gap-3"
+      className="w-full p-4 bg-white/5 border border-violet-500/10 rounded-xl text-left hover:bg-white/10 transition-colors flex items-center gap-3"
     >
       <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
         {avatarUrl ? (

@@ -116,7 +116,7 @@ const Dashboard = () => {
 
         {/* Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="bg-white/5 border-white/10">
+          <Card className="bg-white/5 border-violet-500/10">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-white/60">
                 Meu Perfil
@@ -131,7 +131,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/5 border-white/10">
+          <Card className="bg-white/5 border-violet-500/10">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-white/60">
                 Minha Instituição
@@ -148,7 +148,7 @@ const Dashboard = () => {
 
         {/* Placeholder for future content */}
         <div className="mt-8">
-          <Card className="bg-white/5 border-white/10">
+          <Card className="bg-white/5 border-violet-500/10">
             <CardContent className="py-12 text-center">
               <Home className="w-12 h-12 text-indigo-400 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-white mb-2">

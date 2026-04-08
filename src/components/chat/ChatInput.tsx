@@ -35,7 +35,7 @@ export const ChatInput = forwardRef<HTMLDivElement, ChatInputProps>(({
   };
 
   return (
-    <div ref={ref} className="flex items-end gap-2 px-3 py-2.5 bg-white/[0.06] rounded-xl border border-white/10">
+    <div ref={ref} className="flex items-end gap-2 px-3 py-2.5 bg-white/[0.06] rounded-xl border border-violet-500/10">
       <textarea
         value={mensagem}
         onChange={(e) => setMensagem(e.target.value)}

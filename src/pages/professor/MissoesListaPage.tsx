@@ -127,9 +127,9 @@ const MissoesListaPage = () => {
     : `${casa?.nome || ''} • Semana ${semana}`;
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] pb-24">
+    <div className="min-h-screen bg-[#1A1A2E] pb-24">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-white/10">
+      <div className="flex items-center gap-3 p-4 border-b border-violet-500/10">
         <button 
           onClick={() => navigate(-1)}
           className="p-2 -ml-2 text-white/60 hover:text-white transition-colors"
@@ -151,7 +151,7 @@ const MissoesListaPage = () => {
       </div>
 
       {/* Subtítulo */}
-      <div className="px-4 py-3 border-b border-white/10">
+      <div className="px-4 py-3 border-b border-violet-500/10">
         <p className="text-white/40 text-sm">
           {serie}º ano • {missoes?.length || 0} {missoes?.length === 1 ? 'missão' : 'missões'}
         </p>
@@ -203,7 +203,7 @@ const MissoesListaPage = () => {
                 <button
                   key={missao.id}
                   onClick={() => navigate(`/professor/missoes/${missao.id}`)}
-                  className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-left hover:bg-white/10 transition-colors"
+                  className="w-full p-4 bg-white/5 border border-violet-500/10 rounded-xl text-left hover:bg-white/10 transition-colors"
                 >
                   {/* Título */}
                   <h3 className="text-white font-medium mb-2">{missao.titulo}</h3>

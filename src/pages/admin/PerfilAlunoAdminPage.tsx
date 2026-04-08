@@ -134,7 +134,7 @@ const PerfilAlunoAdminPage = () => {
       </div>
 
       {/* Card do aluno */}
-      <div className="flex items-center gap-4 p-4 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10">
+      <div className="flex items-center gap-4 p-4 rounded-xl bg-[#252547] border border-violet-500/10">
         <div className="w-16 h-16 rounded-full overflow-hidden border-2 shrink-0" style={{ borderColor: cor }}>
           {aluno.avatar_url ? <img src={aluno.avatar_url} alt="" className="w-full h-full object-cover" /> :
           <span className="flex items-center justify-center w-full h-full text-xl text-white/40" style={{ backgroundColor: `${cor}20` }}>
@@ -149,15 +149,15 @@ const PerfilAlunoAdminPage = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="p-3 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10">
+        <div className="p-3 rounded-xl text-center bg-[#252547] border border-violet-500/10">
           <div className="flex items-center justify-center gap-1"><Trophy className="w-3 h-3 text-yellow-500" /><span className="text-lg font-bold text-white">{ranking?.total_pontos || 0}</span></div>
           <p className="text-[10px] text-white/40">Pontos</p>
         </div>
-        <div className="p-3 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10">
+        <div className="p-3 rounded-xl text-center bg-[#252547] border border-violet-500/10">
           <span className="text-lg font-bold text-white">{ranking?.posicao_na_casa || '--'}</span><span className="text-white/40 text-xs">º</span>
           <p className="text-[10px] text-white/40">Na casa</p>
         </div>
-        <div className="p-3 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10">
+        <div className="p-3 rounded-xl text-center bg-[#252547] border border-violet-500/10">
           <div className="flex items-center justify-center gap-1"><Target className="w-3 h-3 text-blue-400" /><span className="text-lg font-bold text-white">{ranking?.missoes_completadas || 0}</span></div>
           <p className="text-[10px] text-white/40">Missoes</p>
         </div>
@@ -167,17 +167,17 @@ const PerfilAlunoAdminPage = () => {
       <div className="space-y-4">
         <p className="text-[10px] font-semibold text-white/30 uppercase tracking-widest px-1">Dados do aluno</p>
 
-        <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 p-4 space-y-3">
+        <div className="rounded-xl bg-[#252547] border border-violet-500/10 p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[10px] text-white/30 block mb-1">Nome</label>
               <input value={nome} onChange={e => { setNome(e.target.value); setHasChanges(true); }}
-                className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/20" />
+                className="w-full bg-white/[0.06] border border-violet-500/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/20" />
             </div>
             <div>
               <label className="text-[10px] text-white/30 block mb-1">Sobrenome</label>
               <input value={sobrenome} onChange={e => { setSobrenome(e.target.value); setHasChanges(true); }}
-                className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/20" />
+                className="w-full bg-white/[0.06] border border-violet-500/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/20" />
             </div>
           </div>
 
@@ -185,7 +185,7 @@ const PerfilAlunoAdminPage = () => {
             <div>
               <label className="text-[10px] text-white/30 block mb-1">Serie</label>
               <select value={serie} onChange={e => { setSerie(e.target.value); setHasChanges(true); }}
-                className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none">
+                className="w-full bg-white/[0.06] border border-violet-500/10 rounded-lg px-3 py-2 text-sm text-white outline-none">
                 <option value="">-</option>
                 {['6º Ano', '7º Ano', '8º Ano', '9º Ano'].map(s => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -193,7 +193,7 @@ const PerfilAlunoAdminPage = () => {
             <div>
               <label className="text-[10px] text-white/30 block mb-1">Turma</label>
               <select value={turma} onChange={e => { setTurma(e.target.value); setHasChanges(true); }}
-                className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none">
+                className="w-full bg-white/[0.06] border border-violet-500/10 rounded-lg px-3 py-2 text-sm text-white outline-none">
                 <option value="">-</option>
                 {['A', 'B', 'C', 'D'].map(t => <option key={t} value={t}>{t}</option>)}
               </select>
@@ -236,7 +236,7 @@ const PerfilAlunoAdminPage = () => {
         <p className="text-[10px] font-semibold text-white/30 uppercase tracking-widest px-1">Acoes</p>
 
         <button onClick={resetarSenha}
-          className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 hover:bg-white/[0.06] transition-colors">
+          className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-[#252547] border border-violet-500/10 hover:bg-white/[0.06] transition-colors">
           <Key className="w-4 h-4 text-amber-400" />
           <div className="text-left">
             <p className="text-sm text-white/70">Resetar senha</p>

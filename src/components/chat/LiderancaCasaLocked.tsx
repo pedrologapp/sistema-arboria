@@ -15,7 +15,7 @@ interface LiderancaCasaLockedProps {
 export const LiderancaCasaLocked = ({ open, onOpenChange, casaColor = '#6366f1' }: LiderancaCasaLockedProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#1a1a2e] border-white/10 text-white max-w-sm" style={{ borderColor: `${casaColor}40` }}>
+      <DialogContent className="bg-[#1a1a2e] border-violet-500/10 text-white max-w-sm" style={{ borderColor: `${casaColor}40` }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2" style={{ color: casaColor }}>
             <Zap className="w-5 h-5" />

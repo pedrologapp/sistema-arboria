@@ -407,10 +407,10 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose, onSuccess }: ModalImpo
   const colunasPreview = colunasObrigatorias;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-      <div className="w-full max-w-lg bg-[#0A0A0A] border border-white/10 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#12122A]/95 p-4">
+      <div className="w-full max-w-lg bg-[#1A1A2E] border border-violet-500/10 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
+        <div className="flex items-center justify-between p-4 border-b border-violet-500/10">
           <h2 className="text-lg font-semibold text-white">
             Importar {tipo === 'alunos' ? 'Alunos' : 'Professores'}
           </h2>
@@ -476,7 +476,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose, onSuccess }: ModalImpo
           {!progresso.ativo && (
             <button
               onClick={baixarModeloExcel}
-              className="w-full p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-2 text-white"
+              className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-2 text-white"
             >
               <Download className="w-4 h-4" />
               Baixar modelo Excel
@@ -495,7 +495,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose, onSuccess }: ModalImpo
 
           {!progresso.ativo && (
             arquivo ? (
-              <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+              <div className="p-4 bg-white/5 border border-violet-500/10 rounded-xl">
                 <div className="flex items-center gap-3">
                   <FileText className="w-8 h-8 text-indigo-400" />
                   <div className="flex-1 min-w-0">
@@ -590,7 +590,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose, onSuccess }: ModalImpo
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-white/10">
+                    <tr className="border-b border-violet-500/10">
                       {colunasPreview.map(col => (
                         <th key={col} className="text-left p-2 text-white/60 font-medium">
                           {col}
@@ -600,7 +600,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose, onSuccess }: ModalImpo
                   </thead>
                   <tbody>
                     {dados.slice(0, 3).map((row, i) => (
-                      <tr key={i} className="border-b border-white/5">
+                      <tr key={i} className="border-b border-violet-500/5">
                         {colunasPreview.map(col => (
                           <td key={col} className="p-2 text-white/80">
                             {(row as any)[col]}
@@ -621,7 +621,7 @@ const ModalImportarCSV = ({ tipo, institutionId, onClose, onSuccess }: ModalImpo
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/10 flex gap-3">
+        <div className="p-4 border-t border-violet-500/10 flex gap-3">
           <button
             onClick={onClose}
             disabled={progresso.ativo}

@@ -67,7 +67,7 @@ const AlterarSenha = () => {
 
   return (
     <div className="min-h-screen w-full bg-black flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-white/5 border-white/10 relative">
+      <Card className="w-full max-w-md bg-white/5 border-violet-500/10 relative">
         {/* Botão Voltar */}
         <button
           onClick={() => navigate(-1)}
@@ -99,7 +99,7 @@ const AlterarSenha = () => {
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="pl-10 pr-10 bg-white/5 border-white/10 text-white placeholder:text-white/30"
+                  className="pl-10 pr-10 bg-white/5 border-violet-500/10 text-white placeholder:text-white/30"
                 />
                 <button
                   type="button"
@@ -122,7 +122,7 @@ const AlterarSenha = () => {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="pl-10 pr-10 bg-white/5 border-white/10 text-white placeholder:text-white/30"
+                  className="pl-10 pr-10 bg-white/5 border-violet-500/10 text-white placeholder:text-white/30"
                 />
                 <button
                   type="button"

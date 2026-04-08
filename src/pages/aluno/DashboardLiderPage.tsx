@@ -260,7 +260,7 @@ const DashboardLiderPage = () => {
           <div className={cn('p-3.5 rounded-xl border',
             aulaStatus === 'confirmada' ? 'bg-emerald-500/10 border-emerald-500/20' :
             aulaStatus === 'cancelada' ? 'bg-red-500/10 border-red-500/20' :
-            'bg-white/[0.04] border-white/10'
+            'bg-white/[0.04] border-violet-500/10'
           )}>
             <div className="flex items-center gap-2">
               {aulaStatus === 'confirmada' ? <CheckCircle className="w-4 h-4 text-emerald-400" /> :
@@ -276,19 +276,19 @@ const DashboardLiderPage = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="p-3.5 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10">
+        <div className="p-3.5 rounded-xl text-center bg-[#252547] border border-violet-500/10">
           <div className="flex items-center justify-center gap-1 mb-0.5">
             <Trophy className="w-3.5 h-3.5 text-yellow-500" />
             <span className="text-xl font-bold text-white">{rankingCasa?.total_pontos || 0}</span>
           </div>
           <p className="text-[10px] text-white/40">Pontos</p>
         </div>
-        <div className="p-3.5 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10">
+        <div className="p-3.5 rounded-xl text-center bg-[#252547] border border-violet-500/10">
           <Users className="w-3.5 h-3.5 text-blue-400 mx-auto mb-0.5" />
           <span className="text-xl font-bold text-white">{membros.length}</span>
           <p className="text-[10px] text-white/40">Membros</p>
         </div>
-        <div className="p-3.5 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10">
+        <div className="p-3.5 rounded-xl text-center bg-[#252547] border border-violet-500/10">
           <span className={cn('text-xl font-bold', pctEntrega >= 80 ? 'text-emerald-400' : pctEntrega >= 50 ? 'text-amber-400' : 'text-red-400')}>{pctEntrega}%</span>
           <p className="text-[10px] text-white/40">Entregas</p>
         </div>
@@ -304,7 +304,7 @@ const DashboardLiderPage = () => {
           {turmaStat.map(([key, stat]) => {
             const pct = stat.total > 0 ? Math.round((stat.entregaram / stat.total) * 100) : 0;
             return (
-              <div key={key} className="flex items-center gap-3 p-2.5 rounded-lg bg-[rgba(26,26,30,0.85)] border border-white/10">
+              <div key={key} className="flex items-center gap-3 p-2.5 rounded-lg bg-[#252547] border border-violet-500/10">
                 <span className="text-xs font-bold text-white w-12">{stat.serie}º {stat.turma}</span>
                 <div className="flex-1">
                   <div className="h-2 bg-white/10 rounded-full overflow-hidden">
@@ -328,7 +328,7 @@ const DashboardLiderPage = () => {
             {expandirSemEntrega ? <ChevronUp className="w-3.5 h-3.5 text-white/30" /> : <ChevronDown className="w-3.5 h-3.5 text-white/30" />}
           </button>
           {expandirSemEntrega && (
-            <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 p-3">
+            <div className="rounded-xl bg-[#252547] border border-violet-500/10 p-3">
               <div className="flex flex-wrap gap-2">
                 {entregasData.naoEntregaram.map(a => (
                   <AvatarPequeno key={a.id} aluno={a} onClick={() => iniciarDM(a.id)} />
@@ -347,9 +347,9 @@ const DashboardLiderPage = () => {
             <div className="w-1 h-3.5 rounded-full bg-yellow-500" />
             <p className="text-[10px] font-semibold text-yellow-400/80 uppercase tracking-widest">Destaques</p>
           </div>
-          <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 overflow-hidden">
+          <div className="rounded-xl bg-[#252547] border border-violet-500/10 overflow-hidden">
             {top5.filter(m => (m.total_pontos || 0) > 0).map((m, idx) => (
-              <div key={m.aluno_id} className={cn('flex items-center gap-3 py-2.5 px-3.5', idx > 0 && 'border-t border-white/5')}>
+              <div key={m.aluno_id} className={cn('flex items-center gap-3 py-2.5 px-3.5', idx > 0 && 'border-t border-violet-500/5')}>
                 <span className="text-sm text-white/40 w-5 text-center">{idx + 1}</span>
                 <span className="text-sm text-white/80 flex-1 truncate">{m.aluno_nome}</span>
                 <span className="text-sm text-emerald-400 font-medium">{m.total_pontos} pts</span>
@@ -366,7 +366,7 @@ const DashboardLiderPage = () => {
             <div className="w-1 h-3.5 rounded-full bg-amber-500" />
             <p className="text-[10px] font-semibold text-amber-400/80 uppercase tracking-widest">Coordenadores</p>
           </div>
-          <div className="rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 overflow-hidden">
+          <div className="rounded-xl bg-[#252547] border border-violet-500/10 overflow-hidden">
             {coordenadores.map((c: any, idx) => {
               const prof = c.profiles as any;
               const serie = prof?.serie?.replace(/\D/g, '') || '?';
@@ -375,7 +375,7 @@ const DashboardLiderPage = () => {
               return (
                 <button key={c.aluno_id}
                   onClick={() => iniciarDM(c.aluno_id)}
-                  className={cn('w-full flex items-center gap-3 py-2.5 px-3.5 hover:bg-white/[0.04] transition-colors text-left', idx > 0 && 'border-t border-white/5')}>
+                  className={cn('w-full flex items-center gap-3 py-2.5 px-3.5 hover:bg-white/[0.04] transition-colors text-left', idx > 0 && 'border-t border-violet-500/5')}>
                   <div className="w-8 h-8 rounded-full overflow-hidden border-2 shrink-0" style={{ borderColor: casaColor }}>
                     {prof?.avatar_url ? <img src={prof.avatar_url} alt="" className="w-full h-full object-cover" /> :
                     <span className="flex items-center justify-center w-full h-full text-[10px] text-white/50" style={{ backgroundColor: `${casaColor}20` }}>

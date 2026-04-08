@@ -643,7 +643,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                 {missaoGeral ? (
                   <button
                     onClick={() => abrirModal(semana.numero, missaoGeral)}
-                    className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-left hover:bg-white/10 transition-colors group"
+                    className="w-full p-4 bg-white/5 border border-violet-500/10 rounded-xl text-left hover:bg-white/10 transition-colors group"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3 min-w-0">
@@ -689,7 +689,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                   className={`w-full p-4 rounded-xl border text-left transition-colors hover:bg-white/5 ${
                     temAlertaIndividuais 
                       ? 'bg-yellow-500/5 border-yellow-500/20' 
-                      : 'bg-white/5 border-white/10'
+                      : 'bg-white/5 border-violet-500/10'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -714,10 +714,10 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
 
       {/* Modal Missão Geral */}
       {modalAberto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#12122A]/95 p-4">
           <div className="w-full max-w-lg bg-slate-900 rounded-t-2xl sm:rounded-2xl max-h-[75vh] overflow-hidden flex flex-col shadow-2xl">
             {/* Header */}
-            <div className="p-4 border-b border-white/10 shrink-0">
+            <div className="p-4 border-b border-violet-500/10 shrink-0">
               <div className="flex items-center justify-between">
                 <h3 className="text-white font-semibold">
                   {missaoEditando ? 'Editar Missão' : 'Nova Missão'} — Semana {semanaAtual}
@@ -748,7 +748,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                       className={`py-2.5 rounded-xl border text-sm font-medium transition-colors ${
                         seriesSelecionadas.includes(serie.id)
                           ? 'bg-white/15 border-white/30 text-white'
-                          : 'bg-white/5 border-white/10 text-white/40'
+                          : 'bg-white/5 border-violet-500/10 text-white/40'
                       }`}
                     >
                       {serie.label}
@@ -770,7 +770,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                       className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${
                         turmasFiltro.includes(turma)
                           ? 'bg-white/15 border-white/30 text-white'
-                          : 'bg-white/5 border-white/10 text-white/40'
+                          : 'bg-white/5 border-violet-500/10 text-white/40'
                       }`}
                     >
                       {turma}
@@ -783,7 +783,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
               </div>
 
               {/* Divisor - Conteúdo */}
-              <div className="border-t border-white/10 pt-4">
+              <div className="border-t border-violet-500/10 pt-4">
                 <h4 className="text-white/60 text-xs font-medium uppercase tracking-wider mb-4">Conteúdo</h4>
               </div>
 
@@ -797,7 +797,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                   value={titulo}
                   onChange={(e) => setTitulo(e.target.value)}
                   placeholder="Ex: Carta para você do futuro"
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20"
+                  className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20"
                 />
               </div>
 
@@ -811,7 +811,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                   onChange={(e) => setDescricao(e.target.value)}
                   placeholder="Breve descrição da missão..."
                   rows={2}
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none"
+                  className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none"
                 />
               </div>
 
@@ -825,7 +825,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                   onChange={(e) => setInstrucoes(e.target.value)}
                   placeholder="Passo a passo do que o aluno deve fazer..."
                   rows={4}
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none font-mono"
+                  className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none font-mono"
                 />
               </div>
 
@@ -839,7 +839,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                   onChange={(e) => setDicas(e.target.value)}
                   placeholder="Dicas para ajudar o aluno..."
                   rows={2}
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none font-mono"
+                  className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none font-mono"
                 />
               </div>
 
@@ -853,7 +853,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                   onChange={(e) => setReflexao(e.target.value)}
                   placeholder="Pergunta para reflexão..."
                   rows={2}
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none"
+                  className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none"
                 />
               </div>
 
@@ -863,7 +863,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                   PDF <span className="text-white/30">(opcional)</span>
                 </label>
                 {arquivoPdfUrl ? (
-                  <div className="p-3 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between gap-3">
+                  <div className="p-3 bg-white/5 border border-violet-500/10 rounded-xl flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
                         <FileText className="w-5 h-5 text-red-400" />
@@ -905,7 +905,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
               </div>
 
               {/* Divisor - Configurações */}
-              <div className="border-t border-white/10 pt-4">
+              <div className="border-t border-violet-500/10 pt-4">
                 <h4 className="text-white/60 text-xs font-medium uppercase tracking-wider mb-4">Configurações</h4>
               </div>
 
@@ -922,7 +922,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                       className={`w-full p-3 rounded-xl border text-left transition-colors flex items-center justify-between ${
                         categoria === cat.id
                           ? 'bg-white/10 border-white/30 text-white'
-                          : 'bg-white/5 border-white/10 text-white/40'
+                          : 'bg-white/5 border-violet-500/10 text-white/40'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -956,7 +956,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                     className={`w-full p-3 rounded-xl border text-left transition-colors flex items-center gap-3 ${
                       liberacao === 'agora'
                         ? 'bg-white/10 border-white/30 text-white'
-                        : 'bg-white/5 border-white/10 text-white/40'
+                        : 'bg-white/5 border-violet-500/10 text-white/40'
                     }`}
                   >
                     <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
@@ -976,7 +976,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                     className={`w-full p-3 rounded-xl border text-left transition-colors flex items-center gap-3 ${
                       liberacao === 'agendado'
                         ? 'bg-white/10 border-white/30 text-white'
-                        : 'bg-white/5 border-white/10 text-white/40'
+                        : 'bg-white/5 border-violet-500/10 text-white/40'
                     }`}
                   >
                     <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
@@ -1004,7 +1004,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                                 type="date"
                                 value={dataLiberacao6ano}
                                 onChange={(e) => setDataLiberacao6ano(e.target.value)}
-                                className="w-full p-2 pl-9 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-white/20"
+                                className="w-full p-2 pl-9 bg-white/5 border border-violet-500/10 rounded-lg text-white text-sm focus:outline-none focus:border-white/20"
                               />
                             </div>
                             <div className="relative w-24">
@@ -1013,7 +1013,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                                 type="time"
                                 value={horaLiberacao6ano}
                                 onChange={(e) => setHoraLiberacao6ano(e.target.value)}
-                                className="w-full p-2 pl-9 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-white/20"
+                                className="w-full p-2 pl-9 bg-white/5 border border-violet-500/10 rounded-lg text-white text-sm focus:outline-none focus:border-white/20"
                               />
                             </div>
                           </div>
@@ -1029,7 +1029,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                                 type="date"
                                 value={dataLiberacao9ano}
                                 onChange={(e) => setDataLiberacao9ano(e.target.value)}
-                                className="w-full p-2 pl-9 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-white/20"
+                                className="w-full p-2 pl-9 bg-white/5 border border-violet-500/10 rounded-lg text-white text-sm focus:outline-none focus:border-white/20"
                               />
                             </div>
                             <div className="relative w-24">
@@ -1038,7 +1038,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                                 type="time"
                                 value={horaLiberacao9ano}
                                 onChange={(e) => setHoraLiberacao9ano(e.target.value)}
-                                className="w-full p-2 pl-9 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-white/20"
+                                className="w-full p-2 pl-9 bg-white/5 border border-violet-500/10 rounded-lg text-white text-sm focus:outline-none focus:border-white/20"
                               />
                             </div>
                           </div>
@@ -1061,7 +1061,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                       type="date"
                       value={dataPrazo}
                       onChange={(e) => setDataPrazo(e.target.value)}
-                      className="w-full p-3 pl-10 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
+                      className="w-full p-3 pl-10 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
                     />
                   </div>
                   <div className="relative w-28">
@@ -1070,7 +1070,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                       type="time"
                       value={horaPrazo}
                       onChange={(e) => setHoraPrazo(e.target.value)}
-                      className="w-full p-3 pl-10 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
+                      className="w-full p-3 pl-10 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm focus:outline-none focus:border-white/20"
                     />
                   </div>
                 </div>
@@ -1087,7 +1087,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                     className={`w-full p-3 rounded-xl border text-left transition-colors flex items-center gap-3 ${
                       requerTexto
                         ? 'bg-white/10 border-white/30 text-white'
-                        : 'bg-white/5 border-white/10 text-white/40'
+                        : 'bg-white/5 border-violet-500/10 text-white/40'
                     }`}
                   >
                     <div className={`w-5 h-5 rounded border flex items-center justify-center ${
@@ -1107,7 +1107,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
                     className={`w-full p-3 rounded-xl border text-left transition-colors flex items-center gap-3 ${
                       requerArquivo
                         ? 'bg-white/10 border-white/30 text-white'
-                        : 'bg-white/5 border-white/10 text-white/40'
+                        : 'bg-white/5 border-violet-500/10 text-white/40'
                     }`}
                   >
                     <div className={`w-5 h-5 rounded border flex items-center justify-center ${
@@ -1126,7 +1126,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
             </div>
 
             {/* Footer */}
-            <div className="flex gap-3 p-4 border-t border-white/10 bg-[#1a1a1a] flex-shrink-0">
+            <div className="flex gap-3 p-4 border-t border-violet-500/10 bg-[#1E1E3A] flex-shrink-0">
               <button
                 onClick={fecharModal}
                 className="flex-1 p-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors"

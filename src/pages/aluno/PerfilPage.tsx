@@ -83,7 +83,7 @@ const PerfilPage = () => {
       </div>
 
       {/* Card do aluno */}
-      <div className="relative overflow-hidden p-5 rounded-2xl bg-[rgba(26,26,30,0.85)] border border-white/10">
+      <div className="relative overflow-hidden p-5 rounded-2xl bg-[#252547] border border-violet-500/10">
         <div className="flex items-center gap-4">
           {/* Avatar */}
           <div className="w-16 h-16 rounded-full overflow-hidden bg-white/10 shrink-0">
@@ -120,19 +120,19 @@ const PerfilPage = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="p-3.5 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10">
+        <div className="p-3.5 rounded-xl text-center bg-[#252547] border border-violet-500/10">
           <div className="flex items-center justify-center gap-1 mb-0.5">
             <Trophy className="w-3.5 h-3.5 text-yellow-500" />
             <span className="text-xl font-bold text-white">{ranking?.total_pontos || 0}</span>
           </div>
           <p className="text-[10px] text-white/40">Pontos</p>
         </div>
-        <div className="p-3.5 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10">
+        <div className="p-3.5 rounded-xl text-center bg-[#252547] border border-violet-500/10">
           <span className="text-xl font-bold text-white">{ranking?.posicao_na_casa || '--'}</span>
-          <span className="text-white/40 text-xs align-top">o</span>
+          <span className="text-white/40 text-xs align-top">º</span>
           <p className="text-[10px] text-white/40 mt-0.5">Na casa</p>
         </div>
-        <div className="p-3.5 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10">
+        <div className="p-3.5 rounded-xl text-center bg-[#252547] border border-violet-500/10">
           <div className="flex items-center justify-center gap-1 mb-0.5">
             <Target className="w-3.5 h-3.5 text-blue-400" />
             <span className="text-xl font-bold text-white">{ranking?.missoes_completadas || 0}</span>
@@ -172,7 +172,7 @@ const PerfilPage = () => {
             </p>
           </div>
         ) : (
-          <div className="p-6 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+          <div className="p-6 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
             <p className="text-white/30 text-sm">Seus scores aparecerão conforme voce avanca</p>
           </div>
         )}
@@ -183,7 +183,7 @@ const PerfilPage = () => {
         <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">
           Arvore de Talentos
         </h3>
-        <div className="p-6 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+        <div className="p-6 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
           <TreePine className="w-8 h-8 text-white/15 mx-auto mb-2" />
           <p className="text-white/30 text-sm">Em breve</p>
           <p className="text-white/15 text-xs mt-1">Sua arvore de 52 habilidades crescera aqui</p>
@@ -195,7 +195,7 @@ const PerfilPage = () => {
         <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">
           Conquistas
         </h3>
-        <div className="p-6 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10 text-center">
+        <div className="p-6 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
           <Award className="w-8 h-8 text-white/15 mx-auto mb-2" />
           <p className="text-white/30 text-sm">Em breve</p>
           <p className="text-white/15 text-xs mt-1">Badges e conquistas desbloqueadas</p>

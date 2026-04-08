@@ -330,7 +330,7 @@ const MapaDesenvolvimentoPage = () => {
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchEnd}
           title={aluno.nomeCompleto}
-          className={`flex items-center gap-1.5 rounded-full bg-white/10 border border-white/10 
+          className={`flex items-center gap-1.5 rounded-full bg-white/10 border border-violet-500/10 
             hover:bg-white/15 active:scale-95 transition-all ${small ? 'px-2 py-1' : 'px-3 py-1.5'}`}
         >
           <Avatar className={small ? 'h-5 w-5' : 'h-6 w-6'}>
@@ -414,7 +414,7 @@ const MapaDesenvolvimentoPage = () => {
       {/* Seletor de turma (infantil/F1) */}
       {!isF2 && turmasVinculadas && turmasVinculadas.length > 1 && (
         <Select value={selectedTurmaId} onValueChange={setSelectedTurmaId}>
-          <SelectTrigger className="bg-white/5 border-white/10 text-white">
+          <SelectTrigger className="bg-white/5 border-violet-500/10 text-white">
             <SelectValue placeholder="Selecione a turma" />
           </SelectTrigger>
           <SelectContent>
@@ -536,7 +536,7 @@ const MapaDesenvolvimentoPage = () => {
 
       {/* Drawer de alocação */}
       <Drawer open={!!drawerAluno && canEdit} onOpenChange={(open) => { if (!open) setDrawerAluno(null); }}>
-        <DrawerContent className="bg-zinc-900 border-white/10">
+        <DrawerContent className="bg-zinc-900 border-violet-500/10">
           <DrawerHeader className="text-center">
             <DrawerTitle className="text-white flex items-center justify-center gap-2">
               {drawerAluno && (
@@ -571,7 +571,7 @@ const MapaDesenvolvimentoPage = () => {
             {drawerAluno && alocacoes[drawerAluno.id] && (
               <button
                 onClick={() => drawerAluno && handleRemover(drawerAluno.id)}
-                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-white/10 text-white/60 hover:text-white hover:bg-white/5 transition-all"
+                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-violet-500/10 text-white/60 hover:text-white hover:bg-white/5 transition-all"
               >
                 <X size={16} />
                 <span className="text-sm">Remover posição</span>

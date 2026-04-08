@@ -196,7 +196,7 @@ const CasaPage = () => {
 
       {/* Card principal: Brasao + Nome + Descricao (unico com cor da casa) */}
       <div
-        className="relative overflow-hidden p-5 rounded-2xl bg-[rgba(26,26,30,0.85)] backdrop-blur-xl border border-white/10"
+        className="relative overflow-hidden p-5 rounded-2xl bg-[#252547] backdrop-blur-xl border border-violet-500/10"
         style={{ boxShadow: `0 16px 32px -8px ${casaColor}25` }}
       >
         <div
@@ -226,13 +226,13 @@ const CasaPage = () => {
 
       {/* Stats: Posicao da casa + Pontos da casa */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="p-4 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10">
+        <div className="p-4 rounded-xl text-center bg-[#252547] border border-violet-500/10">
           <span className="text-2xl font-bold text-white">{posicaoCasa || '--'}</span>
           <span className="text-white/40 text-sm">a</span>
           <span className="text-white/40 text-sm ml-0.5">de {totalCasas}</span>
           <p className="text-xs text-white/40 mt-1">Posicao geral</p>
         </div>
-        <div className="p-4 rounded-xl text-center bg-[rgba(26,26,30,0.85)] border border-white/10">
+        <div className="p-4 rounded-xl text-center bg-[#252547] border border-violet-500/10">
           <div className="flex items-center justify-center gap-1.5">
             <Trophy className="w-4 h-4 text-yellow-500" />
             <span className="text-2xl font-bold text-white">{pontosTotaisCasa.toLocaleString('pt-BR')}</span>
@@ -242,7 +242,7 @@ const CasaPage = () => {
       </div>
 
       {/* Sua contribuicao */}
-      <div className="p-4 rounded-xl bg-[rgba(26,26,30,0.85)] border border-white/10">
+      <div className="p-4 rounded-xl bg-[#252547] border border-violet-500/10">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm text-white/60">Sua contribuicao</span>
           <span className="text-sm text-white font-medium">{meuspontos} pts ({contribuicao}%)</span>
@@ -250,7 +250,7 @@ const CasaPage = () => {
         <Progress value={contribuicao} className="h-2 bg-white/10" />
         {minhaPosicao > 0 && (
           <p className="text-xs text-white/30 mt-2">
-            Voce esta em {minhaPosicao}o lugar entre {totalMembros} membros
+            Voce esta em {minhaPosicao}º lugar entre {totalMembros} membros
           </p>
         )}
       </div>
@@ -261,7 +261,7 @@ const CasaPage = () => {
           <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">
             Destaques
           </h3>
-          <div className="rounded-xl overflow-hidden bg-[rgba(26,26,30,0.85)] border border-white/10">
+          <div className="rounded-xl overflow-hidden bg-[#252547] border border-violet-500/10">
             {top5.filter(m => m.total_pontos > 0).map((membro, idx) => {
               const isMe = membro.aluno_id === user?.id;
               return (
@@ -270,7 +270,7 @@ const CasaPage = () => {
                   className={cn(
                     'flex items-center justify-between py-2.5 px-3',
                     isMe && 'bg-white/5',
-                    idx > 0 && 'border-t border-white/5'
+                    idx > 0 && 'border-t border-violet-500/5'
                   )}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -302,7 +302,7 @@ const CasaPage = () => {
         <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">
           Lideranca
         </h3>
-        <div className="rounded-xl overflow-hidden bg-[rgba(26,26,30,0.85)] border border-white/10">
+        <div className="rounded-xl overflow-hidden bg-[#252547] border border-violet-500/10">
           {lider && (
             <div className="flex items-center justify-between py-2.5 px-3">
               <div className="flex items-center gap-2 min-w-0">
@@ -326,7 +326,7 @@ const CasaPage = () => {
           )}
           {coordenadores.length > 0 && (
             <>
-              <div className="border-t border-white/5" />
+              <div className="border-t border-violet-500/5" />
               {coordenadores.slice(0, 4).map(coord => (
                 <div key={coord.aluno_id} className="flex items-center justify-between py-2 px-3">
                   <div className="flex items-center gap-2 min-w-0">
@@ -359,7 +359,7 @@ const CasaPage = () => {
       <button
         onClick={() => navigate('/aluno/conquistas')}
         className="w-full flex items-center justify-between p-4 rounded-xl
-          bg-[rgba(26,26,30,0.85)] border border-white/10
+          bg-[#252547] border border-violet-500/10
           hover:bg-white/[0.06] transition-colors active:scale-[0.98]"
       >
         <div className="flex items-center gap-3">
@@ -373,7 +373,7 @@ const CasaPage = () => {
       <button
         onClick={() => navigate('/aluno/chat/membros')}
         className="w-full flex items-center justify-between p-4 rounded-xl
-          bg-[rgba(26,26,30,0.85)] border border-white/10
+          bg-[#252547] border border-violet-500/10
           hover:bg-white/[0.06] transition-colors active:scale-[0.98]"
       >
         <div className="flex items-center gap-3">
@@ -447,7 +447,7 @@ function _ConquistasSection_UNUSED({ pontosCasa, institutionId }: { pontosCasa: 
           return (
             <div key={c.id} className={cn(
               'flex items-center gap-3 py-2.5 px-3 rounded-lg border transition-all',
-              desbloqueada ? 'border-white/15 bg-white/[0.06]' : 'border-white/5 bg-white/[0.02]'
+              desbloqueada ? 'border-white/15 bg-white/[0.06]' : 'border-violet-500/5 bg-white/[0.02]'
             )}>
               {/* Icone */}
               <div className={cn('w-8 h-8 rounded-full flex items-center justify-center shrink-0', desbloqueada ? '' : 'opacity-30')}

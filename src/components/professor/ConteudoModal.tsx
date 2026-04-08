@@ -129,15 +129,15 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
 
   return (
     <div 
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-[#12122A]/95 backdrop-blur-sm flex items-center justify-center p-4 z-50"
       onClick={onClose}
     >
       <div 
-        className="bg-[rgba(26,26,30,0.85)] backdrop-blur-xl rounded-2xl w-full max-w-md max-h-[70vh] overflow-hidden flex flex-col border border-white/10 shadow-2xl shadow-black/50"
+        className="bg-[#252547] backdrop-blur-xl rounded-2xl w-full max-w-md max-h-[70vh] overflow-hidden flex flex-col border border-violet-500/10 shadow-2xl shadow-black/50"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
+        <div className="flex items-center justify-between p-4 border-b border-violet-500/10">
           <div>
             <h3 className="text-white font-semibold flex items-center gap-2">
               <BookOpen className="w-4 h-4" /> Conteúdo
@@ -163,7 +163,7 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
               <TreePine className="w-4 h-4" /> Essência do Arboria
             </p>
             
-            <div className="relative overflow-hidden rounded-xl p-6 bg-gradient-to-br from-white/[0.08] to-white/[0.02] backdrop-blur-sm border border-white/10">
+            <div className="relative overflow-hidden rounded-xl p-6 bg-gradient-to-br from-white/[0.08] to-white/[0.02] backdrop-blur-sm border border-violet-500/10">
               <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
               <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
               
@@ -204,7 +204,7 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
                   const isOpen = serieAberta === serie.num;
 
                   return (
-                    <div key={serie.num} className="rounded-xl border border-white/10 overflow-hidden">
+                    <div key={serie.num} className="rounded-xl border border-violet-500/10 overflow-hidden">
                       <button
                         onClick={() => toggleSerie(serie.num)}
                         className={`w-full p-4 text-left flex items-center gap-3
@@ -221,7 +221,7 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
                       </button>
 
                       {isOpen && (
-                        <div className="border-t border-white/5 p-2 space-y-1">
+                        <div className="border-t border-violet-500/5 p-2 space-y-1">
                           {itens.length === 0 ? (
                             <p className="text-white/30 text-sm text-center py-4 font-light">
                               Nenhum material disponível
@@ -275,12 +275,12 @@ const ConteudoModal = ({ isOpen, onClose, faseAtual }: ConteudoModalProps) => {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/10">
+        <div className="p-4 border-t border-violet-500/10">
           <button
             onClick={onClose}
             className="w-full py-3 rounded-xl font-medium text-sm text-white
               bg-gradient-to-r from-white/10 to-white/5
-              border border-white/10
+              border border-violet-500/10
               hover:from-white/15 hover:to-white/10
               hover:border-white/20
               transition-all duration-300

@@ -71,7 +71,7 @@ export const LimelightNav = ({
   return (
     <nav
       className={cn(
-        'relative flex items-center justify-around rounded-full border border-white/10 bg-black/80 backdrop-blur-lg shadow-lg',
+        'relative flex items-center justify-around rounded-full border border-violet-500/10 bg-[#12122A]/95 backdrop-blur-lg shadow-lg',
         className
       )}
     >

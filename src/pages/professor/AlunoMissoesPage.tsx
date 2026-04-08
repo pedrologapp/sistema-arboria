@@ -203,9 +203,9 @@ const AlunoMissoesPage = () => {
     : `/professor/missoes/serie/${serie}/semana/${semana}/geral/alunos`;
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d]">
+    <div className="min-h-screen bg-[#1A1A2E]">
       {/* Header com dados do aluno */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-violet-500/10">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => navigate(voltarUrl)}
@@ -271,7 +271,7 @@ const AlunoMissoesPage = () => {
 
           {/* Divisor */}
           {outrasMissoes.length > 0 && (
-            <div className="mx-4 border-t border-white/10" />
+            <div className="mx-4 border-t border-violet-500/10" />
           )}
 
           {/* Outras Missões */}
