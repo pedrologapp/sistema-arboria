@@ -67,26 +67,32 @@ const RelatoriosPage = () => {
   const fetchCredenciais = async (): Promise<AlunoCredencial[]> => {
     if (!institutionId) throw new Error('Sem instituição');
 
+    // Buscar IDs de professores e admins para excluir
+    const { data: profIds } = await supabase.from('user_roles')
+      .select('user_id')
+      .in('role', ['professor', 'admin']);
+    const excluirIds = new Set((profIds || []).map(r => r.user_id));
+
     const { data: alunos, error } = await supabase
       .from('profiles')
-      .select('full_name, nome, sobrenome, serie, turma, casa_id, email_gerado, matricula_externa')
+      .select('id, full_name, nome, sobrenome, serie, turma, casa_id, email_gerado, matricula_externa')
       .eq('institution_id', institutionId)
       .eq('segmento', 'fundamental2')
       .eq('conta_criada', true)
+      .not('casa_id', 'is', null)
       .order('serie')
       .order('turma')
       .order('full_name');
 
     if (error) throw error;
 
-    // Fetch casas
     const { data: casas } = await supabase
       .from('inteligencias')
       .select('id, nome, emoji');
 
     const casaMap = new Map((casas || []).map(c => [c.id, `${c.emoji || ''} ${c.nome}`]));
 
-    return (alunos || []).map(a => ({
+    return (alunos || []).filter(a => !excluirIds.has(a.id)).map(a => ({
       nome: a.full_name || `${a.nome || ''} ${a.sobrenome || ''}`.trim(),
       serie: a.serie || '-',
       turma: a.turma || '-',
