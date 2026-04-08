@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Trophy, Target, Settings, Award, TreePine } from 'lucide-react';
+import { User, Trophy, Target, Settings } from 'lucide-react';
 import { useStudent } from '@/contexts/StudentContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -178,29 +178,6 @@ const PerfilPage = () => {
         )}
       </div>
 
-      {/* Arvore de Talentos (placeholder) */}
-      <div>
-        <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">
-          Arvore de Talentos
-        </h3>
-        <div className="p-6 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
-          <TreePine className="w-8 h-8 text-white/15 mx-auto mb-2" />
-          <p className="text-white/30 text-sm">Em breve</p>
-          <p className="text-white/15 text-xs mt-1">Sua arvore de 52 habilidades crescera aqui</p>
-        </div>
-      </div>
-
-      {/* Conquistas (placeholder) */}
-      <div>
-        <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">
-          Conquistas
-        </h3>
-        <div className="p-6 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
-          <Award className="w-8 h-8 text-white/15 mx-auto mb-2" />
-          <p className="text-white/30 text-sm">Em breve</p>
-          <p className="text-white/15 text-xs mt-1">Badges e conquistas desbloqueadas</p>
-        </div>
-      </div>
 
       {/* Drawer de detalhes */}
       <InteligenciaDrawer

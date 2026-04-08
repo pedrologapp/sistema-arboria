@@ -152,21 +152,22 @@ const DashboardLiderPage = () => {
     enabled: !!faseAtual?.id,
   });
 
-  // Contribuicao por serie+turma
+  // Contribuicao por serie+turma (inclui todos, mesmo sem turma)
   const turmaStat = (() => {
     const map: Record<string, { serie: string; turma: string; total: number; entregaram: number }> = {};
     membros.forEach(m => {
-      const s = m.serie?.replace(/\D/g, '') || '?';
-      const t = m.turma || '?';
-      const key = `${s}-${t}`;
-      if (!map[key]) map[key] = { serie: s, turma: t, total: 0, entregaram: 0 };
+      const s = m.serie?.replace(/\D/g, '') || '0';
+      const t = m.turma || '';
+      const key = s && t ? `${s}-${t}` : s ? `${s}-sem` : 'sem-turma';
+      const label = t || 'S/T';
+      if (!map[key]) map[key] = { serie: s || '?', turma: label, total: 0, entregaram: 0 };
       map[key].total++;
     });
     const entregaramIds = new Set(entregasData?.entregaram?.map(e => e.id) || []);
     membros.forEach(m => {
-      const s = m.serie?.replace(/\D/g, '') || '?';
-      const t = m.turma || '?';
-      const key = `${s}-${t}`;
+      const s = m.serie?.replace(/\D/g, '') || '0';
+      const t = m.turma || '';
+      const key = s && t ? `${s}-${t}` : s ? `${s}-sem` : 'sem-turma';
       if (entregaramIds.has(m.id) && map[key]) map[key].entregaram++;
     });
     return Object.entries(map).sort((a, b) => {
@@ -219,6 +220,9 @@ const DashboardLiderPage = () => {
           Casa {casa?.nome} — {isLider ? 'Lider' : `Coordenador ${minhaSerie}º ${minhaTurma}`}
         </p>
       </div>
+
+      {/* Reportar ao mentor */}
+      <ReportarMentor userId={profile?.id} institutionId={profile?.institution_id} casaId={casa?.id} casaColor={casaColor} />
 
       {/* Atencao agora */}
       <div>
@@ -399,6 +403,85 @@ const DashboardLiderPage = () => {
           <p className="text-xs text-white/30">
             Fase {faseAtual.numero_fase} — {faseAtual.inteligencia?.nome} · Semana {faseAtual.semana_atual || 1} de 4
           </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// === Reportar ao Mentor ===
+const ReportarMentor = ({ userId, institutionId, casaId, casaColor }: {
+  userId?: string;
+  institutionId?: string;
+  casaId?: number;
+  casaColor: string;
+}) => {
+  const [aberto, setAberto] = useState(false);
+  const [texto, setTexto] = useState('');
+  const [enviado, setEnviado] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+
+  const enviar = async () => {
+    if (!userId || !institutionId || !texto.trim() || salvando) return;
+    setSalvando(true);
+    await supabase.from('reportes_mentor').insert({
+      aluno_id: userId,
+      institution_id: institutionId,
+      casa_id: casaId || null,
+      texto: texto.trim(),
+    });
+    setTexto('');
+    setEnviado(true);
+    setSalvando(false);
+    setTimeout(() => { setEnviado(false); setAberto(false); }, 2500);
+  };
+
+  return (
+    <div>
+      {!aberto ? (
+        <button
+          onClick={() => setAberto(true)}
+          className="w-full p-3.5 rounded-2xl border text-left transition-all hover:bg-white/[0.03] active:scale-[0.98]"
+          style={{ borderColor: `${casaColor}15`, background: `linear-gradient(135deg, ${casaColor}05, #252547)` }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl" style={{ backgroundColor: `${casaColor}15` }}>
+              <MessageCircle className="w-4 h-4" style={{ color: casaColor }} />
+            </div>
+            <div>
+              <p className="text-sm text-white/60">Precisa falar com seu mentor?</p>
+              <p className="text-[10px] text-white/25 mt-0.5">Reporte algo que aconteceu, uma duvida ou algo que precisa de ajuda. Seu mentor vai receber e pode te responder.</p>
+            </div>
+          </div>
+        </button>
+      ) : (
+        <div className="rounded-2xl border p-4" style={{ borderColor: `${casaColor}20`, background: `linear-gradient(135deg, ${casaColor}08, #252547)` }}>
+          <p className="text-sm text-white/60 mb-1">Fale com seu mentor</p>
+          <p className="text-[10px] text-white/25 mb-2">Conte o que aconteceu, peça ajuda ou tire uma duvida. Ele vai receber e responder para voce.</p>
+          <textarea
+            value={texto}
+            onChange={e => setTexto(e.target.value)}
+            placeholder="Ex: Aconteceu algo na aula... / Tenho uma duvida sobre... / Preciso de ajuda com..."
+            maxLength={500}
+            rows={3}
+            autoFocus
+            className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white placeholder:text-white/20 resize-none focus:outline-none focus:border-white/20 transition-colors"
+          />
+          <div className="flex items-center justify-between mt-2">
+            <button onClick={() => setAberto(false)} className="text-[10px] text-white/30 hover:text-white/50">Cancelar</button>
+            {enviado ? (
+              <span className="text-xs text-green-400">Enviado ao mentor!</span>
+            ) : (
+              <button
+                onClick={enviar}
+                disabled={!texto.trim() || salvando}
+                className="px-4 py-1.5 rounded-full text-xs font-medium transition-all disabled:opacity-30"
+                style={{ backgroundColor: `${casaColor}30`, color: casaColor }}
+              >
+                {salvando ? 'Enviando...' : 'Enviar'}
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

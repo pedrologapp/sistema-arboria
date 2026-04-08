@@ -78,6 +78,7 @@ const CirculoAlunosPage = lazy(() => import("./pages/professor/circulo/CirculoAl
 const CirculoRegistrarPage = lazy(() => import("./pages/professor/circulo/CirculoRegistrarPage"));
 const CirculoRegistrarMultiplosPage = lazy(() => import("./pages/professor/circulo/CirculoRegistrarMultiplosPage"));
 const CirculoPessoalPage = lazy(() => import("./pages/professor/circulo/CirculoPessoalPage"));
+const CirculoRelatoPage = lazy(() => import("./pages/professor/circulo/CirculoRelatoPage"));
 const AlunosPageWrapper = lazy(() => import("./pages/professor/AlunosPageWrapper"));
 const PerfilAlunoPageWrapper = lazy(() => import("./pages/professor/PerfilAlunoPageWrapper"));
 const ProfessorConfiguracoesPage = lazy(() => import("./pages/professor/ProfessorConfiguracoesPage"));
@@ -97,6 +98,7 @@ const ProfessorDmPage = lazy(() => import("./pages/professor/ProfessorDmPage"));
 const ConteudoPage = lazy(() => import("./pages/professor/ConteudoPage"));
 const ConteudoGeralPage = lazy(() => import("./pages/professor/ConteudoGeralPage"));
 const ConteudoInteligenciaPage = lazy(() => import("./pages/professor/ConteudoInteligenciaPage"));
+const ReportesMentorPage = lazy(() => import("./pages/professor/ReportesMentorPage"));
 
 // Loading fallback
 const PageLoader = () => (
@@ -466,6 +468,13 @@ const App = () => (
                 </ProfessorLayout>
               </ProfessorProtectedRoute>
             } />
+            <Route path="/professor/circulo/relato" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <CirculoRelatoPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
             <Route path="/professor/alunos" element={
               <ProfessorProtectedRoute>
                 <ProfessorLayout>
@@ -509,6 +518,15 @@ const App = () => (
               </ProfessorProtectedRoute>
             } />
             
+            {/* Reportes dos alunos */}
+            <Route path="/professor/reportes" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <ReportesMentorPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+
             {/* Conteúdo Routes (Infantil/F1) */}
             <Route path="/professor/conteudo" element={
               <ProfessorProtectedRoute>

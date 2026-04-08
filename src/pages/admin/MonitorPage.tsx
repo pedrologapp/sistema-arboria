@@ -243,7 +243,9 @@ const MonitorPage = () => {
       if (!institutionId) return [];
       const { data: casas } = await supabase.from('inteligencias').select('id, nome, cor_hex').order('id');
       const { data: profiles } = await supabase.from('profiles').select('id, casa_id').eq('institution_id', institutionId).eq('segmento', 'fundamental2').not('casa_id', 'is', null);
-      const { data: missoes } = await supabase.from('missoes').select('id').eq('institution_id', institutionId).eq('status', 'liberada');
+      // Buscar missões com prazo já vencido ou hoje (para calcular % real de entrega)
+      const hoje = new Date().toISOString().split('T')[0];
+      const { data: missoes } = await supabase.from('missoes').select('id').eq('institution_id', institutionId).eq('status', 'liberada').lte('data_prazo', hoje);
       const { data: pontos } = await supabase.from('pontos_gerais').select('casa_id, pontos').eq('institution_id', institutionId);
       let entregasSet = new Set<string>();
       if (missoes?.length) {
