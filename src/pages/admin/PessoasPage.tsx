@@ -25,6 +25,7 @@ const PessoasPage = () => {
   const [profCasa, setProfCasa] = useState<number | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
+  const [filtroCargo, setFiltroCargo] = useState<'todos' | 'lider' | 'coordenador'>('todos');
 
   const { data: institutionId } = useQuery({
     queryKey: ['admin-institution', user?.id],
@@ -88,6 +89,27 @@ const PessoasPage = () => {
     enabled: !!institutionId,
   });
 
+  // Cargos ativos
+  const { data: cargosAtivos = [] } = useQuery({
+    queryKey: ['admin-cargos-ativos', institutionId],
+    queryFn: async () => {
+      if (!institutionId) return [];
+      const { data } = await supabase.from('cargos_casa')
+        .select('aluno_id, cargo')
+        .eq('institution_id', institutionId)
+        .eq('ativo', true)
+        .eq('ano_letivo', new Date().getFullYear());
+      return data || [];
+    },
+    enabled: !!institutionId,
+  });
+
+  const cargoMap = useMemo(() => {
+    const map = new Map<string, string>();
+    cargosAtivos.forEach(c => map.set(c.aluno_id, c.cargo));
+    return map;
+  }, [cargosAtivos]);
+
   // Agrupar alunos por casa
   const alunosPorCasa = useMemo(() => {
     let lista = alunos;
@@ -95,10 +117,13 @@ const PessoasPage = () => {
       const t = busca.toLowerCase();
       lista = lista.filter(a => (a.full_name || a.nome || '').toLowerCase().includes(t));
     }
+    if (filtroCargo !== 'todos') {
+      lista = lista.filter(a => cargoMap.get(a.id) === filtroCargo);
+    }
     const map: Record<number, typeof alunos> = {};
     lista.forEach(a => { if (a.casa_id) { if (!map[a.casa_id]) map[a.casa_id] = []; map[a.casa_id].push(a); }});
     return map;
-  }, [alunos, busca]);
+  }, [alunos, busca, filtroCargo, cargoMap]);
 
   // Sem casa (relevante para F2)
   const alunosSemCasa = useMemo(() => {
@@ -249,6 +274,26 @@ const PessoasPage = () => {
           className="pl-10 bg-white/[0.04] border-violet-500/10 text-white placeholder:text-white/30 h-9 text-sm" />
         {busca && <button onClick={() => setBusca('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white"><X className="w-4 h-4" /></button>}
       </div>
+
+      {/* Filtro por cargo (só na tab alunos) */}
+      {tab === 'alunos' && (
+        <div className="flex gap-2">
+          {([
+            { id: 'todos' as const, label: 'Todos', count: alunos.length },
+            { id: 'lider' as const, label: 'Lideres', count: cargosAtivos.filter(c => c.cargo === 'lider').length },
+            { id: 'coordenador' as const, label: 'Coordenadores', count: cargosAtivos.filter(c => c.cargo === 'coordenador').length },
+          ]).map(f => (
+            <button key={f.id} onClick={() => setFiltroCargo(f.id)}
+              className={cn('px-3 py-1.5 rounded-full text-[10px] font-medium transition-colors border',
+                filtroCargo === f.id
+                  ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+                  : 'border-white/5 text-white/30 hover:bg-white/5'
+              )}>
+              {f.label} ({f.count})
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* TAB: ALUNOS */}
       {tab === 'alunos' && (
