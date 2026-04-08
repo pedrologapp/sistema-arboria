@@ -396,16 +396,16 @@ const CheckInEmocional = ({ userId, casaColor }: { userId?: string; casaColor: s
   return (
     <div className="animate-fade-in animate-fade-in-d4 rounded-2xl border p-4" style={{ borderColor: `${casaColor}20`, background: `linear-gradient(135deg, ${casaColor}08, #252547)` }}>
       <p className="text-sm text-white/60 mb-3">Como voce esta se sentindo hoje?</p>
-      <div className="flex justify-between gap-1">
+      <div className="grid grid-cols-4 gap-2">
         {emojisCheckin.map(({ emoji, label }) => (
           <button
             key={emoji}
             onClick={() => salvar(emoji, label)}
-            className={`flex flex-col items-center gap-1 p-1.5 rounded-xl transition-all active:scale-90 ${
+            className={`flex flex-col items-center gap-1 py-2 rounded-xl transition-all active:scale-90 ${
               selecionado === emoji ? 'bg-white/10 scale-110' : 'hover:bg-white/5'
             }`}
           >
-            <span className="text-2xl">{emoji}</span>
+            <span className="text-xl">{emoji}</span>
             <span className="text-[9px] text-white/30">{label}</span>
           </button>
         ))}
