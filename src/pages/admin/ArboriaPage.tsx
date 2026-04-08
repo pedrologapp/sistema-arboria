@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 const ArboriaPage = () => {
   const navigate = useNavigate();
   const [busca, setBusca] = useState('');
+  const [emojiAberto, setEmojiAberto] = useState<string | null>(null);
 
   // Buscar todos os alunos
   const { data: alunos = [], isLoading: loadingAlunos } = useQuery({
@@ -168,13 +169,55 @@ const ArboriaPage = () => {
                 {Object.entries(emojiContagem)
                   .sort(([, a], [, b]) => b - a)
                   .map(([emoji, count]) => (
-                    <div key={emoji} className="flex flex-col items-center gap-1">
+                    <button
+                      key={emoji}
+                      onClick={() => setEmojiAberto(emojiAberto === emoji ? null : emoji)}
+                      className={cn(
+                        'flex flex-col items-center gap-1 px-2 py-1 rounded-xl transition-all',
+                        emojiAberto === emoji ? 'bg-white/10 scale-110' : 'hover:bg-white/5'
+                      )}
+                    >
                       <span className="text-[10px] text-white/40">{count}</span>
                       <span className="text-2xl">{emoji}</span>
-                    </div>
+                    </button>
                   ))}
               </div>
               <p className="text-[10px] text-white/25 text-center mt-2">{checkinsRecentes.length} check-ins nas ultimas 24h</p>
+
+              {/* Detalhes: quem colocou esse emoji */}
+              {emojiAberto && (
+                <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5">
+                  <p className="text-[10px] text-white/30 mb-2">Quem se sentiu {emojiAberto}:</p>
+                  {checkinsRecentes
+                    .filter(c => c.emoji === emojiAberto)
+                    .map((c, i) => {
+                      const alunoInfo = alunos.find(a => a.id === c.aluno_id);
+                      const casaInfo = alunoInfo ? getCasa(alunoInfo.casa_id) : null;
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => navigate(`/admin/arboria/aluno/${c.aluno_id}`)}
+                          className="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/[0.04] transition-colors text-left"
+                        >
+                          <div className="w-7 h-7 rounded-full overflow-hidden border shrink-0" style={{ borderColor: casaInfo?.cor_hex || '#444' }}>
+                            {alunoInfo?.avatar_url ? (
+                              <img src={alunoInfo.avatar_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="flex items-center justify-center w-full h-full text-[10px] text-white/40" style={{ backgroundColor: `${casaInfo?.cor_hex || '#444'}20` }}>
+                                {(alunoInfo?.nome || '?').charAt(0).toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-white truncate">{alunoInfo?.full_name || 'Aluno'}</p>
+                            <p className="text-[9px] text-white/25">{alunoInfo?.serie} - Turma {alunoInfo?.turma}</p>
+                          </div>
+                          {casaInfo && <span className="text-[9px]" style={{ color: casaInfo.cor_hex }}>{casaInfo.nome}</span>}
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
             </div>
           )}
 
