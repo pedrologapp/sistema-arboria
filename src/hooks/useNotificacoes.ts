@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,315 +17,178 @@ export interface NotificacoesPorSemana {
   aprovadas: number;
 }
 
-// Helper: extract numeric grade from serie string (e.g. "6º ano" → 6)
-const extractSerieNum = (serie?: string | null): number | null => {
-  if (!serie) return null;
-  const match = serie.replace(/[^0-9]/g, '');
-  return match ? parseInt(match, 10) : null;
-};
-
 export const useNotificacoes = () => {
   const { user } = useAuth();
   const { profile, casa } = useStudent();
   const queryClient = useQueryClient();
-  const serieNum = extractSerieNum(profile?.serie);
 
-  // 1. Contar missões pendentes — a RPC já filtra por fase ativa + série
-  const { data: missoesPendentes = 0 } = useQuery({
-    queryKey: ['count-missoes-pendentes', user?.id],
+  // === QUERY 1: Missões do aluno (chamada UMA vez, derivamos tudo) ===
+  const { data: missoesData } = useQuery({
+    queryKey: ['notif-missoes', user?.id],
     queryFn: async () => {
-      if (!user?.id) return 0;
-      
-      const { data: missoes, error } = await supabase.rpc('get_missoes_do_aluno', {
-        p_aluno_id: user.id,
-      });
-      
-      if (error || !missoes) return 0;
-      
-      const pendentes = missoes.filter((m: any) => {
-        return (!m.ja_entregou && !m.atrasada) || m.status_entrega === 'refazer';
-      });
-      
-      return pendentes.length;
+      if (!user?.id) return null;
+
+      const [missaoRes, aprovadasRes, missaoInfoRes] = await Promise.all([
+        supabase.rpc('get_missoes_do_aluno', { p_aluno_id: user.id }),
+        supabase
+          .from('entregas')
+          .select('missao_id')
+          .eq('aluno_id', user.id)
+          .eq('status', 'aprovada')
+          .eq('visualizada_pelo_aluno', false),
+        // Buscar fase_id e semana de todas as missões do aluno
+        supabase.rpc('get_missoes_do_aluno', { p_aluno_id: user.id }).then(async (res) => {
+          if (!res.data?.length) return { data: [] };
+          const ids = res.data.map((m: any) => m.id);
+          return supabase.from('missoes').select('id, fase_id, semana').in('id', ids);
+        }),
+      ]);
+
+      return {
+        missoes: missaoRes.data || [],
+        aprovadas: aprovadasRes.data || [],
+        missaoInfo: missaoInfoRes.data || [],
+      };
     },
     enabled: !!user?.id,
     staleTime: 120000,
     refetchInterval: 300000,
   });
 
-  // 2. Contar aprovadas não visualizadas
-  const { data: aprovadasNaoVistas = 0 } = useQuery({
-    queryKey: ['count-aprovadas-nao-vistas', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return 0;
-      
-      const { count, error } = await supabase
-        .from('entregas')
-        .select('*', { count: 'exact', head: true })
-        .eq('aluno_id', user.id)
-        .eq('status', 'aprovada')
-        .eq('visualizada_pelo_aluno', false);
-      
-      if (error) return 0;
-      return count || 0;
-    },
-    enabled: !!user?.id,
-    staleTime: 120000,
-    refetchInterval: 300000,
-  });
+  // Derivar todas as notificações de missões de uma única query
+  const { missoesPendentes, aprovadasNaoVistas, notificacoesPorFase, notificacoesPorSemana } = useMemo(() => {
+    if (!missoesData) return { missoesPendentes: 0, aprovadasNaoVistas: 0, notificacoesPorFase: [] as NotificacoesPorFase[], notificacoesPorSemana: [] as NotificacoesPorSemana[] };
 
-  // 3. Notificações detalhadas por fase (apenas fase ativa da série do aluno)
-  const { data: notificacoesPorFase = [] } = useQuery<NotificacoesPorFase[]>({
-    queryKey: ['notificacoes-por-fase', user?.id, profile?.institution_id, serieNum],
-    queryFn: async () => {
-      if (!user?.id || !profile?.institution_id) return [];
-      
-      // Buscar missões já filtradas pela RPC (fase ativa + série)
-      const { data: missoes, error: missaoError } = await supabase.rpc('get_missoes_do_aluno', {
-        p_aluno_id: user.id,
-      });
-      
-      if (missaoError || !missoes) return [];
-      
-      // Buscar entregas aprovadas não vistas
-      const { data: entregasAprovadas } = await supabase
-        .from('entregas')
-        .select('missao_id')
-        .eq('aluno_id', user.id)
-        .eq('status', 'aprovada')
-        .eq('visualizada_pelo_aluno', false);
-      
-      // Buscar info de fase de cada missão
-      const missaoIds = missoes.map((m: any) => m.id);
-      if (missaoIds.length === 0) return [];
-      
-      const { data: missaoFases } = await supabase
-        .from('missoes')
-        .select('id, fase_id')
-        .in('id', missaoIds);
-      
-      // Agrupar por fase_id
-      const faseMap = new Map<string, NotificacoesPorFase>();
-      
-      for (const m of missoes) {
-        const mf = missaoFases?.find(mf => mf.id === m.id);
-        if (!mf?.fase_id) continue;
-        
-        if (!faseMap.has(mf.fase_id)) {
-          faseMap.set(mf.fase_id, { faseId: mf.fase_id, pendentes: 0, aprovadas: 0 });
+    const { missoes, aprovadas, missaoInfo } = missoesData;
+    const aprovadasSet = new Set(aprovadas.map(a => a.missao_id));
+
+    let pendentes = 0;
+    const faseMap = new Map<string, NotificacoesPorFase>();
+    const semanaMap = new Map<string, NotificacoesPorSemana>();
+
+    for (const m of missoes) {
+      const isPendente = (!m.ja_entregou && !m.atrasada) || m.status_entrega === 'refazer';
+      const isAprovada = aprovadasSet.has(m.id);
+      const info = missaoInfo.find((mi: any) => mi.id === m.id);
+
+      if (isPendente) pendentes++;
+
+      if (info?.fase_id) {
+        // Por fase
+        if (!faseMap.has(info.fase_id)) {
+          faseMap.set(info.fase_id, { faseId: info.fase_id, pendentes: 0, aprovadas: 0 });
         }
-        
-        const entry = faseMap.get(mf.fase_id)!;
-        
-        if ((!m.ja_entregou && !m.atrasada) || m.status_entrega === 'refazer') {
-          entry.pendentes++;
-        }
-        
-        if (entregasAprovadas?.some(e => e.missao_id === m.id)) {
-          entry.aprovadas++;
+        const fEntry = faseMap.get(info.fase_id)!;
+        if (isPendente) fEntry.pendentes++;
+        if (isAprovada) fEntry.aprovadas++;
+
+        // Por semana
+        if (info.semana != null) {
+          const key = `${info.fase_id}_${info.semana}`;
+          if (!semanaMap.has(key)) {
+            semanaMap.set(key, { faseId: info.fase_id, semana: info.semana, pendentes: 0, aprovadas: 0 });
+          }
+          const sEntry = semanaMap.get(key)!;
+          if (isPendente) sEntry.pendentes++;
+          if (isAprovada) sEntry.aprovadas++;
         }
       }
-      
-      return Array.from(faseMap.values());
-    },
-    enabled: !!user?.id && !!profile?.institution_id,
-    staleTime: 120000,
-    refetchInterval: 300000,
-  });
+    }
 
-  // 4. Notificações detalhadas por semana (apenas fase ativa da série do aluno)
-  const { data: notificacoesPorSemana = [] } = useQuery<NotificacoesPorSemana[]>({
-    queryKey: ['notificacoes-por-semana', user?.id, profile?.institution_id, serieNum],
-    queryFn: async () => {
-      if (!user?.id || !profile?.institution_id) return [];
-      
-      // Buscar missões já filtradas pela RPC
-      const { data: missoes, error: missaoError } = await supabase.rpc('get_missoes_do_aluno', {
-        p_aluno_id: user.id,
-      });
-      
-      if (missaoError || !missoes) return [];
-      
-      // Buscar entregas aprovadas não vistas
-      const { data: entregasAprovadas } = await supabase
-        .from('entregas')
-        .select('missao_id')
-        .eq('aluno_id', user.id)
-        .eq('status', 'aprovada')
-        .eq('visualizada_pelo_aluno', false);
-      
-      // Buscar info de fase e semana de cada missão
-      const missaoIds = missoes.map((m: any) => m.id);
-      if (missaoIds.length === 0) return [];
-      
-      const { data: missaoInfo } = await supabase
-        .from('missoes')
-        .select('id, fase_id, semana')
-        .in('id', missaoIds);
-      
-      // Agrupar por fase_id + semana
-      const semanaMap = new Map<string, NotificacoesPorSemana>();
-      
-      for (const m of missoes) {
-        const mi = missaoInfo?.find(mi => mi.id === m.id);
-        if (!mi?.fase_id || mi.semana == null) continue;
-        
-        const key = `${mi.fase_id}_${mi.semana}`;
-        
-        if (!semanaMap.has(key)) {
-          semanaMap.set(key, { 
-            faseId: mi.fase_id, 
-            semana: mi.semana, 
-            pendentes: 0, 
-            aprovadas: 0 
-          });
-        }
-        
-        const entry = semanaMap.get(key)!;
-        
-        if ((!m.ja_entregou && !m.atrasada) || m.status_entrega === 'refazer') {
-          entry.pendentes++;
-        }
-        
-        if (entregasAprovadas?.some(e => e.missao_id === m.id)) {
-          entry.aprovadas++;
-        }
-      }
-      
-      return Array.from(semanaMap.values());
-    },
-    enabled: !!user?.id && !!profile?.institution_id,
-    staleTime: 120000,
-    refetchInterval: 300000,
-  });
+    return {
+      missoesPendentes: pendentes,
+      aprovadasNaoVistas: aprovadas.length,
+      notificacoesPorFase: Array.from(faseMap.values()),
+      notificacoesPorSemana: Array.from(semanaMap.values()),
+    };
+  }, [missoesData]);
 
-  // 5. Contar mensagens não lidas nos canais
-  const { data: canaisNaoLidos = 0 } = useQuery({
-    queryKey: ['count-canais-nao-lidos', profile?.id, casa?.id, profile?.institution_id],
+  // === QUERY 2: Mensagens não lidas (canais + DMs em UMA query cada, sem N+1) ===
+  const { data: mensagensNaoLidas = 0 } = useQuery({
+    queryKey: ['notif-mensagens', profile?.id, casa?.id, profile?.institution_id],
     queryFn: async () => {
       if (!profile?.id || !casa?.id || !profile?.institution_id) return 0;
 
-      // Buscar TODOS os canais visiveis: da casa + escola + conselho
-      const { data: canaisCasa } = await supabase
-        .from('canais_casa')
-        .select('id')
-        .eq('casa_id', casa.id);
+      // Buscar canais e leituras em paralelo
+      const [canaisCasaRes, canaisEscolaRes, leiturasRes, participacoesRes] = await Promise.all([
+        supabase.from('canais_casa').select('id').eq('casa_id', casa.id),
+        supabase.from('canais_casa').select('id').eq('institution_id', profile.institution_id).in('tipo', ['escola_avisos', 'escola_geral', 'conselho_lideres']),
+        supabase.from('canal_leituras').select('canal_id, ultima_leitura').eq('usuario_id', profile.id),
+        supabase.from('conversa_participantes').select('conversa_id, ultima_leitura, conversa:conversas_privadas(updated_at)').eq('usuario_id', profile.id),
+      ]);
 
-      const { data: canaisEscola } = await supabase
-        .from('canais_casa')
-        .select('id')
-        .eq('institution_id', profile.institution_id)
-        .in('tipo', ['escola_avisos', 'escola_geral', 'conselho_lideres']);
-
-      const todosCanais = [...(canaisCasa || []), ...(canaisEscola || [])];
-      // Deduplicate
+      // --- Canais não lidos (sem N+1) ---
+      const todosCanais = [...(canaisCasaRes.data || []), ...(canaisEscolaRes.data || [])];
       const canaisUnicos = [...new Map(todosCanais.map(c => [c.id, c])).values()];
 
-      if (!canaisUnicos.length) return 0;
+      let totalCanais = 0;
+      if (canaisUnicos.length > 0) {
+        const canalIds = canaisUnicos.map(c => c.id);
+        const leituraMap = new Map((leiturasRes.data || []).map(l => [l.canal_id, l.ultima_leitura]));
 
-      const { data: leituras } = await supabase
-        .from('canal_leituras')
-        .select('canal_id, ultima_leitura')
-        .eq('usuario_id', profile.id);
+        // Buscar TODAS as mensagens recentes dos canais em UMA query
+        const minLeitura = [...leituraMap.values()].reduce((min, d) => d < min ? d : min, new Date().toISOString());
+        const fallbackDate = leituraMap.size > 0 ? minLeitura : '1970-01-01';
 
-      let total = 0;
-
-      for (const canal of canaisUnicos) {
-        const leitura = leituras?.find(l => l.canal_id === canal.id);
-        const ultimaLeitura = leitura?.ultima_leitura || '1970-01-01';
-
-        const { count } = await supabase
+        const { data: mensagensRecentes } = await supabase
           .from('mensagens_canal')
-          .select('*', { count: 'exact', head: true })
-          .eq('canal_id', canal.id)
-          .gt('created_at', ultimaLeitura)
+          .select('canal_id, created_at')
+          .in('canal_id', canalIds)
+          .gt('created_at', fallbackDate)
           .neq('autor_id', profile.id);
 
-        total += count || 0;
-      }
-
-      return total;
-    },
-    enabled: !!profile?.id && !!casa?.id && !!profile?.institution_id,
-    staleTime: 30000,
-  });
-
-  // 6. Contar DMs não lidas
-  const { data: dmsNaoLidas = 0 } = useQuery({
-    queryKey: ['count-dms-nao-lidas', profile?.id],
-    queryFn: async () => {
-      if (!profile?.id) return 0;
-      
-      const { data: participacoes } = await supabase
-        .from('conversa_participantes')
-        .select(`
-          conversa_id,
-          ultima_leitura,
-          conversa:conversas_privadas(updated_at)
-        `)
-        .eq('usuario_id', profile.id);
-      
-      if (!participacoes) return 0;
-      
-      let count = 0;
-      for (const p of participacoes) {
-        const ultimaLeitura = new Date(p.ultima_leitura || '1970-01-01');
-        const conversaData = p.conversa as { updated_at: string | null } | null;
-        const ultimaMsg = new Date(conversaData?.updated_at || '1970-01-01');
-        
-        if (ultimaMsg > ultimaLeitura) {
-          count++;
+        // Contar por canal comparando com leitura individual
+        if (mensagensRecentes) {
+          for (const msg of mensagensRecentes) {
+            const ultimaLeitura = leituraMap.get(msg.canal_id) || '1970-01-01';
+            if (msg.created_at > ultimaLeitura) {
+              totalCanais++;
+            }
+          }
         }
       }
-      
-      return count;
+
+      // --- DMs não lidas ---
+      let totalDms = 0;
+      if (participacoesRes.data) {
+        for (const p of participacoesRes.data) {
+          const ultimaLeitura = new Date(p.ultima_leitura || '1970-01-01');
+          const conversaData = p.conversa as { updated_at: string | null } | null;
+          const ultimaMsg = new Date(conversaData?.updated_at || '1970-01-01');
+          if (ultimaMsg > ultimaLeitura) totalDms++;
+        }
+      }
+
+      return totalCanais + totalDms;
     },
-    enabled: !!profile?.id,
-    staleTime: 30000,
+    enabled: !!profile?.id && !!casa?.id && !!profile?.institution_id,
+    staleTime: 60000,
   });
 
   // Real-time: escutar novas mensagens e entregas
   useEffect(() => {
     if (!profile?.id) return;
-    
+
     const channel = supabase
       .channel('nav-notifications')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'mensagens_canal'
-      }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens_canal' }, (payload) => {
         if (payload.new.autor_id !== profile.id) {
-          queryClient.invalidateQueries({ queryKey: ['count-canais-nao-lidos'] });
+          queryClient.invalidateQueries({ queryKey: ['notif-mensagens'] });
         }
       })
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'mensagens_privadas'
-      }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens_privadas' }, (payload) => {
         if (payload.new.autor_id !== profile.id) {
-          queryClient.invalidateQueries({ queryKey: ['count-dms-nao-lidas'] });
+          queryClient.invalidateQueries({ queryKey: ['notif-mensagens'] });
         }
       })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'entregas'
-      }, () => {
-        queryClient.invalidateQueries({ queryKey: ['count-aprovadas-nao-vistas'] });
-        queryClient.invalidateQueries({ queryKey: ['notificacoes-por-fase'] });
-        queryClient.invalidateQueries({ queryKey: ['notificacoes-por-semana'] });
-        queryClient.invalidateQueries({ queryKey: ['count-missoes-pendentes'] });
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'entregas' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['notif-missoes'] });
       })
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [profile?.id, queryClient]);
 
-  // Helpers para buscar notificações específicas
   const getNotificacoesFase = (faseId: string): NotificacoesPorFase | null => {
     return notificacoesPorFase.find(n => n.faseId === faseId) || null;
   };
@@ -337,7 +200,7 @@ export const useNotificacoes = () => {
   return {
     missoesPendentes,
     aprovadasNaoVistas,
-    mensagensNaoLidas: canaisNaoLidos + dmsNaoLidas,
+    mensagensNaoLidas,
     notificacoesPorFase,
     notificacoesPorSemana,
     getNotificacoesFase,

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,87 +12,98 @@ import ProfessorProtectedRoute from "@/components/ProfessorProtectedRoute";
 import { AdminLayout } from "@/components/AdminLayout";
 import StudentLayout from "@/layouts/StudentLayout";
 import ProfessorLayout from "@/layouts/ProfessorLayout";
+
+// Páginas essenciais (eager — sempre carregam)
 import Index from "./pages/Index";
 import Login from "./pages/Login";
-import Setup from "./pages/Setup";
-import Dashboard from "./pages/Dashboard";
-import AlterarSenha from "./pages/AlterarSenha";
-import RecoverAdmin from "./pages/RecoverAdmin";
-import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
-// Admin pages
-import MonitorPage from "./pages/admin/MonitorPage";
-import PessoasPage from "./pages/admin/PessoasPage";
-import PerfilAlunoAdminPage from "./pages/admin/PerfilAlunoAdminPage";
-import PerfilProfessorAdminPage from "./pages/admin/PerfilProfessorAdminPage";
-import CasasPage from "./pages/admin/CasasPage";
-import FasesPage from "./pages/admin/FasesPage";
-import FaseDetalhesPage from "./pages/admin/FaseDetalhesPage";
-import FaseNovaPage from "./pages/admin/FaseNovaPage";
-import RelatoriosPage from "./pages/admin/RelatoriosPage";
-import ConfigPage from "./pages/admin/ConfigPage";
-import ConteudoAdminPage from "./pages/admin/ConteudoAdminPage";
-import ConteudoInteligenciaAdminPage from "./pages/admin/ConteudoInteligenciaAdminPage";
-import AdminChatPage from "./pages/admin/AdminChatPage";
-import AdminCanalChatPage from "./pages/admin/AdminCanalChatPage";
-import AtividadesPage from "./pages/admin/AtividadesPage";
-import DadosPage from "./pages/admin/DadosPage";
-import ArboriaPage from "./pages/admin/ArboriaPage";
-import RegistroVivoPage from "./pages/admin/RegistroVivoPage";
+// Páginas comuns (lazy)
+const Setup = lazy(() => import("./pages/Setup"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const AlterarSenha = lazy(() => import("./pages/AlterarSenha"));
+const RecoverAdmin = lazy(() => import("./pages/RecoverAdmin"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
-// Aluno pages
-import HomePage from "./pages/aluno/HomePage";
-import MissoesPage from "./pages/aluno/MissoesPage";
-import MissoesFasePage from "./pages/aluno/MissoesFasePage";
-import MissoesSemanaPageAluno from "./pages/aluno/MissoesSemanaPage";
-import MissoesCasaPage from "./pages/aluno/MissoesCasaPage";
-import MissaoDetalhePage from "./pages/aluno/MissaoDetalhePage";
-import CasaPage from "./pages/aluno/CasaPage";
-import ChatPage from "./pages/aluno/ChatPage";
-import CanalChatPage from "./pages/aluno/CanalChatPage";
-import DmChatPage from "./pages/aluno/DmChatPage";
-import MembrosPage from "./pages/aluno/MembrosPage";
-import PerfilPage from "./pages/aluno/PerfilPage";
-import ConfiguracoesPage from "./pages/aluno/ConfiguracoesPage";
-import DashboardLiderPage from "./pages/aluno/DashboardLiderPage";
-import ConquistasPage from "./pages/aluno/ConquistasPage";
+// Admin pages (lazy)
+const MonitorPage = lazy(() => import("./pages/admin/MonitorPage"));
+const PessoasPage = lazy(() => import("./pages/admin/PessoasPage"));
+const PerfilAlunoAdminPage = lazy(() => import("./pages/admin/PerfilAlunoAdminPage"));
+const PerfilProfessorAdminPage = lazy(() => import("./pages/admin/PerfilProfessorAdminPage"));
+const CasasPage = lazy(() => import("./pages/admin/CasasPage"));
+const FasesPage = lazy(() => import("./pages/admin/FasesPage"));
+const FaseDetalhesPage = lazy(() => import("./pages/admin/FaseDetalhesPage"));
+const FaseNovaPage = lazy(() => import("./pages/admin/FaseNovaPage"));
+const RelatoriosPage = lazy(() => import("./pages/admin/RelatoriosPage"));
+const ConfigPage = lazy(() => import("./pages/admin/ConfigPage"));
+const ConteudoAdminPage = lazy(() => import("./pages/admin/ConteudoAdminPage"));
+const ConteudoInteligenciaAdminPage = lazy(() => import("./pages/admin/ConteudoInteligenciaAdminPage"));
+const AdminChatPage = lazy(() => import("./pages/admin/AdminChatPage"));
+const AdminCanalChatPage = lazy(() => import("./pages/admin/AdminCanalChatPage"));
+const AtividadesPage = lazy(() => import("./pages/admin/AtividadesPage"));
+const DadosPage = lazy(() => import("./pages/admin/DadosPage"));
+const ArboriaPage = lazy(() => import("./pages/admin/ArboriaPage"));
+const RegistroVivoPage = lazy(() => import("./pages/admin/RegistroVivoPage"));
 
-// Professor pages
-import ProfessorDashboardWrapper from "./pages/professor/ProfessorDashboardWrapper";
-import MapaDesenvolvimentoPage from "./pages/professor/MapaDesenvolvimentoPage";
-import ProfessorMissoesPage from "./pages/professor/MissoesPage";
-import NovaMissaoPage from "./pages/professor/NovaMissaoPage";
-import EditarMissaoPage from "./pages/professor/EditarMissaoPage";
-import MissaoDetalhesPage from "./pages/professor/MissaoDetalhesPage";
-import EntregasPage from "./pages/professor/EntregasPage";
-import AvaliarEntregaPage from "./pages/professor/AvaliarEntregaPage";
-import CirculoPage from "./pages/professor/CirculoPage";
-import CirculoTurmaPage from "./pages/professor/circulo/CirculoTurmaPage";
-import CirculoTurmaDirectPage from "./pages/professor/circulo/CirculoTurmaDirectPage";
-import CirculoAlunosPage from "./pages/professor/circulo/CirculoAlunosPage";
-import CirculoRegistrarPage from "./pages/professor/circulo/CirculoRegistrarPage";
-import CirculoRegistrarMultiplosPage from "./pages/professor/circulo/CirculoRegistrarMultiplosPage";
-import CirculoPessoalPage from "./pages/professor/circulo/CirculoPessoalPage";
-import AlunosPageWrapper from "./pages/professor/AlunosPageWrapper";
-import PerfilAlunoPageWrapper from "./pages/professor/PerfilAlunoPageWrapper";
-import ProfessorConfiguracoesPage from "./pages/professor/ProfessorConfiguracoesPage";
-import MissoesSeriePage from "./pages/professor/MissoesSeriePage";
-import MissoesSemanaPage from "./pages/professor/MissoesSemanaPage";
-import MissoesListaPage from "./pages/professor/MissoesListaPage";
-import AlunosPorTipoPage from "./pages/professor/AlunosPorTipoPage";
-import AlunoMissoesPage from "./pages/professor/AlunoMissoesPage";
-import EntregasSeriePage from "./pages/professor/EntregasSeriePage";
-import EntregasSemanaPage from "./pages/professor/EntregasSemanaPage";
-import EntregasMissaoListaPage from "./pages/professor/EntregasMissaoListaPage";
-import EntregasMissaoPage from "./pages/professor/EntregasMissaoPage";
-import EntregasAlunoPage from "./pages/professor/EntregasAlunoPage";
-import ProfessorChatPage from "./pages/professor/ProfessorChatPage";
-import ProfessorCanalViewPage from "./pages/professor/ProfessorCanalViewPage";
-import ProfessorDmPage from "./pages/professor/ProfessorDmPage";
-import ConteudoPage from "./pages/professor/ConteudoPage";
-import ConteudoGeralPage from "./pages/professor/ConteudoGeralPage";
-import ConteudoInteligenciaPage from "./pages/professor/ConteudoInteligenciaPage";
+// Aluno pages (lazy)
+const HomePage = lazy(() => import("./pages/aluno/HomePage"));
+const MissoesPage = lazy(() => import("./pages/aluno/MissoesPage"));
+const MissoesFasePage = lazy(() => import("./pages/aluno/MissoesFasePage"));
+const MissoesSemanaPageAluno = lazy(() => import("./pages/aluno/MissoesSemanaPage"));
+const MissoesCasaPage = lazy(() => import("./pages/aluno/MissoesCasaPage"));
+const MissaoDetalhePage = lazy(() => import("./pages/aluno/MissaoDetalhePage"));
+const CasaPage = lazy(() => import("./pages/aluno/CasaPage"));
+const ChatPage = lazy(() => import("./pages/aluno/ChatPage"));
+const CanalChatPage = lazy(() => import("./pages/aluno/CanalChatPage"));
+const DmChatPage = lazy(() => import("./pages/aluno/DmChatPage"));
+const MembrosPage = lazy(() => import("./pages/aluno/MembrosPage"));
+const PerfilPage = lazy(() => import("./pages/aluno/PerfilPage"));
+const ConfiguracoesPage = lazy(() => import("./pages/aluno/ConfiguracoesPage"));
+const DashboardLiderPage = lazy(() => import("./pages/aluno/DashboardLiderPage"));
+const ConquistasPage = lazy(() => import("./pages/aluno/ConquistasPage"));
+
+// Professor pages (lazy)
+const ProfessorDashboardWrapper = lazy(() => import("./pages/professor/ProfessorDashboardWrapper"));
+const MapaDesenvolvimentoPage = lazy(() => import("./pages/professor/MapaDesenvolvimentoPage"));
+const ProfessorMissoesPage = lazy(() => import("./pages/professor/MissoesPage"));
+const NovaMissaoPage = lazy(() => import("./pages/professor/NovaMissaoPage"));
+const EditarMissaoPage = lazy(() => import("./pages/professor/EditarMissaoPage"));
+const MissaoDetalhesPage = lazy(() => import("./pages/professor/MissaoDetalhesPage"));
+const EntregasPage = lazy(() => import("./pages/professor/EntregasPage"));
+const AvaliarEntregaPage = lazy(() => import("./pages/professor/AvaliarEntregaPage"));
+const CirculoPage = lazy(() => import("./pages/professor/CirculoPage"));
+const CirculoTurmaPage = lazy(() => import("./pages/professor/circulo/CirculoTurmaPage"));
+const CirculoTurmaDirectPage = lazy(() => import("./pages/professor/circulo/CirculoTurmaDirectPage"));
+const CirculoAlunosPage = lazy(() => import("./pages/professor/circulo/CirculoAlunosPage"));
+const CirculoRegistrarPage = lazy(() => import("./pages/professor/circulo/CirculoRegistrarPage"));
+const CirculoRegistrarMultiplosPage = lazy(() => import("./pages/professor/circulo/CirculoRegistrarMultiplosPage"));
+const CirculoPessoalPage = lazy(() => import("./pages/professor/circulo/CirculoPessoalPage"));
+const AlunosPageWrapper = lazy(() => import("./pages/professor/AlunosPageWrapper"));
+const PerfilAlunoPageWrapper = lazy(() => import("./pages/professor/PerfilAlunoPageWrapper"));
+const ProfessorConfiguracoesPage = lazy(() => import("./pages/professor/ProfessorConfiguracoesPage"));
+const MissoesSeriePage = lazy(() => import("./pages/professor/MissoesSeriePage"));
+const MissoesSemanaPage = lazy(() => import("./pages/professor/MissoesSemanaPage"));
+const MissoesListaPage = lazy(() => import("./pages/professor/MissoesListaPage"));
+const AlunosPorTipoPage = lazy(() => import("./pages/professor/AlunosPorTipoPage"));
+const AlunoMissoesPage = lazy(() => import("./pages/professor/AlunoMissoesPage"));
+const EntregasSeriePage = lazy(() => import("./pages/professor/EntregasSeriePage"));
+const EntregasSemanaPage = lazy(() => import("./pages/professor/EntregasSemanaPage"));
+const EntregasMissaoListaPage = lazy(() => import("./pages/professor/EntregasMissaoListaPage"));
+const EntregasMissaoPage = lazy(() => import("./pages/professor/EntregasMissaoPage"));
+const EntregasAlunoPage = lazy(() => import("./pages/professor/EntregasAlunoPage"));
+const ProfessorChatPage = lazy(() => import("./pages/professor/ProfessorChatPage"));
+const ProfessorCanalViewPage = lazy(() => import("./pages/professor/ProfessorCanalViewPage"));
+const ProfessorDmPage = lazy(() => import("./pages/professor/ProfessorDmPage"));
+const ConteudoPage = lazy(() => import("./pages/professor/ConteudoPage"));
+const ConteudoGeralPage = lazy(() => import("./pages/professor/ConteudoGeralPage"));
+const ConteudoInteligenciaPage = lazy(() => import("./pages/professor/ConteudoInteligenciaPage"));
+
+// Loading fallback
+const PageLoader = () => (
+  <div className="min-h-screen bg-[#1A1A2E] flex items-center justify-center">
+    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-violet-500" />
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -103,6 +115,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <ScrollToTop />
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
@@ -630,6 +643,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
