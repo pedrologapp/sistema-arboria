@@ -386,6 +386,30 @@ const MonitorPage = () => {
     staleTime: 60000,
   });
 
+  // Contagem de logins por aluno hoje
+  const { data: loginsCountMap = {} } = useQuery({
+    queryKey: ['monitor-logins-count', hojeStr, todosAlunos.length],
+    queryFn: async () => {
+      if (!todosAlunos.length) return {};
+      const alunoIds = todosAlunos.map(a => a.id);
+      const map: Record<string, number> = {};
+      for (let i = 0; i < alunoIds.length; i += 50) {
+        const batch = alunoIds.slice(i, i + 50);
+        const { data } = await supabase
+          .from('activity_logs' as any)
+          .select('user_id')
+          .eq('action', 'login')
+          .gte('created_at', `${hojeStr}T00:00:00`)
+          .in('user_id', batch);
+        (data || []).forEach((d: any) => { if (d.user_id) map[d.user_id] = (map[d.user_id] || 0) + 1; });
+      }
+      return map;
+    },
+    enabled: todosAlunos.length > 0,
+    staleTime: 60000,
+    refetchInterval: 60000,
+  });
+
   // Cargos (líderes e coordenadores)
   const { data: cargosMap = {} } = useQuery({
     queryKey: ['monitor-cargos', institutionId],
@@ -703,6 +727,7 @@ const MonitorPage = () => {
                     <div className="flex flex-wrap gap-1.5 px-1">
                       {grupo.alunos.map(a => {
                         const logou = logouHojeSet.has(a.id);
+                        const loginCount = (loginsCountMap as Record<string, number>)[a.id] || 0;
                         return (
                           <div key={a.id} className="relative group">
                             <div className={cn(
@@ -720,8 +745,10 @@ const MonitorPage = () => {
                                 </span>
                               )}
                             </div>
-                            {logou && (
-                              <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#1A1A2E]" />
+                            {loginCount > 0 && (
+                              <div className="absolute -top-1 -right-1 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-emerald-500 border-[1.5px] border-[#1A1A2E] text-[8px] font-bold text-white px-0.5">
+                                {loginCount}
+                              </div>
                             )}
                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 rounded bg-black/95 text-[9px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 text-center">
                               <p>{a.full_name || a.nome || '?'}</p>
@@ -729,6 +756,9 @@ const MonitorPage = () => {
                                 <p className="text-white/50 mt-0.5">
                                   {new Date(a.ultima_atividade).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} às {new Date(a.ultima_atividade).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                 </p>
+                              )}
+                              {loginCount > 0 && (
+                                <p className="text-emerald-400/70 mt-0.5">{loginCount}x hoje</p>
                               )}
                             </div>
                           </div>
