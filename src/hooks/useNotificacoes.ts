@@ -112,7 +112,7 @@ export const useNotificacoes = () => {
       // Buscar canais e leituras em paralelo
       const [canaisCasaRes, canaisEscolaRes, leiturasRes, participacoesRes] = await Promise.all([
         supabase.from('canais_casa').select('id').eq('casa_id', casa.id),
-        supabase.from('canais_casa').select('id').eq('institution_id', profile.institution_id).in('tipo', ['escola_avisos', 'escola_geral', 'conselho_lideres']),
+        supabase.from('canais_casa').select('id').eq('institution_id', profile.institution_id).in('tipo', ['escola_avisos', 'conselho_lideres']),
         supabase.from('canal_leituras').select('canal_id, ultima_leitura').eq('usuario_id', profile.id),
         supabase.from('conversa_participantes').select('conversa_id, ultima_leitura, conversa:conversas_privadas(updated_at)').eq('usuario_id', profile.id),
       ]);

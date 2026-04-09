@@ -7,6 +7,8 @@ interface Membro {
   full_name: string | null;
   avatar_url: string | null;
   ultima_atividade: string | null;
+  serie?: string | null;
+  turma?: string | null;
   cargos_casa?: { cargo: string; ativo: boolean }[];
 }
 
@@ -19,75 +21,72 @@ interface MembroCardProps {
   hideStatus?: boolean;
 }
 
-const CARGO_EMOJI: Record<string, string> = {
-  lider: '🦅 Líder',
-  vice: '👑 Vice-Líder',
-  coordenador: '⭐ Coordenador',
-  embaixador: '🌍 Embaixador',
+const CARGO_LABEL: Record<string, string> = {
+  lider: 'Lider',
+  vice: 'Vice',
+  coordenador: 'Coord',
+  embaixador: 'Emb',
 };
 
-export const MembroCard = ({ membro, isMe, onIniciarConversa, temDmNaoLida = false, hideStatus = false }: MembroCardProps) => {
+const CARGO_EMOJI: Record<string, string> = {
+  lider: '🦅',
+  coordenador: '⭐',
+  embaixador: '🌍',
+};
+
+export const MembroCard = ({ membro, isMe, onIniciarConversa, casaColor, temDmNaoLida = false, hideStatus = false }: MembroCardProps) => {
   const status = getStatusOnline(membro.ultima_atividade);
-  const nomeExibido = (membro.nome && membro.sobrenome) 
-    ? `${membro.nome} ${membro.sobrenome}` 
-    : membro.full_name || membro.nome || 'Usuário';
+  const partes = (membro.full_name || membro.nome || 'Usuario').trim().split(/\s+/);
+  const nomeCurto = partes.length <= 2 ? partes.join(' ') : `${partes[0]} ${partes[1]}`;
   const cargoAtivo = membro.cargos_casa?.find(c => c.ativo);
-  const cargoLabel = cargoAtivo?.cargo ? CARGO_EMOJI[cargoAtivo.cargo] : null;
+  const cargoKey = cargoAtivo?.cargo;
+  const serieNum = membro.serie?.replace(/\D/g, '') || '';
 
   return (
-    <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/5 transition-colors">
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        {/* Status indicator - hidden for mentors/professors */}
-        {!hideStatus && (
-          <div 
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ backgroundColor: status.cor }}
-          />
-        )}
-        
-        {/* Avatar pequeno */}
-        {membro.avatar_url ? (
-          <img 
-            src={membro.avatar_url} 
-            alt={nomeExibido}
-            className="w-6 h-6 rounded-full object-cover flex-shrink-0"
-          />
-        ) : (
-          <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs text-white/70 flex-shrink-0">
-            {nomeExibido.charAt(0).toUpperCase()}
-          </div>
-        )}
-        
-        {/* Nome + Cargo na mesma linha */}
-        <span className="text-white text-sm truncate">{nomeExibido}</span>
-        
-        {cargoLabel && (
-          <span className="text-white/60 text-sm flex-shrink-0">
-            {cargoLabel}
-          </span>
-        )}
-        
-        {isMe && (
-          <span className="text-white/40 text-xs flex-shrink-0">(você)</span>
+    <button
+      onClick={() => !isMe && onIniciarConversa(membro.id)}
+      disabled={isMe}
+      className="w-full flex items-center gap-2 py-1.5 px-2.5 hover:bg-white/[0.06] transition-colors text-left disabled:hover:bg-transparent"
+    >
+      {/* Avatar + status */}
+      <div className="relative shrink-0">
+        <div className="w-7 h-7 rounded-full overflow-hidden bg-white/10">
+          {membro.avatar_url ? (
+            <img src={membro.avatar_url} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <span className="flex items-center justify-center w-full h-full text-[10px] text-white/50">
+              {nomeCurto.charAt(0).toUpperCase()}
+            </span>
+          )}
+        </div>
+        {!hideStatus && status.status === 'online' && (
+          <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500 border-[1.5px] border-[#1A1A2E]" />
         )}
       </div>
-      
-      {/* Botão DM */}
-      {!isMe && (
-        <button 
-          onClick={() => {
-            console.log('🔵 Botão DM clicado! Membro:', membro.id, nomeExibido);
-            onIniciarConversa(membro.id);
-          }}
-          className="relative p-1.5 rounded hover:bg-white/10 text-white/60 hover:text-white transition-colors flex-shrink-0"
-        >
-          💬
-          {/* Badge de não lida */}
-          {temDmNaoLida && (
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full" />
-          )}
-        </button>
+
+      {/* Nome + serie */}
+      <div className="flex-1 min-w-0 flex items-center gap-1.5">
+        <span className="text-xs text-white/80 truncate">{nomeCurto}</span>
+        {isMe && <span className="text-[9px] text-white/30">(voce)</span>}
+        {serieNum && <span className="text-[9px] text-white/25 shrink-0">{serieNum}º{membro.turma || ''}</span>}
+      </div>
+
+      {/* Cargo */}
+      {cargoKey && CARGO_LABEL[cargoKey] && (
+        <span className="text-[9px] text-white/40 shrink-0">
+          {CARGO_EMOJI[cargoKey]} {CARGO_LABEL[cargoKey]}
+        </span>
       )}
-    </div>
+
+      {/* DM icon */}
+      {!isMe && (
+        <div className="relative shrink-0">
+          <span className="text-[11px] text-white/30">💬</span>
+          {temDmNaoLida && (
+            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+          )}
+        </div>
+      )}
+    </button>
   );
 };

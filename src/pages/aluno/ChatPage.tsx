@@ -351,6 +351,7 @@ const ChatPage = () => {
             <span className={cn('text-xs truncate', badge ? 'text-white font-medium' : 'text-white/70')}>
               {getNomeCurto(membro)}
             </span>
+            {membro.serie && <span className="text-[9px] text-white/25 shrink-0">{membro.serie?.replace(/\D/g, '')}º{membro.turma || ''}</span>}
             {label && <span className="text-[9px] text-violet-400/50">{label}</span>}
           </div>
         </div>

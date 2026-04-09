@@ -221,8 +221,11 @@ const DashboardLiderPage = () => {
         </p>
       </div>
 
-      {/* Reportar ao mentor */}
-      <ReportarMentor userId={profile?.id} institutionId={profile?.institution_id} casaId={casa?.id} casaColor={casaColor} />
+      {/* Reportar ao mentor/lider */}
+      <ReportarMentor userId={profile?.id} institutionId={profile?.institution_id} casaId={casa?.id} casaColor={casaColor} cargo={meuCargo} />
+
+      {/* Reportes dos coordenadores (só para líder) */}
+      {isLider && <ReportesCoordSection institutionId={profile?.institution_id} casaId={casa?.id} casaColor={casaColor} />}
 
       {/* Atencao agora */}
       <div>
@@ -437,25 +440,93 @@ const DashboardLiderPage = () => {
 };
 
 // === Reportar ao Mentor ===
-const ReportarMentor = ({ userId, institutionId, casaId, casaColor }: {
+// Seção para o líder ver reportes dos coordenadores
+const ReportesCoordSection = ({ institutionId, casaId, casaColor }: {
+  institutionId?: string;
+  casaId?: number;
+  casaColor: string;
+}) => {
+  const { data: reportes = [] } = useQuery({
+    queryKey: ['reportes-coord', institutionId, casaId],
+    queryFn: async () => {
+      if (!institutionId || !casaId) return [];
+      const { data } = await supabase
+        .from('reportes_mentor' as any)
+        .select('*, aluno:profiles!reportes_mentor_aluno_id_fkey(nome, full_name, serie, turma, avatar_url)')
+        .eq('institution_id', institutionId)
+        .eq('casa_id', casaId)
+        .eq('tipo', 'para_lider')
+        .eq('status', 'aberto')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      return data || [];
+    },
+    enabled: !!institutionId && !!casaId,
+    staleTime: 30000,
+  });
+
+  if (reportes.length === 0) return null;
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3 px-1">
+        <div className="w-1 h-3.5 rounded-full bg-orange-500" />
+        <p className="text-[10px] font-semibold text-orange-400/80 uppercase tracking-widest">Relatos dos Coordenadores</p>
+        <span className="text-[10px] text-orange-400 font-medium ml-1">{reportes.length}</span>
+      </div>
+      <div className="space-y-2">
+        {reportes.map((r: any) => {
+          const aluno = r.aluno as any;
+          const nome = aluno?.full_name?.split(/\s+/).slice(0, 2).join(' ') || 'Coordenador';
+          const hora = new Date(r.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          const dia = new Date(r.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+          return (
+            <div key={r.id} className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20">
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="w-6 h-6 rounded-full overflow-hidden bg-white/10 shrink-0">
+                  {aluno?.avatar_url ? <img src={aluno.avatar_url} alt="" className="w-full h-full object-cover" /> :
+                  <span className="flex items-center justify-center w-full h-full text-[9px] text-white/50">{(aluno?.nome || '?').charAt(0).toUpperCase()}</span>}
+                </div>
+                <span className="text-xs text-white/70 font-medium">{nome}</span>
+                <span className="text-[9px] text-white/25">{aluno?.serie} {aluno?.turma}</span>
+                <span className="text-[9px] text-white/20 ml-auto">{dia} {hora}</span>
+              </div>
+              <p className="text-xs text-white/60 leading-relaxed">{r.texto}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const ReportarMentor = ({ userId, institutionId, casaId, casaColor, cargo }: {
   userId?: string;
   institutionId?: string;
   casaId?: number;
   casaColor: string;
+  cargo?: string | null;
 }) => {
   const [aberto, setAberto] = useState(false);
   const [texto, setTexto] = useState('');
   const [enviado, setEnviado] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
+  // Coordenador → relata ao líder | Líder → relata ao mentor
+  const isCoordenador = cargo === 'coordenador';
+  const destinatario = isCoordenador ? 'lider' : 'mentor';
+  const destinatarioLabel = isCoordenador ? 'lider' : 'mentor';
+  const tipo = isCoordenador ? 'para_lider' : 'para_mentor';
+
   const enviar = async () => {
     if (!userId || !institutionId || !texto.trim() || salvando) return;
     setSalvando(true);
-    await supabase.from('reportes_mentor').insert({
+    await supabase.from('reportes_mentor' as any).insert({
       aluno_id: userId,
       institution_id: institutionId,
       casa_id: casaId || null,
       texto: texto.trim(),
+      tipo,
     });
     setTexto('');
     setEnviado(true);
@@ -476,19 +547,29 @@ const ReportarMentor = ({ userId, institutionId, casaId, casaColor }: {
               <MessageCircle className="w-4 h-4" style={{ color: casaColor }} />
             </div>
             <div>
-              <p className="text-sm text-white/60">Precisa falar com seu mentor?</p>
-              <p className="text-[10px] text-white/25 mt-0.5">Reporte algo que aconteceu, uma duvida ou algo que precisa de ajuda. Seu mentor vai receber e pode te responder.</p>
+              <p className="text-sm text-white/60">Precisa falar com seu {destinatarioLabel}?</p>
+              <p className="text-[10px] text-white/25 mt-0.5">
+                {isCoordenador
+                  ? 'Reporte algo ao lider da sua casa. Ele vai receber e pode te responder.'
+                  : 'Reporte algo que aconteceu, uma duvida ou algo que precisa de ajuda. Seu mentor vai receber e pode te responder.'}
+              </p>
             </div>
           </div>
         </button>
       ) : (
         <div className="rounded-2xl border p-4" style={{ borderColor: `${casaColor}20`, background: `linear-gradient(135deg, ${casaColor}08, #252547)` }}>
-          <p className="text-sm text-white/60 mb-1">Fale com seu mentor</p>
-          <p className="text-[10px] text-white/25 mb-2">Conte o que aconteceu, peça ajuda ou tire uma duvida. Ele vai receber e responder para voce.</p>
+          <p className="text-sm text-white/60 mb-1">Fale com seu {destinatarioLabel}</p>
+          <p className="text-[10px] text-white/25 mb-2">
+            {isCoordenador
+              ? 'Conte o que aconteceu ou algo que o lider precisa saber.'
+              : 'Conte o que aconteceu, peça ajuda ou tire uma duvida. Ele vai receber e responder para voce.'}
+          </p>
           <textarea
             value={texto}
             onChange={e => setTexto(e.target.value)}
-            placeholder="Ex: Aconteceu algo na aula... / Tenho uma duvida sobre... / Preciso de ajuda com..."
+            placeholder={isCoordenador
+              ? 'Ex: Aconteceu algo na turma... / Preciso informar que...'
+              : 'Ex: Aconteceu algo na aula... / Tenho uma duvida sobre... / Preciso de ajuda com...'}
             maxLength={500}
             rows={3}
             autoFocus
@@ -497,7 +578,7 @@ const ReportarMentor = ({ userId, institutionId, casaId, casaColor }: {
           <div className="flex items-center justify-between mt-2">
             <button onClick={() => setAberto(false)} className="text-[10px] text-white/30 hover:text-white/50">Cancelar</button>
             {enviado ? (
-              <span className="text-xs text-green-400">Enviado ao mentor!</span>
+              <span className="text-xs text-green-400">Enviado ao {destinatarioLabel}!</span>
             ) : (
               <button
                 onClick={enviar}
