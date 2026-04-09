@@ -352,10 +352,9 @@ const RegistroVivoPage = () => {
 
   if (!aluno) {
     return (
-      <div className="p-4 space-y-4">
-        <div className="h-10 bg-white/5 rounded-xl animate-pulse" />
-        <div className="h-48 bg-white/5 rounded-xl animate-pulse" />
-        <div className="h-32 bg-white/5 rounded-xl animate-pulse" />
+      <div className="p-4 flex flex-col items-center justify-center min-h-[60vh] gap-3">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-violet-500" />
+        <p className="text-xs text-white/30">Carregando perfil...</p>
       </div>
     );
   }
