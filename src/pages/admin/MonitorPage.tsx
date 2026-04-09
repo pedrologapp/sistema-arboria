@@ -351,6 +351,24 @@ const MonitorPage = () => {
     staleTime: 60000,
   });
 
+  // Mensagens privadas recentes (últimas 24h) para badge
+  const { data: msgPrivadasHoje = 0 } = useQuery({
+    queryKey: ['admin-msgs-privadas-hoje', institutionId],
+    queryFn: async () => {
+      if (!institutionId) return 0;
+      const ontem = new Date();
+      ontem.setDate(ontem.getDate() - 1);
+      const { count } = await supabase
+        .from('mensagens_privadas')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', ontem.toISOString());
+      return count || 0;
+    },
+    enabled: !!institutionId,
+    staleTime: 60000,
+    refetchInterval: 60000,
+  });
+
   // Logins de hoje — alunos
   const { data: todosAlunos = [] } = useQuery({
     queryKey: ['monitor-alunos-login', institutionId],
@@ -781,10 +799,20 @@ const MonitorPage = () => {
           className="w-full flex items-center justify-between p-4 rounded-xl bg-[#252547] border border-violet-500/10 hover:bg-white/[0.06] transition-colors active:scale-[0.98]"
         >
           <div className="flex items-center gap-3">
-            <MessageCircle className="w-5 h-5 text-pink-400" />
+            <div className="relative">
+              <MessageCircle className="w-5 h-5 text-pink-400" />
+              {msgPrivadasHoje > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold px-1">
+                  {msgPrivadasHoje > 99 ? '99+' : msgPrivadasHoje}
+                </span>
+              )}
+            </div>
             <div className="text-left">
               <span className="text-sm text-white/70">Comunicacao</span>
-              <p className="text-[10px] text-white/30">Canais, conselho e conversas privadas</p>
+              <p className="text-[10px] text-white/30">
+                Canais, conselho e conversas privadas
+                {msgPrivadasHoje > 0 && <span className="text-pink-400/60 ml-1">· {msgPrivadasHoje} msgs hoje</span>}
+              </p>
             </div>
           </div>
           <ChevronRight className="w-4 h-4 text-white/30" />
