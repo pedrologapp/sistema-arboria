@@ -14,6 +14,16 @@ const AdminChatPage = () => {
   const [casaSelecionada, setCasaSelecionada] = useState<number | null>(null);
   const [casaDmSelecionada, setCasaDmSelecionada] = useState<number | null>(null);
 
+  // Institution
+  const { data: institutionId } = useQuery({
+    queryKey: ['admin-institution-chat', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('institution_id').eq('id', user!.id).single();
+      return data?.institution_id;
+    },
+    enabled: !!user?.id,
+  });
+
   // Buscar canal do conselho
   const { data: canalConselho } = useQuery({
     queryKey: ['admin-canal-conselho'],
@@ -122,14 +132,66 @@ const AdminChatPage = () => {
     staleTime: 60000,
   });
 
-  // Institution
-  const { data: institutionId } = useQuery({
-    queryKey: ['admin-institution-chat', user?.id],
+  // Msgs privadas por casa (24h) — para badges nos cards
+  const { data: msgsPrivadasPorCasa = {} } = useQuery({
+    queryKey: ['admin-msgs-privadas-por-casa', casas.length, institutionId],
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('institution_id').eq('id', user!.id).single();
-      return data?.institution_id;
+      if (!casas.length || !institutionId) return {};
+      // Buscar todos os alunos com casa_id
+      const { data: alunos } = await supabase.from('profiles')
+        .select('id, casa_id')
+        .eq('institution_id', institutionId)
+        .eq('segmento', 'fundamental2')
+        .not('casa_id', 'is', null);
+      if (!alunos?.length) return {};
+
+      const alunoToCasa: Record<string, number> = {};
+      alunos.forEach(a => { if (a.casa_id) alunoToCasa[a.id] = a.casa_id; });
+
+      // Buscar mensagens privadas recentes
+      const { data: msgs } = await supabase.from('mensagens_privadas')
+        .select('autor_id')
+        .gte('created_at', ontemISO);
+
+      const contagem: Record<number, number> = {};
+      (msgs || []).forEach(m => {
+        const casaId = alunoToCasa[m.autor_id];
+        if (casaId) contagem[casaId] = (contagem[casaId] || 0) + 1;
+      });
+      return contagem;
     },
-    enabled: !!user?.id,
+    enabled: casas.length > 0 && !!institutionId,
+    staleTime: 60000,
+  });
+
+  // Msgs canais por casa (24h) — para badges nos cards de Casas
+  const { data: msgsCanalPorCasa = {} } = useQuery({
+    queryKey: ['admin-msgs-canal-por-casa', casas.length],
+    queryFn: async () => {
+      if (!casas.length) return {};
+      const { data: canais } = await supabase.from('canais_casa')
+        .select('id, casa_id')
+        .in('casa_id', casas.map(c => c.id))
+        .neq('tipo', 'conselho_lideres');
+      if (!canais?.length) return {};
+
+      const canalToCasa: Record<string, number> = {};
+      canais.forEach(c => { if (c.casa_id) canalToCasa[c.id] = c.casa_id; });
+
+      const { data: msgs } = await supabase.from('mensagens_canal')
+        .select('canal_id')
+        .in('canal_id', canais.map(c => c.id))
+        .gte('created_at', ontemISO);
+
+      const contagem: Record<number, number> = {};
+      (msgs || []).forEach(m => {
+        const casaId = canalToCasa[m.canal_id];
+        if (casaId) contagem[casaId] = (contagem[casaId] || 0) + 1;
+      });
+      return contagem;
+    },
+    enabled: casas.length > 0,
+    staleTime: 60000,
   });
 
   // Conversas privadas ativas da casa selecionada
@@ -312,16 +374,24 @@ const AdminChatPage = () => {
             <>
               <p className="text-white/50 text-sm">Selecione uma casa para visualizar seus canais.</p>
               <div className="grid grid-cols-2 gap-2">
-                {casas.map((casa) => (
-                  <button
-                    key={casa.id}
-                    onClick={() => setCasaSelecionada(casa.id)}
-                    className="flex items-center gap-2 p-3 rounded-xl bg-white/5 border border-violet-500/10 hover:bg-white/10 transition-all active:scale-[0.98]"
-                  >
-                    <span className="text-xl">{casa.emoji}</span>
-                    <span className="text-white/80 text-sm font-medium truncate">{casa.nome}</span>
-                  </button>
-                ))}
+                {casas.map((casa) => {
+                  const count = (msgsCanalPorCasa as Record<number, number>)[casa.id] || 0;
+                  return (
+                    <button
+                      key={casa.id}
+                      onClick={() => setCasaSelecionada(casa.id)}
+                      className="flex items-center gap-2 p-3 rounded-xl bg-white/5 border border-violet-500/10 hover:bg-white/10 transition-all active:scale-[0.98]"
+                    >
+                      <span className="text-xl">{casa.emoji}</span>
+                      <span className="text-white/80 text-sm font-medium truncate flex-1 text-left">{casa.nome}</span>
+                      {count > 0 && (
+                        <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold px-1">
+                          {count > 99 ? '99+' : count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </>
           ) : (
@@ -382,16 +452,24 @@ const AdminChatPage = () => {
             <>
               <p className="text-white/50 text-sm">Selecione uma casa para ver as conversas privadas ativas.</p>
               <div className="grid grid-cols-2 gap-2">
-                {casas.map((casa) => (
-                  <button
-                    key={casa.id}
-                    onClick={() => setCasaDmSelecionada(casa.id)}
-                    className="flex items-center gap-2 p-3 rounded-xl bg-white/5 border border-violet-500/10 hover:bg-white/10 transition-all active:scale-[0.98]"
-                  >
-                    <span className="text-xl">{casa.emoji}</span>
-                    <span className="text-white/80 text-sm font-medium truncate">{casa.nome}</span>
-                  </button>
-                ))}
+                {casas.map((casa) => {
+                  const count = (msgsPrivadasPorCasa as Record<number, number>)[casa.id] || 0;
+                  return (
+                    <button
+                      key={casa.id}
+                      onClick={() => setCasaDmSelecionada(casa.id)}
+                      className="flex items-center gap-2 p-3 rounded-xl bg-white/5 border border-violet-500/10 hover:bg-white/10 transition-all active:scale-[0.98]"
+                    >
+                      <span className="text-xl">{casa.emoji}</span>
+                      <span className="text-white/80 text-sm font-medium truncate flex-1 text-left">{casa.nome}</span>
+                      {count > 0 && (
+                        <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold px-1">
+                          {count > 99 ? '99+' : count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </>
           ) : (
