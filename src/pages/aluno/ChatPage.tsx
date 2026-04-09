@@ -281,6 +281,14 @@ const ChatPage = () => {
   // RENDER HELPERS
   // ═══════════════════════════════════════
 
+  // Nome curto: primeiro + segundo nome
+  const getNomeCurto = (membro: any) => {
+    const full = membro.full_name || membro.nome || 'Sem nome';
+    const partes = full.trim().split(/\s+/);
+    if (partes.length <= 2) return full;
+    return `${partes[0]} ${partes[1]}`;
+  };
+
   // Nomes amigáveis para canais por tipo
   const getNomeCanal = (canal: any) => {
     switch (canal.tipo) {
@@ -322,32 +330,29 @@ const ChatPage = () => {
     return (
       <button
         onClick={() => iniciarConversa(membro.id)}
-        className="w-full flex items-center gap-2.5 py-2.5 px-3 rounded-lg text-left hover:bg-white/[0.08] transition-all active:scale-[0.98]"
+        className="w-full flex items-center gap-2 py-2 px-3 rounded-lg text-left hover:bg-white/[0.08] transition-all active:scale-[0.98]"
       >
         <div className="relative shrink-0">
-          <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden">
+          <div className="w-7 h-7 rounded-full bg-white/10 overflow-hidden">
             {membro.avatar_url ? (
               <img src={membro.avatar_url} alt="" className="w-full h-full object-cover" />
             ) : (
-              <span className="flex items-center justify-center w-full h-full text-xs text-white/50">
+              <span className="flex items-center justify-center w-full h-full text-[10px] text-white/50">
                 {(membro.nome || membro.full_name || '?').charAt(0).toUpperCase()}
               </span>
             )}
           </div>
           {status.status === 'online' && (
-            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-[#0d0d0d]" />
+            <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500 border-[1.5px] border-[#0d0d0d]" />
           )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className={cn('text-sm truncate', badge ? 'text-white font-medium' : 'text-white/70')}>
-              {membro.full_name || membro.nome || 'Sem nome'}
+            <span className={cn('text-xs truncate', badge ? 'text-white font-medium' : 'text-white/70')}>
+              {getNomeCurto(membro)}
             </span>
-            {membro.serie && (
-              <span className="text-[9px] text-white/25 shrink-0">{membro.serie?.replace(/\D/g, '')}º{membro.turma || ''}</span>
-            )}
+            {label && <span className="text-[9px] text-violet-400/50">{label}</span>}
           </div>
-          {label && <span className="text-[10px] text-violet-400/60">{label}</span>}
         </div>
         {badge && (
           <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />

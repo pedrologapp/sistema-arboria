@@ -52,7 +52,9 @@ export const MensagemBubble = ({
   agruparComAnterior = false,
   casaBadge 
 }: MensagemBubbleProps) => {
-  const nomeAutor = mensagem.autor?.full_name || 'Usuário';
+  const nomeCompleto = mensagem.autor?.full_name || 'Usuário';
+  const partes = nomeCompleto.trim().split(/\s+/);
+  const nomeAutor = partes.length <= 2 ? nomeCompleto : `${partes[0]} ${partes[1]}`;
   const cargoAtivo = mensagem.autor?.cargos_casa?.find(c => c.ativo);
   const cargoKey = cargoAtivo?.cargo;
   const hora = format(new Date(mensagem.created_at), 'HH:mm');
@@ -90,15 +92,15 @@ export const MensagemBubble = ({
       {/* Conteúdo */}
       <div className="flex-1 min-w-0">
         {/* Header: Nome + Cargo + Hora */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium text-white">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-sm font-medium text-white">
             {nomeAutor}
           </span>
-          
+
           {casaBadge?.nome && (
-            <span 
-              className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-              style={{ 
+            <span
+              className="text-[10px] px-1 py-0.5 rounded-full font-medium"
+              style={{
                 backgroundColor: `${casaBadge.cor || casaColor}20`,
                 color: casaBadge.cor || casaColor
               }}
@@ -106,15 +108,15 @@ export const MensagemBubble = ({
               {casaBadge.emoji} {casaBadge.nome}
             </span>
           )}
-          
+
           {cargoKey && CARGO_BADGE[cargoKey] && (
-            <span className="text-sm text-white/60">
+            <span className="text-xs text-white/50">
               {CARGO_BADGE[cargoKey]} {CARGO_LABEL[cargoKey]}
             </span>
           )}
-          
-          <span className="text-xs text-white/40">
-            • {hora}
+
+          <span className="text-[10px] text-white/30">
+            {hora}
           </span>
         </div>
         
