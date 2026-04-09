@@ -114,12 +114,10 @@ const Login = () => {
   // Mostrar loading enquanto verifica sessão ou está redirecionando
   if (authLoading || isRedirecting || (user && !adminCheckComplete)) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-[#1A1A2E] flex items-center justify-center">
         <div className="text-center">
-          <div className="text-5xl mb-4">🌳</div>
-          <p className="text-white/80 font-medium mb-3">Projeto Arboria</p>
-          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-indigo-500 mx-auto mb-2"></div>
-          <p className="text-white/50 text-sm">Carregando...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-violet-500 mx-auto mb-4" />
+          <p className="text-white/40 text-sm">Carregando...</p>
         </div>
       </div>
     );
