@@ -723,8 +723,13 @@ const MonitorPage = () => {
                             {logou && (
                               <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#1A1A2E]" />
                             )}
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-black/90 text-[9px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                              {a.full_name || a.nome || '?'}
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 rounded bg-black/95 text-[9px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 text-center">
+                              <p>{a.full_name || a.nome || '?'}</p>
+                              {a.ultima_atividade && (
+                                <p className="text-white/50 mt-0.5">
+                                  {new Date(a.ultima_atividade).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} às {new Date(a.ultima_atividade).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              )}
                             </div>
                           </div>
                         );
