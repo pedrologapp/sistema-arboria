@@ -281,6 +281,17 @@ const ChatPage = () => {
   // RENDER HELPERS
   // ═══════════════════════════════════════
 
+  // Nomes amigáveis para canais por tipo
+  const getNomeCanal = (canal: any) => {
+    switch (canal.tipo) {
+      case 'lideranca_casa': return `lideres-e-coordenadores`;
+      case 'conselho_lideres': return `conselho-dos-lideres`;
+      case 'escola_geral': return `geral-da-escola`;
+      case 'escola_avisos': return `avisos-da-escola`;
+      default: return canal.nome?.toLowerCase() || 'canal';
+    }
+  };
+
   const CanalRow = ({ canal, locked = false, onLockedClick, hashColor = 'text-white/30' }: { canal: any; locked?: boolean; onLockedClick?: () => void; hashColor?: string }) => {
     const naoLidas = mensagensNaoLidas[canal.id] || 0;
     return (
@@ -293,7 +304,7 @@ const ChatPage = () => {
       >
         <Hash className={cn('w-4 h-4 shrink-0', hashColor)} />
         <span className={cn('flex-1 text-sm truncate', naoLidas > 0 ? 'text-white font-medium' : 'text-white/70')}>
-          {canal.nome.toLowerCase()}
+          {getNomeCanal(canal)}
         </span>
         {locked && <Lock className="w-3.5 h-3.5 text-white/20 shrink-0" />}
         {naoLidas > 0 && (
@@ -355,8 +366,8 @@ const ChatPage = () => {
 
   // Filter
   const termo = searchTerm.toLowerCase();
-  const filteredCasaCanais = termo ? canaisCasa.filter(c => c.nome.toLowerCase().includes(termo)) : canaisCasa;
-  const filteredEscolaCanais = termo ? canaisEscola.filter(c => c.nome.toLowerCase().includes(termo)) : canaisEscola;
+  const filteredCasaCanais = termo ? canaisCasa.filter(c => getNomeCanal(c).includes(termo)) : canaisCasa;
+  const filteredEscolaCanais = termo ? canaisEscola.filter(c => getNomeCanal(c).includes(termo)) : canaisEscola;
 
   // DM members sorted by role
   const liderancaMembros = membrosCasa.filter(m => {
