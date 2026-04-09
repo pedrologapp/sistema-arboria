@@ -54,6 +54,30 @@ const ConquistasPage = () => {
     },
   });
 
+  // Membros da casa (para meta proporcional)
+  const { data: membrosCasa = 0 } = useQuery({
+    queryKey: ['conquistas-membros-casa', casa?.id, profile?.institution_id],
+    queryFn: async () => {
+      if (!casa?.id || !profile?.institution_id) return 0;
+      const { count } = await supabase.from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('casa_id', casa.id)
+        .eq('institution_id', profile.institution_id)
+        .eq('segmento', 'fundamental2');
+      return count || 0;
+    },
+    enabled: !!casa?.id && !!profile?.institution_id,
+    staleTime: 300000,
+  });
+
+  // Meta = 35% do máximo possível da casa
+  // 7 fases × 3 semanas × 100 pts = 2100 por aluno
+  const MAX_POR_ALUNO = 7 * 3 * 100;
+  const getMetaAjustada = () => {
+    if (!membrosCasa) return 0;
+    return Math.round(MAX_POR_ALUNO * membrosCasa * 0.35);
+  };
+
   // Cargos (historico)
   const { data: cargos = [] } = useQuery({
     queryKey: ['conquistas-cargos', profile?.id],
@@ -127,9 +151,10 @@ const ConquistasPage = () => {
 
         <div className="grid grid-cols-2 gap-3">
           {conquistas.map(c => {
-            const desbloqueada = pontosCasa >= c.pontos_necessarios;
-            const pct = Math.min(Math.round((pontosCasa / c.pontos_necessarios) * 100), 100);
-            const faltam = c.pontos_necessarios - pontosCasa;
+            const meta = getMetaAjustada();
+            const desbloqueada = pontosCasa >= meta;
+            const pct = Math.min(Math.round((pontosCasa / meta) * 100), 100);
+            const faltam = meta - pontosCasa;
 
             return (
               <div key={c.id} className={cn(
@@ -146,10 +171,7 @@ const ConquistasPage = () => {
 
                 {/* Pontuação */}
                 <p className="text-[10px] font-bold mb-2" style={{ color: desbloqueada ? c.cor : `${c.cor}90` }}>
-                  {desbloqueada
-                    ? `${pontosCasa.toLocaleString('pt-BR')} / ${c.pontos_necessarios.toLocaleString('pt-BR')} pts`
-                    : `${pontosCasa.toLocaleString('pt-BR')} / ${c.pontos_necessarios.toLocaleString('pt-BR')} pts`
-                  }
+                  {pontosCasa.toLocaleString('pt-BR')} / {meta.toLocaleString('pt-BR')} pts
                 </p>
 
                 <div className="w-full">
