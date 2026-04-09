@@ -71,6 +71,57 @@ const AdminChatPage = () => {
     enabled: !!casaSelecionada,
   });
 
+  const ontem = new Date();
+  ontem.setDate(ontem.getDate() - 1);
+  const ontemISO = ontem.toISOString();
+
+  // Msgs no conselho (24h)
+  const { data: msgsConselho = 0 } = useQuery({
+    queryKey: ['admin-msgs-conselho', canalConselho?.id],
+    queryFn: async () => {
+      if (!canalConselho?.id) return 0;
+      const { count } = await supabase.from('mensagens_canal')
+        .select('*', { count: 'exact', head: true })
+        .eq('canal_id', canalConselho.id)
+        .gte('created_at', ontemISO);
+      return count || 0;
+    },
+    enabled: !!canalConselho?.id,
+    staleTime: 60000,
+  });
+
+  // Msgs nos canais das casas (24h)
+  const { data: msgsCasas = 0 } = useQuery({
+    queryKey: ['admin-msgs-casas', casas.length],
+    queryFn: async () => {
+      if (!casas.length) return 0;
+      const { data: canais } = await supabase.from('canais_casa')
+        .select('id')
+        .in('casa_id', casas.map(c => c.id))
+        .neq('tipo', 'conselho_lideres');
+      if (!canais?.length) return 0;
+      const { count } = await supabase.from('mensagens_canal')
+        .select('*', { count: 'exact', head: true })
+        .in('canal_id', canais.map(c => c.id))
+        .gte('created_at', ontemISO);
+      return count || 0;
+    },
+    enabled: casas.length > 0,
+    staleTime: 60000,
+  });
+
+  // Msgs privadas (24h)
+  const { data: msgsPrivadas = 0 } = useQuery({
+    queryKey: ['admin-msgs-privadas'],
+    queryFn: async () => {
+      const { count } = await supabase.from('mensagens_privadas')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', ontemISO);
+      return count || 0;
+    },
+    staleTime: 60000,
+  });
+
   // Institution
   const { data: institutionId } = useQuery({
     queryKey: ['admin-institution-chat', user?.id],
@@ -203,17 +254,32 @@ const AdminChatPage = () => {
 
       <Tabs defaultValue="conselho" className="w-full">
         <TabsList className="w-full bg-white/5 border border-violet-500/10">
-          <TabsTrigger value="conselho" className="flex-1 gap-1.5 data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400">
+          <TabsTrigger value="conselho" className="flex-1 gap-1 data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400 relative">
             <Crown className="w-4 h-4" />
             Conselho
+            {msgsConselho > 0 && (
+              <span className="min-w-[16px] h-4 flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold px-1 ml-1">
+                {msgsConselho > 99 ? '99+' : msgsConselho}
+              </span>
+            )}
           </TabsTrigger>
-          <TabsTrigger value="casas" className="flex-1 gap-1.5 data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-400">
+          <TabsTrigger value="casas" className="flex-1 gap-1 data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-400">
             <Home className="w-4 h-4" />
             Casas
+            {msgsCasas > 0 && (
+              <span className="min-w-[16px] h-4 flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold px-1 ml-1">
+                {msgsCasas > 99 ? '99+' : msgsCasas}
+              </span>
+            )}
           </TabsTrigger>
-          <TabsTrigger value="privadas" className="flex-1 gap-1.5 data-[state=active]:bg-pink-500/20 data-[state=active]:text-pink-400">
+          <TabsTrigger value="privadas" className="flex-1 gap-1 data-[state=active]:bg-pink-500/20 data-[state=active]:text-pink-400">
             <Lock className="w-4 h-4" />
             Privadas
+            {msgsPrivadas > 0 && (
+              <span className="min-w-[16px] h-4 flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold px-1 ml-1">
+                {msgsPrivadas > 99 ? '99+' : msgsPrivadas}
+              </span>
+            )}
           </TabsTrigger>
         </TabsList>
 
