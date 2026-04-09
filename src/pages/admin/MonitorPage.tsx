@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertTriangle, CheckCircle, Clock, Users, Activity, ChevronDown, ChevronUp, Calendar, LogIn } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, Users, Activity, ChevronDown, ChevronUp, Calendar, LogIn, MessageCircle, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const MonitorPage = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [faseSelecionada, setFaseSelecionada] = useState<string | null>(null); // null = ativa
   const [serieFiltro, setSerieFiltro] = useState<string | null>(null);
@@ -771,6 +773,22 @@ const MonitorPage = () => {
             <p className="text-white/30 text-xs">Nenhuma atividade recente</p>
           </div>
         )}
+      </div>
+      {/* Atalhos */}
+      <div className="space-y-2">
+        <button
+          onClick={() => navigate('/admin/chat')}
+          className="w-full flex items-center justify-between p-4 rounded-xl bg-[#252547] border border-violet-500/10 hover:bg-white/[0.06] transition-colors active:scale-[0.98]"
+        >
+          <div className="flex items-center gap-3">
+            <MessageCircle className="w-5 h-5 text-pink-400" />
+            <div className="text-left">
+              <span className="text-sm text-white/70">Comunicacao</span>
+              <p className="text-[10px] text-white/30">Canais, conselho e conversas privadas</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-white/30" />
+        </button>
       </div>
     </div>
   );
