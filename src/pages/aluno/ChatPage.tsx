@@ -81,7 +81,7 @@ const ChatPage = () => {
         .from('canais_casa')
         .select('*')
         .eq('institution_id', profile.institution_id)
-        .in('tipo', ['escola_avisos', 'escola_geral'])
+        .in('tipo', ['escola_avisos'])
         .order('ordem');
       return data || [];
     },
