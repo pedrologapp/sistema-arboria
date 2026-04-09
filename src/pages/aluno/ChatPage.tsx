@@ -234,9 +234,28 @@ const ChatPage = () => {
     return !!meu?.cargos_casa?.find((c: any) => c.ativo && (c.cargo === 'lider' || c.cargo === 'coordenador'));
   }, [membrosCasa, profile?.id]);
 
-  // Iniciar conversa DM
+  // Iniciar conversa DM (só com membros da mesma casa, exceto líder→líder)
   const iniciarConversa = async (outroUsuarioId: string) => {
     if (!profile?.id || !profile?.institution_id) return;
+
+    // Verificar se o outro usuario é da mesma casa (ou se sou líder falando com líder)
+    const membroDaCasa = membrosCasa.some(m => m.id === outroUsuarioId);
+    const ehMentor = mentorCasa?.id === outroUsuarioId;
+    if (!membroDaCasa && !ehMentor) {
+      // Se sou líder, verificar se o outro é líder de outra casa
+      if (isLider) {
+        const { data: cargoOutro } = await supabase.from('cargos_casa')
+          .select('cargo').eq('aluno_id', outroUsuarioId).eq('ativo', true).eq('cargo', 'lider').maybeSingle();
+        if (!cargoOutro) {
+          toast.error('Voce so pode conversar com membros da sua casa');
+          return;
+        }
+      } else {
+        toast.error('Voce so pode conversar com membros da sua casa');
+        return;
+      }
+    }
+
     try {
       const { data: minhasConversas } = await supabase
         .from('conversa_participantes').select('conversa_id').eq('usuario_id', profile.id);
@@ -358,7 +377,11 @@ const ChatPage = () => {
   const filteredLideranca = termo ? liderancaMembros.filter(m => (m.full_name || m.nome || '').toLowerCase().includes(termo)) : liderancaMembros;
   const filteredMembros = termo ? membrosSemCargo.filter(m => (m.full_name || m.nome || '').toLowerCase().includes(termo)) : membrosSemCargo;
 
-  const dmNaoLidaIds = new Set(dmsNaoLidas.map(d => d.outroUsuarioId));
+  // Filtrar DMs: só mostrar de membros da casa (+ mentor + líderes de outras casas se sou líder)
+  const idsMinhaCasa = new Set(membrosCasa.map(m => m.id));
+  if (mentorCasa?.id) idsMinhaCasa.add(mentorCasa.id);
+  const dmsPermitidas = dmsNaoLidas.filter(d => idsMinhaCasa.has(d.outroUsuarioId));
+  const dmNaoLidaIds = new Set(dmsPermitidas.map(d => d.outroUsuarioId));
 
   return (
     <div className="p-4 space-y-5 pb-24">
