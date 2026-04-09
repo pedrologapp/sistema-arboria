@@ -386,6 +386,8 @@ const MonitorPage = () => {
     staleTime: 60000,
   });
 
+  const hojeStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
   // Contagem de logins por aluno hoje
   const { data: loginsCountMap = {} } = useQuery({
     queryKey: ['monitor-logins-count', hojeStr, todosAlunos.length],
@@ -429,7 +431,6 @@ const MonitorPage = () => {
   });
 
   // Determinar quem acessou hoje usando ultima_atividade do profile
-  const hojeStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
   const logouHojeSet = new Set(
     todosAlunos
       .filter(a => a.ultima_atividade && a.ultima_atividade.startsWith(hojeStr))
