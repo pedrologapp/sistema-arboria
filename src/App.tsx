@@ -41,6 +41,7 @@ const ConteudoAdminPage = lazy(() => import("./pages/admin/ConteudoAdminPage"));
 const ConteudoInteligenciaAdminPage = lazy(() => import("./pages/admin/ConteudoInteligenciaAdminPage"));
 const AdminChatPage = lazy(() => import("./pages/admin/AdminChatPage"));
 const AdminCanalChatPage = lazy(() => import("./pages/admin/AdminCanalChatPage"));
+const AdminDmViewPage = lazy(() => import("./pages/admin/AdminDmViewPage"));
 const AtividadesPage = lazy(() => import("./pages/admin/AtividadesPage"));
 const DadosPage = lazy(() => import("./pages/admin/DadosPage"));
 const ArboriaPage = lazy(() => import("./pages/admin/ArboriaPage"));
@@ -268,6 +269,13 @@ const App = () => (
               <ProtectedRoute requireAdmin>
                 <AdminLayout>
                   <AdminCanalChatPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/chat/dm/:conversaId" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <AdminDmViewPage />
                 </AdminLayout>
               </ProtectedRoute>
             } />

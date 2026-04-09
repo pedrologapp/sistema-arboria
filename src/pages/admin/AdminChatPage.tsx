@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CanalItem } from '@/components/chat/CanalItem';
+import { CasaBrasao } from '@/components/CasaBrasao';
 import { cn } from '@/lib/utils';
 
 const AdminChatPage = () => {
@@ -43,7 +44,7 @@ const AdminChatPage = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from('inteligencias')
-        .select('id, nome, emoji, cor_hex')
+        .select('id, nome, emoji, cor_hex, brasao_url')
         .order('id');
       return data || [];
     },
@@ -304,6 +305,25 @@ const AdminChatPage = () => {
     staleTime: 30000,
   });
 
+  // Msgs por canal individual (24h) para a casa selecionada
+  const { data: msgsPorCanal = {} } = useQuery({
+    queryKey: ['admin-msgs-por-canal', casaSelecionada, canalLideranca?.id, canaisCasa.length],
+    queryFn: async () => {
+      const canalIds = canaisCasa.map(c => c.id);
+      if (canalLideranca) canalIds.push(canalLideranca.id);
+      if (!canalIds.length) return {};
+      const { data: msgs } = await supabase.from('mensagens_canal')
+        .select('canal_id')
+        .in('canal_id', canalIds)
+        .gte('created_at', ontemISO);
+      const contagem: Record<string, number> = {};
+      (msgs || []).forEach(m => { contagem[m.canal_id] = (contagem[m.canal_id] || 0) + 1; });
+      return contagem;
+    },
+    enabled: !!casaSelecionada && (canaisCasa.length > 0 || !!canalLideranca),
+    staleTime: 60000,
+  });
+
   const casaAtual = casas.find(c => c.id === casaSelecionada);
   const casaDmAtual = casas.find(c => c.id === casaDmSelecionada);
 
@@ -382,7 +402,7 @@ const AdminChatPage = () => {
                       onClick={() => setCasaSelecionada(casa.id)}
                       className="flex items-center gap-2 p-3 rounded-xl bg-white/5 border border-violet-500/10 hover:bg-white/10 transition-all active:scale-[0.98]"
                     >
-                      <span className="text-xl">{casa.emoji}</span>
+                      <CasaBrasao brasaoUrl={casa.brasao_url} emoji={casa.emoji} nome={casa.nome} size="mini" />
                       <span className="text-white/80 text-sm font-medium truncate flex-1 text-left">{casa.nome}</span>
                       {count > 0 && (
                         <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold px-1">
@@ -403,7 +423,7 @@ const AdminChatPage = () => {
                 ← Voltar às casas
               </button>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">{casaAtual?.emoji}</span>
+                <CasaBrasao brasaoUrl={casaAtual?.brasao_url} emoji={casaAtual?.emoji} nome={casaAtual?.nome} size="small" />
                 <h2 className="text-white font-semibold">
                   {casaAtual?.nome}
                 </h2>
@@ -425,6 +445,11 @@ const AdminChatPage = () => {
                   >
                     <span className="text-lg">⚡</span>
                     <span className="text-white/90 font-medium flex-1 text-left">Liderança</span>
+                    {(msgsPorCanal as Record<string, number>)[canalLideranca.id] > 0 && (
+                      <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold px-1">
+                        {(msgsPorCanal as Record<string, number>)[canalLideranca.id]}
+                      </span>
+                    )}
                   </button>
                 </div>
               )}
@@ -435,6 +460,7 @@ const AdminChatPage = () => {
                   <CanalItem
                     key={canal.id}
                     canal={canal}
+                    naoLidas={(msgsPorCanal as Record<string, number>)[canal.id] || 0}
                     onClick={() => navigate(`/admin/chat/canal/${canal.id}`)}
                     casaColor={casaAtual?.cor_hex}
                   />
@@ -460,7 +486,7 @@ const AdminChatPage = () => {
                       onClick={() => setCasaDmSelecionada(casa.id)}
                       className="flex items-center gap-2 p-3 rounded-xl bg-white/5 border border-violet-500/10 hover:bg-white/10 transition-all active:scale-[0.98]"
                     >
-                      <span className="text-xl">{casa.emoji}</span>
+                      <CasaBrasao brasaoUrl={casa.brasao_url} emoji={casa.emoji} nome={casa.nome} size="mini" />
                       <span className="text-white/80 text-sm font-medium truncate flex-1 text-left">{casa.nome}</span>
                       {count > 0 && (
                         <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold px-1">
@@ -481,7 +507,7 @@ const AdminChatPage = () => {
                 ← Voltar às casas
               </button>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">{casaDmAtual?.emoji}</span>
+                <CasaBrasao brasaoUrl={casaDmAtual?.brasao_url} emoji={casaDmAtual?.emoji} nome={casaDmAtual?.nome} size="small" />
                 <h2 className="text-white font-semibold">{casaDmAtual?.nome}</h2>
                 <span className="text-xs text-white/30">{conversasAtivas.length} conversas ativas</span>
               </div>
@@ -509,9 +535,10 @@ const AdminChatPage = () => {
                       : '';
 
                     return (
-                      <div
+                      <button
                         key={conv.conversaId}
-                        className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.04] border border-violet-500/10 hover:bg-white/[0.06] transition-colors"
+                        onClick={() => navigate(`/admin/chat/dm/${conv.conversaId}`)}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.04] border border-violet-500/10 hover:bg-white/[0.06] transition-colors text-left active:scale-[0.98]"
                       >
                         {/* Avatares sobrepostos */}
                         <div className="flex -space-x-2 shrink-0">
@@ -543,7 +570,7 @@ const AdminChatPage = () => {
 
                         {/* Hora */}
                         <span className="text-[9px] text-white/20 shrink-0">{tempo}</span>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
