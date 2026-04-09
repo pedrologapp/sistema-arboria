@@ -64,7 +64,7 @@ const FasesPage = () => {
     hoje.setHours(12, 0, 0, 0);
     const inicio = new Date(fase.data_inicio + 'T12:00:00');
     const fim = new Date(fase.data_fim + 'T12:00:00');
-    if (fase.ativo && hoje >= inicio && hoje <= fim) return 'ativa';
+    if (hoje >= inicio && hoje <= fim) return 'ativa';
     if (hoje > fim) return 'concluida';
     return 'futura';
   };

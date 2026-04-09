@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Trophy, Users, RefreshCw, ChevronRight, Lock } from 'lucide-react';
+import { Trophy, Users, RefreshCw, ChevronRight, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -46,6 +46,8 @@ const CasaPage = () => {
   const [totalCasas, setTotalCasas] = useState(8);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [expandirCoords, setExpandirCoords] = useState(false);
+  const [expandirMembros, setExpandirMembros] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!casa?.id || !profile?.institution_id) {
@@ -327,7 +329,7 @@ const CasaPage = () => {
           {coordenadores.length > 0 && (
             <>
               <div className="border-t border-violet-500/5" />
-              {coordenadores.slice(0, 4).map(coord => (
+              {(expandirCoords ? coordenadores : coordenadores.slice(0, 4)).map(coord => (
                 <div key={coord.aluno_id} className="flex items-center justify-between py-2 px-3">
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-5 h-5 rounded-full bg-white/10 overflow-hidden shrink-0">
@@ -345,10 +347,23 @@ const CasaPage = () => {
                   <span className="text-[10px] text-white/30">Coord.</span>
                 </div>
               ))}
-              {coordenadores.length > 4 && (
-                <div className="py-2 px-3 text-xs text-white/25 text-center">
+              {coordenadores.length > 4 && !expandirCoords && (
+                <button
+                  onClick={() => setExpandirCoords(true)}
+                  className="w-full py-2 px-3 text-xs text-white/40 text-center hover:bg-white/[0.04] transition-colors flex items-center justify-center gap-1"
+                >
                   +{coordenadores.length - 4} coordenadores
-                </div>
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+              )}
+              {coordenadores.length > 4 && expandirCoords && (
+                <button
+                  onClick={() => setExpandirCoords(false)}
+                  className="w-full py-2 px-3 text-xs text-white/40 text-center hover:bg-white/[0.04] transition-colors flex items-center justify-center gap-1"
+                >
+                  Recolher
+                  <ChevronUp className="w-3 h-3" />
+                </button>
               )}
             </>
           )}
@@ -370,18 +385,59 @@ const CasaPage = () => {
       </button>
 
       {/* Ver todos os membros */}
-      <button
-        onClick={() => navigate('/aluno/chat/membros')}
-        className="w-full flex items-center justify-between p-4 rounded-xl
-          bg-[#252547] border border-violet-500/10
-          hover:bg-white/[0.06] transition-colors active:scale-[0.98]"
-      >
-        <div className="flex items-center gap-3">
-          <Users className="w-5 h-5 text-white/40" />
-          <span className="text-sm text-white/70">Ver todos os {totalMembros} membros</span>
-        </div>
-        <ChevronRight className="w-4 h-4 text-white/30" />
-      </button>
+      <div>
+        <button
+          onClick={() => setExpandirMembros(!expandirMembros)}
+          className="w-full flex items-center justify-between p-4 rounded-xl
+            bg-[#252547] border border-violet-500/10
+            hover:bg-white/[0.06] transition-colors active:scale-[0.98]"
+        >
+          <div className="flex items-center gap-3">
+            <Users className="w-5 h-5 text-white/40" />
+            <span className="text-sm text-white/70">Ver todos os {totalMembros} membros</span>
+          </div>
+          {expandirMembros ? <ChevronUp className="w-4 h-4 text-white/30" /> : <ChevronDown className="w-4 h-4 text-white/30" />}
+        </button>
+
+        {expandirMembros && (
+          <div className="mt-2 rounded-xl overflow-hidden bg-[#252547] border border-violet-500/10">
+            {[...membros].sort((a, b) => b.total_pontos - a.total_pontos).map((membro, idx) => {
+              const isMe = membro.aluno_id === user?.id;
+              return (
+                <div
+                  key={membro.aluno_id}
+                  className={cn(
+                    'flex items-center justify-between py-2.5 px-3',
+                    isMe && 'bg-white/5',
+                    idx > 0 && 'border-t border-violet-500/5'
+                  )}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-5 text-center text-xs text-white/30">{idx + 1}</span>
+                    <div className="w-6 h-6 rounded-full bg-white/10 overflow-hidden shrink-0">
+                      {membro.avatar_url ? (
+                        <img src={membro.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="flex items-center justify-center w-full h-full text-xs text-white/60">
+                          {membro.aluno_nome.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <span className={cn('text-sm truncate block', isMe ? 'text-white font-medium' : 'text-white/80')}>
+                        {membro.aluno_nome}
+                        {isMe && <span className="text-white/30 ml-1">(voce)</span>}
+                      </span>
+                      {membro.serie && <span className="text-[10px] text-white/25">{membro.serie}</span>}
+                    </div>
+                  </div>
+                  <span className="text-sm text-green-400 shrink-0">{membro.total_pontos} pts</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

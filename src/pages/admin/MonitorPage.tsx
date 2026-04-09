@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertTriangle, CheckCircle, Clock, Users, Activity, ChevronDown, Calendar } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, Users, Activity, ChevronDown, ChevronUp, Calendar, LogIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -12,6 +12,8 @@ const MonitorPage = () => {
   const [faseSelecionada, setFaseSelecionada] = useState<string | null>(null); // null = ativa
   const [serieFiltro, setSerieFiltro] = useState<string | null>(null);
   const [showFaseSelect, setShowFaseSelect] = useState(false);
+  const [loginsExpandido, setLoginsExpandido] = useState(true);
+  const [loginFiltro, setLoginFiltro] = useState<'todos' | 'lideres' | 'coordenadores'>('todos');
 
   // Institution
   const { data: institutionId } = useQuery({
@@ -38,17 +40,33 @@ const MonitorPage = () => {
     enabled: !!institutionId,
   });
 
-  // Fase selecionada (ativa por padrao)
+  // Fase selecionada (determina ativa por datas, nao pelo campo 'ativo')
   const faseAtual = faseSelecionada
     ? todasFases.find(f => f.id === faseSelecionada)
-    : todasFases.find(f => f.ativo);
+    : (() => {
+        const hoje = new Date();
+        hoje.setHours(12, 0, 0, 0);
+        return todasFases.find(f => {
+          if (!f.data_inicio || !f.data_fim) return false;
+          const inicio = new Date(f.data_inicio + 'T12:00:00');
+          const fim = new Date(f.data_fim + 'T12:00:00');
+          return hoje >= inicio && hoje <= fim;
+        }) || todasFases.find(f => f.ativo);
+      })();
 
   const faseId = faseAtual?.id;
   const semanaAtual = faseAtual?.semana_atual || 1;
   const faseInt = faseAtual?.inteligencia as any;
   const faseNome = faseInt?.nome || 'Sem fase';
   const faseCor = faseInt?.cor_hex || '#6366f1';
-  const ehFaseAtiva = faseAtual?.ativo;
+  const ehFaseAtiva = (() => {
+    if (!faseAtual?.data_inicio || !faseAtual?.data_fim) return false;
+    const hoje = new Date();
+    hoje.setHours(12, 0, 0, 0);
+    const inicio = new Date(faseAtual.data_inicio + 'T12:00:00');
+    const fim = new Date(faseAtual.data_fim + 'T12:00:00');
+    return hoje >= inicio && hoje <= fim;
+  })();
 
   // Total alunos (filtrado por serie)
   const { data: totalAlunos = 0 } = useQuery({
@@ -238,14 +256,15 @@ const MonitorPage = () => {
 
   // Casas
   const { data: visaoCasas = [] } = useQuery({
-    queryKey: ['admin-visao-casas', institutionId],
+    queryKey: ['admin-visao-casas', institutionId, faseId],
     queryFn: async () => {
       if (!institutionId) return [];
       const { data: casas } = await supabase.from('inteligencias').select('id, nome, cor_hex').order('id');
       const { data: profiles } = await supabase.from('profiles').select('id, casa_id').eq('institution_id', institutionId).eq('segmento', 'fundamental2').not('casa_id', 'is', null);
-      // Buscar missões com prazo já vencido ou hoje (para calcular % real de entrega)
-      const hoje = new Date().toISOString().split('T')[0];
-      const { data: missoes } = await supabase.from('missoes').select('id').eq('institution_id', institutionId).eq('status', 'liberada').lte('data_prazo', hoje);
+      // Buscar missões da fase atual (ou todas liberadas se nao tem fase)
+      let missaoQuery = supabase.from('missoes').select('id').eq('institution_id', institutionId).eq('status', 'liberada');
+      if (faseId) missaoQuery = missaoQuery.eq('fase_id', faseId);
+      const { data: missoes } = await missaoQuery;
       const { data: pontos } = await supabase.from('pontos_gerais').select('casa_id, pontos').eq('institution_id', institutionId);
       let entregasSet = new Set<string>();
       if (missoes?.length) {
@@ -329,6 +348,74 @@ const MonitorPage = () => {
     enabled: !!institutionId,
     staleTime: 60000,
   });
+
+  // Logins de hoje — alunos
+  const { data: todosAlunos = [] } = useQuery({
+    queryKey: ['monitor-alunos-login', institutionId],
+    queryFn: async () => {
+      if (!institutionId) return [];
+      const { data } = await supabase.from('profiles')
+        .select('id, full_name, nome, avatar_url, serie, turma, ultima_atividade')
+        .eq('institution_id', institutionId)
+        .eq('segmento', 'fundamental2')
+        .not('serie', 'is', null)
+        .order('full_name');
+      return data || [];
+    },
+    enabled: !!institutionId,
+    staleTime: 60000,
+  });
+
+  // Cargos (líderes e coordenadores)
+  const { data: cargosMap = {} } = useQuery({
+    queryKey: ['monitor-cargos', institutionId],
+    queryFn: async () => {
+      if (!institutionId) return {};
+      const { data } = await supabase.from('cargos_casa')
+        .select('aluno_id, cargo')
+        .eq('institution_id', institutionId)
+        .eq('ativo', true)
+        .in('cargo', ['lider', 'coordenador']);
+      const map: Record<string, string> = {};
+      (data || []).forEach(c => { map[c.aluno_id] = c.cargo; });
+      return map;
+    },
+    enabled: !!institutionId,
+    staleTime: 300000,
+  });
+
+  // Determinar quem acessou hoje usando ultima_atividade do profile
+  const hojeStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const logouHojeSet = new Set(
+    todosAlunos
+      .filter(a => a.ultima_atividade && a.ultima_atividade.startsWith(hojeStr))
+      .map(a => a.id)
+  );
+
+  // Filtrar alunos por cargo
+  const alunosFiltrados = loginFiltro === 'todos'
+    ? todosAlunos
+    : todosAlunos.filter(a => cargosMap[a.id] === (loginFiltro === 'lideres' ? 'lider' : 'coordenador'));
+
+  // Agrupar alunos por serie+turma para login map
+  const gruposLogin = (() => {
+    const map: Record<string, { serie: string; turma: string; alunos: typeof todosAlunos }> = {};
+    alunosFiltrados.forEach(a => {
+      const serieNum = a.serie?.replace(/\D/g, '') || '0';
+      const turma = a.turma || 'S/T';
+      const key = `${serieNum}-${turma}`;
+      if (!map[key]) map[key] = { serie: serieNum, turma, alunos: [] };
+      map[key].alunos.push(a);
+    });
+    return Object.entries(map)
+      .filter(([, g]) => g.alunos.length > 0)
+      .sort((a, b) => {
+        const sd = parseInt(a[1].serie) - parseInt(b[1].serie);
+        return sd !== 0 ? sd : a[1].turma.localeCompare(b[1].turma);
+      });
+  })();
+
+  const totalLogaram = alunosFiltrados.filter(a => logouHojeSet.has(a.id)).length;
 
   return (
     <div className="p-4 space-y-5 pb-24">
@@ -538,6 +625,96 @@ const MonitorPage = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Logins de Hoje */}
+      {todosAlunos.length > 0 && (
+        <div>
+          <button
+            onClick={() => setLoginsExpandido(!loginsExpandido)}
+            className="w-full flex items-center gap-2 mb-3 px-1"
+          >
+            <div className="w-1 h-3.5 rounded-full bg-emerald-500" />
+            <LogIn className="w-3.5 h-3.5 text-emerald-400/80" />
+            <p className="text-[10px] font-semibold text-emerald-400/80 uppercase tracking-widest">Logins de Hoje</p>
+            <span className="text-[10px] font-medium text-emerald-400 ml-1">{totalLogaram}/{alunosFiltrados.length}</span>
+            <div className="flex-1" />
+            {loginsExpandido ? <ChevronUp className="w-3.5 h-3.5 text-white/20" /> : <ChevronDown className="w-3.5 h-3.5 text-white/20" />}
+          </button>
+
+          {loginsExpandido && (
+            <div className="flex gap-1.5 mb-3 px-1">
+              {([
+                { id: 'todos', label: 'Todos' },
+                { id: 'lideres', label: 'Lideres' },
+                { id: 'coordenadores', label: 'Coordenadores' },
+              ] as const).map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setLoginFiltro(f.id)}
+                  className={cn(
+                    'px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors',
+                    loginFiltro === f.id ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/[0.04] text-white/30 hover:bg-white/[0.08]'
+                  )}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {loginsExpandido && (
+            <div className="space-y-4">
+              {gruposLogin.map(([key, grupo]) => {
+                const logaram = grupo.alunos.filter(a => logouHojeSet.has(a.id)).length;
+                return (
+                  <div key={key}>
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                      <span className="text-[10px] font-medium text-white/40">{grupo.serie}º {grupo.turma}</span>
+                      <span className={cn(
+                        'text-[9px] font-medium px-1.5 py-0.5 rounded-full',
+                        logaram === grupo.alunos.length ? 'bg-emerald-500/20 text-emerald-400' :
+                        logaram > 0 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-white/5 text-white/25'
+                      )}>
+                        {logaram}/{grupo.alunos.length}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 px-1">
+                      {grupo.alunos.map(a => {
+                        const logou = logouHojeSet.has(a.id);
+                        return (
+                          <div key={a.id} className="relative group">
+                            <div className={cn(
+                              'w-8 h-8 rounded-full overflow-hidden border-2 transition-all',
+                              logou ? 'border-emerald-400 opacity-100' : 'border-white/10 opacity-25 grayscale'
+                            )}>
+                              {a.avatar_url ? (
+                                <img src={a.avatar_url} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span className={cn(
+                                  'flex items-center justify-center w-full h-full text-[10px] font-medium',
+                                  logou ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/10 text-white/40'
+                                )}>
+                                  {(a.nome || a.full_name || '?').charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            {logou && (
+                              <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#1A1A2E]" />
+                            )}
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-black/90 text-[9px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                              {a.full_name || a.nome || '?'}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

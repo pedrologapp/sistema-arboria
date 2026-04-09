@@ -363,8 +363,8 @@ const DashboardLiderPage = () => {
         </div>
       )}
 
-      {/* Coordenadores */}
-      {coordenadores.length > 0 && (
+      {/* Coordenadores (para líderes) ou Meus Alunos (para coordenadores) */}
+      {isLider && coordenadores.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3 px-1">
             <div className="w-1 h-3.5 rounded-full bg-amber-500" />
@@ -393,6 +393,33 @@ const DashboardLiderPage = () => {
                 </button>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {isCoordenador && membros.filter(m => m.id !== profile?.id).length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <div className="w-1 h-3.5 rounded-full bg-amber-500" />
+            <p className="text-[10px] font-semibold text-amber-400/80 uppercase tracking-widest">Meus Alunos</p>
+          </div>
+          <div className="rounded-xl bg-[#252547] border border-violet-500/10 overflow-hidden">
+            {membros.filter(m => m.id !== profile?.id).map((m, idx) => (
+              <button key={m.id}
+                onClick={() => iniciarDM(m.id)}
+                className={cn('w-full flex items-center gap-3 py-2.5 px-3.5 hover:bg-white/[0.04] transition-colors text-left', idx > 0 && 'border-t border-violet-500/5')}>
+                <div className="w-8 h-8 rounded-full overflow-hidden border-2 shrink-0" style={{ borderColor: casaColor }}>
+                  {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover" /> :
+                  <span className="flex items-center justify-center w-full h-full text-[10px] text-white/50" style={{ backgroundColor: `${casaColor}20` }}>
+                    {(m.nome || '?').charAt(0).toUpperCase()}</span>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white/70 truncate">{m.full_name || 'Aluno'}</p>
+                  <p className="text-[10px] text-white/30">{m.serie} {m.turma}</p>
+                </div>
+                <MessageCircle className="w-4 h-4 text-white/20" />
+              </button>
+            ))}
           </div>
         </div>
       )}

@@ -86,7 +86,7 @@ const Login = () => {
 
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
-          toast.error('Email ou senha incorretos. Primeira vez? A senha padrão é: sobrenome123 (ex: silva123)');
+          toast.error('Email ou senha incorretos. Primeira vez? Use a senha fornecida pela escola.');
         } else if (error.message.includes('Email not confirmed')) {
           toast.error('Por favor, confirme seu email antes de fazer login');
         } else {

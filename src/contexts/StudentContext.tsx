@@ -130,12 +130,14 @@ export const StudentProvider = ({ children }: StudentProviderProps) => {
       // 2. Fetch everything else IN PARALLEL
       const serieNum = profileData?.serie ? parseInt(profileData.serie) : null;
 
-      // Build fase query
+      // Build fase query (determina fase ativa por datas, nao pelo campo 'ativo')
+      const hojeDate = new Date().toISOString().split('T')[0];
       let faseQuery = supabase
         .from('fases')
         .select('id, numero_fase, semana_atual, data_inicio, data_fim, inteligencia:inteligencias!inteligencia_id(id, nome, codigo, emoji, cor_hex)')
         .eq('institution_id', profileData.institution_id)
-        .eq('ativo', true);
+        .lte('data_inicio', hojeDate)
+        .gte('data_fim', hojeDate);
       if (profileData.segmento) faseQuery = faseQuery.or(`segmento.eq.${profileData.segmento},segmento.is.null`);
       if (serieNum) faseQuery = faseQuery.or(`serie.eq.${serieNum},serie.is.null`);
 

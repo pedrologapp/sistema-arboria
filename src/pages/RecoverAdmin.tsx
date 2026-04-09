@@ -9,8 +9,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 const RecoverAdmin = () => {
-  const [email, setEmail] = useState("projetoarboria@gmail.com");
-  const [newPassword, setNewPassword] = useState("123456");
+  const [email, setEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [recoveryCode, setRecoveryCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 

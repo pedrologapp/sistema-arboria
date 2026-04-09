@@ -10,6 +10,7 @@ const ArboriaPage = () => {
   const navigate = useNavigate();
   const [busca, setBusca] = useState('');
   const [emojiAberto, setEmojiAberto] = useState<string | null>(null);
+  const [historicoAberto, setHistoricoAberto] = useState<string | null>(null);
 
   // Buscar todos os alunos
   const { data: alunos = [], isLoading: loadingAlunos } = useQuery({
@@ -49,18 +50,34 @@ const ArboriaPage = () => {
     },
   });
 
-  // Últimos check-ins emocionais (últimos 24h)
-  const { data: checkinsRecentes = [] } = useQuery({
-    queryKey: ['arboria-checkins-recentes'],
+  const hojeData = new Date().toISOString().split('T')[0];
+
+  // Check-ins de hoje
+  const { data: checkinsHoje = [] } = useQuery({
+    queryKey: ['arboria-checkins-hoje', hojeData],
     queryFn: async () => {
-      const ontem = new Date();
-      ontem.setDate(ontem.getDate() - 1);
       const { data } = await supabase
         .from('checkin_emocional')
-        .select('aluno_id, emoji, label, data')
-        .gte('data', ontem.toISOString().split('T')[0])
+        .select('aluno_id, emoji, label, data, created_at')
+        .eq('data', hojeData)
+        .order('created_at', { ascending: false });
+      return data || [];
+    },
+  });
+
+  // Histórico (últimos 7 dias, excluindo hoje)
+  const { data: checkinsHistorico = [] } = useQuery({
+    queryKey: ['arboria-checkins-historico', hojeData],
+    queryFn: async () => {
+      const seteDiasAtras = new Date();
+      seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
+      const { data } = await supabase
+        .from('checkin_emocional')
+        .select('aluno_id, emoji, label, data, created_at')
+        .lt('data', hojeData)
+        .gte('data', seteDiasAtras.toISOString().split('T')[0])
         .order('created_at', { ascending: false })
-        .limit(30);
+        .limit(50);
       return data || [];
     },
   });
@@ -88,11 +105,26 @@ const ArboriaPage = () => {
       )
     : [];
 
-  // Resumo emocional
-  const emojiContagem = checkinsRecentes.reduce((acc, c) => {
+  // Resumo emocional (só hoje)
+  const emojiContagem = checkinsHoje.reduce((acc, c) => {
     acc[c.emoji] = (acc[c.emoji] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
+
+  // Mapa emoji → label
+  const emojiLabel = checkinsHoje.reduce((acc, c) => {
+    if (c.emoji && c.label && !acc[c.emoji]) acc[c.emoji] = c.label;
+    return acc;
+  }, {} as Record<string, string>);
+
+  // Histórico agrupado por dia (com checkins completos)
+  const historicoAgrupado = checkinsHistorico.reduce((acc, c) => {
+    const dia = c.data || '';
+    if (!acc[dia]) acc[dia] = { contagem: {} as Record<string, number>, checkins: [] as typeof checkinsHistorico };
+    acc[dia].contagem[c.emoji] = (acc[dia].contagem[c.emoji] || 0) + 1;
+    acc[dia].checkins.push(c);
+    return acc;
+  }, {} as Record<string, { contagem: Record<string, number>; checkins: typeof checkinsHistorico }>);
 
   const getAlunoNome = (alunoId: string) => {
     const a = alunos.find(al => al.id === alunoId);
@@ -173,22 +205,27 @@ const ArboriaPage = () => {
                       key={emoji}
                       onClick={() => setEmojiAberto(emojiAberto === emoji ? null : emoji)}
                       className={cn(
-                        'flex flex-col items-center gap-1 px-2 py-1 rounded-xl transition-all',
+                        'flex flex-col items-center gap-1 px-2 py-1.5 rounded-xl transition-all min-w-[52px]',
                         emojiAberto === emoji ? 'bg-white/10 scale-110' : 'hover:bg-white/5'
                       )}
                     >
                       <span className="text-[10px] text-white/40">{count}</span>
                       <span className="text-2xl">{emoji}</span>
+                      {emojiLabel[emoji] && (
+                        <span className="text-[9px] text-white/30 leading-tight text-center">{emojiLabel[emoji]}</span>
+                      )}
                     </button>
                   ))}
               </div>
-              <p className="text-[10px] text-white/25 text-center mt-2">{checkinsRecentes.length} check-ins nas ultimas 24h</p>
+              <p className="text-[10px] text-white/25 text-center mt-2">
+                {new Set(checkinsHoje.map(c => c.aluno_id)).size}/{alunos.length} alunos registraram hoje
+              </p>
 
               {/* Detalhes: quem colocou esse emoji */}
               {emojiAberto && (
                 <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5">
-                  <p className="text-[10px] text-white/30 mb-2">Quem se sentiu {emojiAberto}:</p>
-                  {checkinsRecentes
+                  <p className="text-[10px] text-white/30 mb-2">Quem se sentiu {emojiAberto} hoje:</p>
+                  {checkinsHoje
                     .filter(c => c.emoji === emojiAberto)
                     .map((c, i) => {
                       const alunoInfo = alunos.find(a => a.id === c.aluno_id);
@@ -212,12 +249,93 @@ const ArboriaPage = () => {
                             <p className="text-xs text-white truncate">{alunoInfo?.full_name || 'Aluno'}</p>
                             <p className="text-[9px] text-white/25">{alunoInfo?.serie} - Turma {alunoInfo?.turma}</p>
                           </div>
-                          {casaInfo && <span className="text-[9px]" style={{ color: casaInfo.cor_hex }}>{casaInfo.nome}</span>}
+                          <div className="flex flex-col items-end shrink-0">
+                            {c.created_at && (
+                              <span className="text-[9px] text-white/30 font-mono">
+                                {new Date(c.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            )}
+                            {casaInfo && <span className="text-[9px]" style={{ color: casaInfo.cor_hex }}>{casaInfo.nome}</span>}
+                          </div>
                         </button>
                       );
                     })}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Histórico emocional (últimos 7 dias) */}
+          {Object.keys(historicoAgrupado).length > 0 && (
+            <div className="rounded-2xl border border-violet-500/10 bg-[#252547] p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Heart className="w-4 h-4 text-white/30" />
+                <p className="text-sm font-medium text-white/60">Historico Emocional</p>
+                <span className="text-[10px] text-white/25">ultimos 7 dias</span>
+              </div>
+              <div className="space-y-1">
+                {Object.entries(historicoAgrupado)
+                  .sort(([a], [b]) => b.localeCompare(a))
+                  .map(([dia, { contagem, checkins }]) => {
+                    const dataFormatada = new Date(dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+                    const totalDia = Object.values(contagem).reduce((s, n) => s + n, 0);
+                    const isOpen = historicoAberto === dia;
+                    return (
+                      <div key={dia}>
+                        <button
+                          onClick={() => setHistoricoAberto(isOpen ? null : dia)}
+                          className="w-full flex items-center gap-3 py-2 px-1 rounded-lg hover:bg-white/[0.04] transition-colors"
+                        >
+                          <span className="text-[10px] text-white/30 w-20 shrink-0 text-left">{dataFormatada}</span>
+                          <div className="flex items-center gap-1.5 flex-1">
+                            {Object.entries(contagem)
+                              .sort(([, a], [, b]) => b - a)
+                              .map(([emoji, count]) => (
+                                <span key={emoji} className="text-sm">
+                                  {emoji}<span className="text-[9px] text-white/30 ml-0.5">{count}</span>
+                                </span>
+                              ))}
+                          </div>
+                          <span className="text-[9px] text-white/20">{totalDia}</span>
+                        </button>
+                        {isOpen && (
+                          <div className="ml-2 mb-2 pl-3 border-l border-white/5 space-y-1">
+                            {checkins.map((c, i) => {
+                              const alunoInfo = alunos.find(a => a.id === c.aluno_id);
+                              const casaInfo = alunoInfo ? getCasa(alunoInfo.casa_id) : null;
+                              return (
+                                <button
+                                  key={i}
+                                  onClick={() => navigate(`/admin/arboria/aluno/${c.aluno_id}`)}
+                                  className="w-full flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-white/[0.04] transition-colors text-left"
+                                >
+                                  <span className="text-base">{c.emoji}</span>
+                                  <div className="w-6 h-6 rounded-full overflow-hidden border shrink-0" style={{ borderColor: casaInfo?.cor_hex || '#444' }}>
+                                    {alunoInfo?.avatar_url ? (
+                                      <img src={alunoInfo.avatar_url} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                      <span className="flex items-center justify-center w-full h-full text-[9px] text-white/40" style={{ backgroundColor: `${casaInfo?.cor_hex || '#444'}20` }}>
+                                        {(alunoInfo?.nome || '?').charAt(0).toUpperCase()}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[11px] text-white/70 truncate">{alunoInfo?.full_name || 'Aluno'}</p>
+                                  </div>
+                                  {c.created_at && (
+                                    <span className="text-[9px] text-white/25 font-mono shrink-0">
+                                      {new Date(c.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
             </div>
           )}
 
