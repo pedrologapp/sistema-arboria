@@ -404,7 +404,12 @@ const ProfessorDashboard = () => {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-white font-medium">{t.serie}º Ano — Turma {t.turma}</p>
                           {ag ? (
-                            <p className="text-[10px] text-white/40">{diasSemana[ag.dia_semana]} {ag.horario?.slice(0, 5)}</p>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setAgendaSerie(t.serie); setAgendaTurma(t.turma); setAgendaDia(ag.dia_semana); setAgendaHorario(ag.horario?.slice(0, 5) || '08:00'); setShowAgendaModal(true); }}
+                              className="text-[10px] text-white/40 hover:text-violet-300 transition-colors"
+                            >
+                              {diasSemana[ag.dia_semana]} {ag.horario?.slice(0, 5)} (editar)
+                            </button>
                           ) : (
                             <button
                               onClick={(e) => { e.stopPropagation(); setAgendaSerie(t.serie); setAgendaTurma(t.turma); setShowAgendaModal(true); }}
@@ -496,6 +501,28 @@ const ProfessorDashboard = () => {
               className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors">
               Salvar
             </button>
+            {agenda.find((a: any) => a.serie === agendaSerie && a.turma === agendaTurma) && (
+              <button
+                onClick={async () => {
+                  if (!profile?.id || !faseAtual?.id || !agendaSerie || !agendaTurma) return;
+                  try {
+                    await supabase.from('professor_agenda')
+                      .update({ ativo: false })
+                      .eq('professor_id', profile.id)
+                      .eq('fase_id', faseAtual.id)
+                      .eq('serie', agendaSerie)
+                      .eq('turma', agendaTurma);
+                    toast.success('Horario removido');
+                    setShowAgendaModal(false);
+                    setAgendaSerie(''); setAgendaTurma('');
+                    queryClient.invalidateQueries({ queryKey: ['prof-agenda'] });
+                  } catch (err: any) { toast.error(err.message || 'Erro'); }
+                }}
+                className="w-full py-2.5 rounded-xl bg-red-500/10 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-colors"
+              >
+                Remover horario
+              </button>
+            )}
           </div>
         </div>
       )}

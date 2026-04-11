@@ -166,8 +166,8 @@ const FaseDetalhesPage = () => {
     queryFn: async () => {
       if (!faseId || !institutionId) return {};
       const { data } = await supabase.from('missoes')
-        .select('id, semana, tipo_missao, casa_id, titulo, arquivo_pdf_nome, arquivo_pdf_url, status')
-        .eq('fase_id', faseId).eq('institution_id', institutionId).eq('origem', 'admin');
+        .select('id, semana, tipo_missao, casa_id, titulo, arquivo_pdf_nome, arquivo_pdf_url, status, origem, criado_por, pontos_base')
+        .eq('fase_id', faseId).eq('institution_id', institutionId);
       const map: Record<number, any[]> = { 1: [], 2: [], 3: [], 4: [] };
       (data || []).forEach(m => { if (map[m.semana]) map[m.semana].push(m); });
       return map;
@@ -434,7 +434,7 @@ const FaseDetalhesPage = () => {
 
                     {/* Missoes */}
                     <div>
-                      <p className="text-[10px] text-white/30 mb-1.5">Missoes</p>
+                      <p className="text-[10px] text-white/30 mb-1.5">Missoes ({missoes.length})</p>
 
                       {/* Geral */}
                       <div className="mb-2">
@@ -442,8 +442,12 @@ const FaseDetalhesPage = () => {
                         {missaoGeral ? (
                           <div className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-white/[0.04]">
                             <FileText className="w-3 h-3 text-emerald-400 shrink-0" />
-                            <a href={missaoGeral.arquivo_pdf_url} target="_blank" rel="noopener noreferrer"
-                              className="text-[10px] text-emerald-400/80 hover:text-emerald-300 truncate flex-1">{missaoGeral.arquivo_pdf_nome || missaoGeral.titulo}</a>
+                            <span className="text-[10px] text-emerald-400/80 truncate flex-1">{missaoGeral.titulo}</span>
+                            {missaoGeral.origem === 'admin' ? (
+                              <span className="text-[8px] text-violet-400/50 shrink-0">admin</span>
+                            ) : (
+                              <span className="text-[8px] text-amber-400/50 shrink-0">professor</span>
+                            )}
                             <button onClick={() => removerMissao(missaoGeral.id)} className="p-0.5 text-white/20 hover:text-red-400"><Trash2 className="w-2.5 h-2.5" /></button>
                           </div>
                         ) : (
@@ -459,20 +463,30 @@ const FaseDetalhesPage = () => {
                         <p className="text-[9px] text-white/20 uppercase tracking-wider mb-1">Por casa</p>
                         <div className="space-y-1">
                           {casas.map(casa => {
-                            const missaoCasa = missoesIndiv.find((m: any) => m.casa_id === casa.id);
+                            const missoesCasa = missoesIndiv.filter((m: any) => m.casa_id === casa.id);
                             return (
-                              <div key={casa.id} className="flex items-center gap-2 py-1 px-2 rounded-lg hover:bg-white/[0.02]">
-                                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: casa.cor_hex }} />
-                                <span className="text-[10px] text-white/40 flex-1 truncate">{casa.nome}</span>
-                                {missaoCasa ? (
-                                  <>
-                                    <a href={missaoCasa.arquivo_pdf_url} target="_blank" rel="noopener noreferrer"
-                                      className="text-[9px] text-blue-400/60 hover:text-blue-300 truncate max-w-[80px]">{missaoCasa.arquivo_pdf_nome || 'PDF'}</a>
-                                    <button onClick={() => removerMissao(missaoCasa.id)} className="p-0.5 text-white/15 hover:text-red-400"><Trash2 className="w-2.5 h-2.5" /></button>
-                                  </>
+                              <div key={casa.id}>
+                                {missoesCasa.length > 0 ? (
+                                  missoesCasa.map((missaoCasa: any) => (
+                                    <div key={missaoCasa.id} className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-white/[0.03] mb-1">
+                                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: casa.cor_hex }} />
+                                      <span className="text-[10px] text-white/60 truncate flex-1">{missaoCasa.titulo}</span>
+                                      <span className="text-[8px] text-white/30 shrink-0">{missaoCasa.pontos_base}pts</span>
+                                      {missaoCasa.origem === 'admin' ? (
+                                        <span className="text-[8px] text-violet-400/50 shrink-0">admin</span>
+                                      ) : (
+                                        <span className="text-[8px] text-amber-400/50 shrink-0">prof</span>
+                                      )}
+                                      <button onClick={() => removerMissao(missaoCasa.id)} className="p-0.5 text-white/15 hover:text-red-400"><Trash2 className="w-2.5 h-2.5" /></button>
+                                    </div>
+                                  ))
                                 ) : (
-                                  <button onClick={() => { setMissaoUploadInfo({ semana, tipo: 'individual', casaId: casa.id }); missaoInputRef.current?.click(); }}
-                                    className="text-[9px] text-white/15 hover:text-white/30">+ PDF</button>
+                                  <div className="flex items-center gap-2 py-1 px-2 rounded-lg hover:bg-white/[0.02]">
+                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: casa.cor_hex }} />
+                                    <span className="text-[10px] text-white/40 flex-1 truncate">{casa.nome}</span>
+                                    <button onClick={() => { setMissaoUploadInfo({ semana, tipo: 'individual', casaId: casa.id }); missaoInputRef.current?.click(); }}
+                                      className="text-[9px] text-white/15 hover:text-white/30">+ PDF</button>
+                                  </div>
                                 )}
                               </div>
                             );
