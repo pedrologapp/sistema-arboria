@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
-import { calcularSemanaAtualDaFase } from '@/utils/timezone';
+import { calcularSemanaAtualDaFase, hojeBrasil } from '@/utils/timezone';
 import { applyTheme } from '@/utils/theme';
 
 interface Profile {
@@ -131,7 +131,7 @@ export const StudentProvider = ({ children }: StudentProviderProps) => {
       const serieNum = profileData?.serie ? parseInt(profileData.serie) : null;
 
       // Build fase query (determina fase ativa por datas, nao pelo campo 'ativo')
-      const hojeDate = new Date().toISOString().split('T')[0];
+      const hojeDate = hojeBrasil();
       let faseQuery = supabase
         .from('fases')
         .select('id, numero_fase, semana_atual, data_inicio, data_fim, inteligencia:inteligencias!inteligencia_id(id, nome, codigo, emoji, cor_hex)')

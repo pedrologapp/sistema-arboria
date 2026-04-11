@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { calcularSemanaAtualDaFase } from '@/utils/timezone';
+import { calcularSemanaAtualDaFase, hojeBrasil } from '@/utils/timezone';
 
 type Segmento = 'infantil' | 'fundamental1' | 'fundamental2';
 
@@ -201,7 +201,7 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
         }
 
         // Determinar fase atual baseada nas datas (não no flag ativo)
-        const hoje = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const hoje = hojeBrasil();
 
         const faseSelectFields = `
             id,

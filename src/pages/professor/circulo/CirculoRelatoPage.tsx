@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { hojeBrasil } from '@/utils/timezone';
 
 const CirculoRelatoPage = () => {
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ const CirculoRelatoPage = () => {
       observacao_texto: texto.trim(),
       tipo_observacao: 'relato_professor',
       intensidade: 'normal',
-      data_observacao: new Date().toISOString().split('T')[0],
+      data_observacao: hojeBrasil(),
       institution_id: profile?.institution_id,
     };
 

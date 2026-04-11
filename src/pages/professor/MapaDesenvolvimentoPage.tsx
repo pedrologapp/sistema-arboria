@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { calcularSemanaAtualDaFase } from '@/utils/timezone';
+import { calcularSemanaAtualDaFase, hojeBrasil } from '@/utils/timezone';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -102,7 +102,7 @@ const MapaDesenvolvimentoPage = () => {
   const { data: faseF2 } = useQuery({
     queryKey: ['mapa-fase-f2', selectedSerieF2, profile?.institution_id],
     queryFn: async () => {
-      const hoje = new Date().toISOString().split('T')[0];
+      const hoje = hojeBrasil();
       const { data, error } = await supabase
         .from('fases')
         .select(`id, numero_fase, semana_atual, data_inicio, data_fim,

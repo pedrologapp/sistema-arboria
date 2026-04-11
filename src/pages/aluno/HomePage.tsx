@@ -7,6 +7,7 @@ import { useNotificacoes } from '@/hooks/useNotificacoes';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { supabase } from '@/integrations/supabase/client';
 import { Progress } from '@/components/ui/progress';
+import { hojeBrasil } from '@/utils/timezone';
 
 const saudacoes = [
   'Bom te ver por aqui',
@@ -363,7 +364,7 @@ const CheckInEmocional = ({ userId, casaColor }: { userId?: string; casaColor: s
 
   useEffect(() => {
     if (!userId) return;
-    const hoje = new Date().toISOString().split('T')[0];
+    const hoje = hojeBrasil();
     supabase
       .from('checkin_emocional')
       .select('emoji')
@@ -382,7 +383,7 @@ const CheckInEmocional = ({ userId, casaColor }: { userId?: string; casaColor: s
     if (!userId || salvando) return;
     setSalvando(true);
     setSelecionado(emoji);
-    const hoje = new Date().toISOString().split('T')[0];
+    const hoje = hojeBrasil();
     await supabase.from('checkin_emocional').upsert(
       { aluno_id: userId, emoji, label, data: hoje },
       { onConflict: 'aluno_id,data' }

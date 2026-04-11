@@ -104,6 +104,11 @@ export const calcularSemanaAtualDaFase = (dataInicio: string, dataFim: string): 
   return 4; // dia 21+ até data_fim
 };
 
+// Obter data de hoje no timezone Brasil em formato YYYY-MM-DD
+export const hojeBrasil = (): string => {
+  return agoraBrasil().toLocaleDateString('en-CA'); // en-CA retorna YYYY-MM-DD
+};
+
 // Obter início do dia no timezone Brasil
 export const inicioDoDiaBrasil = (data?: Date): Date => {
   const d = data ? new Date(data) : agoraBrasil();

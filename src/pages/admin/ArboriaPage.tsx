@@ -5,6 +5,7 @@ import { Search, TrendingUp, BookOpen, Sparkles, ChevronRight, Star, Target, Eye
 import { supabase } from '@/integrations/supabase/client';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { cn } from '@/lib/utils';
+import { hojeBrasil, agoraBrasil } from '@/utils/timezone';
 
 const ArboriaPage = () => {
   const navigate = useNavigate();
@@ -50,7 +51,7 @@ const ArboriaPage = () => {
     },
   });
 
-  const hojeData = new Date().toISOString().split('T')[0];
+  const hojeData = hojeBrasil();
 
   // Check-ins de hoje
   const { data: checkinsHoje = [] } = useQuery({
@@ -69,13 +70,14 @@ const ArboriaPage = () => {
   const { data: checkinsHistorico = [] } = useQuery({
     queryKey: ['arboria-checkins-historico', hojeData],
     queryFn: async () => {
-      const seteDiasAtras = new Date();
+      const seteDiasAtras = agoraBrasil();
       seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
+      const seteDiasAtrasStr = seteDiasAtras.toLocaleDateString('en-CA');
       const { data } = await supabase
         .from('checkin_emocional')
         .select('aluno_id, emoji, label, data, created_at')
         .lt('data', hojeData)
-        .gte('data', seteDiasAtras.toISOString().split('T')[0])
+        .gte('data', seteDiasAtrasStr)
         .order('created_at', { ascending: false })
         .limit(50);
       return data || [];

@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { hojeBrasil } from '@/utils/timezone';
 
 const MonitorPage = () => {
   const navigate = useNavigate();
@@ -386,7 +387,7 @@ const MonitorPage = () => {
     staleTime: 60000,
   });
 
-  const hojeStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const hojeStr = hojeBrasil();
 
   // Contagem de logins por aluno hoje
   const { data: loginsCountMap = {} } = useQuery({

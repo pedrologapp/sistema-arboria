@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CanalItem } from '@/components/chat/CanalItem';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { cn } from '@/lib/utils';
+import { hojeBrasil, agoraBrasil } from '@/utils/timezone';
 
 const AdminChatPage = () => {
   const navigate = useNavigate();
@@ -82,7 +83,7 @@ const AdminChatPage = () => {
     enabled: !!casaSelecionada,
   });
 
-  const ontem = new Date();
+  const ontem = agoraBrasil();
   ontem.setDate(ontem.getDate() - 1);
   const ontemISO = ontem.toISOString();
 
@@ -527,7 +528,7 @@ const AdminChatPage = () => {
                     const tempo = conv.ultimaData
                       ? (() => {
                           const d = new Date(conv.ultimaData);
-                          const hoje = new Date().toISOString().split('T')[0];
+                          const hoje = hojeBrasil();
                           const diaMsg = conv.ultimaData.split('T')[0];
                           if (diaMsg === hoje) return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                           return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
