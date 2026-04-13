@@ -1,9 +1,11 @@
-import { ArrowLeft, Lock, Bell, Palette, LogOut } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, Lock, Bell, Palette, LogOut, PenLine, Check, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { CasaBrasao } from '@/components/CasaBrasao';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import AvatarUpload from '@/components/aluno/AvatarUpload';
 
@@ -23,6 +25,27 @@ const ProfessorConfiguracoesPage = () => {
   };
 
   const fullName = profile?.full_name || `${profile?.nome || ''} ${profile?.sobrenome || ''}`.trim() || 'Professor';
+  const [editandoNome, setEditandoNome] = useState(false);
+  const [novoNome, setNovoNome] = useState(fullName);
+  const [salvandoNome, setSalvandoNome] = useState(false);
+
+  const salvarNome = async () => {
+    if (!user?.id || !novoNome.trim()) return;
+    setSalvandoNome(true);
+    const nome = novoNome.trim().split(' ')[0];
+    const sobrenome = novoNome.trim().split(' ').slice(1).join(' ');
+    const { error } = await supabase.from('profiles').update({
+      nome, sobrenome, full_name: novoNome.trim()
+    }).eq('id', user.id);
+    if (!error) {
+      toast.success('Nome atualizado!');
+      setEditandoNome(false);
+      refreshData();
+    } else {
+      toast.error('Erro ao salvar nome');
+    }
+    setSalvandoNome(false);
+  };
   const initials = fullName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
 
   return (
@@ -62,7 +85,26 @@ const ProfessorConfiguracoesPage = () => {
             )}
             
             <div className="text-center">
-              <h3 className="text-lg font-semibold text-white">{fullName}</h3>
+              {editandoNome ? (
+                <div className="flex items-center gap-2 justify-center">
+                  <input
+                    type="text"
+                    value={novoNome}
+                    onChange={(e) => setNovoNome(e.target.value)}
+                    className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-white text-center text-lg font-semibold focus:outline-none focus:border-white/40"
+                    autoFocus
+                    onKeyDown={(e) => e.key === 'Enter' && salvarNome()}
+                  />
+                  <button onClick={salvarNome} disabled={salvandoNome} className="p-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30">
+                    {salvandoNome ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => { setNovoNome(fullName); setEditandoNome(true); }} className="flex items-center gap-2 mx-auto group">
+                  <h3 className="text-lg font-semibold text-white">{fullName}</h3>
+                  <PenLine className="w-3.5 h-3.5 text-white/30 group-hover:text-white/60" />
+                </button>
+              )}
               {casaMentor && (
                 <p className="text-sm inline-flex items-center justify-center gap-1" style={{ color: casaColor }}>
                   <CasaBrasao 
