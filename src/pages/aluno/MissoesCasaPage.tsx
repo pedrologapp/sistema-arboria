@@ -104,7 +104,11 @@ const MissoesCasaPage = () => {
           }
         }
 
-        const { data: missoesData, error: missoesError } = await supabase
+        // Filtrar por série do aluno + data_liberacao
+        const serieNum = profile?.serie ? parseInt(profile.serie) : null;
+        const agora = new Date().toISOString();
+
+        let missaoQuery = supabase
           .from('missoes')
           .select('id, titulo, descricao, pontos_base')
           .eq('fase_id', faseId)
@@ -112,7 +116,11 @@ const MissoesCasaPage = () => {
           .eq('tipo_missao', 'individual')
           .eq('casa_id', casaIdNum)
           .eq('status', 'liberada')
+          .lte('data_liberacao', agora)
           .order('pontos_base', { ascending: true });
+        if (serieNum) missaoQuery = missaoQuery.eq('serie_filtro', serieNum);
+
+        const { data: missoesData, error: missoesError } = await missaoQuery;
 
         if (missoesError) throw missoesError;
 

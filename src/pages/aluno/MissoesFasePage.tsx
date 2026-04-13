@@ -111,11 +111,19 @@ const MissoesFasePage = () => {
 
       setFase(faseFormatada);
 
-      const { data: missoes, error: missoesError } = await supabase
+      // Filtrar missões por série do aluno + data_liberacao já passou
+      const serieNum = profile?.serie ? parseInt(profile.serie) : null;
+      const agora = new Date().toISOString();
+
+      let missaoQuery = supabase
         .from('missoes')
         .select('id, semana')
         .eq('fase_id', faseId)
-        .eq('status', 'liberada');
+        .eq('status', 'liberada')
+        .lte('data_liberacao', agora);
+      if (serieNum) missaoQuery = missaoQuery.eq('serie_filtro', serieNum);
+
+      const { data: missoes, error: missoesError } = await missaoQuery;
 
       if (missoesError) throw missoesError;
 

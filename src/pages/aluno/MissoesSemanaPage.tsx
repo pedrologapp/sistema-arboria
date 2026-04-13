@@ -89,8 +89,9 @@ const MissoesSemanaPage = () => {
         };
         setFase(faseFormatted);
 
-        // Filtrar por série do aluno
+        // Filtrar por série do aluno + data_liberacao já passou
         const serieNum = profile?.serie ? parseInt(profile.serie) : null;
+        const agora = new Date().toISOString();
 
         let geraisQuery = supabase
           .from('missoes')
@@ -98,7 +99,8 @@ const MissoesSemanaPage = () => {
           .eq('fase_id', faseId)
           .eq('semana', semanaNum)
           .eq('tipo_missao', 'geral')
-          .eq('status', 'liberada');
+          .eq('status', 'liberada')
+          .lte('data_liberacao', agora);
         if (serieNum) geraisQuery = geraisQuery.eq('serie_filtro', serieNum);
 
         const { data: geraisData, error: geraisError } = await geraisQuery;
@@ -110,7 +112,8 @@ const MissoesSemanaPage = () => {
           .eq('fase_id', faseId)
           .eq('semana', semanaNum)
           .eq('tipo_missao', 'individual')
-          .eq('status', 'liberada');
+          .eq('status', 'liberada')
+          .lte('data_liberacao', agora);
         if (serieNum) individuaisQuery = individuaisQuery.eq('serie_filtro', serieNum);
 
         const { data: individuaisData, error: individuaisError } = await individuaisQuery;
