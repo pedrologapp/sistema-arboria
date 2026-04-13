@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
-import { calcularSemanaAtualDaFase } from '@/utils/timezone';
+import { calcularSemanaAtualDaFase, agoraBrasil } from '@/utils/timezone';
 import { useStudent } from '@/contexts/StudentContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -94,7 +94,7 @@ const MissoesPage = () => {
       }
 
       // Determinar status pela data atual
-      const hoje = new Date();
+      const hoje = agoraBrasil();
       hoje.setHours(12, 0, 0, 0);
       
       const itensLista: ItemFase[] = Array.from(fasesDedup.values()).map(fase => {

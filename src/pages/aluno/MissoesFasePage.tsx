@@ -5,14 +5,19 @@ import { cn } from '@/lib/utils';
 import { useStudent } from '@/contexts/StudentContext';
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { calcularSemanaAtualDaFase } from '@/utils/timezone';
+import { calcularSemanaAtualDaFase, parseDataLocal } from '@/utils/timezone';
+import { addDays, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
+import CrossImCard from '@/components/aluno/CrossImCard';
+import GlossarioTooltip from '@/components/aluno/GlossarioTooltip';
 
 interface Inteligencia {
   id: number;
   nome: string;
+  codigo: string;
   cor_hex: string | null;
   brasao_url: string | null;
   emoji: string | null;
@@ -23,6 +28,8 @@ interface FaseData {
   numero_fase: number;
   semana_atual: number | null;
   ativo: boolean | null;
+  data_inicio: string | null;
+  data_fim: string | null;
   inteligencia: Inteligencia;
 }
 
@@ -36,7 +43,7 @@ interface SemanaInfo {
 const MissoesFasePage = () => {
   const { faseId } = useParams();
   const navigate = useNavigate();
-  const { profile } = useStudent();
+  const { profile, casa, casaColor } = useStudent();
   const { getNotificacoesSemana } = useNotificacoes();
 
   const [fase, setFase] = useState<FaseData | null>(null);
@@ -75,7 +82,7 @@ const MissoesFasePage = () => {
           data_inicio,
           data_fim,
           inteligencia:inteligencias!inteligencia_id (
-            id, nome, cor_hex, brasao_url, emoji
+            id, nome, codigo, cor_hex, brasao_url, emoji
           )
         `)
         .eq('id', faseId)
@@ -97,6 +104,8 @@ const MissoesFasePage = () => {
         numero_fase: faseData.numero_fase,
         semana_atual: semanaCalculada,
         ativo: faseData.ativo,
+        data_inicio: faseData.data_inicio,
+        data_fim: faseData.data_fim,
         inteligencia: faseData.inteligencia as unknown as Inteligencia
       };
 
@@ -230,13 +239,27 @@ const MissoesFasePage = () => {
         />
         <div className="text-center">
           <h1 className="text-xl font-semibold text-white tracking-tight">
-            Fase {fase.inteligencia.nome}
+            <GlossarioTooltip termo={fase.inteligencia.codigo} cor={casaColor}>
+              Fase {fase.inteligencia.nome}
+            </GlossarioTooltip>
           </h1>
           <p className="text-xs text-[#9CA3AF] uppercase tracking-widest mt-1">
             Semanas 1-4
           </p>
         </div>
       </div>
+
+      {/* Cross-IM Card */}
+      {casa?.codigo && fase?.inteligencia?.codigo && (
+        <div className="mb-6">
+          <CrossImCard
+            casaCodigo={casa.codigo}
+            faseCodigo={fase.inteligencia.codigo}
+            corCasa={casaColor}
+            faseNome={fase.inteligencia.nome}
+          />
+        </div>
+      )}
 
       {/* Section title */}
       <p className="text-xs font-medium text-[#9CA3AF] uppercase tracking-widest mb-4">
@@ -307,7 +330,14 @@ const MissoesFasePage = () => {
                     isFutura && 'text-[#475569]',
                     (isAtual || isPassada) && 'text-[#94A3B8]'
                   )}>
-                    {isFutura && 'Bloqueada'}
+                    {isFutura && (() => {
+                      if (fase?.data_inicio) {
+                        const inicio = parseDataLocal(fase.data_inicio);
+                        const semanaInicio = addDays(inicio, (semana.numero - 1) * 7);
+                        return `Abre ${format(semanaInicio, "dd 'de' MMM", { locale: ptBR })}`;
+                      }
+                      return 'Bloqueada';
+                    })()}
                     {(isAtual || isPassada) && semana.totalMissoes > 0 && (
                       <>
                         {semana.totalMissoes} {semana.totalMissoes === 1 ? 'missão' : 'missões'} · {semana.concluidas}/{semana.totalMissoes} concluídas

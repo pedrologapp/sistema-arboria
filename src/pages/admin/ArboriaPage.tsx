@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search, TrendingUp, BookOpen, Sparkles, ChevronRight, Star, Target, Eye, Heart } from 'lucide-react';
+import { Search, TrendingUp, BookOpen, Sparkles, ChevronRight, Star, Target, Eye, Heart, Flame, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { cn } from '@/lib/utils';
@@ -93,6 +93,36 @@ const ArboriaPage = () => {
         .select('id, aluno_id, texto, created_at')
         .order('created_at', { ascending: false })
         .limit(5);
+      return data || [];
+    },
+  });
+
+  // Desafios diários — respostas de hoje e recentes
+  const [filtroDesafioSerie, setFiltroDesafioSerie] = useState<string | null>(null);
+  const { data: desafiosHoje = [] } = useQuery({
+    queryKey: ['arboria-desafios-hoje', hojeData],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('desafio_diario_respostas')
+        .select('id, aluno_id, desafio_casa_codigo, desafio_tipo, habilidades, texto, data, created_at')
+        .eq('data', hojeData)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      return data || [];
+    },
+  });
+
+  const { data: desafiosRecentes = [] } = useQuery({
+    queryKey: ['arboria-desafios-recentes'],
+    queryFn: async () => {
+      const seteDiasAtras = agoraBrasil();
+      seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
+      const { data } = await supabase
+        .from('desafio_diario_respostas')
+        .select('id, aluno_id, desafio_casa_codigo, desafio_tipo, habilidades, texto, data, created_at')
+        .gte('data', seteDiasAtras.toLocaleDateString('en-CA'))
+        .order('created_at', { ascending: false })
+        .limit(100);
       return data || [];
     },
   });
@@ -407,10 +437,124 @@ const ArboriaPage = () => {
             </div>
           )}
 
+          {/* ═══ DESAFIOS DIÁRIOS ═══ */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <div className="w-1 h-3.5 rounded-full bg-orange-500" />
+              <p className="text-[10px] font-semibold text-orange-400/80 uppercase tracking-widest">Desafios Diários</p>
+              <span className="text-[10px] text-white/20 ml-auto">
+                {desafiosHoje.length} respostas hoje
+              </span>
+            </div>
+
+            {/* Stats rápidos */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="p-3 rounded-xl text-center bg-[#252547] border border-violet-500/10">
+                <span className="text-xl font-bold text-white">{desafiosHoje.length}</span>
+                <p className="text-[9px] text-white/30 mt-0.5">Hoje</p>
+              </div>
+              <div className="p-3 rounded-xl text-center bg-[#252547] border border-violet-500/10">
+                <span className="text-xl font-bold text-white">{desafiosRecentes.length}</span>
+                <p className="text-[9px] text-white/30 mt-0.5">7 dias</p>
+              </div>
+              <div className="p-3 rounded-xl text-center bg-[#252547] border border-violet-500/10">
+                <span className="text-xl font-bold text-white">
+                  {new Set(desafiosRecentes.map((d: any) => d.aluno_id)).size}
+                </span>
+                <p className="text-[9px] text-white/30 mt-0.5">Alunos ativos</p>
+              </div>
+            </div>
+
+            {/* Filtro por série */}
+            <div className="flex gap-1.5 overflow-x-auto pb-1">
+              <button
+                onClick={() => setFiltroDesafioSerie(null)}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-[10px] font-medium transition-colors shrink-0',
+                  !filtroDesafioSerie ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' : 'bg-white/[0.04] text-white/40'
+                )}
+              >
+                Todas
+              </button>
+              {['6', '7', '8', '9'].map(s => (
+                <button
+                  key={s}
+                  onClick={() => setFiltroDesafioSerie(filtroDesafioSerie === s ? null : s)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg text-[10px] font-medium transition-colors shrink-0',
+                    filtroDesafioSerie === s ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' : 'bg-white/[0.04] text-white/40'
+                  )}
+                >
+                  {s}° ano
+                </button>
+              ))}
+            </div>
+
+            {/* Respostas recentes */}
+            <div className="space-y-2">
+              {(() => {
+                const respostasFiltradas = desafiosHoje.filter((d: any) => {
+                  if (!filtroDesafioSerie) return true;
+                  const aluno = alunos.find(a => a.id === d.aluno_id);
+                  return aluno?.serie === filtroDesafioSerie;
+                });
+
+                if (respostasFiltradas.length === 0) {
+                  return (
+                    <div className="p-4 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
+                      <p className="text-white/20 text-sm">Nenhuma resposta hoje{filtroDesafioSerie ? ` no ${filtroDesafioSerie}° ano` : ''}</p>
+                    </div>
+                  );
+                }
+
+                const TIPO_LABELS: Record<string, string> = {
+                  observacao: 'Observação', acao: 'Ação', reflexao: 'Reflexão', escuta: 'Escuta', registro: 'Registro'
+                };
+                const TIPO_CORES: Record<string, string> = {
+                  observacao: '#3B82F6', acao: '#22C55E', reflexao: '#8B5CF6', escuta: '#F59E0B', registro: '#F97316'
+                };
+
+                return respostasFiltradas.slice(0, 10).map((d: any) => {
+                  const aluno = alunos.find(a => a.id === d.aluno_id);
+                  const corTipo = TIPO_CORES[d.desafio_tipo] || '#888';
+                  return (
+                    <div key={d.id} className="p-3 rounded-xl bg-[#252547] border border-violet-500/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[9px] text-white/60 font-bold">
+                          {(aluno?.nome || '?')[0]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] text-white/70 truncate">{aluno?.full_name || aluno?.nome || 'Aluno'}</p>
+                          <p className="text-[9px] text-white/25">{aluno?.serie}° {aluno?.turma}</p>
+                        </div>
+                        <span
+                          className="text-[8px] font-bold uppercase px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: `${corTipo}20`, color: corTipo }}
+                        >
+                          {TIPO_LABELS[d.desafio_tipo] || d.desafio_tipo}
+                        </span>
+                      </div>
+                      <p className="text-xs text-white/55 leading-relaxed line-clamp-3">"{d.texto}"</p>
+                      {d.habilidades && d.habilidades.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {d.habilidades.map((h: string, i: number) => (
+                            <span key={i} className="text-[8px] px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-300/60">
+                              {h.replace(/_/g, ' ')}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+
           {/* Call to action */}
           <div className="rounded-2xl border border-amber-500/15 bg-amber-500/5 p-4 text-center">
             <p className="text-sm text-white/70">Busque um aluno para ver seu <span className="font-semibold text-amber-300">Registro Vivo</span></p>
-            <p className="text-[10px] text-white/30 mt-1">Missoes, observacoes, emocoes, relatos — a historia completa</p>
+            <p className="text-[10px] text-white/30 mt-1">Missões, observações, emoções, relatos — a história completa</p>
           </div>
         </>
       )}

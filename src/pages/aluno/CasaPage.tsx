@@ -8,6 +8,8 @@ import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { Progress } from '@/components/ui/progress';
+import DesafioDiarioCard from '@/components/aluno/DesafioDiarioCard';
+import { useDesafioDiario } from '@/hooks/useDesafioDiario';
 
 interface MembroComCargo {
   aluno_id: string;
@@ -20,14 +22,14 @@ interface MembroComCargo {
 }
 
 const descricoesPadrao: Record<string, string> = {
-  'linguistica': 'Nos somos a voz que ecoa. Transformamos ideias em palavras que movem pessoas, contam historias e mudam perspectivas. Onde outros veem silencio, nos criamos significado.',
-  'logico-matematica': 'Nos enxergamos a ordem por tras do caos. Padroes, conexoes e solucoes que ninguem mais percebe — esse e o nosso territorio. Pensamos com precisao e agimos com estrategia.',
-  'espacial': 'Nos vemos o que ainda nao existe. Formas, espacos e possibilidades ganham vida na nossa mente antes de existirem no mundo. Onde outros veem o obvio, nos imaginamos o extraordinario.',
-  'musical': 'Nos sentimos o mundo em frequencias. Ritmo, harmonia e melodia nao sao apenas sons — sao a forma como processamos a realidade. Ouvimos o que os outros nao percebem.',
-  'corporal-cinestesica': 'Nos pensamos em movimento. O corpo nao apenas executa — ele descobre, cria e resolve. Onde outros param para planejar, nos ja estamos em acao encontrando o caminho.',
-  'naturalista': 'Nos lemos o mundo como um sistema vivo. Classificamos, conectamos e entendemos o que une todas as coisas. Onde outros veem desordem, nos encontramos padroes da natureza.',
-  'interpessoal': 'Nos entendemos as pessoas antes mesmo das palavras. Emocoes, intencoes e dinamicas de grupo sao a nossa linguagem natural. Conectamos, lideramos e construimos junto.',
-  'intrapessoal': 'Nos conhecemos a forca que existe dentro de cada um. Autoconhecimento, reflexao e clareza interior sao o nosso poder. Sabemos quem somos — e isso muda tudo.',
+  'linguistica': 'A gente pensa em palavras. Antes de fazer qualquer coisa, já estamos montando frases na cabeça. Contar histórias, convencer, explicar — isso é natural pra quem é da Linguística. Onde outros ficam em silêncio, a gente cria significado.',
+  'logico-matematica': 'A gente enxerga padrões onde os outros veem bagunça. Conexões, lógica e soluções aparecem na nossa cabeça antes mesmo de procurar. Pensar com estratégia e resolver problemas é o que nos move.',
+  'espacial': 'A gente vê coisas que ainda não existem. Formas, espaços e possibilidades ganham vida na nossa mente antes de existirem no mundo real. Enquanto outros pensam em palavras, a gente pensa em imagens.',
+  'musical': 'A gente sente o mundo pelo som. Ritmo, melodia, harmonia — tudo isso chega pra gente de um jeito que os outros não percebem. Não é só ouvir música: é pensar e sentir através dela.',
+  'corporal-cinestesica': 'A gente pensa em movimento. Nosso corpo não só executa — ele descobre, cria e resolve. Enquanto outros ficam planejando, a gente já está em ação, aprendendo fazendo.',
+  'naturalista': 'A gente lê o mundo como um sistema vivo. Classificar, organizar, perceber o que conecta as coisas — isso é natural pra quem é da Naturalista. Onde outros veem desordem, a gente encontra padrões.',
+  'interpessoal': 'A gente entende as pessoas antes mesmo delas falarem. Perceber o que alguém está sentindo, o clima de um grupo, quem precisa de ajuda — isso é natural pra quem é da Interpessoal. Conectar e liderar é o nosso jeito.',
+  'intrapessoal': 'A gente se conhece de verdade. Saber o que está sentindo, por que está sentindo e usar isso pra tomar decisões melhores — isso é natural pra quem é da Intrapessoal. A gente sabe quem é, e isso muda tudo.',
 };
 
 const cargoLabels: Record<string, string> = {
@@ -46,6 +48,16 @@ const CasaPage = () => {
   const [totalCasas, setTotalCasas] = useState(8);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [desafiosData, setDesafiosData] = useState<any[]>([]);
+
+  // Carregar desafios diários (lazy)
+  useEffect(() => {
+    import('@/data/desafiosDiarios').then(mod => {
+      setDesafiosData(mod.DESAFIOS_DIARIOS || []);
+    }).catch(() => {});
+  }, []);
+
+  const { desafio: desafioHoje, saudacao: saudacaoDesafio } = useDesafioDiario(desafiosData, casa?.codigo);
   const [expandirCoords, setExpandirCoords] = useState(false);
   const [expandirMembros, setExpandirMembros] = useState(false);
 
@@ -73,7 +85,7 @@ const CasaPage = () => {
           .eq('casa_id', casa.id)
           .eq('institution_id', profile.institution_id)
           .order('posicao_na_casa', { ascending: true })
-          .limit(50),
+          .limit(200),
         supabase
           .from('cargos_casa')
           .select('aluno_id, cargo')
@@ -196,33 +208,31 @@ const CasaPage = () => {
         </button>
       </div>
 
-      {/* Card principal: Brasao + Nome + Descricao (unico com cor da casa) */}
+      {/* Card principal: Brasao + Nome + Descricao */}
       <div
         className="relative overflow-hidden p-5 rounded-2xl bg-[#252547] backdrop-blur-xl border border-violet-500/10"
         style={{ boxShadow: `0 16px 32px -8px ${casaColor}25` }}
       >
         <div
-          className="absolute -top-10 -right-10 w-36 h-36 rounded-full blur-3xl opacity-20 pointer-events-none"
+          className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl opacity-20 pointer-events-none"
           style={{ backgroundColor: casaColor }}
         />
-        <div className="relative z-10 flex items-center gap-4">
+        <div className="relative z-10 flex flex-col items-center text-center gap-3">
           <CasaBrasao
             brasaoUrl={casa.brasao_url}
             emoji={casa.emoji}
             nome={casa.nome}
             size="large"
-            className="w-16 h-16"
+            className="w-24 h-24"
           />
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold" style={{ color: casaColor }}>
-              Casa {casa.nome}
-            </h2>
-            {descricao && (
-              <p className="text-white/40 text-xs mt-1 leading-relaxed line-clamp-2">
-                {descricao}
-              </p>
-            )}
-          </div>
+          <h2 className="text-xl font-bold" style={{ color: casaColor }}>
+            Casa {casa.nome}
+          </h2>
+          {descricao && (
+            <p className="text-white/50 text-sm leading-relaxed">
+              {descricao}
+            </p>
+          )}
         </div>
       </div>
 
@@ -242,6 +252,11 @@ const CasaPage = () => {
           <p className="text-xs text-white/40 mt-1">Pontos da casa</p>
         </div>
       </div>
+
+      {/* Desafio Diário */}
+      {desafioHoje && (
+        <DesafioDiarioCard desafio={desafioHoje} saudacao={saudacaoDesafio} />
+      )}
 
       {/* Sua contribuicao */}
       <div className="p-4 rounded-xl bg-[#252547] border border-violet-500/10">

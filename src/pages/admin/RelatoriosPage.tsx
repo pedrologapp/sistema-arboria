@@ -73,6 +73,13 @@ const RelatoriosPage = () => {
       .in('role', ['professor', 'admin']);
     const excluirIds = new Set((profIds || []).map(r => r.user_id));
 
+    // Buscar IDs de líderes e coordenadores para excluir
+    const { data: cargosIds } = await supabase.from('cargos_casa')
+      .select('aluno_id')
+      .in('cargo', ['lider', 'coordenador'])
+      .eq('ativo', true);
+    (cargosIds || []).forEach(c => excluirIds.add(c.aluno_id));
+
     const { data: alunos, error } = await supabase
       .from('profiles')
       .select('id, full_name, nome, sobrenome, serie, turma, casa_id, email_gerado, matricula_externa')

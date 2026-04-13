@@ -141,6 +141,14 @@ const ConquistasPage = () => {
         </div>
       </div>
 
+      {/* Mensagem motivadora para quem está começando */}
+      {pontosCasa === 0 && (
+        <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/15 text-center">
+          <p className="text-sm text-white/70">Suas conquistas começam aqui!</p>
+          <p className="text-xs text-white/40 mt-1">Complete missões para desbloquear conquistas da casa e pessoais.</p>
+        </div>
+      )}
+
       {/* Conquistas da Casa */}
       <div>
         <div className="flex items-center gap-2 mb-3 px-1">

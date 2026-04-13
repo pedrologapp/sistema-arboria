@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trophy } from 'lucide-react';
+import confetti from 'canvas-confetti';
 
 interface FeedbackAprovadoModalProps {
   isOpen: boolean;
@@ -18,7 +20,20 @@ const FeedbackAprovadoModal = ({
   pontosConquistados,
   feedbackProfessor
 }: FeedbackAprovadoModalProps) => {
-  if (!isOpen) return null;
+
+  // Confetti ao abrir
+  useEffect(() => {
+    if (!isOpen) return;
+    const timer = setTimeout(() => {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#22C55E', '#F59E0B', '#8B5CF6', '#3B82F6', '#EC4899'],
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [isOpen]);
 
   return (
     <AnimatePresence>
@@ -48,26 +63,38 @@ const FeedbackAprovadoModal = ({
 
             {/* Header */}
             <div className="text-center mb-6">
-              <p className="text-2xl mb-2">⭐ PARABÉNS! ⭐</p>
+              <motion.p
+                initial={{ scale: 0.5 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+                className="text-2xl mb-2"
+              >
+                PARABÉNS!
+              </motion.p>
               <p className="text-white/60 text-sm line-clamp-2">{missaoTitulo}</p>
             </div>
 
             {/* Nota e Pontos */}
             <div className="bg-green-500/20 border border-green-500/30 rounded-xl p-5 text-center mb-6">
-              <p className="text-5xl font-bold text-white mb-2">
+              <motion.p
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.4, type: 'spring', stiffness: 150 }}
+                className="text-5xl font-bold text-white mb-2"
+              >
                 {nota}<span className="text-2xl text-white/60">/10</span>
-              </p>
+              </motion.p>
               <div className="flex items-center justify-center gap-2 text-green-400 text-lg">
                 <Trophy className="w-5 h-5" />
-                <span>+{pontosConquistados} pontos conquistados!</span>
+                <span>+{pontosConquistados} pontos!</span>
               </div>
             </div>
 
             {/* Feedback do Professor */}
             {feedbackProfessor ? (
               <div className="mb-6">
-                <p className="text-white/40 text-xs uppercase tracking-wide mb-2 flex items-center gap-2">
-                  💬 Feedback do Professor
+                <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+                  Feedback do Professor
                 </p>
                 <div className="bg-white/5 border border-violet-500/10 rounded-xl p-4">
                   <p className="text-white/80 text-sm italic leading-relaxed">
@@ -88,7 +115,7 @@ const FeedbackAprovadoModal = ({
               onClick={onClose}
               className="w-full py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-colors"
             >
-              OK, Entendi!
+              Continuar
             </button>
           </motion.div>
         </motion.div>

@@ -237,15 +237,17 @@ const MissoesCasaPage = () => {
     );
   }
 
+  const corCasa = casa.cor_hex || '#8b5cf6';
+
   return (
     <div className="min-h-screen bg-[#1A1A2E] px-5 py-6 pb-24">
       {/* Back button */}
       <button
         onClick={handleVoltar}
-        className="flex items-center gap-2 text-[#94A3B8] hover:text-white transition-colors mb-6"
+        className="flex items-center gap-2 text-white/50 hover:text-white transition-colors mb-6"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span className="text-sm">Individual - {casa.nome}</span>
+        <span className="text-sm">Voltar</span>
       </button>
 
       {/* Banner for other house */}
@@ -253,130 +255,83 @@ const MissoesCasaPage = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 rounded-xl bg-[#252547] border border-[#3B82F6]/20 mb-6"
+          className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 mb-5"
         >
-          <div className="flex items-start gap-3">
-            <Info className="w-4 h-4 text-[#3B82F6] mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-[#94A3B8]">
-              <span className="text-[#3B82F6]">Você é da Casa {minhaCasaNome}.</span>{' '}
-              Estas missões são apenas para visualização.
+          <div className="flex items-start gap-2">
+            <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-white/50">
+              <span className="text-blue-400">Você é da Casa {minhaCasaNome}.</span> Estas missões são apenas para visualização.
             </p>
           </div>
         </motion.div>
       )}
 
-      {/* House header */}
+      {/* House header — estilo pergaminho */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-4 mb-6"
+        className="flex flex-col items-center gap-3 mb-6 text-center"
       >
         <div className={ehMinhaCasa ? '' : 'opacity-50'}>
-          <CasaBrasao
-            brasaoUrl={casa.brasao_url}
-            emoji={casa.emoji}
-            nome={casa.nome}
-            size="medium"
-          />
+          <CasaBrasao brasaoUrl={casa.brasao_url} emoji={casa.emoji} nome={casa.nome} size="medium" />
         </div>
         <div>
-          <h1 className="text-[15px] font-semibold text-white uppercase tracking-wide">
-            Missões Individuais
+          <h1 className="text-lg font-semibold text-white">
+            Casa {casa.nome}
           </h1>
-          <p className="text-[13px] text-[#94A3B8]">
-            Casa {casa.nome} - Semana {semanaNum}
+          <p className="text-xs text-white/40 mt-0.5">
+            Missões individuais · Semana {semanaNum}
           </p>
-          {!ehMinhaCasa && (
-            <p className="text-xs text-[#64748B] mt-0.5">(modo visualização)</p>
-          )}
         </div>
       </motion.div>
 
       {/* Missions list */}
       {missoes.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center py-12"
-        >
-          <ClipboardList className="w-10 h-10 text-[#334155] mx-auto mb-3" />
-          <p className="text-[#64748B] text-sm">Nenhuma missão desta casa nesta semana</p>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
+          <ClipboardList className="w-10 h-10 text-white/10 mx-auto mb-3" />
+          <p className="text-white/30 text-sm">Nenhuma missão nesta semana</p>
         </motion.div>
       ) : (
         <div className="space-y-3">
           {missoes.map((missao, index) => (
-            <motion.div
+            <motion.button
               key={missao.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.03 }}
+              transition={{ delay: index * 0.04 }}
               onClick={() => handleMissaoClick(missao.id)}
               className={cn(
-                'p-4 rounded-xl transition-all cursor-pointer',
+                'w-full p-4 rounded-xl text-left transition-all border',
                 ehMinhaCasa
-                  ? 'bg-[#252547] hover:bg-[#283548]'
-                  : 'bg-[#252547]/50'
+                  ? 'hover:bg-white/[0.04] active:scale-[0.98]'
+                  : 'opacity-60'
               )}
+              style={{
+                borderColor: `${corCasa}20`,
+                background: `linear-gradient(135deg, ${corCasa}08, #252547)`,
+              }}
             >
-              <div className="flex items-start gap-3">
-                {/* Icon */}
-                <div className="mt-0.5">
-                  {ehMinhaCasa ? (
-                    renderStatusIcon(missao.status)
-                  ) : (
-                    <Eye className="w-4 h-4 text-[#475569]" />
-                  )}
+              <div className="flex items-center gap-3">
+                {/* Status icon */}
+                <div className="flex-shrink-0">
+                  {ehMinhaCasa ? renderStatusIcon(missao.status) : <Eye className="w-4 h-4 text-white/20" />}
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <h3 className={cn(
-                    'text-[15px] font-medium',
-                    ehMinhaCasa ? 'text-white' : 'text-[#64748B]'
-                  )}>
-                    {missao.titulo}
-                  </h3>
-                  {missao.descricao && (
-                    <p className={cn(
-                      'text-[13px] line-clamp-2 mt-1',
-                      ehMinhaCasa ? 'text-[#94A3B8]' : 'text-[#475569]'
-                    )}>
-                      {missao.descricao}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-3 mt-2">
-                    <span className={cn(
-                      'text-xs',
-                      ehMinhaCasa ? 'text-[#3B82F6]' : 'text-[#475569]'
-                    )}>
-                      +{missao.pontos_base} pts
-                    </span>
+                  <h3 className="text-sm font-medium text-white">{missao.titulo}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs font-semibold" style={{ color: corCasa }}>+{missao.pontos_base} pts</span>
                     {ehMinhaCasa && (
-                      <span className={cn('text-xs', getStatusColor(missao.status))}>
-                        {getStatusLabel(missao.status)}
-                      </span>
-                    )}
-                    {!ehMinhaCasa && (
-                      <span className="text-xs text-[#475569]">(somente visualização)</span>
+                      <>
+                        <span className="text-white/15">·</span>
+                        <span className={cn('text-xs', getStatusColor(missao.status))}>{getStatusLabel(missao.status)}</span>
+                      </>
                     )}
                   </div>
-
-                  {/* Action button */}
-                  {ehMinhaCasa && (missao.status === 'disponivel' || missao.status === 'refazer') && (
-                    <button
-                      className="mt-3 w-full py-2.5 rounded-lg bg-[#3B82F6] text-white text-sm font-medium 
-                                 hover:bg-[#2563EB] transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMissaoClick(missao.id);
-                      }}
-                    >
-                      {missao.status === 'refazer' ? 'Refazer missão' : 'Fazer missão'}
-                    </button>
-                  )}
                 </div>
               </div>
-            </motion.div>
+            </motion.button>
           ))}
         </div>
       )}

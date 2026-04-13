@@ -170,19 +170,22 @@ const ProfessorDashboard = () => {
         serie, turma, confirmada: true, aula_nao_ocorreu: false,
       }, { onConflict: 'professor_id,fase_id,semana,serie,turma' });
 
-      // Liberar missoes pre-configuradas desta serie/semana
-      const hoje = new Date();
-      const liberacao = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 18, 0, 0);
-      const prazo = new Date(liberacao.getTime() + 7 * 24 * 60 * 60 * 1000);
+      // Liberar missões desta série/semana (rascunho ou pre_configurada)
+      const agora = new Date();
+      const liberacao = agora.toISOString();
+      // Prazo: próximo domingo às 00:00 (7 dias)
+      const diasAteDomingo = 7 - agora.getDay(); // 0=dom, 1=seg...
+      const proximoDomingo = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + (diasAteDomingo === 0 ? 7 : diasAteDomingo), 0, 0, 0);
+      const prazo = proximoDomingo.toISOString();
       const serieNum = parseInt(serie.replace(/\D/g, ''));
 
       await supabase.from('missoes')
-        .update({ status: 'liberada', data_liberacao: liberacao.toISOString(), data_prazo: prazo.toISOString() })
+        .update({ status: 'liberada', data_liberacao: liberacao, data_prazo: prazo })
         .eq('fase_id', faseAtual.id).eq('semana', faseAtual.semana_atual || 1)
-        .eq('origem', 'admin').eq('status', 'pre_configurada')
+        .in('status', ['rascunho', 'pre_configurada'])
         .or(`serie_filtro.eq.${serieNum},serie_filtro.is.null`);
 
-      toast.success(`Aula confirmada! Missoes do ${serie} ${turma} serao liberadas as 18h`);
+      toast.success(`Aula confirmada! Missões do ${serie} liberadas para os alunos.`);
       queryClient.invalidateQueries({ queryKey: ['prof-confirmacoes'] });
     } catch (err: any) { toast.error(err.message || 'Erro'); } finally { setConfirmando(false); }
   };

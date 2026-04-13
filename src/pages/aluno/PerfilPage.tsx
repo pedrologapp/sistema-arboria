@@ -118,6 +118,14 @@ const PerfilPage = () => {
         </div>
       </div>
 
+      {/* Mensagem de boas-vindas para aluno novo */}
+      {(ranking?.total_pontos || 0) === 0 && (ranking?.missoes_completadas || 0) === 0 && (
+        <div className="p-4 rounded-xl bg-gradient-to-r from-violet-500/10 to-blue-500/10 border border-violet-500/15 text-center">
+          <p className="text-sm text-white/70">Sua jornada está começando!</p>
+          <p className="text-xs text-white/40 mt-1">Complete sua primeira missão para ver seus pontos crescerem aqui.</p>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         <div className="p-3.5 rounded-xl text-center bg-[#252547] border border-violet-500/10">

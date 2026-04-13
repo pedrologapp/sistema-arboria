@@ -56,6 +56,8 @@ interface MissaoDetalhe {
   casa_emoji: string | null;
   arquivo_pdf_url: string | null;
   arquivo_pdf_nome: string | null;
+  fase_id: string | null;
+  semana: number | null;
 }
 
 interface ArquivoEntrega {
@@ -279,6 +281,8 @@ const MissaoDetalhePage = () => {
           requer_texto,
           permite_entrega_atrasada,
           casa_id,
+          fase_id,
+          semana,
           arquivo_pdf_url,
           arquivo_pdf_nome,
           casa:inteligencias!missoes_casa_id_fkey (
@@ -321,6 +325,8 @@ const MissaoDetalhePage = () => {
         casa_emoji: inteligenciaData?.emoji ?? null,
         arquivo_pdf_url: missaoData.arquivo_pdf_url ?? null,
         arquivo_pdf_nome: missaoData.arquivo_pdf_nome ?? null,
+        fase_id: missaoData.fase_id ?? null,
+        semana: missaoData.semana ?? null,
       });
 
       // Buscar entrega existente
@@ -487,9 +493,19 @@ const MissaoDetalhePage = () => {
   const validar = (): string[] => {
     const erros: string[] = [];
 
-    // Texto é obrigatório
-    if (!textoResposta.trim()) {
+    // Texto obrigatório apenas se requer_texto
+    if (missao?.requer_texto !== false && !textoResposta.trim()) {
       erros.push('Escreva sua resposta antes de enviar');
+    }
+
+    // Arquivo obrigatório se requer_arquivo
+    if (missao?.requer_arquivo && arquivos.length === 0) {
+      erros.push('Anexe pelo menos um arquivo');
+    }
+
+    // Limite de arquivos
+    if (arquivos.length > 10) {
+      erros.push('Máximo de 10 arquivos por entrega');
     }
 
     return erros;
@@ -497,7 +513,7 @@ const MissaoDetalhePage = () => {
 
   // Enviar entrega
   const handleEnviar = async () => {
-    if (!missao || !user) return;
+    if (!missao || !user || enviando) return;
 
     const erros = validar();
     if (erros.length > 0) {
@@ -600,7 +616,12 @@ const MissaoDetalhePage = () => {
         description: "Sua entrega foi registrada com sucesso."
       });
 
-      navigate('/aluno/missoes');
+      // Voltar para a semana de onde veio (não para lista de fases)
+      if (missao.fase_id && missao.semana) {
+        navigate(`/aluno/missoes/fase/${missao.fase_id}/semana/${missao.semana}`);
+      } else {
+        navigate('/aluno/missoes');
+      }
 
     } catch (err: any) {
       console.error('Erro ao enviar:', err);
@@ -720,11 +741,13 @@ const MissaoDetalhePage = () => {
   const mostrarFormulario = podeEnviar();
 
   // Determine display context
-  const displayContexto = missao.contexto || missao.descricao;
+  const displayContexto = missao.contexto;
+  const porqueImporta = missao.descricao; // "Por que essa fase importa para você"
   const hasNewFormat = !!(missao.lente_especial || missao.itens?.length || missao.reflexao || missao.contexto);
 
   // Contagem de seções do pergaminho para numeração da trilha
   const secoesPergaminho = [
+    porqueImporta ? 'porque' : null,
     displayContexto ? 'contexto' : null,
     missao.lente_especial ? 'lente' : null,
     missao.instrucoes ? 'instrucoes' : null,
@@ -875,6 +898,37 @@ const MissaoDetalhePage = () => {
               )}
 
               <div className="space-y-0">
+                {/* ── SEÇÃO: POR QUE ESSA FASE IMPORTA ── */}
+                {porqueImporta && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.25 }}
+                    className="relative pl-9 pb-6"
+                  >
+                    <div
+                      className="absolute left-0 top-1 w-[23px] h-[23px] rounded-full border-2 flex items-center justify-center text-[10px]"
+                      style={{ borderColor: casaColor, backgroundColor: `${casaColor}20`, color: casaColor }}
+                    >
+                      {['I','II','III','IV','V','VI'][secoesPergaminho.indexOf('porque')] || 'I'}
+                    </div>
+                    <h2
+                      className="text-[11px] font-bold uppercase tracking-[0.15em] mb-2"
+                      style={{ color: casaColor }}
+                    >
+                      Por que essa fase importa para você
+                    </h2>
+                    <div
+                      className="rounded-lg p-3"
+                      style={{ backgroundColor: `${casaColor}08`, borderLeft: `2px solid ${casaColor}30` }}
+                    >
+                      <p className="text-white/70 text-sm leading-relaxed text-justify">
+                        {porqueImporta}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
                 {/* ── SEÇÃO: CONTEXTO ── */}
                 {displayContexto && (
                   <motion.div
@@ -883,12 +937,11 @@ const MissaoDetalhePage = () => {
                     transition={{ delay: 0.3 }}
                     className="relative pl-9 pb-6"
                   >
-                    {/* Marcador da trilha */}
                     <div
                       className="absolute left-0 top-1 w-[23px] h-[23px] rounded-full border-2 flex items-center justify-center text-[10px]"
                       style={{ borderColor: casaColor, backgroundColor: `${casaColor}20`, color: casaColor }}
                     >
-                      I
+                      {['I','II','III','IV','V','VI'][secoesPergaminho.indexOf('contexto')] || 'I'}
                     </div>
                     <h2
                       className="text-[11px] font-bold uppercase tracking-[0.15em] mb-2"
@@ -896,7 +949,7 @@ const MissaoDetalhePage = () => {
                     >
                       Contexto
                     </h2>
-                    <p className="text-white/75 text-sm leading-relaxed whitespace-pre-wrap">
+                    <p className="text-white/75 text-sm leading-relaxed whitespace-pre-wrap text-justify">
                       {displayContexto}
                     </p>
                   </motion.div>
@@ -926,7 +979,7 @@ const MissaoDetalhePage = () => {
                       className="rounded-lg p-3"
                       style={{ backgroundColor: `${casaColor}08`, borderLeft: `2px solid ${casaColor}40` }}
                     >
-                      <p className="text-white/85 italic leading-relaxed">
+                      <p className="text-white/85 italic leading-relaxed text-justify">
                         "{missao.lente_especial}"
                       </p>
                     </div>
@@ -942,21 +995,24 @@ const MissaoDetalhePage = () => {
                     className="relative pl-9 pb-6"
                   >
                     <div
-                      className="absolute left-0 top-1 w-[23px] h-[23px] rounded-full border-2 flex items-center justify-center text-[10px] font-bold"
-                      style={{ borderColor: casaColor, backgroundColor: casaColor, color: '#1a1a2e' }}
+                      className="absolute left-0 top-1 w-[26px] h-[26px] rounded-full flex items-center justify-center text-[11px] font-bold shadow-lg"
+                      style={{ backgroundColor: casaColor, color: '#1a1a2e', boxShadow: `0 0 12px ${casaColor}40` }}
                     >
-                      {secoesPergaminho.indexOf('instrucoes') < 3 ? ['I','II','III'][secoesPergaminho.indexOf('instrucoes')] : 'III'}
+                      {['I','II','III','IV','V','VI'][secoesPergaminho.indexOf('instrucoes')] || 'III'}
                     </div>
                     <h2
-                      className="text-[11px] font-bold uppercase tracking-[0.15em] mb-2"
+                      className="text-[13px] font-bold uppercase tracking-[0.12em] mb-3"
                       style={{ color: casaColor }}
                     >
-                      Sua Missao
+                      Sua Missão
                     </h2>
-                    <div className="prose prose-invert prose-sm max-w-none">
+                    <div
+                      className="prose prose-invert prose-sm max-w-none rounded-lg p-3"
+                      style={{ backgroundColor: `${casaColor}08`, border: `1px solid ${casaColor}15` }}
+                    >
                       <ReactMarkdown
                         components={{
-                          p: ({ children }) => <p className="text-white/80 mb-3 leading-relaxed text-sm">{children}</p>,
+                          p: ({ children }) => <p className="text-white/85 mb-3 leading-relaxed text-sm text-justify">{children}</p>,
                           strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
                           em: ({ children }) => <em className="text-white/65 italic">{children}</em>,
                           ul: ({ children }) => <ul className="list-disc list-inside space-y-1 text-white/75 mb-3 ml-1 text-sm">{children}</ul>,
@@ -1013,7 +1069,7 @@ const MissaoDetalhePage = () => {
                           </div>
                           <div>
                             <p className="text-white/90 font-medium text-sm">{item.nome}</p>
-                            {item.descricao && <p className="text-white/45 text-xs mt-0.5">{item.descricao}</p>}
+                            {item.descricao && <p className="text-white/45 text-xs mt-0.5 text-justify">{item.descricao}</p>}
                           </div>
                         </div>
                       ))}
@@ -1041,7 +1097,7 @@ const MissaoDetalhePage = () => {
                     >
                       Reflexao Final
                     </h2>
-                    <p className="text-white/60 text-sm italic leading-relaxed">{missao.reflexao}</p>
+                    <p className="text-white/60 text-sm italic leading-relaxed text-justify">{missao.reflexao}</p>
                   </motion.div>
                 )}
               </div>
@@ -1197,7 +1253,7 @@ const MissaoDetalhePage = () => {
 
               {/* Instrução */}
               <p className="text-white/50 text-sm">
-                Escreva sua resposta. Voce tambem pode anexar fotos ou arquivos.
+                Escreva sua resposta ou envie fotos e arquivos.
               </p>
 
               {/* Botões de upload em linha */}
@@ -1280,17 +1336,17 @@ const MissaoDetalhePage = () => {
                 </div>
               )}
 
-              {/* Textarea resposta */}
+              {/* Resposta principal */}
               <div className="space-y-2">
-                <label className="text-sm text-white/50">Sua resposta <span className="text-red-400">*</span></label>
+                <label className="text-sm text-white/50">Digite sua resposta</label>
                 <div className="relative">
                   <Textarea
                     value={textoResposta}
                     onChange={(e) => setTextoResposta(e.target.value)}
-                    placeholder="Escreva sua resposta..."
-                    rows={4}
+                    placeholder="Escreva aqui o que você fez, o que percebeu, o que aprendeu..."
+                    rows={5}
                     disabled={enviando}
-                    className="bg-white/5 border-violet-500/10 text-white placeholder:text-white/30 resize-none"
+                    className="bg-white/5 border-violet-500/10 text-white placeholder:text-white/25 resize-none"
                   />
                   {textoResposta.length > 0 && (
                     <span className="absolute bottom-3 right-3 text-xs text-white/40">
@@ -1298,6 +1354,19 @@ const MissaoDetalhePage = () => {
                     </span>
                   )}
                 </div>
+              </div>
+
+              {/* Comentário adicional */}
+              <div className="space-y-2">
+                <label className="text-sm text-white/40">Comentário adicional (opcional)</label>
+                <Textarea
+                  value={reflexaoResposta}
+                  onChange={(e) => setReflexaoResposta(e.target.value)}
+                  placeholder="Algo mais que queira acrescentar..."
+                  rows={2}
+                  disabled={enviando}
+                  className="bg-white/5 border-violet-500/10 text-white placeholder:text-white/20 resize-none text-sm"
+                />
               </div>
             </motion.div>
           )}
@@ -1316,7 +1385,7 @@ const MissaoDetalhePage = () => {
         {mostrarFormulario && (
           <Button
             onClick={handleEnviar}
-            disabled={enviando || !textoResposta.trim()}
+            disabled={enviando || (missao.requer_texto !== false && !textoResposta.trim())}
             className="w-full h-12 text-base font-semibold rounded-xl shadow-lg"
             style={{
               backgroundColor: casaColor,

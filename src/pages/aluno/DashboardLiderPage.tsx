@@ -176,7 +176,7 @@ const DashboardLiderPage = () => {
     });
   })();
 
-  const pctEntrega = entregasData ? Math.round((entregasData.entregaram.length / entregasData.total) * 100) : 0;
+  const pctEntrega = entregasData && entregasData.total > 0 ? Math.round((entregasData.entregaram.length / entregasData.total) * 100) : 0;
 
   // Iniciar DM
   const iniciarDM = async (outroId: string) => {

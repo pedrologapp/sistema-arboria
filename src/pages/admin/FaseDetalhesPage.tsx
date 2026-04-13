@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Check, X, Upload, FileText, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, X, Upload, FileText, Trash2, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import MissoesPorCasa from '@/components/admin/MissoesPorCasa';
 
 const mecanismos: Record<string, string> = {
   linguistica: 'A experiencia chega narrada. O linguistico pensa em palavras antes de agir, enquanto age e depois de agir — o processamento verbal e anterior e simultaneo ao comportamento.',
@@ -110,6 +111,8 @@ const FaseDetalhesPage = () => {
   const [semanaParaUpload, setSemanaParaUpload] = useState<number | null>(null);
   const [missaoUploadInfo, setMissaoUploadInfo] = useState<{ semana: number; tipo: string; casaId: number | null } | null>(null);
   const [semanaExpandida, setSemanaExpandida] = useState<number | null>(null);
+  const [semanaMissoesCasa, setSemanaMissoesCasa] = useState<number | null>(null);
+  const [serieMissoesCasa, setSerieMissoesCasa] = useState<number>(6);
 
   const handleUploadPdf = async (file: File, semana: number) => {
     if (!faseId || !institutionId) return;
@@ -287,6 +290,41 @@ const FaseDetalhesPage = () => {
 
   if (!fase) return <div className="p-4"><button onClick={() => navigate(-1)} className="p-2 text-white/50"><ArrowLeft className="w-5 h-5" /></button><p className="text-white/40 text-center mt-12">Fase nao encontrada</p></div>;
 
+  // Se está editando missões por casa de uma semana específica
+  if (semanaMissoesCasa && institutionId && faseId) {
+    return (
+      <div className="p-4 pb-24">
+        {/* Seletor de série */}
+        <div className="flex gap-2 mb-4">
+          {[6, 7, 8, 9].map(s => (
+            <button
+              key={s}
+              onClick={() => setSerieMissoesCasa(s)}
+              className={cn(
+                'flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors',
+                serieMissoesCasa === s
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white/[0.06] text-white/40 hover:bg-white/[0.1]'
+              )}
+            >
+              {s}° Ano
+            </button>
+          ))}
+        </div>
+        <MissoesPorCasa
+          faseId={faseId}
+          institutionId={institutionId}
+          semana={semanaMissoesCasa}
+          serie={serieMissoesCasa}
+          dataInicio={fase.data_inicio}
+          dataFim={fase.data_fim}
+          inteligenciaId={(fase.inteligencia as any)?.id}
+          onVoltar={() => setSemanaMissoesCasa(null)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 space-y-5 pb-24">
       {/* Header */}
@@ -400,98 +438,23 @@ const FaseDetalhesPage = () => {
                 {/* Conteudo expandido */}
                 {isExpanded && (
                   <div className="px-3.5 pb-3.5 space-y-3 border-t border-violet-500/5 pt-3">
-                    {/* Habilidades */}
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] text-white/30">Habilidades</p>
-                      <button onClick={() => abrirEditorSemana(semana)}
-                        className="text-[10px] text-violet-400/70 hover:text-violet-300">{habs.length > 0 ? 'Editar' : 'Configurar'}</button>
-                    </div>
-                    {habs.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {habs.map((h: any) => (
-                          <span key={h.id} className="px-1.5 py-0.5 rounded text-[9px] bg-violet-500/15 text-violet-300/80 border border-violet-500/20">{h.codigo}</span>
-                        ))}
-                      </div>
-                    ) : <p className="text-[10px] text-white/15">Nenhuma configurada</p>}
-
-                    {/* PDF professor */}
+                    {/* Configurar por série */}
                     <div>
-                      <p className="text-[10px] text-white/30 mb-1">Conteudo do professor</p>
-                      {conteudo ? (
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                          <a href={conteudo.arquivo_url} target="_blank" rel="noopener noreferrer"
-                            className="text-[10px] text-blue-400/80 hover:text-blue-300 truncate flex-1">{conteudo.arquivo_nome || 'PDF'}</a>
-                          <button onClick={() => removerPdf(semana)} className="p-1 text-white/20 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
-                        </div>
-                      ) : (
-                        <button onClick={() => { setSemanaParaUpload(semana); fileInputRef.current?.click(); }}
-                          disabled={isUploading} className="flex items-center gap-1.5 text-[10px] text-white/25 hover:text-white/50 disabled:opacity-50">
-                          <Upload className="w-3 h-3" />{isUploading ? 'Enviando...' : 'Anexar PDF'}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Missoes */}
-                    <div>
-                      <p className="text-[10px] text-white/30 mb-1.5">Missoes ({missoes.length})</p>
-
-                      {/* Geral */}
-                      <div className="mb-2">
-                        <p className="text-[9px] text-white/20 uppercase tracking-wider mb-1">Geral</p>
-                        {missaoGeral ? (
-                          <div className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-white/[0.04]">
-                            <FileText className="w-3 h-3 text-emerald-400 shrink-0" />
-                            <span className="text-[10px] text-emerald-400/80 truncate flex-1">{missaoGeral.titulo}</span>
-                            {missaoGeral.origem === 'admin' ? (
-                              <span className="text-[8px] text-violet-400/50 shrink-0">admin</span>
-                            ) : (
-                              <span className="text-[8px] text-amber-400/50 shrink-0">professor</span>
-                            )}
-                            <button onClick={() => removerMissao(missaoGeral.id)} className="p-0.5 text-white/20 hover:text-red-400"><Trash2 className="w-2.5 h-2.5" /></button>
-                          </div>
-                        ) : (
-                          <button onClick={() => { setMissaoUploadInfo({ semana, tipo: 'geral', casaId: null }); missaoInputRef.current?.click(); }}
-                            className="flex items-center gap-1.5 text-[10px] text-white/20 hover:text-white/40 py-1">
-                            <Upload className="w-3 h-3" />Adicionar missao geral
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Individuais por casa */}
-                      <div>
-                        <p className="text-[9px] text-white/20 uppercase tracking-wider mb-1">Por casa</p>
-                        <div className="space-y-1">
-                          {casas.map(casa => {
-                            const missoesCasa = missoesIndiv.filter((m: any) => m.casa_id === casa.id);
-                            return (
-                              <div key={casa.id}>
-                                {missoesCasa.length > 0 ? (
-                                  missoesCasa.map((missaoCasa: any) => (
-                                    <div key={missaoCasa.id} className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-white/[0.03] mb-1">
-                                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: casa.cor_hex }} />
-                                      <span className="text-[10px] text-white/60 truncate flex-1">{missaoCasa.titulo}</span>
-                                      <span className="text-[8px] text-white/30 shrink-0">{missaoCasa.pontos_base}pts</span>
-                                      {missaoCasa.origem === 'admin' ? (
-                                        <span className="text-[8px] text-violet-400/50 shrink-0">admin</span>
-                                      ) : (
-                                        <span className="text-[8px] text-amber-400/50 shrink-0">prof</span>
-                                      )}
-                                      <button onClick={() => removerMissao(missaoCasa.id)} className="p-0.5 text-white/15 hover:text-red-400"><Trash2 className="w-2.5 h-2.5" /></button>
-                                    </div>
-                                  ))
-                                ) : (
-                                  <div className="flex items-center gap-2 py-1 px-2 rounded-lg hover:bg-white/[0.02]">
-                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: casa.cor_hex }} />
-                                    <span className="text-[10px] text-white/40 flex-1 truncate">{casa.nome}</span>
-                                    <button onClick={() => { setMissaoUploadInfo({ semana, tipo: 'individual', casaId: casa.id }); missaoInputRef.current?.click(); }}
-                                      className="text-[9px] text-white/15 hover:text-white/30">+ PDF</button>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
+                      <p className="text-[10px] text-white/30 mb-2">Configurar por série</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[6, 7, 8, 9].map(s => {
+                          const missoesSerieCount = missoes.filter((m: any) => m.serie_filtro === s || m.serie_filtro === null).length;
+                          return (
+                            <button
+                              key={s}
+                              onClick={() => { setSerieMissoesCasa(s); setSemanaMissoesCasa(semana); }}
+                              className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-white/[0.04] border border-violet-500/10 hover:bg-white/[0.08] transition-colors"
+                            >
+                              <span className="text-[11px] text-white font-medium">{s}° Ano</span>
+                              <ChevronRight className="w-3.5 h-3.5 text-white/20" />
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -537,15 +500,19 @@ const FaseDetalhesPage = () => {
 
       {/* Modal seletor */}
       {semanaEditando !== null && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-[#1E1E3A] border-t border-violet-500/10 rounded-t-2xl p-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg bg-[#1E1E3A] border border-violet-500/10 rounded-2xl max-h-[75vh] flex flex-col overflow-hidden shadow-2xl">
+            {/* Header fixo */}
+            <div className="flex items-center justify-between p-4 border-b border-violet-500/10 shrink-0">
               <div>
                 <p className="text-white font-medium">Semana {semanaEditando}</p>
                 <p className="text-xs text-white/30">{habSelecionadas.size} habilidades</p>
               </div>
               <button onClick={() => setSemanaEditando(null)} className="p-1 text-white/30 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
+
+            {/* Conteúdo scrollável */}
+            <div className="p-4 overflow-y-auto flex-1">
 
             {/* Filtro tabs */}
             <div className="flex gap-2 mb-3">
@@ -613,7 +580,10 @@ const FaseDetalhesPage = () => {
               });
             })()}
 
-            <div className="sticky bottom-0 pt-3 bg-[#1E1E3A]">
+            </div>
+
+            {/* Footer fixo com botão salvar */}
+            <div className="p-4 border-t border-violet-500/10 shrink-0 bg-[#1E1E3A]">
               <button onClick={salvarHab} disabled={salvandoHab}
                 className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors disabled:opacity-50">
                 {salvandoHab ? 'Salvando...' : `Salvar ${habSelecionadas.size} habilidades`}

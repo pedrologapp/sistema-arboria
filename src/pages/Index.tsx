@@ -6,7 +6,6 @@ const Index = () => {
   return (
     <div className="min-h-screen w-full bg-black flex flex-col items-center justify-center overflow-hidden px-4 sm:px-6">
       <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold text-center text-white relative z-20 leading-tight">
-        <span className="block sm:inline">Sistema de Casas</span>{" "}
         <span className="block sm:inline">Arboria</span>
       </h1>
       <div className="w-full max-w-[40rem] h-40 relative mt-4">

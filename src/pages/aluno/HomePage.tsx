@@ -1,13 +1,15 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
-import { Target, MessageCircle, Shield, User, Star, AlertTriangle, Trophy } from 'lucide-react';
+import { Target, MessageCircle, Shield, User, Star, AlertTriangle, Trophy, Sparkles } from 'lucide-react';
 import { useStudent } from '@/contexts/StudentContext';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { supabase } from '@/integrations/supabase/client';
 import { Progress } from '@/components/ui/progress';
 import { hojeBrasil } from '@/utils/timezone';
+import { CROSS_IM_COMBINACOES, MECANISMOS_CASA } from '@/data/crossImData';
+import OnboardingModal from '@/components/aluno/OnboardingModal';
 
 const saudacoes = [
   'Bom te ver por aqui',
@@ -112,6 +114,25 @@ const HomePage = () => {
     enabled: !!profile?.id && !!casa?.id,
   });
 
+  // Resumo da casa para líder/coordenador
+  const isLiderOuCoord = cargo === 'Lider' || cargo === 'Coordenador';
+  const { data: resumoCasa } = useQuery({
+    queryKey: ['resumo-casa-lider', casa?.id, faseAtual?.id],
+    queryFn: async () => {
+      if (!casa?.id || !profile?.institution_id) return null;
+      const { data: membros } = await supabase
+        .from('ranking_alunos_por_casa')
+        .select('aluno_id, total_pontos, missoes_completadas')
+        .eq('casa_id', casa.id)
+        .eq('institution_id', profile.institution_id);
+      const total = membros?.length || 0;
+      const comEntrega = membros?.filter((m: any) => (m.missoes_completadas || 0) > 0).length || 0;
+      return { totalMembros: total, comEntrega, pctEntrega: total > 0 ? Math.round((comEntrega / total) * 100) : 0 };
+    },
+    enabled: isLiderOuCoord && !!casa?.id && !!profile?.institution_id,
+    staleTime: 120000,
+  });
+
   // Missões urgentes (prazo em menos de 2 dias e não entregues)
   const { data: missoesUrgentes } = useQuery({
     queryKey: ['missoes-urgentes', profile?.id],
@@ -142,13 +163,21 @@ const HomePage = () => {
 
   const firstName = profile?.nome?.split(' ')[0] || 'Aluno';
 
-  const quickActions = [
-    { id: 'missoes', icon: Target, label: 'Missoes', description: 'Ver missoes da fase', path: '/aluno/missoes', badge: missoesPendentes > 0 ? missoesPendentes : undefined, color: '#f59e0b', bgColor: 'rgba(245,158,11,0.12)' },
-    { id: 'chat', icon: MessageCircle, label: 'Chat', description: 'Conversar com a casa', path: '/aluno/chat', badge: mensagensNaoLidas > 0 ? mensagensNaoLidas : undefined, color: '#8b5cf6', bgColor: 'rgba(139,92,246,0.12)' },
-    { id: 'casa', icon: Shield, label: 'Minha Casa', description: 'Membros e ranking', path: '/aluno/casa', color: '#10b981', bgColor: 'rgba(16,185,129,0.12)' },
-    { id: 'conquistas', icon: Trophy, label: 'Conquistas', description: 'Desbloqueie premios', path: '/aluno/conquistas', color: '#f59e0b', bgColor: 'rgba(245,158,11,0.12)' },
-    { id: 'perfil', icon: User, label: 'Perfil', description: 'Suas inteligencias', path: '/aluno/perfil', color: '#ec4899', bgColor: 'rgba(236,72,153,0.12)' },
-  ];
+  // Onboarding: mostra uma vez para cada aluno (chave versionada)
+  const onboardingKey = `arboria_onboarding_v2_${profile?.id}`;
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    if (!localStorage.getItem(onboardingKey)) {
+      setShowOnboarding(true);
+    }
+  }, [profile?.id, onboardingKey]);
+
+  const fecharOnboarding = () => {
+    localStorage.setItem(onboardingKey, 'done');
+    setShowOnboarding(false);
+  };
 
   const isPrimeiro = ranking?.posicao_na_casa === 1 && (ranking?.total_pontos || 0) > 0;
   const semanaAtual = faseAtual?.semana_atual || 1;
@@ -173,6 +202,17 @@ const HomePage = () => {
 
   return (
     <div className="p-4 space-y-4 pb-24">
+      {/* Onboarding primeiro acesso */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={fecharOnboarding}
+        casaNome={casa?.nome}
+        casaCor={casaColor}
+        casaBrasaoUrl={casa?.brasao_url}
+        casaEmoji={casa?.emoji}
+        alunoNome={firstName}
+      />
+
       {/* Saudacao */}
       <div className="pt-2 animate-fade-in">
         <h1 className="text-xl font-bold text-white">
@@ -181,22 +221,38 @@ const HomePage = () => {
         <p className="text-sm text-white/35 mt-0.5">{getFraseMotivacional()}</p>
       </div>
 
-      {/* Card de Urgencia */}
+      {/* Card de Urgência — leva direto pra missão */}
       {missoesUrgentes && missoesUrgentes.length > 0 && (
         <button
-          onClick={() => navigate('/aluno/missoes')}
+          onClick={() => {
+            if (missoesUrgentes.length === 1) {
+              navigate(`/aluno/missoes/${missoesUrgentes[0].id}`);
+            } else {
+              navigate('/aluno/missoes');
+            }
+          }}
           className="w-full p-3 rounded-2xl text-left bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/15 transition-colors active:scale-[0.98]"
         >
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
             <div className="flex-1">
               <p className="text-white text-sm font-medium">
-                {missoesUrgentes.length === 1 ? '1 missao para entregar' : `${missoesUrgentes.length} missoes para entregar`}
+                {missoesUrgentes.length === 1 ? '1 missão para entregar' : `${missoesUrgentes.length} missões para entregar`}
               </p>
-              <p className="text-amber-400/50 text-[10px] mt-0.5">Prazo encerrando</p>
+              <p className="text-amber-400/50 text-[10px] mt-0.5">
+                {missoesUrgentes.length === 1 ? 'Toque para abrir' : 'Prazo encerrando'}
+              </p>
             </div>
           </div>
         </button>
+      )}
+
+      {/* CARD: Aluno sem casa */}
+      {!casa && (
+        <div className="animate-fade-in p-5 rounded-2xl bg-[#252547] border border-violet-500/10 text-center">
+          <p className="text-white font-medium">Bem-vindo ao Arboria!</p>
+          <p className="text-white/40 text-sm mt-2">Você ainda não foi alocado a uma casa. Aguarde seu professor — em breve você vai descobrir a qual casa pertence!</p>
+        </div>
       )}
 
       {/* CARD DA CASA */}
@@ -262,7 +318,7 @@ const HomePage = () => {
                   <p className="text-xs text-white/50">
                     Fase {faseAtual.numero_fase} — {faseAtual.inteligencia.nome}
                   </p>
-                  <span className="text-[10px] text-white/30">S{semanaAtual}/4</span>
+                  <span className="text-[10px] text-white/30">Semana {semanaAtual} de 4</span>
                 </div>
                 <div className="mt-1.5 h-1.5 bg-white/10 rounded-full overflow-hidden">
                   <div className="h-full rounded-full transition-all" style={{ width: `${(semanaAtual / 4) * 100}%`, backgroundColor: casaColor }} />
@@ -273,9 +329,43 @@ const HomePage = () => {
         </div>
       )}
 
+      {/* Card do Líder/Coordenador */}
+      {isLiderOuCoord && resumoCasa && (
+        <button
+          onClick={() => navigate('/aluno/dashboard')}
+          className="w-full p-3.5 rounded-2xl text-left border animate-fade-in animate-fade-in-d2 hover:bg-white/[0.03] transition-colors active:scale-[0.98]"
+          style={{ borderColor: `${casaColor}20`, background: `linear-gradient(135deg, ${casaColor}08, #252547)` }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl" style={{ backgroundColor: `${casaColor}20` }}>
+              <Shield className="w-5 h-5" style={{ color: casaColor }} />
+            </div>
+            <div className="flex-1">
+              <p className="text-white font-medium text-sm">Painel de {cargo}</p>
+              <p className="text-white/40 text-[11px] mt-0.5">
+                {resumoCasa.comEntrega}/{resumoCasa.totalMembros} membros com entregas · {resumoCasa.pctEntrega}%
+              </p>
+            </div>
+            <div className="text-lg font-bold" style={{ color: casaColor }}>{resumoCasa.pctEntrega}%</div>
+          </div>
+        </button>
+      )}
+
+      {/* Cross-IM: Voce nesta fase */}
+      <CrossImHomeCard casaCodigo={casa?.codigo} faseCodigo={faseAtual?.inteligencia?.codigo} corCasa={casaColor} />
+
+      {/* Lembrete desafio diário */}
+      {casa?.codigo && <DesafioDiarioLembrete casaCodigo={casa.codigo} casaColor={casaColor} />}
+
       {/* MISSOES em destaque */}
       <button
-        onClick={() => navigate('/aluno/missoes')}
+        onClick={() => {
+          if (faseAtual?.id && semanaAtual) {
+            navigate(`/aluno/missoes/fase/${faseAtual.id}/semana/${semanaAtual}`);
+          } else {
+            navigate('/aluno/missoes');
+          }
+        }}
         className="relative w-full p-4 rounded-2xl text-left overflow-hidden border active:scale-[0.98] transition-all animate-fade-in animate-fade-in-d2"
         style={{ borderColor: `${casaColor}20`, background: `linear-gradient(135deg, ${casaColor}12, #252547)` }}
       >
@@ -284,8 +374,10 @@ const HomePage = () => {
             <Target className="w-6 h-6" style={{ color: casaColor }} />
           </div>
           <div className="flex-1">
-            <p className="text-white font-semibold text-sm">Missoes da Fase</p>
-            <p className="text-white/40 text-[11px] mt-0.5">Semana {semanaAtual} de 4</p>
+            <p className="text-white font-semibold text-sm">Missões da Fase</p>
+            <p className="text-white/40 text-[11px] mt-0.5">
+              {faseAtual ? `Semana ${semanaAtual} de 4` : 'Nenhuma fase ativa'}
+            </p>
           </div>
           {missoesPendentes > 0 && (
             <span className="min-w-[22px] h-[22px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1.5">
@@ -384,11 +476,15 @@ const CheckInEmocional = ({ userId, casaColor }: { userId?: string; casaColor: s
     setSalvando(true);
     setSelecionado(emoji);
     const hoje = hojeBrasil();
-    await supabase.from('checkin_emocional').upsert(
+    const { error } = await supabase.from('checkin_emocional').upsert(
       { aluno_id: userId, emoji, label, data: hoje },
       { onConflict: 'aluno_id,data' }
     );
-    setJaRespondeu(true);
+    if (!error) {
+      setJaRespondeu(true);
+    } else {
+      setSelecionado(null);
+    }
     setSalvando(false);
   };
 
@@ -430,17 +526,19 @@ const CampoRelato = ({ userId, institutionId, faseId, semana, casaColor }: {
   const enviar = async () => {
     if (!userId || !institutionId || !texto.trim() || salvando) return;
     setSalvando(true);
-    await supabase.from('relatos_alunos').insert({
+    const { error } = await supabase.from('relatos_alunos').insert({
       aluno_id: userId,
       institution_id: institutionId,
       fase_id: faseId || null,
       semana,
       texto: texto.trim(),
     });
-    setTexto('');
-    setEnviado(true);
+    if (!error) {
+      setTexto('');
+      setEnviado(true);
+      setTimeout(() => setEnviado(false), 3000);
+    }
     setSalvando(false);
-    setTimeout(() => setEnviado(false), 3000);
   };
 
   return (
@@ -470,6 +568,130 @@ const CampoRelato = ({ userId, institutionId, faseId, semana, casaColor }: {
         )}
       </div>
     </div>
+  );
+};
+
+// === Cross-IM Card compacto (expande no lugar) ===
+const CrossImHomeCard = ({ casaCodigo, faseCodigo, corCasa }: {
+  casaCodigo?: string;
+  faseCodigo?: string;
+  corCasa: string;
+}) => {
+  const [expandido, setExpandido] = useState(false);
+
+  if (!casaCodigo || !faseCodigo) return null;
+
+  const comb = CROSS_IM_COMBINACOES.find(
+    c => c.casa_codigo === casaCodigo && c.fase_codigo === faseCodigo
+  );
+  if (!comb) return null;
+
+  const mecanismo = !comb.fase_propria ? MECANISMOS_CASA[casaCodigo] : null;
+
+  return (
+    <div
+      className="animate-fade-in animate-fade-in-d2 rounded-2xl border overflow-hidden transition-all"
+      style={{ borderColor: `${corCasa}15`, background: `linear-gradient(135deg, ${corCasa}08, #252547)` }}
+    >
+      <button
+        onClick={() => setExpandido(!expandido)}
+        className="w-full p-3.5 text-left hover:bg-white/[0.02] transition-colors"
+      >
+        <p className="text-[10px] font-bold uppercase tracking-[0.12em] mb-1.5" style={{ color: `${corCasa}90` }}>
+          {comb.fase_propria ? 'Sua fase, seu território' : 'Você nesta fase'}
+        </p>
+        <p className={`text-xs text-white/55 leading-relaxed ${expandido ? '' : 'line-clamp-2'}`}>
+          {comb.texto_aluno}
+        </p>
+        <p className="text-[10px] mt-2" style={{ color: `${corCasa}60` }}>
+          {expandido ? 'Fechar' : 'Ler mais'}
+        </p>
+      </button>
+
+      {expandido && (
+        <div className="px-3.5 pb-3.5 space-y-3" style={{ borderTop: `1px solid ${corCasa}10` }}>
+          {/* Mecanismo da casa (só quando casa ≠ fase) */}
+          {mecanismo && (
+            <div className="pt-2 rounded-lg p-2.5" style={{ backgroundColor: `${corCasa}06`, borderLeft: `2px solid ${corCasa}25` }}>
+              <p className="text-white/35 text-xs italic leading-relaxed">
+                {mecanismo}
+              </p>
+            </div>
+          )}
+
+          {/* Caminhos */}
+          {comb.caminhos_possiveis.length > 0 && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.1em] mb-2" style={{ color: `${corCasa}70` }}>
+                Onde isso pode te levar
+              </p>
+              <div className="space-y-1.5">
+                {comb.caminhos_possiveis.map((caminho, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: `${corCasa}40` }} />
+                    <span className="text-[11px] text-white/45 leading-relaxed">{caminho}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// === Lembrete Desafio Diário ===
+const DesafioDiarioLembrete = ({ casaCodigo, casaColor }: { casaCodigo?: string; casaColor: string }) => {
+  const navigate = useNavigate();
+  const { profile } = useStudent();
+  const [jaFez, setJaFez] = useState(true); // assume que fez até confirmar
+
+  useEffect(() => {
+    if (!profile?.id || !casaCodigo) return;
+    const agora = new Date();
+    const dataStr = agora.getHours() < 6
+      ? new Date(agora.getTime() - 86400000).toLocaleDateString('en-CA')
+      : agora.toLocaleDateString('en-CA');
+
+    supabase
+      .from('desafio_diario_respostas' as any)
+      .select('id')
+      .eq('aluno_id', profile.id)
+      .eq('data', dataStr)
+      .maybeSingle()
+      .then(({ data }) => {
+        setJaFez(!!data);
+      });
+  }, [profile?.id, casaCodigo]);
+
+  if (jaFez || !casaCodigo) return null;
+
+  const frasesCuriosidade = [
+    'Tem algo esperando por você hoje...',
+    'Você consegue perceber o que ninguém percebe?',
+    'Um pequeno desafio pode mudar seu dia',
+    'Algo para testar sobre você mesmo',
+    'O que você vai descobrir hoje?',
+  ];
+  const frase = frasesCuriosidade[new Date().getDate() % frasesCuriosidade.length];
+
+  return (
+    <button
+      onClick={() => navigate('/aluno/casa')}
+      className="w-full p-3.5 rounded-2xl text-left border animate-fade-in animate-fade-in-d3 hover:bg-white/[0.03] transition-colors active:scale-[0.98]"
+      style={{ borderColor: `${casaColor}20`, background: `linear-gradient(135deg, ${casaColor}08, #252547)` }}
+    >
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-xl" style={{ backgroundColor: `${casaColor}20` }}>
+          <Sparkles className="w-5 h-5" style={{ color: casaColor }} />
+        </div>
+        <div className="flex-1">
+          <p className="text-white font-medium text-sm">Desafio do dia</p>
+          <p className="text-white/40 text-[11px] mt-0.5 italic">{frase}</p>
+        </div>
+      </div>
+    </button>
   );
 };
 
