@@ -142,18 +142,23 @@ const ProfessorChatPage = () => {
     staleTime: 30000,
   });
 
-  // Realtime
+  // Realtime (com fallback se WebSocket falhar no mobile)
   useEffect(() => {
     if (!profile?.id) return;
-    const ch = supabase.channel('prof-chat-updates')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens_canal' }, (p) => {
-        if (p.new.autor_id !== profile.id) queryClient.invalidateQueries({ queryKey: ['prof-msg-nao-lidas'] });
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens_privadas' }, (p) => {
-        if (p.new.autor_id !== profile.id) queryClient.invalidateQueries({ queryKey: ['prof-dms-nao-lidas'] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    let ch: any = null;
+    try {
+      ch = supabase.channel('prof-chat-updates')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens_canal' }, (p) => {
+          if (p.new.autor_id !== profile.id) queryClient.invalidateQueries({ queryKey: ['prof-msg-nao-lidas'] });
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens_privadas' }, (p) => {
+          if (p.new.autor_id !== profile.id) queryClient.invalidateQueries({ queryKey: ['prof-dms-nao-lidas'] });
+        })
+        .subscribe();
+    } catch (err) {
+      console.warn('[ProfessorChat] WebSocket indisponível:', err);
+    }
+    return () => { if (ch) try { supabase.removeChannel(ch); } catch {} };
   }, [profile?.id, queryClient]);
 
   // ═══════════════════════════════════════

@@ -334,27 +334,28 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
   // Realtime: recarregar quando fases mudam (admin ativa/desativa)
   useEffect(() => {
     if (!profile?.institution_id) return;
-
-    const channel = supabase
-      .channel('professor-fases-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'fases',
-          filter: `institution_id=eq.${profile.institution_id}`,
-        },
-        (payload) => {
-          console.log('[ProfessorContext] fase alterada via realtime:', payload.eventType);
-          fetchProfessorData();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    let channel: any = null;
+    try {
+      channel = supabase
+        .channel('professor-fases-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'fases',
+            filter: `institution_id=eq.${profile.institution_id}`,
+          },
+          (payload) => {
+            console.log('[ProfessorContext] fase alterada via realtime:', payload.eventType);
+            fetchProfessorData();
+          }
+        )
+        .subscribe();
+    } catch (err) {
+      console.warn('[ProfessorContext] WebSocket indisponível:', err);
+    }
+    return () => { if (channel) try { supabase.removeChannel(channel); } catch {} };
   }, [profile?.institution_id, fetchProfessorData]);
 
   const casaColor = casaMentor?.cor_hex || '#6366f1';
