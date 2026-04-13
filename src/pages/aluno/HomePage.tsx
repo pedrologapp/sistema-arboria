@@ -404,7 +404,7 @@ const HomePage = () => {
               onClick={() => navigate(item.path)}
               className="relative flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-[#252547] border border-violet-500/10 hover:bg-white/[0.06] transition-all active:scale-[0.95]"
             >
-              {item.badge && item.badge > 0 && (
+              {(item.badge ?? 0) > 0 && (
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
               )}
               <Icon className="w-5 h-5" style={{ color: item.color }} />
