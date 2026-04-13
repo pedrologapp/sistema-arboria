@@ -216,9 +216,10 @@ const CirculoAlunosPage = () => {
       if (obsError) throw obsError;
 
       // Delete existing aluno records for this observation
-      await supabase.from('observacao_aluno').delete().eq('observacao_semanal_id', obs.id);
+      const { error: delError } = await supabase.from('observacao_aluno').delete().eq('observacao_semanal_id', obs.id);
+      if (delError) console.warn('Delete falhou, tentando upsert:', delError);
 
-      // Insert all aluno states (excluding faltou - they get nothing)
+      // Insert/upsert all aluno states (excluding faltou - they get nothing)
       const registros = alunos
         .filter(a => getEstado(a.id) !== 'faltou')
         .map(a => ({
@@ -229,7 +230,9 @@ const CirculoAlunosPage = () => {
         }));
 
       if (registros.length > 0) {
-        const { error: regError } = await supabase.from('observacao_aluno').insert(registros);
+        const { error: regError } = await supabase
+          .from('observacao_aluno')
+          .upsert(registros, { onConflict: 'observacao_semanal_id,aluno_id' });
         if (regError) throw regError;
       }
 
