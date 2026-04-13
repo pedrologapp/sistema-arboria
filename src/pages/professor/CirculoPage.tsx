@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useProfessor } from '@/contexts/ProfessorContext';
-import { Eye, ChevronRight, MessageSquare, AlertCircle } from 'lucide-react';
+import { Eye, ChevronRight, MessageSquare, AlertCircle, Check } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 
 const SERIES_F2 = [
   { numero: 6, label: '6º Ano' },
@@ -12,8 +13,64 @@ const SERIES_F2 = [
 ];
 
 const CirculoPage = () => {
-  const { faseAtual } = useProfessor();
+  const { profile, faseAtual } = useProfessor();
   const navigate = useNavigate();
+  const semanaAtual = faseAtual?.semana_atual || 1;
+
+  // Buscar observações feitas por série nesta semana
+  const { data: observacoesPorSerie = {} } = useQuery({
+    queryKey: ['observacoes-por-serie', profile?.id, faseAtual?.id, semanaAtual],
+    queryFn: async () => {
+      if (!profile?.id || !faseAtual?.id) return {};
+      const { data } = await supabase
+        .from('observacao_semanal')
+        .select('serie, turma, status')
+        .eq('professor_id', profile.id)
+        .eq('fase_id', faseAtual.id)
+        .eq('semana', semanaAtual);
+
+      // Agrupar por série: contar turmas com observação enviada
+      const resultado: Record<number, { enviadas: number; rascunhos: number }> = {};
+      (data || []).forEach(o => {
+        const s = parseInt(o.serie);
+        if (!resultado[s]) resultado[s] = { enviadas: 0, rascunhos: 0 };
+        if (o.status === 'enviada') resultado[s].enviadas++;
+        else resultado[s].rascunhos++;
+      });
+      return resultado;
+    },
+    enabled: !!profile?.id && !!faseAtual?.id,
+  });
+
+  // Buscar total de turmas por série
+  const { data: turmasPorSerie = {} } = useQuery({
+    queryKey: ['turmas-por-serie', profile?.institution_id],
+    queryFn: async () => {
+      if (!profile?.institution_id) return {};
+      const { data } = await supabase
+        .from('profiles')
+        .select('serie, turma')
+        .eq('institution_id', profile.institution_id)
+        .eq('segmento', 'fundamental2')
+        .not('casa_id', 'is', null)
+        .not('turma', 'is', null);
+
+      const resultado: Record<number, Set<string>> = {};
+      (data || []).forEach(d => {
+        const s = parseInt(d.serie || '0');
+        if (!resultado[s]) resultado[s] = new Set();
+        if (d.turma) resultado[s].add(d.turma);
+      });
+
+      const final: Record<number, number> = {};
+      Object.entries(resultado).forEach(([s, turmas]) => {
+        final[parseInt(s)] = turmas.size;
+      });
+      return final;
+    },
+    enabled: !!profile?.institution_id,
+    staleTime: 120000,
+  });
 
   return (
     <div className="p-4 space-y-6 pb-24">
@@ -22,9 +79,14 @@ const CirculoPage = () => {
         <h1 className="text-xl font-semibold text-white">Observar</h1>
         {faseAtual?.inteligencia && (
           <p className="text-xs text-white/30 mt-0.5">
-            Fase {faseAtual.numero_fase} — {faseAtual.inteligencia.nome} — Semana {faseAtual.semana_atual || 1}
+            Fase {faseAtual.numero_fase} — {faseAtual.inteligencia.nome}
           </p>
         )}
+      </div>
+
+      {/* Info da semana */}
+      <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
+        <p className="text-xs text-blue-300">Todas as observações feitas aqui são para a <span className="font-bold">Semana {semanaAtual}</span> da fase atual.</p>
       </div>
 
       {/* Observacao Semanal */}
@@ -32,28 +94,47 @@ const CirculoPage = () => {
         <div className="flex items-center gap-2 mb-3 px-1">
           <div className="w-1 h-3.5 rounded-full bg-violet-500" />
           <p className="text-[10px] font-semibold text-violet-400/80 uppercase tracking-widest">
-            Observacao Semanal
+            Observação Semanal — Semana {semanaAtual}
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          {SERIES_F2.map((serie) => (
-            <button
-              key={serie.numero}
-              onClick={() => navigate(`/professor/circulo/serie/${serie.numero}`)}
-              className="p-5 rounded-xl text-center bg-[#252547] border border-violet-500/10
-                hover:border-violet-500/30 hover:bg-violet-500/[0.06]
-                transition-all active:scale-[0.97]"
-            >
-              <p className="text-3xl font-bold text-white">{serie.numero}º</p>
-              <p className="text-xs text-white/40 mt-1">ANO</p>
-            </button>
-          ))}
-        </div>
+          {SERIES_F2.map((serie) => {
+            const obs = observacoesPorSerie[serie.numero];
+            const totalTurmas = turmasPorSerie[serie.numero] || 0;
+            const enviadas = obs?.enviadas || 0;
+            const rascunhos = obs?.rascunhos || 0;
+            const todasFeitas = totalTurmas > 0 && enviadas >= totalTurmas;
 
-        <p className="text-[10px] text-white/20 text-center mt-2">
-          Selecione a serie para registrar a observacao da semana
-        </p>
+            return (
+              <button
+                key={serie.numero}
+                onClick={() => navigate(`/professor/circulo/serie/${serie.numero}`)}
+                className={cn(
+                  "p-5 rounded-xl text-center border transition-all active:scale-[0.97]",
+                  todasFeitas
+                    ? "bg-green-500/10 border-green-500/30 hover:bg-green-500/15"
+                    : enviadas > 0 || rascunhos > 0
+                    ? "bg-amber-500/10 border-amber-500/20 hover:bg-amber-500/15"
+                    : "bg-[#252547] border-violet-500/10 hover:border-violet-500/30 hover:bg-violet-500/[0.06]"
+                )}
+              >
+                <div className="flex items-center justify-center gap-1.5">
+                  <p className="text-3xl font-bold text-white">{serie.numero}°</p>
+                  {todasFeitas && <Check className="w-5 h-5 text-green-400" />}
+                </div>
+                <p className="text-xs text-white/40 mt-1">ANO</p>
+                {totalTurmas > 0 && (
+                  <p className={cn("text-[10px] mt-1.5 font-medium",
+                    todasFeitas ? "text-green-400/70" : enviadas > 0 ? "text-amber-400/70" : "text-white/25"
+                  )}>
+                    {enviadas}/{totalTurmas} {totalTurmas === 1 ? 'turma' : 'turmas'}
+                  </p>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Quer relatar algo? */}
