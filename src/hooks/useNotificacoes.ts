@@ -28,20 +28,19 @@ export const useNotificacoes = () => {
     queryFn: async () => {
       if (!user?.id) return null;
 
-      // 1 única chamada da RPC (em vez de 2)
-      const missaoRes = await supabase.rpc('get_missoes_do_aluno', { p_aluno_id: user.id });
-      const missaoIds = (missaoRes.data || []).map((m: any) => m.id);
-
-      const [aprovadasRes, missaoInfoRes] = await Promise.all([
+      const [missaoRes, aprovadasRes, missaoInfoRes] = await Promise.all([
+        supabase.rpc('get_missoes_do_aluno', { p_aluno_id: user.id }),
         supabase
           .from('entregas')
           .select('missao_id')
           .eq('aluno_id', user.id)
           .eq('status', 'aprovada')
           .eq('visualizada_pelo_aluno', false),
-        missaoIds.length > 0
-          ? supabase.from('missoes').select('id, fase_id, semana').in('id', missaoIds)
-          : Promise.resolve({ data: [] as any[] }),
+        supabase.rpc('get_missoes_do_aluno', { p_aluno_id: user.id }).then(async (res) => {
+          if (!res.data?.length) return { data: [] };
+          const ids = res.data.map((m: any) => m.id);
+          return supabase.from('missoes').select('id, fase_id, semana').in('id', ids);
+        }),
       ]);
 
       return {
