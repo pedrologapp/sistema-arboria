@@ -19,6 +19,7 @@ interface Missao {
   id: string;
   titulo: string;
   tipo_missao: string | null;
+  casa_id: number | null;
   inteligencia_cross: number | null;
 }
 
@@ -50,11 +51,11 @@ const MissoesSemanaPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('missoes')
-        .select('id, titulo, tipo_missao, inteligencia_cross')
+        .select('id, titulo, tipo_missao, casa_id, inteligencia_cross')
         .eq('institution_id', profile!.institution_id!)
-        .eq('casa_id', casaMentor!.id)
         .eq('semana', semanaNumber)
-        .or(`serie_filtro.eq.${serie},serie_filtro.is.null`);
+        .eq('serie_filtro', parseInt(serie))
+        .in('status', ['liberada', 'rascunho']);
 
       if (error) throw error;
       return data as Missao[];
@@ -108,10 +109,11 @@ const MissoesSemanaPage = () => {
       // Total esperado = missões × alunos
       const totalEsperadoGeral = totalMissoesGeraisCalc * totalAlunos;
 
-      // INDIVIDUAL: Agrupar missões por casa primeiro
+      // INDIVIDUAL: Agrupar missões por casa (usa casa_id ou inteligencia_cross)
       const missoesPorCasaMap: Record<number, string[]> = {};
-      missoes?.filter(m => m.tipo_missao === 'individual' && m.inteligencia_cross).forEach(m => {
-        const casaId = m.inteligencia_cross!;
+      missoes?.filter(m => m.tipo_missao === 'individual').forEach(m => {
+        const casaId = m.casa_id || m.inteligencia_cross;
+        if (!casaId) return;
         if (!missoesPorCasaMap[casaId]) missoesPorCasaMap[casaId] = [];
         missoesPorCasaMap[casaId].push(m.id);
       });
@@ -152,8 +154,9 @@ const MissoesSemanaPage = () => {
   const missoesPorCasa = useMemo(() => {
     const porCasa: Record<number, number> = {};
     missoes?.filter(m => m.tipo_missao === 'individual').forEach(m => {
-      if (m.inteligencia_cross) {
-        porCasa[m.inteligencia_cross] = (porCasa[m.inteligencia_cross] || 0) + 1;
+      const casaId = m.casa_id || m.inteligencia_cross;
+      if (casaId) {
+        porCasa[casaId] = (porCasa[casaId] || 0) + 1;
       }
     });
     return porCasa;
