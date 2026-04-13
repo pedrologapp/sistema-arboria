@@ -26,8 +26,8 @@ const MissoesSeriePage = () => {
         .from('missoes')
         .select('id, semana')
         .eq('institution_id', profile!.institution_id!)
-        .eq('casa_id', casaMentor!.id)
-        .or(`serie_filtro.eq.${serie},serie_filtro.is.null`);
+        .eq('serie_filtro', parseInt(serie))
+        .in('status', ['liberada', 'rascunho']);
 
       if (missaoError) throw missaoError;
 
@@ -45,13 +45,13 @@ const MissoesSeriePage = () => {
         entregas = entregasData || [];
       }
 
-      // 3. Contar alunos da série na casa do mentor
+      // 3. Contar TODOS os alunos da série
       const { count: totalAlunos, error: alunosError } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .eq('institution_id', profile!.institution_id!)
-        .eq('casa_id', casaMentor!.id)
-        .ilike('serie', `%${serie}%`);
+        .ilike('serie', `%${serie}%`)
+        .not('casa_id', 'is', null);
 
       if (alunosError) throw alunosError;
 
@@ -83,10 +83,9 @@ const MissoesSeriePage = () => {
         .from('missoes')
         .select('*', { count: 'exact', head: true })
         .eq('institution_id', profile!.institution_id!)
-        .eq('casa_id', casaMentor!.id)
         .eq('semana', 0)
-        .or(`serie_filtro.eq.${serie},serie_filtro.is.null`)
-        .neq('status', 'rascunho');
+        .eq('serie_filtro', parseInt(serie))
+        .in('status', ['liberada', 'rascunho']);
       return count || 0;
     },
     enabled: !!casaMentor?.id && !!profile?.institution_id && !!serie

@@ -362,7 +362,7 @@ const ProfessorDashboard = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-violet-400" />
-                <span className="text-sm font-medium text-white">Organize sua Fase — Semana {faseAtual?.semana_atual || 1}</span>
+                <span className="text-xs font-medium text-white">Organize sua Fase — Semana {faseAtual?.semana_atual || 1}</span>
               </div>
               <div className="flex items-center gap-2">
                 {/* Resumo quando fechado */}
