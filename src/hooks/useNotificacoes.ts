@@ -165,27 +165,33 @@ export const useNotificacoes = () => {
   });
 
   // Real-time: escutar novas mensagens e entregas
+  // Real-time: escutar novas mensagens e entregas (com fallback se WebSocket falhar)
   useEffect(() => {
     if (!profile?.id) return;
 
-    const channel = supabase
-      .channel('nav-notifications')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens_canal' }, (payload) => {
-        if (payload.new.autor_id !== profile.id) {
-          queryClient.invalidateQueries({ queryKey: ['notif-mensagens'] });
-        }
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens_privadas' }, (payload) => {
-        if (payload.new.autor_id !== profile.id) {
-          queryClient.invalidateQueries({ queryKey: ['notif-mensagens'] });
-        }
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'entregas' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['notif-missoes'] });
-      })
-      .subscribe();
+    let channel: any = null;
+    try {
+      channel = supabase
+        .channel('nav-notifications')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens_canal' }, (payload) => {
+          if (payload.new.autor_id !== profile.id) {
+            queryClient.invalidateQueries({ queryKey: ['notif-mensagens'] });
+          }
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens_privadas' }, (payload) => {
+          if (payload.new.autor_id !== profile.id) {
+            queryClient.invalidateQueries({ queryKey: ['notif-mensagens'] });
+          }
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'entregas' }, () => {
+          queryClient.invalidateQueries({ queryKey: ['notif-missoes'] });
+        })
+        .subscribe();
+    } catch (err) {
+      console.warn('[Notificacoes] WebSocket indisponível, usando polling:', err);
+    }
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { if (channel) try { supabase.removeChannel(channel); } catch {} };
   }, [profile?.id, queryClient]);
 
   const getNotificacoesFase = (faseId: string): NotificacoesPorFase | null => {
