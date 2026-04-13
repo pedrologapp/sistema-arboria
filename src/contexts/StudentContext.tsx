@@ -141,7 +141,7 @@ export const StudentProvider = ({ children }: StudentProviderProps) => {
       if (profileData.segmento) faseQuery = faseQuery.or(`segmento.eq.${profileData.segmento},segmento.is.null`);
       if (serieNum) faseQuery = faseQuery.or(`serie.eq.${serieNum},serie.is.null`);
 
-      const results = await Promise.allSettled([
+      const [casaRes, instRes, faseRes, rankingRes, membrosRes, scoresRes] = await Promise.all([
         // Casa
         profileData?.casa_id
           ? supabase.from('inteligencias').select('*').eq('id', profileData.casa_id).single()
@@ -163,10 +163,6 @@ export const StudentProvider = ({ children }: StudentProviderProps) => {
         // Scores de inteligencia
         supabase.from('perfil_inteligencias_aluno').select('*').eq('aluno_id', user.id).order('inteligencia_id'),
       ]);
-
-      // Extrair resultados (fulfilled retorna data, rejected retorna null)
-      const getResult = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' ? r.value : { data: null, error: r.reason };
-      const [casaRes, instRes, faseRes, rankingRes, membrosRes, scoresRes] = results.map(getResult);
 
       // Process casa
       if (casaRes.data) {
