@@ -201,8 +201,8 @@ const HomePage = () => {
 
   return (
     <div className="p-4 space-y-4 pb-24">
-      {/* Onboarding primeiro acesso */}
-      <OnboardingModal
+      {/* Onboarding primeiro acesso — desabilitado temporariamente para debug */}
+      {/* <OnboardingModal
         isOpen={showOnboarding}
         onClose={fecharOnboarding}
         casaNome={casa?.nome}
@@ -210,7 +210,7 @@ const HomePage = () => {
         casaBrasaoUrl={casa?.brasao_url}
         casaEmoji={casa?.emoji}
         alunoNome={firstName}
-      />
+      /> */}
 
       {/* Saudacao */}
       <div className="pt-2 animate-fade-in">
