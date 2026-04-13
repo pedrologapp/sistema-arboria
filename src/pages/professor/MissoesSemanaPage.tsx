@@ -69,17 +69,22 @@ const MissoesSemanaPage = () => {
     queryFn: async () => {
       if (!profile?.institution_id || !casaMentor?.id) return null;
 
-      // Buscar alunos da casa mentor da série
+      // Buscar TODOS os alunos da série (de todas as casas)
       const { data: alunos } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, casa_id')
         .eq('institution_id', profile.institution_id)
-        .eq('casa_id', casaMentor.id)
         .ilike('serie', `%${serie}%`)
         .not('casa_id', 'is', null);
 
       const totalAlunos = alunos?.length || 0;
       const alunoIds = alunos?.map(a => a.id) || [];
+
+      // Contar alunos por casa
+      const alunosPorCasa: Record<number, number> = {};
+      alunos?.forEach(a => {
+        if (a.casa_id) alunosPorCasa[a.casa_id] = (alunosPorCasa[a.casa_id] || 0) + 1;
+      });
 
       const missaoIds = missoes?.map(m => m.id) || [];
       
@@ -130,9 +135,10 @@ const MissoesSemanaPage = () => {
             .map(e => `${e.aluno_id}_${e.missao_id}`)
         );
         
+        const totalAlunosCasa = alunosPorCasa[casaId] || 0;
         porCasa[casaId] = {
-          entregaram: entregasCasaUnicas.size,           // Entregas feitas
-          total: totalMissoesCasa * totalAlunos           // Entregas esperadas
+          entregaram: entregasCasaUnicas.size,
+          total: totalMissoesCasa * totalAlunosCasa
         };
       });
 
@@ -267,22 +273,20 @@ const MissoesSemanaPage = () => {
             <div className="space-y-2">
               {inteligencias?.map((inteligencia) => {
                 const qtdMissoes = missoesPorCasa[inteligencia.id] || 0;
-                
+                const missaoDaCasa = missoes?.find(m => m.tipo_missao === 'individual' && (m.casa_id === inteligencia.id || m.inteligencia_cross === inteligencia.id));
+
                 return (
-                  <button
-                    key={inteligencia.id}
-                    onClick={() => {
-                      // Navegar para lista de alunos da casa (novo fluxo centrado no aluno)
-                      navigate(`/professor/missoes/serie/${serie}/semana/${semana}/casa/${inteligencia.id}/alunos`);
-                    }}
-                    disabled={qtdMissoes === 0}
-                    className={cn(
-                      "w-full p-3 rounded-xl text-left transition-colors flex items-center justify-between",
-                      qtdMissoes > 0 
-                        ? "bg-white/5 hover:bg-white/10" 
-                        : "bg-white/5 opacity-50 cursor-not-allowed"
-                    )}
-                  >
+                  <div key={inteligencia.id} className={cn(
+                    "w-full p-3 rounded-xl transition-colors flex items-center justify-between",
+                    qtdMissoes > 0 ? "bg-white/5" : "bg-white/5 opacity-50"
+                  )}>
+                    <button
+                      onClick={() => {
+                        if (qtdMissoes > 0) navigate(`/professor/missoes/serie/${serie}/semana/${semana}/casa/${inteligencia.id}/alunos`);
+                      }}
+                      disabled={qtdMissoes === 0}
+                      className="flex items-center gap-3 flex-1 text-left"
+                    >
                     <div className="flex items-center gap-3">
                       <CasaBrasao 
                         brasaoUrl={inteligencia.brasao_url}
@@ -301,25 +305,40 @@ const MissoesSemanaPage = () => {
                       </div>
                     </div>
                     
-                    {qtdMissoes > 0 && entregasContagem?.porCasa[inteligencia.id] ? (
-                      <span className={cn(
-                        "text-xs font-semibold px-2 py-0.5 rounded",
-                        entregasContagem.porCasa[inteligencia.id].entregaram === entregasContagem.porCasa[inteligencia.id].total
-                          ? "bg-green-500/20 text-green-400"
-                          : entregasContagem.porCasa[inteligencia.id].entregaram > 0
-                            ? "bg-yellow-500/20 text-yellow-400"
-                            : "bg-red-500/20 text-red-400"
-                      )}>
-                        {entregasContagem.porCasa[inteligencia.id].entregaram}/{entregasContagem.porCasa[inteligencia.id].total}
-                      </span>
-                    ) : qtdMissoes > 0 ? (
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-white/10 text-white/40">
-                        ...
-                      </span>
-                    ) : (
-                      <Circle size={16} className="text-white/20" />
-                    )}
-                  </button>
+                    </button>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Botão Ver missão */}
+                      {missaoDaCasa && (
+                        <button
+                          onClick={() => navigate(`/aluno/missoes/${missaoDaCasa.id}`)}
+                          className="text-[10px] text-violet-400 px-2 py-1 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 transition-colors"
+                        >
+                          Ver
+                        </button>
+                      )}
+
+                      {/* Badge de entregas */}
+                      {qtdMissoes > 0 && entregasContagem?.porCasa[inteligencia.id] ? (
+                        <span className={cn(
+                          "text-xs font-semibold px-2 py-0.5 rounded",
+                          entregasContagem.porCasa[inteligencia.id].entregaram === entregasContagem.porCasa[inteligencia.id].total
+                            ? "bg-green-500/20 text-green-400"
+                            : entregasContagem.porCasa[inteligencia.id].entregaram > 0
+                              ? "bg-yellow-500/20 text-yellow-400"
+                              : "bg-red-500/20 text-red-400"
+                        )}>
+                          {entregasContagem.porCasa[inteligencia.id].entregaram}/{entregasContagem.porCasa[inteligencia.id].total}
+                        </span>
+                      ) : qtdMissoes > 0 ? (
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded bg-white/10 text-white/40">
+                          ...
+                        </span>
+                      ) : (
+                        <Circle size={16} className="text-white/20" />
+                      )}
+                    </div>
+                  </div>
                 );
               })}
             </div>
