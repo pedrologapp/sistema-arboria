@@ -169,20 +169,12 @@ const CirculoAlunosPage = () => {
     setModalTexto('');
   };
 
-  // Tap to cycle (mobile friendly alternative to drag)
+  // Tap abre modal com todas as opções (incluindo faltou)
   const handleTap = (aluno: Aluno) => {
+    setModalAluno(aluno);
     const estadoAtual = getEstado(aluno.id);
-    if (estadoAtual === 'fez') {
-      // Open modal to choose state
-      setModalAluno(aluno);
-      setModalEstado('surpreendeu');
-      setModalTexto('');
-    } else if (estadoAtual === 'faltou') {
-      setEstadoAluno(aluno.id, 'fez');
-    } else {
-      // Already marked, tap to return to Fez
-      setEstadoAluno(aluno.id, 'fez');
-    }
+    setModalEstado(estadoAtual === 'fez' ? 'surpreendeu' : estadoAtual);
+    setModalTexto(getTexto(aluno.id));
   };
 
   // Contagens
@@ -545,7 +537,7 @@ const CirculoAlunosPage = () => {
 
             {/* Estado selector */}
             <div className="flex gap-2">
-              {(['surpreendeu', 'dificuldades', 'nao_conseguiu'] as Estado[]).map(e => (
+              {(['surpreendeu', 'dificuldades', 'nao_conseguiu', 'faltou'] as Estado[]).map(e => (
                 <button
                   key={e}
                   onClick={() => setModalEstado(e)}

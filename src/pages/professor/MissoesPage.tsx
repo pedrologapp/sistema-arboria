@@ -78,7 +78,7 @@ const MissoesPage = () => {
         .select('id, serie_filtro')
         .eq('casa_id', casaMentor!.id)
         .eq('institution_id', profile!.institution_id!)
-        .eq('status', 'liberada');
+        .in('status', ['liberada', 'rascunho']);
 
       if (error) throw error;
 
@@ -126,7 +126,7 @@ const MissoesPage = () => {
         .from('missoes')
         .select('id')
         .eq('institution_id', profile!.institution_id!)
-        .eq('status', 'liberada');
+        .in('status', ['liberada', 'rascunho']);
 
       if (errMissoes) throw errMissoes;
 
@@ -202,7 +202,7 @@ const MissoesPage = () => {
         .from('missoes')
         .select('id')
         .eq('institution_id', profile!.institution_id!)
-        .eq('status', 'liberada');
+        .in('status', ['liberada', 'rascunho']);
 
       const missaoIds = missoes?.map(m => m.id) || [];
 
@@ -263,7 +263,7 @@ const MissoesPage = () => {
         .from('missoes')
         .select('id, data_liberacao, data_prazo')
         .eq('institution_id', profile!.institution_id!)
-        .eq('status', 'liberada');
+        .in('status', ['liberada', 'rascunho']);
       
       if (!missoes || missoes.length === 0) {
         return { 
@@ -394,7 +394,7 @@ const MissoesPage = () => {
         .from('missoes')
         .select('id, serie_filtro')
         .eq('institution_id', profile!.institution_id!)
-        .eq('status', 'liberada');
+        .in('status', ['liberada', 'rascunho']);
 
       const missaoIds = missoes?.map(m => m.id) || [];
       if (missaoIds.length === 0) return null;
