@@ -362,7 +362,7 @@ const ProfessorDashboard = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-violet-400" />
-                <span className="text-sm font-medium text-white">Organize sua Fase</span>
+                <span className="text-sm font-medium text-white">Organize sua Fase — Semana {faseAtual?.semana_atual || 1}</span>
               </div>
               <div className="flex items-center gap-2">
                 {/* Resumo quando fechado */}
@@ -375,7 +375,7 @@ const ProfessorDashboard = () => {
               </div>
             </div>
             {!expandirOrganizar && (
-              <p className="text-[10px] text-white/25 mt-1">Confirme suas aulas para liberar missoes aos alunos</p>
+              <p className="text-[10px] text-white/25 mt-1">Confirme suas aulas da semana {faseAtual?.semana_atual || 1} para liberar as missões</p>
             )}
           </button>
 
