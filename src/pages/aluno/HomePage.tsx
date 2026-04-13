@@ -153,16 +153,6 @@ const HomePage = () => {
     staleTime: 120000,
   });
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white/20" />
-      </div>
-    );
-  }
-
-  const firstName = profile?.nome?.split(' ')[0] || 'Aluno';
-
   // Onboarding: mostra uma vez para cada aluno (chave versionada)
   const onboardingKey = `arboria_onboarding_v2_${profile?.id}`;
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -179,6 +169,15 @@ const HomePage = () => {
     setShowOnboarding(false);
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white/20" />
+      </div>
+    );
+  }
+
+  const firstName = profile?.nome?.split(' ')[0] || 'Aluno';
   const isPrimeiro = ranking?.posicao_na_casa === 1 && (ranking?.total_pontos || 0) > 0;
   const semanaAtual = faseAtual?.semana_atual || 1;
 
