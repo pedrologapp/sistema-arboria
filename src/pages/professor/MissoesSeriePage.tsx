@@ -31,16 +31,16 @@ const MissoesSeriePage = () => {
 
       if (missaoError) throw missaoError;
 
-      // 2. Buscar entregas dessas missões
+      // 2. Buscar entregas dessas missões (com aluno_id para contar únicos)
       const missaoIds = missoes?.map(m => m.id) || [];
-      let entregas: { missao_id: string }[] = [];
-      
+      let entregas: { missao_id: string; aluno_id: string }[] = [];
+
       if (missaoIds.length > 0) {
         const { data: entregasData, error: entregasError } = await supabase
           .from('entregas')
-          .select('missao_id')
+          .select('missao_id, aluno_id')
           .in('missao_id', missaoIds);
-        
+
         if (entregasError) throw entregasError;
         entregas = entregasData || [];
       }
@@ -63,10 +63,23 @@ const MissoesSeriePage = () => {
         4: { missoes: 0, entregas: 0, total: totalAlunos || 0 },
       };
 
+      // Agrupar missões por semana e contar alunos únicos que entregaram
+      const missoesPorSemana: Record<number, string[]> = { 1: [], 2: [], 3: [], 4: [] };
       missoes?.forEach(m => {
-        if (m.semana && contagem[m.semana]) {
+        if (m.semana && missoesPorSemana[m.semana]) {
+          missoesPorSemana[m.semana].push(m.id);
           contagem[m.semana].missoes++;
-          contagem[m.semana].entregas += entregas?.filter(e => e.missao_id === m.id).length || 0;
+        }
+      });
+
+      // Para cada semana, contar alunos únicos que entregaram pelo menos 1 missão
+      [1, 2, 3, 4].forEach(sem => {
+        const missaoIdsSemana = missoesPorSemana[sem];
+        if (missaoIdsSemana.length > 0) {
+          const alunosUnicos = new Set(
+            entregas.filter(e => missaoIdsSemana.includes(e.missao_id)).map(e => e.aluno_id)
+          );
+          contagem[sem].entregas = alunosUnicos.size;
         }
       });
 
