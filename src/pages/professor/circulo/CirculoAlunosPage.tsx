@@ -219,7 +219,7 @@ const CirculoAlunosPage = () => {
       const { error: delError } = await supabase.from('observacao_aluno').delete().eq('observacao_semanal_id', obs.id);
       if (delError) console.warn('Delete falhou, tentando upsert:', delError);
 
-      // Insert/upsert all aluno states (incluindo faltou para salvar no rascunho)
+      // Insert/upsert todos os estados (incluindo faltou)
       const registros = alunos
         .map(a => ({
           observacao_semanal_id: obs.id,
