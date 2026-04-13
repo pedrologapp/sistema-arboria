@@ -169,11 +169,10 @@ const CirculoAlunosPage = () => {
     setModalTexto('');
   };
 
-  // Tap abre modal com todas as opções (incluindo faltou)
+  // Tap abre modal com todas as opções
   const handleTap = (aluno: Aluno) => {
     setModalAluno(aluno);
-    const estadoAtual = getEstado(aluno.id);
-    setModalEstado(estadoAtual === 'fez' ? 'surpreendeu' : estadoAtual);
+    setModalEstado(getEstado(aluno.id));
     setModalTexto(getTexto(aluno.id));
   };
 
@@ -188,7 +187,10 @@ const CirculoAlunosPage = () => {
 
   // Salvar
   const salvar = async (enviar: boolean) => {
-    if (!profile?.id || !profile?.institution_id || !faseAtual?.id) return;
+    if (!profile?.id || !profile?.institution_id || !faseAtual?.id) {
+      toast.error('Erro: dados do professor não carregados. Tente recarregar a página.');
+      return;
+    }
     setSalvando(true);
 
     try {
@@ -537,7 +539,7 @@ const CirculoAlunosPage = () => {
 
             {/* Estado selector */}
             <div className="flex gap-2">
-              {(['surpreendeu', 'dificuldades', 'nao_conseguiu', 'faltou'] as Estado[]).map(e => (
+              {(['fez', 'surpreendeu', 'dificuldades', 'nao_conseguiu', 'faltou'] as Estado[]).map(e => (
                 <button
                   key={e}
                   onClick={() => setModalEstado(e)}
