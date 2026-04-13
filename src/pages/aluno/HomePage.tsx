@@ -116,7 +116,22 @@ const HomePage = () => {
 
   // Resumo da casa para líder/coordenador
   const isLiderOuCoord = cargo === 'Lider' || cargo === 'Coordenador';
-  const resumoCasa = null; // desabilitado para debug
+  const { data: resumoCasa } = useQuery({
+    queryKey: ['resumo-casa-lider', casa?.id, faseAtual?.id],
+    queryFn: async () => {
+      if (!casa?.id || !profile?.institution_id) return null;
+      const { data: membros } = await supabase
+        .from('ranking_alunos_por_casa')
+        .select('aluno_id, total_pontos, missoes_completadas')
+        .eq('casa_id', casa.id)
+        .eq('institution_id', profile.institution_id);
+      const total = membros?.length || 0;
+      const comEntrega = membros?.filter((m: any) => (m.missoes_completadas || 0) > 0).length || 0;
+      return { totalMembros: total, comEntrega, pctEntrega: total > 0 ? Math.round((comEntrega / total) * 100) : 0 };
+    },
+    enabled: isLiderOuCoord && !!casa?.id && !!profile?.institution_id,
+    staleTime: 120000,
+  });
 
   // Missões urgentes (prazo em menos de 2 dias e não entregues)
   const { data: missoesUrgentes } = useQuery({
@@ -186,8 +201,8 @@ const HomePage = () => {
 
   return (
     <div className="p-4 space-y-4 pb-24">
-      {/* Onboarding primeiro acesso — desabilitado temporariamente para debug */}
-      {/* <OnboardingModal
+      {/* Onboarding primeiro acesso */}
+      <OnboardingModal
         isOpen={showOnboarding}
         onClose={fecharOnboarding}
         casaNome={casa?.nome}
@@ -195,7 +210,7 @@ const HomePage = () => {
         casaBrasaoUrl={casa?.brasao_url}
         casaEmoji={casa?.emoji}
         alunoNome={firstName}
-      /> */}
+      />
 
       {/* Saudacao */}
       <div className="pt-2 animate-fade-in">
@@ -205,8 +220,8 @@ const HomePage = () => {
         <p className="text-sm text-white/35 mt-0.5">{getFraseMotivacional()}</p>
       </div>
 
-      {/* Card de Urgência — desabilitado para debug */}
-      {false && missoesUrgentes && missoesUrgentes.length > 0 && (
+      {/* Card de Urgência */}
+      {missoesUrgentes && missoesUrgentes.length > 0 && (
         <button
           onClick={() => {
             if (missoesUrgentes.length === 1) {
@@ -316,8 +331,8 @@ const HomePage = () => {
         </div>
       )}
 
-      {/* Card do Líder/Coordenador — desabilitado para debug */}
-      {false && isLiderOuCoord && resumoCasa && (
+      {/* Card do Líder/Coordenador */}
+      {isLiderOuCoord && resumoCasa && (
         <button
           onClick={() => navigate('/aluno/dashboard')}
           className="w-full p-3.5 rounded-2xl text-left border animate-fade-in animate-fade-in-d2 hover:bg-white/[0.03] transition-colors active:scale-[0.98]"
@@ -338,9 +353,11 @@ const HomePage = () => {
         </button>
       )}
 
-      {/* Cross-IM e Desafio Diário — desabilitados para debug */}
-      {/* <CrossImHomeCard casaCodigo={casa?.codigo} faseCodigo={faseAtual?.inteligencia?.codigo} corCasa={casaColor} /> */}
-      {/* {casa?.codigo && <DesafioDiarioLembrete casaCodigo={casa.codigo} casaColor={casaColor} />} */}
+      {/* Cross-IM */}
+      <CrossImHomeCard casaCodigo={casa?.codigo} faseCodigo={faseAtual?.inteligencia?.codigo} corCasa={casaColor} />
+
+      {/* Lembrete desafio diário */}
+      {casa?.codigo && <DesafioDiarioLembrete casaCodigo={casa.codigo} casaColor={casaColor} />}
 
       {/* MISSOES em destaque */}
       <button
