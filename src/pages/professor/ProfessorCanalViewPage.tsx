@@ -100,21 +100,24 @@ const ProfessorCanalViewPage = () => {
   useEffect(() => {
     if (!canalId) return;
     
-    const channel = supabase
-      .channel(`professor-canal-${canalId}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'mensagens_canal',
-        filter: `canal_id=eq.${canalId}`
-      }, () => {
-        queryClient.invalidateQueries({ queryKey: ['professor-mensagens-canal', canalId] });
-      })
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    let channel: any = null;
+    try {
+      channel = supabase
+        .channel(`professor-canal-${canalId}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'mensagens_canal',
+          filter: `canal_id=eq.${canalId}`
+        }, () => {
+          queryClient.invalidateQueries({ queryKey: ['professor-mensagens-canal', canalId] });
+        })
+        .subscribe();
+    } catch (err) {
+      console.warn('[ProfessorCanalViewPage] WebSocket indisponível:', err);
+    }
+
+    return () => { if (channel) try { supabase.removeChannel(channel); } catch {} };
   }, [canalId, queryClient]);
 
   // Scroll automático para última mensagem

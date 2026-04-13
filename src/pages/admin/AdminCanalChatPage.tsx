@@ -88,18 +88,23 @@ const AdminCanalChatPage = () => {
   // Realtime
   useEffect(() => {
     if (!canalId) return;
-    const channel = supabase
-      .channel(`admin-canal-${canalId}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'mensagens_canal',
-        filter: `canal_id=eq.${canalId}`
-      }, () => {
-        queryClient.invalidateQueries({ queryKey: ['admin-mensagens-canal', canalId] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    let channel: any = null;
+    try {
+      channel = supabase
+        .channel(`admin-canal-${canalId}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'mensagens_canal',
+          filter: `canal_id=eq.${canalId}`
+        }, () => {
+          queryClient.invalidateQueries({ queryKey: ['admin-mensagens-canal', canalId] });
+        })
+        .subscribe();
+    } catch (err) {
+      console.warn('[AdminCanalChatPage] WebSocket indisponível:', err);
+    }
+    return () => { if (channel) try { supabase.removeChannel(channel); } catch {} };
   }, [canalId, queryClient]);
 
   useEffect(() => {

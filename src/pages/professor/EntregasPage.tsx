@@ -71,52 +71,55 @@ const EntregasPage = () => {
   useEffect(() => {
     if (!profile?.institution_id) return;
 
-    const channel = supabase
-      .channel('entregas-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'entregas'
-        },
-        async (payload) => {
-          console.log('Nova entrega recebida:', payload);
-          
-          // Buscar dados do aluno para mostrar no toast
-          const { data: aluno } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', payload.new.aluno_id)
-            .single();
+    let channel: any = null;
+    try {
+      channel = supabase
+        .channel('entregas-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'entregas'
+          },
+          async (payload) => {
+            console.log('Nova entrega recebida:', payload);
 
-          // Buscar dados da missão
-          const { data: missao } = await supabase
-            .from('missoes')
-            .select('titulo')
-            .eq('id', payload.new.missao_id)
-            .single();
+            // Buscar dados do aluno para mostrar no toast
+            const { data: aluno } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', payload.new.aluno_id)
+              .single();
 
-          // Mostrar notificação
-          toast.info('📬 Nova entrega recebida!', {
-            description: `${aluno?.full_name || 'Aluno'} - ${missao?.titulo || 'Missão'}`,
-            duration: 5000,
-          });
+            // Buscar dados da missão
+            const { data: missao } = await supabase
+              .from('missoes')
+              .select('titulo')
+              .eq('id', payload.new.missao_id)
+              .single();
 
-          // Incrementar contador
-          setNovasEntregas(prev => prev + 1);
+            // Mostrar notificação
+            toast.info('📬 Nova entrega recebida!', {
+              description: `${aluno?.full_name || 'Aluno'} - ${missao?.titulo || 'Missão'}`,
+              duration: 5000,
+            });
 
-          // Invalidar queries
-          queryClient.invalidateQueries({ queryKey: ['entregas-por-serie'] });
-          queryClient.invalidateQueries({ queryKey: ['entregas-por-semana'] });
-          queryClient.invalidateQueries({ queryKey: ['entregas-por-tipo'] });
-        }
-      )
-      .subscribe();
+            // Incrementar contador
+            setNovasEntregas(prev => prev + 1);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+            // Invalidar queries
+            queryClient.invalidateQueries({ queryKey: ['entregas-por-serie'] });
+            queryClient.invalidateQueries({ queryKey: ['entregas-por-semana'] });
+            queryClient.invalidateQueries({ queryKey: ['entregas-por-tipo'] });
+          }
+        )
+        .subscribe();
+    } catch (err) {
+      console.warn('[EntregasPage] WebSocket indisponível:', err);
+    }
+
+    return () => { if (channel) try { supabase.removeChannel(channel); } catch {} };
   }, [profile?.institution_id, queryClient]);
 
   const totalPendentes = Object.values(contagemPorSerie || {}).reduce((a, b) => a + b, 0);

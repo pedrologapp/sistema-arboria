@@ -115,30 +115,30 @@ const DmChatPage = () => {
   // Realtime para novas mensagens
   useEffect(() => {
     if (!conversaId) return;
-    
-    const channel = supabase
-      .channel(`dm-${conversaId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'mensagens_privadas',
-        filter: `conversa_id=eq.${conversaId}`
-      }, () => {
-        queryClient.invalidateQueries({ queryKey: ['dm-mensagens', conversaId] });
-        // Atualizar leitura quando receber nova mensagem
-        if (profile?.id) {
-          supabase
-            .from('conversa_participantes')
-            .update({ ultima_leitura: new Date().toISOString() })
-            .eq('conversa_id', conversaId)
-            .eq('usuario_id', profile.id);
-        }
-      })
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    let channel: any = null;
+    try {
+      channel = supabase
+        .channel(`dm-${conversaId}`)
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'mensagens_privadas',
+          filter: `conversa_id=eq.${conversaId}`
+        }, () => {
+          queryClient.invalidateQueries({ queryKey: ['dm-mensagens', conversaId] });
+          if (profile?.id) {
+            supabase
+              .from('conversa_participantes')
+              .update({ ultima_leitura: new Date().toISOString() })
+              .eq('conversa_id', conversaId)
+              .eq('usuario_id', profile.id);
+          }
+        })
+        .subscribe();
+    } catch (err) {
+      console.warn('[DmChat] WebSocket indisponível:', err);
+    }
+    return () => { if (channel) try { supabase.removeChannel(channel); } catch {} };
   }, [conversaId, queryClient, profile?.id]);
 
   // Scroll automático para última mensagem

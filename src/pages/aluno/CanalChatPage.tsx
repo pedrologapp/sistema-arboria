@@ -102,16 +102,21 @@ const CanalChatPage = () => {
     return diffMinutos < 5;
   };
 
-  // Realtime
+  // Realtime (com fallback se WebSocket falhar no mobile)
   useEffect(() => {
     if (!canalId) return;
-    const channel = supabase
-      .channel(`canal-${canalId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'mensagens_canal', filter: `canal_id=eq.${canalId}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ['mensagens-canal', canalId] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    let channel: any = null;
+    try {
+      channel = supabase
+        .channel(`canal-${canalId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'mensagens_canal', filter: `canal_id=eq.${canalId}` }, () => {
+          queryClient.invalidateQueries({ queryKey: ['mensagens-canal', canalId] });
+        })
+        .subscribe();
+    } catch (err) {
+      console.warn('[CanalChat] WebSocket indisponível:', err);
+    }
+    return () => { if (channel) try { supabase.removeChannel(channel); } catch {} };
   }, [canalId, queryClient]);
 
   // Auto scroll

@@ -197,23 +197,28 @@ const ChatPage = () => {
     staleTime: 10000,
   });
 
-  // Realtime
+  // Realtime (com fallback se WebSocket falhar no mobile)
   useEffect(() => {
     if (!profile?.id || !casa?.id) return;
-    const channel = supabase
-      .channel('global-chat-updates')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens_canal' }, (payload) => {
-        if (payload.new.autor_id !== profile.id) {
-          queryClient.invalidateQueries({ queryKey: ['mensagens-nao-lidas'] });
-        }
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens_privadas' }, (payload) => {
-        if (payload.new.autor_id !== profile.id) {
-          queryClient.invalidateQueries({ queryKey: ['dms-nao-lidas'] });
-        }
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    let channel: any = null;
+    try {
+      channel = supabase
+        .channel('global-chat-updates')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens_canal' }, (payload) => {
+          if (payload.new.autor_id !== profile.id) {
+            queryClient.invalidateQueries({ queryKey: ['mensagens-nao-lidas'] });
+          }
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens_privadas' }, (payload) => {
+          if (payload.new.autor_id !== profile.id) {
+            queryClient.invalidateQueries({ queryKey: ['dms-nao-lidas'] });
+          }
+        })
+        .subscribe();
+    } catch (err) {
+      console.warn('[Chat] WebSocket indisponível:', err);
+    }
+    return () => { if (channel) try { supabase.removeChannel(channel); } catch {} };
   }, [profile?.id, casa?.id, queryClient]);
 
   // ═══════════════════════════════════════

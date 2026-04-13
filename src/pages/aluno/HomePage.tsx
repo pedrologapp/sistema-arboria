@@ -269,7 +269,10 @@ const HomePage = () => {
                 <h2 className="text-2xl font-extrabold tracking-tight" style={{ color: casaColor }}>
                   Casa {casa.nome}
                 </h2>
-                <p className="text-white/50 text-sm mt-0.5">{cargo || 'Membro'}</p>
+                <p className="text-white/50 text-sm mt-0.5">
+                  {cargo || 'Membro'}
+                  {profile?.serie && ` · ${profile.serie}° ${profile.turma || ''}`}
+                </p>
               </div>
             </div>
 

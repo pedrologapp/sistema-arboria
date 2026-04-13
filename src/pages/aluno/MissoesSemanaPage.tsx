@@ -89,23 +89,31 @@ const MissoesSemanaPage = () => {
         };
         setFase(faseFormatted);
 
-        const { data: geraisData, error: geraisError } = await supabase
+        // Filtrar por série do aluno
+        const serieNum = profile?.serie ? parseInt(profile.serie) : null;
+
+        let geraisQuery = supabase
           .from('missoes')
           .select('id, titulo, descricao, pontos_base')
           .eq('fase_id', faseId)
           .eq('semana', semanaNum)
           .eq('tipo_missao', 'geral')
           .eq('status', 'liberada');
+        if (serieNum) geraisQuery = geraisQuery.or(`serie_filtro.eq.${serieNum},serie_filtro.is.null`);
 
+        const { data: geraisData, error: geraisError } = await geraisQuery;
         if (geraisError) throw geraisError;
 
-        const { data: individuaisData, error: individuaisError } = await supabase
+        let individuaisQuery = supabase
           .from('missoes')
           .select('id, titulo, casa_id')
           .eq('fase_id', faseId)
           .eq('semana', semanaNum)
           .eq('tipo_missao', 'individual')
           .eq('status', 'liberada');
+        if (serieNum) individuaisQuery = individuaisQuery.or(`serie_filtro.eq.${serieNum},serie_filtro.is.null`);
+
+        const { data: individuaisData, error: individuaisError } = await individuaisQuery;
 
         if (individuaisError) throw individuaisError;
 
