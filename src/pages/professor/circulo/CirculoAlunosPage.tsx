@@ -133,19 +133,24 @@ const CirculoAlunosPage = () => {
     enabled: !!rascunhoExistente?.id,
   });
 
-  // Carregar Cross-IM no state quando dados chegam
-  // Using a ref to track if we've loaded
+  // Carregar Cross-IM no state quando dados chegam (via useRef para evitar loop)
   const crossImCarregado = useRef(false);
-  if (crossImSalvos && crossImSalvos.length > 0 && !crossImCarregado.current) {
+  const crossImSalvosRef = useRef(crossImSalvos);
+  crossImSalvosRef.current = crossImSalvos;
+
+  if (!crossImCarregado.current && crossImSalvos && crossImSalvos.length > 0) {
     crossImCarregado.current = true;
-    const map = new Map<string, number[]>();
-    crossImSalvos.forEach((r: any) => {
-      const atual = map.get(r.aluno_id) || [];
-      if (!atual.includes(r.inteligencia_detectada_id)) {
-        map.set(r.aluno_id, [...atual, r.inteligencia_detectada_id]);
-      }
-    });
-    setCrossImPorAluno(map);
+    // Usar setTimeout para não causar setState durante render
+    setTimeout(() => {
+      const map = new Map<string, number[]>();
+      (crossImSalvosRef.current || []).forEach((r: any) => {
+        const atual = map.get(r.aluno_id) || [];
+        if (!atual.includes(r.inteligencia_detectada_id)) {
+          map.set(r.aluno_id, [...atual, r.inteligencia_detectada_id]);
+        }
+      });
+      setCrossImPorAluno(map);
+    }, 0);
   }
 
   const getEstado = (alunoId: string): Estado => alunosEstado.get(alunoId)?.estado || 'fez';
