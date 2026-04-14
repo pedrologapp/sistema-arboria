@@ -97,6 +97,19 @@ const ArboriaPage = () => {
     },
   });
 
+  // Status das observações por turma (quais professores já fizeram)
+  const { data: statusObservacoes = [] } = useQuery({
+    queryKey: ['arboria-status-observacoes'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('observacao_semanal')
+        .select('serie, turma, semana, status, professor_id, enviada_em')
+        .order('serie')
+        .order('turma');
+      return data || [];
+    },
+  });
+
   // Observações com comentários (recentes)
   const [filtroObsSerie, setFiltroObsSerie] = useState<string | null>(null);
   const [filtroObsEstado, setFiltroObsEstado] = useState<string | null>(null);
@@ -455,6 +468,47 @@ const ArboriaPage = () => {
                     <p className="text-sm text-white/70 line-clamp-2">"{r.texto}"</p>
                   </button>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* ═══ STATUS DAS OBSERVAÇÕES POR TURMA ═══ */}
+          {statusObservacoes.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-1">
+                <div className="w-1 h-3.5 rounded-full bg-emerald-500" />
+                <p className="text-[10px] font-semibold text-emerald-400/80 uppercase tracking-widest">Observações por Turma</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {(() => {
+                  // Agrupar por série+turma
+                  const turmas: Record<string, { serie: string; turma: string; status: string; semana: number }> = {};
+                  statusObservacoes.forEach((o: any) => {
+                    const key = `${o.serie}-${o.turma}`;
+                    if (!turmas[key] || o.status === 'enviada') {
+                      turmas[key] = { serie: o.serie, turma: o.turma, status: o.status, semana: o.semana };
+                    }
+                  });
+
+                  return Object.values(turmas).sort((a, b) => `${a.serie}${a.turma}`.localeCompare(`${b.serie}${b.turma}`)).map(t => (
+                    <div key={`${t.serie}-${t.turma}`}
+                      className={cn('p-3 rounded-xl border text-center',
+                        t.status === 'enviada' ? 'bg-green-500/10 border-green-500/20' :
+                        t.status === 'rascunho' ? 'bg-amber-500/10 border-amber-500/20' :
+                        'bg-white/5 border-violet-500/10'
+                      )}>
+                      <p className="text-sm font-bold text-white">{t.serie}° {t.turma}</p>
+                      <p className={cn('text-[10px] mt-0.5',
+                        t.status === 'enviada' ? 'text-green-400' :
+                        t.status === 'rascunho' ? 'text-amber-400' : 'text-white/30'
+                      )}>
+                        {t.status === 'enviada' ? 'Observação enviada' : t.status === 'rascunho' ? 'Rascunho' : 'Pendente'}
+                      </p>
+                      <p className="text-[9px] text-white/20 mt-0.5">Semana {t.semana}</p>
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
           )}
