@@ -27,6 +27,12 @@ class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('[ErrorBoundary]', error, info.componentStack);
+    // Auto-reload se for erro de chunk/module não encontrado (deploy novo)
+    if (error?.message?.includes('Failed to fetch dynamically imported module') ||
+        error?.message?.includes('Loading chunk') ||
+        error?.message?.includes('Loading CSS chunk')) {
+      window.location.reload();
+    }
   }
 
   handleRetry = () => {
