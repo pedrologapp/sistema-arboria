@@ -13,6 +13,7 @@ const CirculoRelatoPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { profile, faseAtual } = useProfessor();
+  const [tipoRelato, setTipoRelato] = useState<'aluno' | 'aula'>('aluno');
   const [texto, setTexto] = useState('');
   const [busca, setBusca] = useState('');
   const [alunoSelecionado, setAlunoSelecionado] = useState<any>(null);
@@ -48,13 +49,13 @@ const CirculoRelatoPage = () => {
     const payload: any = {
       professor_id: user?.id,
       observacao_texto: texto.trim(),
-      tipo_observacao: 'relato_professor',
+      tipo_observacao: tipoRelato === 'aula' ? 'relato_aula' : 'relato_professor',
       intensidade: 'normal',
       data_observacao: hojeBrasil(),
       institution_id: profile?.institution_id,
     };
 
-    if (alunoSelecionado) {
+    if (tipoRelato === 'aluno' && alunoSelecionado) {
       payload.aluno_id = alunoSelecionado.id;
     }
     if (faseAtual?.id) {
@@ -82,7 +83,7 @@ const CirculoRelatoPage = () => {
         </div>
         <h2 className="text-lg font-semibold text-white mb-1">Relato registrado!</h2>
         <p className="text-sm text-white/40 mb-6">
-          {alunoSelecionado ? `Vinculado a ${alunoSelecionado.nome}` : 'Relato geral (sem aluno vinculado)'}
+          {tipoRelato === 'aula' ? 'Relato sobre a aula registrado' : alunoSelecionado ? `Vinculado a ${alunoSelecionado.full_name || alunoSelecionado.nome}` : 'Relato geral registrado'}
         </p>
         <div className="flex gap-3">
           <button
@@ -115,8 +116,26 @@ const CirculoRelatoPage = () => {
         </div>
       </div>
 
-      {/* Aluno vinculado */}
-      {alunoSelecionado ? (
+      {/* Tipo de relato */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => { setTipoRelato('aluno'); setAlunoSelecionado(null); }}
+          className={cn('flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors',
+            tipoRelato === 'aluno' ? 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30' : 'bg-white/[0.04] text-white/40 border-transparent'
+          )}>
+          Sobre um aluno
+        </button>
+        <button
+          onClick={() => { setTipoRelato('aula'); setAlunoSelecionado(null); setBusca(''); }}
+          className={cn('flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors',
+            tipoRelato === 'aula' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-white/[0.04] text-white/40 border-transparent'
+          )}>
+          Sobre a aula
+        </button>
+      </div>
+
+      {/* Aluno vinculado (só se tipo = aluno) */}
+      {tipoRelato === 'aluno' && alunoSelecionado ? (
         <div className="flex items-center gap-3 p-3 rounded-xl bg-[#252547] border border-cyan-500/20">
           <div className="w-9 h-9 rounded-full overflow-hidden border-2 shrink-0" style={{ borderColor: (alunoSelecionado.casa as any)?.cor_hex || '#444' }}>
             {alunoSelecionado.avatar_url ? (
@@ -135,7 +154,7 @@ const CirculoRelatoPage = () => {
             <X className="w-4 h-4" />
           </button>
         </div>
-      ) : (
+      ) : tipoRelato === 'aluno' ? (
         <div>
           <p className="text-[10px] text-white/40 mb-2 px-1">Vincular a um aluno (opcional)</p>
           <div className="relative">
@@ -176,15 +195,26 @@ const CirculoRelatoPage = () => {
             </div>
           )}
         </div>
+      ) : (
+        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+          <p className="text-xs text-amber-300">Escreva sobre como foi a aula: o que funcionou, o que não funcionou, sugestões, dúvidas.</p>
+          {faseAtual && (
+            <p className="text-[10px] text-amber-300/50 mt-1">
+              Fase {faseAtual.inteligencia?.nome} · Semana {faseAtual.semana_atual || 1}
+            </p>
+          )}
+        </div>
       )}
 
       {/* Texto do relato */}
       <div>
-        <p className="text-[10px] text-white/40 mb-2 px-1">Seu relato</p>
+        <p className="text-[10px] text-white/40 mb-2 px-1">
+          {tipoRelato === 'aula' ? 'Como foi a aula?' : 'Seu relato'}
+        </p>
         <textarea
           value={texto}
           onChange={e => setTexto(e.target.value)}
-          placeholder="Escreva aqui o que observou, sentiu ou quer registrar..."
+          placeholder={tipoRelato === 'aula' ? 'Como foi a aula? O que funcionou? O que melhoraria? Alguma dúvida?' : 'Escreva aqui o que observou, sentiu ou quer registrar...'}
           maxLength={1000}
           rows={5}
           className="w-full bg-[#252547] border border-violet-500/10 rounded-xl p-3 text-sm text-white placeholder:text-white/20 resize-none focus:outline-none focus:border-white/20 transition-colors"
