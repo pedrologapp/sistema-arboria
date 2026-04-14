@@ -542,8 +542,8 @@ const ArboriaPage = () => {
               ))}
             </div>
 
-            {/* Lista */}
-            <div className="space-y-2">
+            {/* Lista com scroll */}
+            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
               {(() => {
                 const ESTADO_CONFIG: Record<string, { label: string; cor: string }> = {
                   surpreendeu: { label: 'Foi além', cor: '#22C55E' },
