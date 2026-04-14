@@ -386,6 +386,12 @@ const CirculoAlunosPage = () => {
               </span>
             )}
           </div>
+          {/* Indicador de comentário */}
+          {getTexto(aluno.id) && (
+            <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-blue-500 border-2 border-[#1E1E3A] flex items-center justify-center">
+              <span className="text-[6px] text-white font-bold">C</span>
+            </div>
+          )}
           {/* Indicadores Cross-IM */}
           {(crossImPorAluno.get(aluno.id) || []).length > 0 && (
             <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 flex gap-0.5">
@@ -618,7 +624,7 @@ const CirculoAlunosPage = () => {
                   Cross-IM — Usou outra inteligência?
                 </p>
                 <div className="grid grid-cols-4 gap-1.5">
-                  {inteligencias.filter(i => i.id !== modalAluno.casa_id).map(intel => {
+                  {inteligencias.map(intel => {
                     const crossIms = crossImPorAluno.get(modalAluno.id) || [];
                     const selecionado = crossIms.includes(intel.id);
                     return (
