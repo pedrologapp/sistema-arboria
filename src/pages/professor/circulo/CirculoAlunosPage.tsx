@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, Save, ChevronDown, ChevronUp, X } from 'lucide-react';
@@ -118,6 +118,35 @@ const CirculoAlunosPage = () => {
       setAlunosEstado(map);
     }
   });
+
+  // Carregar Cross-IM salvos
+  const { data: crossImSalvos } = useQuery({
+    queryKey: ['cross-im-salvos', rascunhoExistente?.id],
+    queryFn: async () => {
+      if (!rascunhoExistente?.id) return [];
+      const { data } = await supabase
+        .from('cross_im_registros' as any)
+        .select('aluno_id, inteligencia_detectada_id')
+        .eq('observacao_semanal_id', rascunhoExistente.id);
+      return data || [];
+    },
+    enabled: !!rascunhoExistente?.id,
+  });
+
+  // Carregar Cross-IM no state quando dados chegam
+  // Using a ref to track if we've loaded
+  const crossImCarregado = useRef(false);
+  if (crossImSalvos && crossImSalvos.length > 0 && !crossImCarregado.current) {
+    crossImCarregado.current = true;
+    const map = new Map<string, number[]>();
+    crossImSalvos.forEach((r: any) => {
+      const atual = map.get(r.aluno_id) || [];
+      if (!atual.includes(r.inteligencia_detectada_id)) {
+        map.set(r.aluno_id, [...atual, r.inteligencia_detectada_id]);
+      }
+    });
+    setCrossImPorAluno(map);
+  }
 
   const getEstado = (alunoId: string): Estado => alunosEstado.get(alunoId)?.estado || 'fez';
   const getTexto = (alunoId: string): string => alunosEstado.get(alunoId)?.texto || '';
