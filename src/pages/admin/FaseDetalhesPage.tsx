@@ -28,6 +28,7 @@ const FaseDetalhesPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [calibracaoEstado, setCalibracaoEstado] = useState<string | null>(null);
   const [semanaEditando, setSemanaEditando] = useState<number | null>(null);
   const [habSelecionadas, setHabSelecionadas] = useState<Set<number>>(new Set());
   const [salvandoHab, setSalvandoHab] = useState(false);
@@ -498,6 +499,33 @@ const FaseDetalhesPage = () => {
         </div>
       </div>
 
+      {/* ═══ CALIBRAÇÃO DA FASE ═══ */}
+      <div>
+        <div className="flex items-center gap-2 mb-3 px-1">
+          <div className="w-1 h-3.5 rounded-full bg-emerald-500" />
+          <p className="text-[10px] font-semibold text-emerald-400/80 uppercase tracking-widest">Calibração da Fase</p>
+        </div>
+
+        <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+          {[
+            { key: 'surpreendeu', label: 'Foi além', bg: 'bg-emerald-500/15', text: 'text-emerald-300', border: 'border-emerald-500/30' },
+            { key: 'fez', label: 'Fez', bg: 'bg-blue-500/15', text: 'text-blue-300', border: 'border-blue-500/30' },
+            { key: 'dificuldades', label: 'Dificuldades', bg: 'bg-amber-500/15', text: 'text-amber-300', border: 'border-amber-500/30' },
+            { key: 'nao_conseguiu', label: 'Não conseguiu', bg: 'bg-red-500/15', text: 'text-red-300', border: 'border-red-500/30' },
+          ].map(e => (
+            <button key={e.key} onClick={() => setCalibracaoEstado(calibracaoEstado === e.key ? null : e.key)}
+              className={cn('px-3 py-2 rounded-lg text-xs font-medium transition-colors shrink-0 border',
+                calibracaoEstado === e.key ? `${e.bg} ${e.text} ${e.border}` : 'bg-white/[0.04] text-white/40 border-transparent')}>
+              {e.label}
+            </button>
+          ))}
+        </div>
+
+        {calibracaoEstado && (
+          <CalibracaoLista faseId={faseId!} estado={calibracaoEstado} />
+        )}
+      </div>
+
       {/* Modal seletor */}
       {semanaEditando !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -592,6 +620,86 @@ const FaseDetalhesPage = () => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+// Componente de calibração — lista alunos por estado
+const CalibracaoLista = ({ faseId, estado }: { faseId: string; estado: string }) => {
+  const { data: observacoes = [], isLoading } = useQuery({
+    queryKey: ['calibracao', faseId, estado],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('observacao_aluno')
+        .select(`
+          id, aluno_id, estado, observacao_texto,
+          observacao_semanal:observacao_semanal_id (serie, turma, semana)
+        `)
+        .eq('estado', estado)
+        .order('created_at', { ascending: false })
+        .limit(30);
+
+      if (!data) return [];
+
+      // Buscar nomes dos alunos
+      const alunoIds = [...new Set(data.map(d => d.aluno_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, nome, casa_id')
+        .in('id', alunoIds);
+
+      const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+
+      // Buscar casas
+      const { data: casas } = await supabase.from('inteligencias').select('id, nome, cor_hex');
+      const casaMap = new Map((casas || []).map(c => [c.id, c]));
+
+      return data.map(d => {
+        const p = profileMap.get(d.aluno_id);
+        const casa = p?.casa_id ? casaMap.get(p.casa_id) : null;
+        const obs = d.observacao_semanal as any;
+        return {
+          ...d,
+          aluno_nome: p?.full_name || p?.nome || 'Aluno',
+          casa_nome: casa?.nome || '',
+          casa_cor: casa?.cor_hex || '#666',
+          serie: obs?.serie,
+          turma: obs?.turma,
+          semana: obs?.semana,
+        };
+      });
+    },
+    enabled: !!faseId && !!estado,
+  });
+
+  const LABELS: Record<string, string> = {
+    surpreendeu: 'Foi além', fez: 'Fez', dificuldades: 'Dificuldades', nao_conseguiu: 'Não conseguiu',
+  };
+
+  if (isLoading) return <div className="p-4 text-center"><div className="animate-spin rounded-full h-5 w-5 border-t-2 border-white/20 mx-auto" /></div>;
+
+  if (observacoes.length === 0) return (
+    <div className="p-4 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
+      <p className="text-white/30 text-sm">Nenhum aluno com estado "{LABELS[estado]}" nesta fase</p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[10px] text-white/30">{observacoes.length} aluno{observacoes.length > 1 ? 's' : ''}</p>
+      {observacoes.map((o: any) => (
+        <div key={o.id} className="p-3 rounded-xl bg-[#252547] border border-violet-500/10">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: o.casa_cor }} />
+            <p className="text-[11px] text-white/70 flex-1 truncate">{o.aluno_nome}</p>
+            <span className="text-[9px] text-white/25">{o.serie}° {o.turma} · S{o.semana}</span>
+            <span className="text-[8px] px-1.5 py-0.5 rounded bg-white/10 text-white/40">{o.casa_nome}</span>
+          </div>
+          {o.observacao_texto && (
+            <p className="text-xs text-white/50 leading-relaxed mt-1">"{o.observacao_texto}"</p>
+          )}
+        </div>
+      ))}
     </div>
   );
 };

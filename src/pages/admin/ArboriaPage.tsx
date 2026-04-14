@@ -66,13 +66,13 @@ const ArboriaPage = () => {
     },
   });
 
-  // Histórico (últimos 7 dias, excluindo hoje)
+  // Histórico (últimos 5 dias, excluindo hoje)
   const { data: checkinsHistorico = [] } = useQuery({
     queryKey: ['arboria-checkins-historico', hojeData],
     queryFn: async () => {
-      const seteDiasAtras = agoraBrasil();
-      seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
-      const seteDiasAtrasStr = seteDiasAtras.toLocaleDateString('en-CA');
+      const cincoDiasAtras = agoraBrasil();
+      cincoDiasAtras.setDate(cincoDiasAtras.getDate() - 5);
+      const seteDiasAtrasStr = cincoDiasAtras.toLocaleDateString('en-CA');
       const { data } = await supabase
         .from('checkin_emocional')
         .select('aluno_id, emoji, label, data, created_at')
@@ -93,6 +93,28 @@ const ArboriaPage = () => {
         .select('id, aluno_id, texto, created_at')
         .order('created_at', { ascending: false })
         .limit(5);
+      return data || [];
+    },
+  });
+
+  // Observações com comentários (recentes)
+  const [filtroObsSerie, setFiltroObsSerie] = useState<string | null>(null);
+  const [filtroObsEstado, setFiltroObsEstado] = useState<string | null>(null);
+  const { data: observacoesRecentes = [] } = useQuery({
+    queryKey: ['arboria-observacoes-recentes'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('observacao_aluno')
+        .select(`
+          id, aluno_id, estado, observacao_texto, created_at,
+          observacao_semanal:observacao_semanal_id (
+            serie, turma, semana, professor_id
+          )
+        `)
+        .not('observacao_texto', 'is', null)
+        .neq('observacao_texto', '')
+        .order('created_at', { ascending: false })
+        .limit(50);
       return data || [];
     },
   });
@@ -303,7 +325,7 @@ const ArboriaPage = () => {
               <div className="flex items-center gap-2 mb-3">
                 <Heart className="w-4 h-4 text-white/30" />
                 <p className="text-sm font-medium text-white/60">Historico Emocional</p>
-                <span className="text-[10px] text-white/25">ultimos 7 dias</span>
+                <span className="text-[10px] text-white/25">últimos 5 dias</span>
               </div>
               <div className="space-y-1">
                 {Object.entries(historicoAgrupado)
@@ -436,6 +458,91 @@ const ArboriaPage = () => {
               </div>
             </div>
           )}
+
+          {/* ═══ OBSERVAÇÕES DO PROFESSOR ═══ */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <div className="w-1 h-3.5 rounded-full bg-violet-500" />
+              <p className="text-[10px] font-semibold text-violet-400/80 uppercase tracking-widest">Observações do Professor</p>
+              <span className="text-[10px] text-white/20 ml-auto">{observacoesRecentes.length} com comentário</span>
+            </div>
+
+            {/* Filtros */}
+            <div className="flex gap-1.5 overflow-x-auto pb-1">
+              <button onClick={() => setFiltroObsEstado(null)}
+                className={cn('px-3 py-1.5 rounded-lg text-[10px] font-medium transition-colors shrink-0',
+                  !filtroObsEstado ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30' : 'bg-white/[0.04] text-white/40')}>
+                Todos
+              </button>
+              {[
+                { key: 'surpreendeu', label: 'Foi além', cor: 'emerald' },
+                { key: 'dificuldades', label: 'Dificuldades', cor: 'amber' },
+                { key: 'nao_conseguiu', label: 'Não conseguiu', cor: 'red' },
+                { key: 'fez', label: 'Fez', cor: 'blue' },
+              ].map(e => (
+                <button key={e.key} onClick={() => setFiltroObsEstado(filtroObsEstado === e.key ? null : e.key)}
+                  className={cn(`px-3 py-1.5 rounded-lg text-[10px] font-medium transition-colors shrink-0`,
+                    filtroObsEstado === e.key ? `bg-${e.cor}-500/20 text-${e.cor}-300 border border-${e.cor}-500/30` : 'bg-white/[0.04] text-white/40')}>
+                  {e.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Lista */}
+            <div className="space-y-2">
+              {(() => {
+                const ESTADO_CONFIG: Record<string, { label: string; cor: string }> = {
+                  surpreendeu: { label: 'Foi além', cor: '#22C55E' },
+                  fez: { label: 'Fez', cor: '#3B82F6' },
+                  dificuldades: { label: 'Dificuldades', cor: '#F59E0B' },
+                  nao_conseguiu: { label: 'Não conseguiu', cor: '#EF4444' },
+                  faltou: { label: 'Faltou', cor: '#6B7280' },
+                };
+
+                const filtradas = observacoesRecentes.filter((o: any) => {
+                  if (filtroObsEstado && o.estado !== filtroObsEstado) return false;
+                  if (filtroObsSerie) {
+                    const obs = o.observacao_semanal as any;
+                    if (obs?.serie !== filtroObsSerie) return false;
+                  }
+                  return true;
+                });
+
+                if (filtradas.length === 0) {
+                  return (
+                    <div className="p-4 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
+                      <p className="text-white/20 text-sm">Nenhuma observação com comentário</p>
+                    </div>
+                  );
+                }
+
+                return filtradas.slice(0, 10).map((o: any) => {
+                  const aluno = alunos.find(a => a.id === o.aluno_id);
+                  const obs = o.observacao_semanal as any;
+                  const config = ESTADO_CONFIG[o.estado] || ESTADO_CONFIG.fez;
+
+                  return (
+                    <div key={o.id} className="p-3 rounded-xl bg-[#252547] border border-violet-500/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[9px] text-white/60 font-bold">
+                          {(aluno?.nome || '?')[0]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] text-white/70 truncate">{aluno?.full_name || aluno?.nome || 'Aluno'}</p>
+                          <p className="text-[9px] text-white/25">{obs?.serie}° {obs?.turma} · Sem. {obs?.semana}</p>
+                        </div>
+                        <span className="text-[8px] font-bold uppercase px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: `${config.cor}20`, color: config.cor }}>
+                          {config.label}
+                        </span>
+                      </div>
+                      <p className="text-xs text-white/55 leading-relaxed">"{o.observacao_texto}"</p>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
 
           {/* ═══ DESAFIOS DIÁRIOS ═══ */}
           <div className="space-y-3">
