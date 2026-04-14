@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertTriangle, CheckCircle, Clock, Users, Activity, ChevronDown, ChevronUp, Calendar, LogIn, MessageCircle, ChevronRight } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, Users, Activity, ChevronDown, ChevronUp, Calendar, LogIn, MessageCircle, ChevronRight, ClipboardList, Eye, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { hojeBrasil } from '@/utils/timezone';
+import { hojeBrasil, agoraBrasil, TIMEZONE_BRASIL } from '@/utils/timezone';
 
 const MonitorPage = () => {
   const navigate = useNavigate();
@@ -17,6 +17,7 @@ const MonitorPage = () => {
   const [showFaseSelect, setShowFaseSelect] = useState(false);
   const [loginsExpandido, setLoginsExpandido] = useState(true);
   const [loginFiltro, setLoginFiltro] = useState<'todos' | 'lideres' | 'coordenadores'>('todos');
+  const [dashboardTab, setDashboardTab] = useState<'login' | 'entregas' | 'observacoes' | 'desafios'>('login');
 
   // Institution
   const { data: institutionId } = useQuery({
@@ -431,10 +432,82 @@ const MonitorPage = () => {
     staleTime: 300000,
   });
 
+  // Entregas recentes (para aba Entregas)
+  const { data: entregasRecentes = [] } = useQuery({
+    queryKey: ['monitor-entregas-recentes', institutionId, dashboardTab],
+    queryFn: async () => {
+      if (!institutionId) return [];
+      const { data } = await supabase.from('entregas')
+        .select('aluno_id, missao_id, status, created_at, missao:missoes!entregas_missao_id_fkey(titulo)')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      return data || [];
+    },
+    enabled: !!institutionId && dashboardTab === 'entregas',
+    staleTime: 60000,
+  });
+
+  // Observacoes de alunos recentes (para aba Observacoes)
+  const { data: obsAlunasRecentes = [] } = useQuery({
+    queryKey: ['monitor-obs-alunos-recentes', institutionId, dashboardTab],
+    queryFn: async () => {
+      if (!institutionId) return [];
+      const { data } = await supabase.from('observacao_aluno')
+        .select('aluno_id, estado, observacao_texto, created_at')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      return data || [];
+    },
+    enabled: !!institutionId && dashboardTab === 'observacoes',
+    staleTime: 60000,
+  });
+
+  // Desafios diarios de hoje (para aba Desafios)
+  const { data: desafiosHoje = [] } = useQuery({
+    queryKey: ['monitor-desafios-hoje', institutionId, hojeStr, dashboardTab],
+    queryFn: async () => {
+      if (!institutionId) return [];
+      const { data } = await supabase.from('desafio_diario_respostas' as any)
+        .select('aluno_id, desafio_tipo, texto, data, created_at')
+        .eq('data', hojeStr)
+        .order('created_at', { ascending: false });
+      return (data || []) as Array<{ aluno_id: string; desafio_tipo: string; texto: string; data: string; created_at: string }>;
+    },
+    enabled: !!institutionId && dashboardTab === 'desafios',
+    staleTime: 60000,
+  });
+
+  // Sets derivados para as abas
+  const entregouSet = new Set(entregasRecentes.map((e: any) => e.aluno_id));
+  const obsMap = new Map<string, { estado: string; texto: string; created_at: string }>();
+  obsAlunasRecentes.forEach((o: any) => {
+    if (!obsMap.has(o.aluno_id)) obsMap.set(o.aluno_id, { estado: o.estado, texto: o.observacao_texto, created_at: o.created_at });
+  });
+  const desafioSet = new Set((desafiosHoje as any[]).map((d: any) => d.aluno_id));
+  const desafioMap = new Map<string, { tipo: string; texto: string; created_at: string }>();
+  (desafiosHoje as any[]).forEach((d: any) => {
+    if (!desafioMap.has(d.aluno_id)) desafioMap.set(d.aluno_id, { tipo: d.desafio_tipo, texto: d.texto, created_at: d.created_at });
+  });
+
+  // Helper para formatar timestamp UTC -> Brasil
+  const formatTimeBrasil = (ts: string) => {
+    if (!ts) return '';
+    return new Date(ts).toLocaleString('pt-BR', { timeZone: TIMEZONE_BRASIL, hour: '2-digit', minute: '2-digit' });
+  };
+  const formatDateTimeBrasil = (ts: string) => {
+    if (!ts) return '';
+    return new Date(ts).toLocaleString('pt-BR', { timeZone: TIMEZONE_BRASIL, day: '2-digit', month: '2-digit' }) + ' as ' + formatTimeBrasil(ts);
+  };
+
   // Determinar quem acessou hoje usando ultima_atividade do profile
+  // Converter UTC timestamp para timezone Brasil antes de comparar
   const logouHojeSet = new Set(
     todosAlunos
-      .filter(a => a.ultima_atividade && a.ultima_atividade.startsWith(hojeStr))
+      .filter(a => {
+        if (!a.ultima_atividade) return false;
+        const dataBrasil = new Date(a.ultima_atividade).toLocaleDateString('en-CA', { timeZone: TIMEZONE_BRASIL });
+        return dataBrasil === hojeStr;
+      })
       .map(a => a.id)
   );
 
@@ -674,7 +747,7 @@ const MonitorPage = () => {
         </div>
       )}
 
-      {/* Logins de Hoje */}
+      {/* Dashboard dos Alunos */}
       {todosAlunos.length > 0 && (
         <div>
           <button
@@ -682,14 +755,47 @@ const MonitorPage = () => {
             className="w-full flex items-center gap-2 mb-3 px-1"
           >
             <div className="w-1 h-3.5 rounded-full bg-emerald-500" />
-            <LogIn className="w-3.5 h-3.5 text-emerald-400/80" />
-            <p className="text-[10px] font-semibold text-emerald-400/80 uppercase tracking-widest">Logins de Hoje</p>
-            <span className="text-[10px] font-medium text-emerald-400 ml-1">{totalLogaram}/{alunosFiltrados.length}</span>
+            <Users className="w-3.5 h-3.5 text-emerald-400/80" />
+            <p className="text-[10px] font-semibold text-emerald-400/80 uppercase tracking-widest">Dashboard dos Alunos</p>
             <div className="flex-1" />
             {loginsExpandido ? <ChevronUp className="w-3.5 h-3.5 text-white/20" /> : <ChevronDown className="w-3.5 h-3.5 text-white/20" />}
           </button>
 
           {loginsExpandido && (
+            <div className="flex gap-1.5 mb-3 px-1 overflow-x-auto">
+              {([
+                { id: 'login' as const, label: 'Login', icon: LogIn, cor: 'emerald' },
+                { id: 'entregas' as const, label: 'Entregas', icon: ClipboardList, cor: 'blue' },
+                { id: 'observacoes' as const, label: 'Observacoes', icon: Eye, cor: 'violet' },
+                { id: 'desafios' as const, label: 'Desafios', icon: Zap, cor: 'orange' },
+              ]).map(tab => {
+                const isActive = dashboardTab === tab.id;
+                const Icon = tab.icon;
+                const corClasses: Record<string, { active: string; inactive: string }> = {
+                  emerald: { active: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40', inactive: 'bg-white/[0.04] text-white/30 hover:bg-white/[0.08] border-transparent' },
+                  blue: { active: 'bg-blue-500/20 text-blue-400 border-blue-500/40', inactive: 'bg-white/[0.04] text-white/30 hover:bg-white/[0.08] border-transparent' },
+                  violet: { active: 'bg-violet-500/20 text-violet-400 border-violet-500/40', inactive: 'bg-white/[0.04] text-white/30 hover:bg-white/[0.08] border-transparent' },
+                  orange: { active: 'bg-orange-500/20 text-orange-400 border-orange-500/40', inactive: 'bg-white/[0.04] text-white/30 hover:bg-white/[0.08] border-transparent' },
+                };
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setDashboardTab(tab.id)}
+                    className={cn(
+                      'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors border shrink-0',
+                      isActive ? corClasses[tab.cor].active : corClasses[tab.cor].inactive
+                    )}
+                  >
+                    <Icon className="w-3 h-3" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Sub-filtro de cargos (apenas na aba Login) */}
+          {loginsExpandido && dashboardTab === 'login' && (
             <div className="flex gap-1.5 mb-3 px-1">
               {([
                 { id: 'todos', label: 'Todos' },
@@ -710,8 +816,12 @@ const MonitorPage = () => {
             </div>
           )}
 
-          {loginsExpandido && (
+          {/* Login Tab */}
+          {loginsExpandido && dashboardTab === 'login' && (
             <div className="space-y-4">
+              <div className="flex items-center gap-2 px-1 mb-2">
+                <span className="text-[10px] font-medium text-emerald-400">{totalLogaram}/{alunosFiltrados.length} logaram hoje</span>
+              </div>
               {gruposLogin.map(([key, grupo]) => {
                 const logaram = grupo.alunos.filter(a => logouHojeSet.has(a.id)).length;
                 return (
@@ -756,11 +866,224 @@ const MonitorPage = () => {
                               <p>{a.full_name || a.nome || '?'}</p>
                               {a.ultima_atividade && (
                                 <p className="text-white/50 mt-0.5">
-                                  {new Date(a.ultima_atividade).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} às {new Date(a.ultima_atividade).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  {new Date(a.ultima_atividade).toLocaleDateString('pt-BR', { timeZone: TIMEZONE_BRASIL, day: '2-digit', month: '2-digit' })} as {formatTimeBrasil(a.ultima_atividade)}
                                 </p>
                               )}
                               {loginCount > 0 && (
                                 <p className="text-emerald-400/70 mt-0.5">{loginCount}x hoje</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Entregas Tab */}
+          {loginsExpandido && dashboardTab === 'entregas' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 px-1 mb-2">
+                <span className="text-[10px] font-medium text-blue-400">{entregouSet.size} alunos com entregas recentes</span>
+              </div>
+              {gruposLogin.map(([key, grupo]) => {
+                const entregaram = grupo.alunos.filter(a => entregouSet.has(a.id)).length;
+                return (
+                  <div key={key}>
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                      <span className="text-[10px] font-medium text-white/40">{grupo.serie}º {grupo.turma}</span>
+                      <span className={cn(
+                        'text-[9px] font-medium px-1.5 py-0.5 rounded-full',
+                        entregaram === grupo.alunos.length ? 'bg-blue-500/20 text-blue-400' :
+                        entregaram > 0 ? 'bg-blue-500/15 text-blue-400/70' : 'bg-white/5 text-white/25'
+                      )}>
+                        {entregaram}/{grupo.alunos.length}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 px-1">
+                      {grupo.alunos.map(a => {
+                        const entregou = entregouSet.has(a.id);
+                        const entregaInfo = entregasRecentes.find((e: any) => e.aluno_id === a.id);
+                        return (
+                          <div key={a.id} className="relative group">
+                            <div className={cn(
+                              'w-8 h-8 rounded-full overflow-hidden border-2 transition-all',
+                              entregou ? 'border-blue-400 opacity-100' : 'border-white/10 opacity-25 grayscale'
+                            )}>
+                              {a.avatar_url ? (
+                                <img src={a.avatar_url} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span className={cn(
+                                  'flex items-center justify-center w-full h-full text-[10px] font-medium',
+                                  entregou ? 'bg-blue-500/20 text-blue-300' : 'bg-white/10 text-white/40'
+                                )}>
+                                  {(a.nome || a.full_name || '?').charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 rounded bg-black/95 text-[9px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 text-center">
+                              <p>{a.full_name || a.nome || '?'}</p>
+                              {entregaInfo ? (
+                                <>
+                                  <p className="text-blue-400/70 mt-0.5">{(entregaInfo as any).missao?.titulo || 'Missao'}</p>
+                                  <p className="text-white/40 mt-0.5">{(entregaInfo as any).status} - {formatDateTimeBrasil((entregaInfo as any).created_at)}</p>
+                                </>
+                              ) : (
+                                <p className="text-white/30 mt-0.5">Sem entregas recentes</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Observacoes Tab */}
+          {loginsExpandido && dashboardTab === 'observacoes' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 px-1 mb-2">
+                <span className="text-[10px] font-medium text-violet-400">{obsMap.size} alunos com observacoes recentes</span>
+              </div>
+              {gruposLogin.map(([key, grupo]) => {
+                const comObs = grupo.alunos.filter(a => obsMap.has(a.id)).length;
+                return (
+                  <div key={key}>
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                      <span className="text-[10px] font-medium text-white/40">{grupo.serie}º {grupo.turma}</span>
+                      <span className={cn(
+                        'text-[9px] font-medium px-1.5 py-0.5 rounded-full',
+                        comObs === grupo.alunos.length ? 'bg-violet-500/20 text-violet-400' :
+                        comObs > 0 ? 'bg-violet-500/15 text-violet-400/70' : 'bg-white/5 text-white/25'
+                      )}>
+                        {comObs}/{grupo.alunos.length}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 px-1">
+                      {grupo.alunos.map(a => {
+                        const obs = obsMap.get(a.id);
+                        const borderColor = obs
+                          ? obs.estado === 'surpreendeu' ? 'border-amber-400' :
+                            obs.estado === 'fez' ? 'border-emerald-400' :
+                            obs.estado === 'dificuldades' ? 'border-red-400' :
+                            'border-white/30'
+                          : 'border-white/10';
+                        const bgColor = obs
+                          ? obs.estado === 'surpreendeu' ? 'bg-amber-500/20 text-amber-300' :
+                            obs.estado === 'fez' ? 'bg-emerald-500/20 text-emerald-300' :
+                            obs.estado === 'dificuldades' ? 'bg-red-500/20 text-red-300' :
+                            'bg-white/10 text-white/40'
+                          : 'bg-white/10 text-white/40';
+                        const estadoLabel: Record<string, string> = {
+                          surpreendeu: 'Foi alem',
+                          fez: 'Fez',
+                          dificuldades: 'Dificuldades',
+                          nao_conseguiu: 'Nao conseguiu',
+                        };
+                        return (
+                          <div key={a.id} className="relative group">
+                            <div className={cn(
+                              'w-8 h-8 rounded-full overflow-hidden border-2 transition-all',
+                              borderColor,
+                              obs ? 'opacity-100' : 'opacity-25 grayscale'
+                            )}>
+                              {a.avatar_url ? (
+                                <img src={a.avatar_url} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span className={cn(
+                                  'flex items-center justify-center w-full h-full text-[10px] font-medium',
+                                  bgColor
+                                )}>
+                                  {(a.nome || a.full_name || '?').charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 rounded bg-black/95 text-[9px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 text-center max-w-[200px]">
+                              <p>{a.full_name || a.nome || '?'}</p>
+                              {obs ? (
+                                <>
+                                  <p className={cn('mt-0.5',
+                                    obs.estado === 'surpreendeu' ? 'text-amber-400/70' :
+                                    obs.estado === 'fez' ? 'text-emerald-400/70' :
+                                    obs.estado === 'dificuldades' ? 'text-red-400/70' :
+                                    'text-white/40'
+                                  )}>{estadoLabel[obs.estado] || obs.estado}</p>
+                                  {obs.texto && (
+                                    <p className="text-white/40 mt-0.5 whitespace-normal">{obs.texto.length > 60 ? obs.texto.slice(0, 60) + '...' : obs.texto}</p>
+                                  )}
+                                </>
+                              ) : (
+                                <p className="text-white/30 mt-0.5">Sem observacoes recentes</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Desafios Tab */}
+          {loginsExpandido && dashboardTab === 'desafios' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 px-1 mb-2">
+                <span className="text-[10px] font-medium text-orange-400">{desafioSet.size} alunos responderam o desafio hoje</span>
+              </div>
+              {gruposLogin.map(([key, grupo]) => {
+                const comDesafio = grupo.alunos.filter(a => desafioSet.has(a.id)).length;
+                return (
+                  <div key={key}>
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                      <span className="text-[10px] font-medium text-white/40">{grupo.serie}º {grupo.turma}</span>
+                      <span className={cn(
+                        'text-[9px] font-medium px-1.5 py-0.5 rounded-full',
+                        comDesafio === grupo.alunos.length ? 'bg-orange-500/20 text-orange-400' :
+                        comDesafio > 0 ? 'bg-orange-500/15 text-orange-400/70' : 'bg-white/5 text-white/25'
+                      )}>
+                        {comDesafio}/{grupo.alunos.length}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 px-1">
+                      {grupo.alunos.map(a => {
+                        const desafio = desafioMap.get(a.id);
+                        return (
+                          <div key={a.id} className="relative group">
+                            <div className={cn(
+                              'w-8 h-8 rounded-full overflow-hidden border-2 transition-all',
+                              desafio ? 'border-orange-400 opacity-100' : 'border-white/10 opacity-25 grayscale'
+                            )}>
+                              {a.avatar_url ? (
+                                <img src={a.avatar_url} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span className={cn(
+                                  'flex items-center justify-center w-full h-full text-[10px] font-medium',
+                                  desafio ? 'bg-orange-500/20 text-orange-300' : 'bg-white/10 text-white/40'
+                                )}>
+                                  {(a.nome || a.full_name || '?').charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 rounded bg-black/95 text-[9px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 text-center max-w-[200px]">
+                              <p>{a.full_name || a.nome || '?'}</p>
+                              {desafio ? (
+                                <>
+                                  <p className="text-orange-400/70 mt-0.5">{desafio.tipo}</p>
+                                  {desafio.texto && (
+                                    <p className="text-white/40 mt-0.5 whitespace-normal">{desafio.texto.length > 60 ? desafio.texto.slice(0, 60) + '...' : desafio.texto}</p>
+                                  )}
+                                  <p className="text-white/30 mt-0.5">as {formatTimeBrasil(desafio.created_at)}</p>
+                                </>
+                              ) : (
+                                <p className="text-white/30 mt-0.5">Nao respondeu hoje</p>
                               )}
                             </div>
                           </div>
