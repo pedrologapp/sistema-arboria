@@ -462,6 +462,43 @@ const MonitorPage = () => {
     staleTime: 60000,
   });
 
+  // Cross-IM registros (para aba Observações)
+  const { data: crossImRegistros = [] } = useQuery({
+    queryKey: ['monitor-crossim', institutionId, dashboardTab],
+    queryFn: async () => {
+      if (!institutionId) return [];
+      const { data } = await supabase
+        .from('cross_im_registros' as any)
+        .select('aluno_id, inteligencia_detectada_id')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      return data || [];
+    },
+    enabled: !!institutionId && dashboardTab === 'observacoes',
+    staleTime: 60000,
+  });
+
+  // Cross-IM por aluno
+  const crossImMap = new Map<string, number[]>();
+  crossImRegistros.forEach((r: any) => {
+    const atual = crossImMap.get(r.aluno_id) || [];
+    if (!atual.includes(r.inteligencia_detectada_id)) {
+      crossImMap.set(r.aluno_id, [...atual, r.inteligencia_detectada_id]);
+    }
+  });
+
+  // Cores das inteligências (para bolinhas Cross-IM)
+  const { data: inteligenciasCores = {} } = useQuery({
+    queryKey: ['inteligencias-cores'],
+    queryFn: async () => {
+      const { data } = await supabase.from('inteligencias').select('id, cor_hex');
+      const map: Record<number, string> = {};
+      (data || []).forEach((i: any) => { if (i.cor_hex) map[i.id] = i.cor_hex; });
+      return map;
+    },
+    staleTime: 600000,
+  });
+
   // Desafios diarios de hoje (para aba Desafios)
   const { data: desafiosHoje = [] } = useQuery({
     queryKey: ['monitor-desafios-hoje', institutionId, hojeStr, dashboardTab],
@@ -986,6 +1023,8 @@ const MonitorPage = () => {
                           dificuldades: 'Dificuldades',
                           nao_conseguiu: 'Nao conseguiu',
                         };
+                        const temComentario = obs?.texto && obs.texto.trim();
+                        const crossIms = crossImMap.get(a.id) || [];
                         return (
                           <div key={a.id} className="relative group">
                             <div className={cn(
@@ -1004,6 +1043,21 @@ const MonitorPage = () => {
                                 </span>
                               )}
                             </div>
+                            {/* Indicador comentário */}
+                            {temComentario && (
+                              <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-blue-500 border border-[#1A1A2E] flex items-center justify-center">
+                                <span className="text-[5px] text-white font-bold">C</span>
+                              </div>
+                            )}
+                            {/* Bolinhas Cross-IM */}
+                            {crossIms.length > 0 && (
+                              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex gap-px">
+                                {crossIms.slice(0, 3).map(intId => (
+                                  <div key={intId} className="w-2 h-2 rounded-full border border-[#1A1A2E]"
+                                    style={{ backgroundColor: (inteligenciasCores as Record<number, string>)[intId] || '#666' }} />
+                                ))}
+                              </div>
+                            )}
                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 rounded bg-black/95 text-[9px] text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 text-center max-w-[200px]">
                               <p>{a.full_name || a.nome || '?'}</p>
                               {obs ? (
