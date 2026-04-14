@@ -91,9 +91,12 @@ const MonitorPage = () => {
     queryKey: ['admin-obs-status', institutionId, faseId],
     queryFn: async () => {
       if (!institutionId || !faseId) return { enviadas: 0, totalProfessores: 0, pendentes: [] as string[], semanasEnviadas: 0, totalSemanas: 4 };
-      const { data: profs } = await supabase.from('professor_casa')
-        .select('professor_id, profiles!professor_casa_professor_id_fkey(full_name)')
+      // Só buscar o professor da fase ativa (casa = inteligência da fase)
+      let profsQuery = supabase.from('professor_casa')
+        .select('professor_id, casa_id, profiles!professor_casa_professor_id_fkey(full_name)')
         .eq('institution_id', institutionId).eq('ativo', true);
+      if (faseInt?.id) profsQuery = profsQuery.eq('casa_id', faseInt.id);
+      const { data: profs } = await profsQuery;
       // Contar observacoes enviadas em TODAS as semanas da fase
       const { data: obs } = await supabase.from('observacao_semanal')
         .select('professor_id, semana, status')
