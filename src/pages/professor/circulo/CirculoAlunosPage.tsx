@@ -70,19 +70,23 @@ const CirculoAlunosPage = () => {
     staleTime: 120000,
   });
 
-  // Fetch cores das casas
-  const { data: casaCores = {} } = useQuery({
-    queryKey: ['casa-cores'],
+  // Fetch inteligências (cores + nomes para Cross-IM)
+  const { data: inteligencias = [] } = useQuery({
+    queryKey: ['inteligencias-full'],
     queryFn: async () => {
-      const { data } = await supabase.from('inteligencias').select('id, cor_hex');
-      const map: Record<number, string> = {};
-      (data || []).forEach((i: any) => { if (i.cor_hex) map[i.id] = i.cor_hex; });
-      return map;
+      const { data } = await supabase.from('inteligencias').select('id, nome, codigo, cor_hex, emoji').order('id');
+      return (data || []) as { id: number; nome: string; codigo: string; cor_hex: string | null; emoji: string | null }[];
     },
     staleTime: 600000,
   });
 
+  const casaCores: Record<number, string> = {};
+  inteligencias.forEach(i => { if (i.cor_hex) casaCores[i.id] = i.cor_hex; });
   const getCasaCor = (casaId: number | null) => casaCores[casaId || 0] || '#444';
+  const getCasaNome = (casaId: number | null) => inteligencias.find(i => i.id === casaId)?.nome || '';
+
+  // Cross-IM state por aluno
+  const [crossImPorAluno, setCrossImPorAluno] = useState<Map<string, number[]>>(new Map());
 
   // Check existing draft
   const { data: rascunhoExistente } = useQuery({
@@ -308,6 +312,32 @@ const CirculoAlunosPage = () => {
         console.log('[Cross-IM] Alunos com comentario para processar:', alunosComComentario.length);
       }
 
+      // Salvar Cross-IM registrados
+      if (crossImPorAluno.size > 0) {
+        const crossImRegistros: any[] = [];
+        crossImPorAluno.forEach((intIds, alunoId) => {
+          intIds.forEach(intId => {
+            crossImRegistros.push({
+              observacao_semanal_id: obs.id,
+              aluno_id: alunoId,
+              inteligencia_detectada_id: intId,
+              fase_id: faseAtual.id,
+              semana: semanaAtual,
+              professor_id: profile.id,
+              institution_id: profile.institution_id,
+            });
+          });
+        });
+        if (crossImRegistros.length > 0) {
+          await supabase.from('cross_im_registros' as any).upsert(crossImRegistros, {
+            onConflict: 'observacao_semanal_id,aluno_id,inteligencia_detectada_id'
+          }).then(({ error }) => {
+            if (error) console.warn('[Cross-IM] Erro ao salvar (tabela pode não existir):', error.message);
+            else console.log(`[Cross-IM] ${crossImRegistros.length} registros salvos`);
+          });
+        }
+      }
+
       queryClient.invalidateQueries({ queryKey: ['observacao-rascunho'] });
 
       if (enviar) {
@@ -339,19 +369,31 @@ const CirculoAlunosPage = () => {
           isSmall ? 'w-14' : 'w-16'
         )}
       >
-        <div
-          className={cn('rounded-full overflow-hidden border-2', isSmall ? 'w-10 h-10' : 'w-12 h-12')}
-          style={{ borderColor: casaColor }}
-        >
-          {aluno.avatar_url ? (
-            <img src={aluno.avatar_url} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <span
-              className={cn('flex items-center justify-center w-full h-full text-white/70', isSmall ? 'text-xs' : 'text-sm')}
-              style={{ backgroundColor: `${casaColor}20` }}
-            >
-              {getInitial(aluno)}
-            </span>
+        {/* Avatar com anel Cross-IM */}
+        <div className="relative">
+          <div
+            className={cn('rounded-full overflow-hidden border-2', isSmall ? 'w-10 h-10' : 'w-12 h-12')}
+            style={{ borderColor: casaColor }}
+          >
+            {aluno.avatar_url ? (
+              <img src={aluno.avatar_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span
+                className={cn('flex items-center justify-center w-full h-full text-white/70', isSmall ? 'text-xs' : 'text-sm')}
+                style={{ backgroundColor: `${casaColor}20` }}
+              >
+                {getInitial(aluno)}
+              </span>
+            )}
+          </div>
+          {/* Indicadores Cross-IM */}
+          {(crossImPorAluno.get(aluno.id) || []).length > 0 && (
+            <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 flex gap-0.5">
+              {(crossImPorAluno.get(aluno.id) || []).map(intId => (
+                <div key={intId} className="w-2 h-2 rounded-full border border-[#1E1E3A]"
+                  style={{ backgroundColor: casaCores[intId] || '#666' }} />
+              ))}
+            </div>
           )}
         </div>
         <span className={cn('text-center leading-tight truncate w-full', isSmall ? 'text-[9px]' : 'text-[10px]', 'text-white/60')}>
@@ -525,75 +567,134 @@ const CirculoAlunosPage = () => {
         </div>
       </div>
 
-      {/* Modal de texto */}
+      {/* Modal de observação do aluno */}
       {modalAluno && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[#1E1E3A] border border-violet-500/10 p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white font-medium">{modalAluno.full_name || modalAluno.nome || 'Aluno'}</p>
-                <p className={cn('text-xs', estadoConfig[modalEstado].cor)}>{estadoConfig[modalEstado].label}</p>
-              </div>
-              <button onClick={() => { setModalAluno(null); setModalTexto(''); }} className="p-1 text-white/30 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Estado selector */}
-            <div className="flex gap-2">
-              {(['fez', 'surpreendeu', 'dificuldades', 'nao_conseguiu', 'faltou'] as Estado[]).map(e => (
-                <button
-                  key={e}
-                  onClick={() => setModalEstado(e)}
-                  className={cn(
-                    'flex-1 py-2 rounded-lg text-xs font-medium border transition-colors',
-                    modalEstado === e
-                      ? `${estadoConfig[e].bg} ${estadoConfig[e].border} ${estadoConfig[e].cor}`
-                      : 'bg-white/[0.04] border-violet-500/10 text-white/40'
-                  )}
-                >
-                  {estadoConfig[e].label}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A0A1A] p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-[#1E1E3A] border border-violet-500/10 max-h-[80vh] flex flex-col overflow-hidden">
+            <div className="p-4 space-y-3 overflow-y-auto flex-1 min-h-0">
+              {/* Info do aluno */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm text-white/70"
+                    style={{ borderColor: getCasaCor(modalAluno.casa_id), backgroundColor: `${getCasaCor(modalAluno.casa_id)}20` }}>
+                    {(modalAluno.nome || '?')[0]}
+                  </div>
+                  <div>
+                    <p className="text-white font-medium text-sm">{modalAluno.full_name || modalAluno.nome || 'Aluno'}</p>
+                    <p className="text-[10px] text-white/40">
+                      Casa {getCasaNome(modalAluno.casa_id)} · {serieNumero}° {turmaLetra}
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => { setModalAluno(null); setModalTexto(''); }} className="p-1 text-white/30 hover:text-white">
+                  <X className="w-5 h-5" />
                 </button>
-              ))}
-            </div>
+              </div>
 
+              {/* Estado selector */}
+              <div>
+                <p className="text-[9px] text-white/25 uppercase tracking-wider mb-1.5">Estado</p>
+                <div className="flex gap-1.5">
+                  {(['fez', 'surpreendeu', 'dificuldades', 'nao_conseguiu', 'faltou'] as Estado[]).map(e => (
+                    <button
+                      key={e}
+                      onClick={() => setModalEstado(e)}
+                      className={cn(
+                        'flex-1 py-1.5 rounded-lg text-[10px] font-medium border transition-colors',
+                        modalEstado === e
+                          ? `${estadoConfig[e].bg} ${estadoConfig[e].border} ${estadoConfig[e].cor}`
+                          : 'bg-white/[0.04] border-violet-500/10 text-white/40'
+                      )}
+                    >
+                      {estadoConfig[e].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cross-IM — registro rápido */}
+              <div>
+                <p className="text-[9px] text-white/25 uppercase tracking-wider mb-1.5">
+                  Cross-IM — Usou outra inteligência?
+                </p>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {inteligencias.filter(i => i.id !== modalAluno.casa_id).map(intel => {
+                    const crossIms = crossImPorAluno.get(modalAluno.id) || [];
+                    const selecionado = crossIms.includes(intel.id);
+                    return (
+                      <button
+                        key={intel.id}
+                        onClick={() => {
+                          setCrossImPorAluno(prev => {
+                            const novo = new Map(prev);
+                            const atual = novo.get(modalAluno.id) || [];
+                            if (selecionado) {
+                              novo.set(modalAluno.id, atual.filter(id => id !== intel.id));
+                            } else {
+                              novo.set(modalAluno.id, [...atual, intel.id]);
+                            }
+                            return novo;
+                          });
+                        }}
+                        className={cn(
+                          'py-1.5 rounded-lg text-[9px] font-medium border transition-all',
+                          selecionado
+                            ? 'border-2 scale-[1.02]'
+                            : 'bg-white/[0.03] border-white/10 text-white/30'
+                        )}
+                        style={selecionado ? {
+                          borderColor: intel.cor_hex || '#666',
+                          backgroundColor: `${intel.cor_hex}20`,
+                          color: intel.cor_hex || '#fff',
+                        } : undefined}
+                      >
+                        {intel.nome.length > 10 ? intel.nome.slice(0, 8) + '...' : intel.nome}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+            {/* Comentário */}
             {(() => {
               const comentarioObrigatorio = modalEstado === 'surpreendeu' || modalEstado === 'nao_conseguiu';
               return (
-                <>
-                  <div>
-                    <textarea
-                      value={modalTexto}
-                      onChange={(e) => setModalTexto(e.target.value)}
-                      placeholder={comentarioObrigatorio ? 'Descreva o que observou...' : 'O que voce observou? (opcional)'}
-                      rows={3}
-                      className="w-full bg-white/[0.04] border border-violet-500/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 resize-none outline-none focus:border-white/20"
-                    />
-                    {comentarioObrigatorio && (
-                      <p className="text-[10px] text-amber-400/60 mt-1">Comentario obrigatorio para este estado</p>
-                    )}
-                  </div>
-
-                  <div className="flex gap-3">
-                    {!comentarioObrigatorio && (
-                      <button
-                        onClick={handleModalPular}
-                        className="flex-1 py-2.5 rounded-lg bg-white/[0.06] text-white/50 text-sm hover:bg-white/[0.1] transition-colors"
-                      >
-                        Sem texto
-                      </button>
-                    )}
-                    <button
-                      onClick={handleModalSalvar}
-                      disabled={comentarioObrigatorio && !modalTexto.trim()}
-                      className="flex-1 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      Salvar
-                    </button>
-                  </div>
-                </>
+                <div>
+                  <p className="text-[9px] text-white/25 uppercase tracking-wider mb-1.5">Comentário{!comentarioObrigatorio && ' (opcional)'}</p>
+                  <textarea
+                    value={modalTexto}
+                    onChange={(e) => setModalTexto(e.target.value)}
+                    placeholder={comentarioObrigatorio ? 'Descreva o que observou...' : 'O que você observou?'}
+                    rows={2}
+                    className="w-full bg-white/[0.04] border border-violet-500/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 resize-none outline-none focus:border-white/20"
+                  />
+                  {comentarioObrigatorio && (
+                    <p className="text-[10px] text-amber-400/60 mt-1">Obrigatório para este estado</p>
+                  )}
+                </div>
               );
             })()}
+            </div>
+
+            {/* Footer fixo */}
+            <div className="flex gap-3 p-4 border-t border-violet-500/10 shrink-0">
+              <button
+                onClick={handleModalPular}
+                className="flex-1 py-2.5 rounded-lg bg-white/[0.06] text-white/50 text-sm hover:bg-white/[0.1] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleModalSalvar}
+                disabled={(() => {
+                  const comentarioObrigatorio = modalEstado === 'surpreendeu' || modalEstado === 'nao_conseguiu';
+                  return comentarioObrigatorio && !modalTexto.trim();
+                })()}
+                className="flex-1 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors disabled:opacity-40"
+              >
+                Salvar
+              </button>
+            </div>
           </div>
         </div>
       )}
