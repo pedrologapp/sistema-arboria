@@ -430,6 +430,14 @@ const MissaoDetalhePage = () => {
     fetchMissao();
   }, [fetchMissao]);
 
+  // Registrar visualização da missão
+  useEffect(() => {
+    if (!id || !user) return;
+    supabase.from('missao_visualizacoes' as any)
+      .upsert({ aluno_id: user.id, missao_id: id }, { onConflict: 'aluno_id,missao_id' })
+      .then(() => {});
+  }, [id, user]);
+
   // Handlers de arquivo
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;

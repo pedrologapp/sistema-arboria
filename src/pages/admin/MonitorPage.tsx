@@ -440,12 +440,30 @@ const MonitorPage = () => {
       const { data } = await supabase.from('entregas')
         .select('aluno_id, missao_id, status, created_at, missao:missoes!entregas_missao_id_fkey(titulo)')
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(500);
       return data || [];
     },
     enabled: !!institutionId && dashboardTab === 'entregas',
     staleTime: 60000,
   });
+
+  // Visualizações de missões (para aba Entregas)
+  const { data: visualizacoesMissao = [] } = useQuery({
+    queryKey: ['monitor-visualizacoes', institutionId, dashboardTab],
+    queryFn: async () => {
+      if (!institutionId) return [];
+      const { data } = await supabase
+        .from('missao_visualizacoes' as any)
+        .select('aluno_id, missao_id, created_at')
+        .order('created_at', { ascending: false })
+        .limit(500);
+      return data || [];
+    },
+    enabled: !!institutionId && dashboardTab === 'entregas',
+    staleTime: 60000,
+  });
+
+  const visualizouSet = new Set((visualizacoesMissao || []).map((v: any) => v.aluno_id));
 
   // Observacoes de alunos recentes (para aba Observacoes)
   const { data: obsAlunasRecentes = [] } = useQuery({
@@ -455,7 +473,7 @@ const MonitorPage = () => {
       const { data } = await supabase.from('observacao_aluno')
         .select('aluno_id, estado, observacao_texto, created_at')
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(500);
       return data || [];
     },
     enabled: !!institutionId && dashboardTab === 'observacoes',
@@ -923,18 +941,25 @@ const MonitorPage = () => {
           {/* Entregas Tab */}
           {loginsExpandido && dashboardTab === 'entregas' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 px-1 mb-2">
-                <span className="text-[10px] font-medium text-blue-400">{entregouSet.size} alunos com entregas recentes</span>
+              <div className="flex items-center gap-3 px-1 mb-2">
+                <span className="text-[10px] font-medium text-blue-400">{entregouSet.size} entregaram</span>
+                <span className="text-[10px] font-medium text-orange-400">{visualizouSet.size} visualizaram</span>
+              </div>
+              <div className="flex gap-3 px-1 mb-2">
+                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-emerald-400" /><span className="text-[8px] text-white/30">Entregou</span></div>
+                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-orange-400" /><span className="text-[8px] text-white/30">Visualizou</span></div>
+                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-white/20" /><span className="text-[8px] text-white/30">Nada</span></div>
               </div>
               {gruposLogin.map(([key, grupo]) => {
                 const entregaram = grupo.alunos.filter(a => entregouSet.has(a.id)).length;
+                const visualizaram = grupo.alunos.filter(a => visualizouSet.has(a.id) && !entregouSet.has(a.id)).length;
                 return (
                   <div key={key}>
                     <div className="flex items-center gap-2 mb-2 px-1">
                       <span className="text-[10px] font-medium text-white/40">{grupo.serie}º {grupo.turma}</span>
                       <span className={cn(
                         'text-[9px] font-medium px-1.5 py-0.5 rounded-full',
-                        entregaram === grupo.alunos.length ? 'bg-blue-500/20 text-blue-400' :
+                        entregaram === grupo.alunos.length ? 'bg-emerald-500/20 text-emerald-400' :
                         entregaram > 0 ? 'bg-blue-500/15 text-blue-400/70' : 'bg-white/5 text-white/25'
                       )}>
                         {entregaram}/{grupo.alunos.length}
@@ -943,19 +968,23 @@ const MonitorPage = () => {
                     <div className="flex flex-wrap gap-1.5 px-1">
                       {grupo.alunos.map(a => {
                         const entregou = entregouSet.has(a.id);
+                        const visualizou = visualizouSet.has(a.id);
                         const entregaInfo = entregasRecentes.find((e: any) => e.aluno_id === a.id);
+                        const borderCor = entregou ? 'border-emerald-400' : visualizou ? 'border-orange-400' : 'border-white/10';
+                        const bgCor = entregou ? 'bg-emerald-500/20 text-emerald-300' : visualizou ? 'bg-orange-500/20 text-orange-300' : 'bg-white/10 text-white/40';
                         return (
                           <div key={a.id} className="relative group">
                             <div className={cn(
                               'w-8 h-8 rounded-full overflow-hidden border-2 transition-all',
-                              entregou ? 'border-blue-400 opacity-100' : 'border-white/10 opacity-25 grayscale'
+                              borderCor,
+                              (entregou || visualizou) ? 'opacity-100' : 'opacity-25 grayscale'
                             )}>
                               {a.avatar_url ? (
                                 <img src={a.avatar_url} alt="" className="w-full h-full object-cover" />
                               ) : (
                                 <span className={cn(
                                   'flex items-center justify-center w-full h-full text-[10px] font-medium',
-                                  entregou ? 'bg-blue-500/20 text-blue-300' : 'bg-white/10 text-white/40'
+                                  bgCor
                                 )}>
                                   {(a.nome || a.full_name || '?').charAt(0).toUpperCase()}
                                 </span>
@@ -965,11 +994,13 @@ const MonitorPage = () => {
                               <p>{a.full_name || a.nome || '?'}</p>
                               {entregaInfo ? (
                                 <>
-                                  <p className="text-blue-400/70 mt-0.5">{(entregaInfo as any).missao?.titulo || 'Missao'}</p>
-                                  <p className="text-white/40 mt-0.5">{(entregaInfo as any).status} - {formatDateTimeBrasil((entregaInfo as any).created_at)}</p>
+                                  <p className="text-emerald-400/70 mt-0.5">{(entregaInfo as any).missao?.titulo || 'Missão'}</p>
+                                  <p className="text-white/40 mt-0.5">{(entregaInfo as any).status} — {formatDateTimeBrasil((entregaInfo as any).created_at)}</p>
                                 </>
+                              ) : visualizou ? (
+                                <p className="text-orange-400/70 mt-0.5">Visualizou a missão</p>
                               ) : (
-                                <p className="text-white/30 mt-0.5">Sem entregas recentes</p>
+                                <p className="text-white/30 mt-0.5">Não abriu missão</p>
                               )}
                             </div>
                           </div>
