@@ -33,6 +33,7 @@ const FaseDetalhesPage = () => {
   const [editandoDatas, setEditandoDatas] = useState(false);
   const [novaDataInicio, setNovaDataInicio] = useState('');
   const [novaDataFim, setNovaDataFim] = useState('');
+  const [semanaDatas, setSemanaDatas] = useState<Record<number, { inicio: string; fim: string }>>({});
   const [salvandoDatas, setSalvandoDatas] = useState(false);
   const [habSelecionadas, setHabSelecionadas] = useState<Set<number>>(new Set());
   const [salvandoHab, setSalvandoHab] = useState(false);
@@ -343,137 +344,125 @@ const FaseDetalhesPage = () => {
         </div>
       </div>
 
-      {/* Configuração de Datas */}
-      <div className="rounded-xl bg-[#252547] border border-violet-500/10 p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest">Datas da Fase</p>
-          {!editandoDatas ? (
-            <button onClick={() => { setNovaDataInicio(fase.data_inicio); setNovaDataFim(fase.data_fim); setEditandoDatas(true); }}
-              className="text-[10px] text-violet-400 hover:text-violet-300">
-              Editar
-            </button>
-          ) : (
-            <button onClick={() => setEditandoDatas(false)} className="text-[10px] text-white/30 hover:text-white/50">
-              Cancelar
-            </button>
-          )}
-        </div>
+      {/* Configuração de Datas por Semana */}
+      {(() => {
+        const inicio = new Date(fase.data_inicio + 'T12:00:00');
+        const fim = new Date(fase.data_fim + 'T12:00:00');
+        const totalDias = Math.floor((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        const diasPorSemana = Math.ceil(totalDias / 4);
+        const hoje = new Date(); hoje.setHours(12, 0, 0, 0);
 
-        {editandoDatas ? (
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[9px] text-white/30 block mb-1">Início</label>
-                <input type="date" value={novaDataInicio} onChange={e => setNovaDataInicio(e.target.value)}
-                  className="w-full p-2 bg-white/5 border border-violet-500/10 rounded-lg text-white text-xs focus:outline-none focus:border-white/20" />
-              </div>
-              <div>
-                <label className="text-[9px] text-white/30 block mb-1">Fim</label>
-                <input type="date" value={novaDataFim} onChange={e => setNovaDataFim(e.target.value)}
-                  className="w-full p-2 bg-white/5 border border-violet-500/10 rounded-lg text-white text-xs focus:outline-none focus:border-white/20" />
-              </div>
+        const getSemanaDefault = (s: number) => {
+          const semInicio = new Date(inicio.getTime() + (s - 1) * diasPorSemana * 86400000);
+          const semFim = s === 4 ? fim : new Date(inicio.getTime() + s * diasPorSemana * 86400000 - 86400000);
+          return {
+            inicio: semInicio.toISOString().split('T')[0],
+            fim: semFim.toISOString().split('T')[0],
+          };
+        };
+
+        return (
+          <div className="rounded-xl bg-[#252547] border border-violet-500/10 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest">Datas da Fase</p>
+              {!editandoDatas ? (
+                <button onClick={() => {
+                  const datas: Record<number, { inicio: string; fim: string }> = {};
+                  [1, 2, 3, 4].forEach(s => { datas[s] = getSemanaDefault(s); });
+                  setSemanaDatas(datas);
+                  setEditandoDatas(true);
+                }} className="text-[10px] text-violet-400 hover:text-violet-300">Editar semanas</button>
+              ) : (
+                <button onClick={() => setEditandoDatas(false)} className="text-[10px] text-white/30 hover:text-white/50">Cancelar</button>
+              )}
             </div>
 
-            {/* Preview das semanas com novas datas */}
-            {novaDataInicio && novaDataFim && (() => {
-              const inicio = new Date(novaDataInicio + 'T12:00:00');
-              const fim = new Date(novaDataFim + 'T12:00:00');
-              const totalDias = Math.floor((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-              const diasPorSemana = Math.ceil(totalDias / 4);
-              return (
-                <div className="space-y-1">
-                  <p className="text-[9px] text-white/25">Preview: {totalDias} dias · ~{diasPorSemana} dias/semana</p>
-                  {[1, 2, 3, 4].map(s => {
-                    const semInicio = new Date(inicio.getTime() + (s - 1) * diasPorSemana * 86400000);
-                    const semFim = s === 4 ? fim : new Date(inicio.getTime() + s * diasPorSemana * 86400000 - 86400000);
-                    return (
-                      <div key={s} className="flex items-center gap-2 text-[9px]">
-                        <span className="text-white/50 w-16">Semana {s}:</span>
-                        <span className="text-white/30">
-                          {semInicio.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} — {semFim.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                        </span>
+            {editandoDatas ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map(s => (
+                  <div key={s} className="p-2.5 rounded-lg bg-white/[0.03] border border-violet-500/10 space-y-1.5">
+                    <p className="text-[10px] text-white/50 font-medium">Semana {s}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[8px] text-white/25 block mb-0.5">Início</label>
+                        <input type="date" value={semanaDatas[s]?.inicio || ''}
+                          onChange={e => setSemanaDatas(prev => ({ ...prev, [s]: { ...prev[s], inicio: e.target.value } }))}
+                          className="w-full p-1.5 bg-white/5 border border-violet-500/10 rounded text-white text-[10px] focus:outline-none focus:border-white/20" />
                       </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-
-            <button
-              onClick={async () => {
-                if (!faseId || !novaDataInicio || !novaDataFim) return;
-                setSalvandoDatas(true);
-                try {
-                  // 1. Atualizar datas da fase
-                  const { error } = await supabase.from('fases').update({
-                    data_inicio: novaDataInicio,
-                    data_fim: novaDataFim,
-                  }).eq('id', faseId);
-                  if (error) throw error;
-
-                  // 2. Recalcular prazos das missões baseado nas novas semanas
-                  const inicio = new Date(novaDataInicio + 'T12:00:00');
-                  const fim = new Date(novaDataFim + 'T12:00:00');
-                  const totalDias = Math.floor((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                  const diasPorSemana = Math.ceil(totalDias / 4);
-
-                  // Para cada semana, atualizar data_prazo das missões
-                  for (let s = 1; s <= 4; s++) {
-                    const semFim = s === 4 ? fim : new Date(inicio.getTime() + s * diasPorSemana * 86400000 - 86400000);
-                    // Prazo = fim da semana às 23:59
-                    const novoPrazo = new Date(semFim);
-                    novoPrazo.setHours(23, 59, 59);
-
-                    await supabase.from('missoes').update({
-                      data_prazo: novoPrazo.toISOString(),
-                    }).eq('fase_id', faseId).eq('semana', s).in('status', ['liberada', 'rascunho']);
-                  }
-
-                  toast.success('Datas e prazos das missões atualizados!');
-                  setEditandoDatas(false);
-                  queryClient.invalidateQueries({ queryKey: ['admin-fase-detalhe'] });
-                } catch (err: any) {
-                  toast.error('Erro ao salvar: ' + (err.message || 'Erro'));
-                }
-                setSalvandoDatas(false);
-              }}
-              disabled={salvandoDatas || !novaDataInicio || !novaDataFim}
-              className="w-full py-2 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-500 transition-colors disabled:opacity-50"
-            >
-              {salvandoDatas ? 'Salvando...' : 'Salvar datas'}
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {(() => {
-              const inicio = new Date(fase.data_inicio + 'T12:00:00');
-              const fim = new Date(fase.data_fim + 'T12:00:00');
-              const totalDias = Math.floor((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-              const diasPorSemana = Math.ceil(totalDias / 4);
-              const hoje = new Date(); hoje.setHours(12, 0, 0, 0);
-              return (
-                <>
-                  <p className="text-[9px] text-white/25">{totalDias} dias · ~{diasPorSemana} dias/semana</p>
-                  {[1, 2, 3, 4].map(s => {
-                    const semInicio = new Date(inicio.getTime() + (s - 1) * diasPorSemana * 86400000);
-                    const semFim = s === 4 ? fim : new Date(inicio.getTime() + s * diasPorSemana * 86400000 - 86400000);
-                    const ativa = hoje >= semInicio && hoje <= semFim;
-                    return (
-                      <div key={s} className={cn('flex items-center gap-2 text-[9px] py-0.5 px-1 rounded', ativa && 'bg-violet-500/10')}>
-                        <span className={cn('w-16', ativa ? 'text-violet-400 font-bold' : 'text-white/50')}>Semana {s}:</span>
-                        <span className={cn(ativa ? 'text-violet-300' : 'text-white/30')}>
-                          {semInicio.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} — {semFim.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                        </span>
-                        {ativa && <span className="text-[8px] text-violet-400 ml-auto">atual</span>}
+                      <div>
+                        <label className="text-[8px] text-white/25 block mb-0.5">Fim</label>
+                        <input type="date" value={semanaDatas[s]?.fim || ''}
+                          onChange={e => setSemanaDatas(prev => ({ ...prev, [s]: { ...prev[s], fim: e.target.value } }))}
+                          className="w-full p-1.5 bg-white/5 border border-violet-500/10 rounded text-white text-[10px] focus:outline-none focus:border-white/20" />
                       </div>
-                    );
-                  })}
-                </>
-              );
-            })()}
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  onClick={async () => {
+                    if (!faseId) return;
+                    setSalvandoDatas(true);
+                    try {
+                      // Atualizar data_inicio e data_fim da fase com base nas semanas
+                      const novoInicio = semanaDatas[1]?.inicio;
+                      const novoFim = semanaDatas[4]?.fim;
+                      if (!novoInicio || !novoFim) throw new Error('Preencha todas as datas');
+
+                      await supabase.from('fases').update({
+                        data_inicio: novoInicio,
+                        data_fim: novoFim,
+                      }).eq('id', faseId);
+
+                      // Atualizar prazo das missões por semana
+                      for (let s = 1; s <= 4; s++) {
+                        const semFim = semanaDatas[s]?.fim;
+                        if (semFim) {
+                          const novoPrazo = new Date(semFim + 'T23:59:59');
+                          await supabase.from('missoes').update({
+                            data_prazo: novoPrazo.toISOString(),
+                          }).eq('fase_id', faseId).eq('semana', s).in('status', ['liberada', 'rascunho']);
+                        }
+                      }
+
+                      toast.success('Datas das semanas e prazos atualizados!');
+                      setEditandoDatas(false);
+                      queryClient.invalidateQueries({ queryKey: ['admin-fase-detalhe'] });
+                    } catch (err: any) {
+                      toast.error('Erro: ' + (err.message || 'Erro'));
+                    }
+                    setSalvandoDatas(false);
+                  }}
+                  disabled={salvandoDatas}
+                  className="w-full py-2 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-500 transition-colors disabled:opacity-50"
+                >
+                  {salvandoDatas ? 'Salvando...' : 'Salvar datas das semanas'}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {[1, 2, 3, 4].map(s => {
+                  const sem = getSemanaDefault(s);
+                  const semInicio = new Date(sem.inicio + 'T12:00:00');
+                  const semFim = new Date(sem.fim + 'T12:00:00');
+                  const ativa = hoje >= semInicio && hoje <= semFim;
+                  const dias = Math.floor((semFim.getTime() - semInicio.getTime()) / 86400000) + 1;
+                  return (
+                    <div key={s} className={cn('flex items-center gap-2 text-[9px] py-1 px-1.5 rounded', ativa && 'bg-violet-500/10')}>
+                      <span className={cn('w-16', ativa ? 'text-violet-400 font-bold' : 'text-white/50')}>Semana {s}:</span>
+                      <span className={cn(ativa ? 'text-violet-300' : 'text-white/30')}>
+                        {semInicio.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} — {semFim.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                      </span>
+                      <span className="text-[8px] text-white/15 ml-auto">{dias}d</span>
+                      {ativa && <span className="text-[8px] text-violet-400">atual</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        );
+      })()}
 
       {/* Mecanismo */}
       {mecanismo && (
