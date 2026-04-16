@@ -30,6 +30,10 @@ const FaseDetalhesPage = () => {
   const queryClient = useQueryClient();
   const [calibracaoEstado, setCalibracaoEstado] = useState<string | null>(null);
   const [semanaEditando, setSemanaEditando] = useState<number | null>(null);
+  const [editandoDatas, setEditandoDatas] = useState(false);
+  const [novaDataInicio, setNovaDataInicio] = useState('');
+  const [novaDataFim, setNovaDataFim] = useState('');
+  const [salvandoDatas, setSalvandoDatas] = useState(false);
   const [habSelecionadas, setHabSelecionadas] = useState<Set<number>>(new Set());
   const [salvandoHab, setSalvandoHab] = useState(false);
   const [filtroHab, setFiltroHab] = useState<'mecanismo' | 'todas'>('mecanismo');
@@ -337,6 +341,117 @@ const FaseDetalhesPage = () => {
           <h1 className="text-lg font-semibold text-white">Fase {fase.numero_fase} — {int?.nome || '?'}</h1>
           <p className="text-xs text-white/30">{formatDate(fase.data_inicio)} a {formatDate(fase.data_fim)} · {getStatus()}</p>
         </div>
+      </div>
+
+      {/* Configuração de Datas */}
+      <div className="rounded-xl bg-[#252547] border border-violet-500/10 p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest">Datas da Fase</p>
+          {!editandoDatas ? (
+            <button onClick={() => { setNovaDataInicio(fase.data_inicio); setNovaDataFim(fase.data_fim); setEditandoDatas(true); }}
+              className="text-[10px] text-violet-400 hover:text-violet-300">
+              Editar
+            </button>
+          ) : (
+            <button onClick={() => setEditandoDatas(false)} className="text-[10px] text-white/30 hover:text-white/50">
+              Cancelar
+            </button>
+          )}
+        </div>
+
+        {editandoDatas ? (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[9px] text-white/30 block mb-1">Início</label>
+                <input type="date" value={novaDataInicio} onChange={e => setNovaDataInicio(e.target.value)}
+                  className="w-full p-2 bg-white/5 border border-violet-500/10 rounded-lg text-white text-xs focus:outline-none focus:border-white/20" />
+              </div>
+              <div>
+                <label className="text-[9px] text-white/30 block mb-1">Fim</label>
+                <input type="date" value={novaDataFim} onChange={e => setNovaDataFim(e.target.value)}
+                  className="w-full p-2 bg-white/5 border border-violet-500/10 rounded-lg text-white text-xs focus:outline-none focus:border-white/20" />
+              </div>
+            </div>
+
+            {/* Preview das semanas com novas datas */}
+            {novaDataInicio && novaDataFim && (() => {
+              const inicio = new Date(novaDataInicio + 'T12:00:00');
+              const fim = new Date(novaDataFim + 'T12:00:00');
+              const totalDias = Math.floor((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+              const diasPorSemana = Math.ceil(totalDias / 4);
+              return (
+                <div className="space-y-1">
+                  <p className="text-[9px] text-white/25">Preview: {totalDias} dias · ~{diasPorSemana} dias/semana</p>
+                  {[1, 2, 3, 4].map(s => {
+                    const semInicio = new Date(inicio.getTime() + (s - 1) * diasPorSemana * 86400000);
+                    const semFim = s === 4 ? fim : new Date(inicio.getTime() + s * diasPorSemana * 86400000 - 86400000);
+                    return (
+                      <div key={s} className="flex items-center gap-2 text-[9px]">
+                        <span className="text-white/50 w-16">Semana {s}:</span>
+                        <span className="text-white/30">
+                          {semInicio.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} — {semFim.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            <button
+              onClick={async () => {
+                if (!faseId || !novaDataInicio || !novaDataFim) return;
+                setSalvandoDatas(true);
+                const { error } = await supabase.from('fases').update({
+                  data_inicio: novaDataInicio,
+                  data_fim: novaDataFim,
+                }).eq('id', faseId);
+                if (error) {
+                  toast.error('Erro ao salvar: ' + error.message);
+                } else {
+                  toast.success('Datas atualizadas!');
+                  setEditandoDatas(false);
+                  queryClient.invalidateQueries({ queryKey: ['admin-fase-detalhe'] });
+                }
+                setSalvandoDatas(false);
+              }}
+              disabled={salvandoDatas || !novaDataInicio || !novaDataFim}
+              className="w-full py-2 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-500 transition-colors disabled:opacity-50"
+            >
+              {salvandoDatas ? 'Salvando...' : 'Salvar datas'}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {(() => {
+              const inicio = new Date(fase.data_inicio + 'T12:00:00');
+              const fim = new Date(fase.data_fim + 'T12:00:00');
+              const totalDias = Math.floor((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+              const diasPorSemana = Math.ceil(totalDias / 4);
+              const hoje = new Date(); hoje.setHours(12, 0, 0, 0);
+              return (
+                <>
+                  <p className="text-[9px] text-white/25">{totalDias} dias · ~{diasPorSemana} dias/semana</p>
+                  {[1, 2, 3, 4].map(s => {
+                    const semInicio = new Date(inicio.getTime() + (s - 1) * diasPorSemana * 86400000);
+                    const semFim = s === 4 ? fim : new Date(inicio.getTime() + s * diasPorSemana * 86400000 - 86400000);
+                    const ativa = hoje >= semInicio && hoje <= semFim;
+                    return (
+                      <div key={s} className={cn('flex items-center gap-2 text-[9px] py-0.5 px-1 rounded', ativa && 'bg-violet-500/10')}>
+                        <span className={cn('w-16', ativa ? 'text-violet-400 font-bold' : 'text-white/50')}>Semana {s}:</span>
+                        <span className={cn(ativa ? 'text-violet-300' : 'text-white/30')}>
+                          {semInicio.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} — {semFim.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                        </span>
+                        {ativa && <span className="text-[8px] text-violet-400 ml-auto">atual</span>}
+                      </div>
+                    );
+                  })}
+                </>
+              );
+            })()}
+          </div>
+        )}
       </div>
 
       {/* Mecanismo */}
