@@ -403,16 +403,37 @@ const FaseDetalhesPage = () => {
               onClick={async () => {
                 if (!faseId || !novaDataInicio || !novaDataFim) return;
                 setSalvandoDatas(true);
-                const { error } = await supabase.from('fases').update({
-                  data_inicio: novaDataInicio,
-                  data_fim: novaDataFim,
-                }).eq('id', faseId);
-                if (error) {
-                  toast.error('Erro ao salvar: ' + error.message);
-                } else {
-                  toast.success('Datas atualizadas!');
+                try {
+                  // 1. Atualizar datas da fase
+                  const { error } = await supabase.from('fases').update({
+                    data_inicio: novaDataInicio,
+                    data_fim: novaDataFim,
+                  }).eq('id', faseId);
+                  if (error) throw error;
+
+                  // 2. Recalcular prazos das missões baseado nas novas semanas
+                  const inicio = new Date(novaDataInicio + 'T12:00:00');
+                  const fim = new Date(novaDataFim + 'T12:00:00');
+                  const totalDias = Math.floor((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                  const diasPorSemana = Math.ceil(totalDias / 4);
+
+                  // Para cada semana, atualizar data_prazo das missões
+                  for (let s = 1; s <= 4; s++) {
+                    const semFim = s === 4 ? fim : new Date(inicio.getTime() + s * diasPorSemana * 86400000 - 86400000);
+                    // Prazo = fim da semana às 23:59
+                    const novoPrazo = new Date(semFim);
+                    novoPrazo.setHours(23, 59, 59);
+
+                    await supabase.from('missoes').update({
+                      data_prazo: novoPrazo.toISOString(),
+                    }).eq('fase_id', faseId).eq('semana', s).in('status', ['liberada', 'rascunho']);
+                  }
+
+                  toast.success('Datas e prazos das missões atualizados!');
                   setEditandoDatas(false);
                   queryClient.invalidateQueries({ queryKey: ['admin-fase-detalhe'] });
+                } catch (err: any) {
+                  toast.error('Erro ao salvar: ' + (err.message || 'Erro'));
                 }
                 setSalvandoDatas(false);
               }}
