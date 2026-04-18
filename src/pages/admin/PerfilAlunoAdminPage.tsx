@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Save, Key, Trash2, Trophy, Target } from 'lucide-react';
+import { ArrowLeft, Save, Key, Trash2, Trophy, Target, TreePine } from 'lucide-react';
+import ArvoreTalentosView from '@/components/aluno/ArvoreTalentosView';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -35,6 +36,45 @@ const PerfilAlunoAdminPage = () => {
       const { data } = await supabase.from('inteligencias').select('id, nome, cor_hex').order('id');
       return data || [];
     },
+  });
+
+  const [mostrarArvore, setMostrarArvore] = useState(false);
+
+  // Dados da Árvore de Talentos
+  const { data: dadosArvore } = useQuery({
+    queryKey: ['admin-arvore-talentos', id],
+    queryFn: async () => {
+      if (!id) return {};
+      const { data } = await supabase
+        .from('arvore_talentos')
+        .select('habilidade_id, inteligencia_id, tipo_ponto, habilidade:habilidades!arvore_talentos_habilidade_id_fkey(codigo)')
+        .eq('aluno_id', id);
+
+      if (!data) return {};
+
+      // Buscar mapeamento inteligencia_id -> codigo
+      const { data: intels } = await supabase.from('inteligencias').select('id, codigo');
+      const intelMap: Record<number, string> = {};
+      (intels || []).forEach((i: any) => { intelMap[i.id] = i.codigo; });
+
+      // Agrupar por inteligência: { interpessoal: { S01: 'desenvolvimento', ... } }
+      const resultado: Record<string, Record<string, string>> = {};
+      (data || []).forEach((d: any) => {
+        const intCodigo = intelMap[d.inteligencia_id];
+        if (!intCodigo) return;
+        const habCodigo = (d.habilidade as any)?.codigo;
+        if (!habCodigo) return;
+        if (!resultado[intCodigo]) resultado[intCodigo] = {};
+        // Manter o estado mais alto (consolidacao > desenvolvimento > contato > exposicao)
+        const prioridade: Record<string, number> = { exposicao: 1, contato: 2, desenvolvimento: 3, consolidacao: 4 };
+        const atual = resultado[intCodigo][habCodigo];
+        if (!atual || (prioridade[d.tipo_ponto] || 0) > (prioridade[atual] || 0)) {
+          resultado[intCodigo][habCodigo] = d.tipo_ponto;
+        }
+      });
+      return resultado;
+    },
+    enabled: !!id && mostrarArvore,
   });
 
   const { data: cargoAtual } = useQuery({
@@ -243,6 +283,26 @@ const PerfilAlunoAdminPage = () => {
             <p className="text-[10px] text-white/30">Nova senha: {nome.toLowerCase() || 'nome'}123</p>
           </div>
         </button>
+
+        {/* Árvore de Talentos */}
+        <button onClick={() => setMostrarArvore(!mostrarArvore)}
+          className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-emerald-500/20 hover:bg-emerald-500/10 transition-colors">
+          <TreePine className="w-4 h-4 text-emerald-400" />
+          <div className="text-left">
+            <p className="text-sm text-white/70">Árvore de Talentos</p>
+            <p className="text-[10px] text-white/30">{mostrarArvore ? 'Toque para fechar' : 'Visualizar a árvore do aluno'}</p>
+          </div>
+        </button>
+
+        {mostrarArvore && (
+          <div className="rounded-xl overflow-hidden border border-emerald-500/20" style={{ height: 500 }}>
+            <ArvoreTalentosView
+              alunoNome={`${nome} ${sobrenome}`.trim() || 'Aluno'}
+              alunoInfo={`${serie} ${turma} · Arboria`}
+              dadosPorInteligencia={dadosArvore || {}}
+            />
+          </div>
+        )}
 
         <button onClick={() => { if (confirm('Tem certeza?')) { /* TODO: delete user */ toast.info('Funcionalidade em desenvolvimento'); }}}
           className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-red-500/20 hover:bg-red-500/10 transition-colors">
