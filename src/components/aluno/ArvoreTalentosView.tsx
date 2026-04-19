@@ -11,6 +11,7 @@ interface ArvoreTalentosViewProps {
   alunoInfo?: string;
   avatarUrl?: string | null;
   dadosPorInteligencia?: Record<string, Record<string, string>>;
+  brasoes?: Record<string, string>; // codigo -> brasao_url
 }
 
 // ═══════════════════════════════════════
@@ -237,8 +238,8 @@ function TreeMoldura() {
   );
 }
 
-function TreeCrest({ intelligenceKey, phaseIndex, dimmed, focused, onTap }: {
-  intelligenceKey: string; phaseIndex: number; dimmed: boolean; focused: boolean; onTap: (k: string) => void;
+function TreeCrest({ intelligenceKey, phaseIndex, dimmed, focused, onTap, brasaoUrl }: {
+  intelligenceKey: string; phaseIndex: number; dimmed: boolean; focused: boolean; onTap: (k: string) => void; brasaoUrl?: string;
 }) {
   const ints = INTELLIGENCES[intelligenceKey];
   const pos = crestPos(phaseIndex);
@@ -253,8 +254,12 @@ function TreeCrest({ intelligenceKey, phaseIndex, dimmed, focused, onTap }: {
             <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2s" repeatCount="indefinite" />
           </circle>
         )}
-        <text textAnchor="middle" dominantBaseline="central" fill={ints.hex} fontSize={20} fontWeight={600}
-          fontFamily="'JetBrains Mono', monospace" style={{ userSelect: 'none' }} y={1}>{ints.glyph}</text>
+        {brasaoUrl ? (
+          <image href={brasaoUrl} x={-18} y={-18} width={36} height={36} style={{ userSelect: 'none' }} />
+        ) : (
+          <text textAnchor="middle" dominantBaseline="central" fill={ints.hex} fontSize={20} fontWeight={600}
+            fontFamily="'JetBrains Mono', monospace" style={{ userSelect: 'none' }} y={1}>{ints.glyph}</text>
+        )}
         {!focused && (
           <animateTransform attributeName="transform" type="scale" values="1;1.05;1" dur="5s"
             begin={`${-(phaseIndex * 0.6)}s`} repeatCount="indefinite" additive="sum" />
@@ -421,8 +426,21 @@ function TreeLegendPanel({ open, onClose, onToggle }: { open: boolean; onClose: 
 // MAIN COMPONENT
 // ═══════════════════════════════════════
 
-export default function ArvoreTalentosView({ alunoNome, alunoInfo, avatarUrl, dadosPorInteligencia }: ArvoreTalentosViewProps) {
+export default function ArvoreTalentosView({ alunoNome, alunoInfo, avatarUrl, dadosPorInteligencia, brasoes = {} }: ArvoreTalentosViewProps) {
   const studentData = dadosPorInteligencia && Object.keys(dadosPorInteligencia).length > 0 ? dadosPorInteligencia : FALLBACK_DATA;
+
+  // Mapear códigos da árvore para códigos do banco (para brasões)
+  const CODIGO_MAP: Record<string, string> = {
+    corporal: 'corporal_cinestesica',
+    musical: 'musical',
+    espacial: 'espacial',
+    naturalista: 'naturalista',
+    linguistica: 'linguistica',
+    logica: 'logico_matematica',
+    interpessoal: 'interpessoal',
+    intrapessoal: 'intrapessoal',
+  };
+  const getBrasaoUrl = (intKey: string) => brasoes[CODIGO_MAP[intKey] || intKey] || brasoes[intKey] || '';
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 375, h: 720 });
@@ -506,6 +524,9 @@ export default function ArvoreTalentosView({ alunoNome, alunoInfo, avatarUrl, da
   const onPointerDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest('[data-node-tap]') || (e.target as HTMLElement).closest('[data-crest-tap]')) return;
     pauseIdle();
+    // Clicar no background deseleciona tudo
+    if (focusedCrest) setFocusedCrest(null);
+    if (selectedSkill) setSelectedSkill(null);
     e.currentTarget.setPointerCapture(e.pointerId);
     dragRef.current = { startX: e.clientX, startY: e.clientY, baseX: x.get(), baseY: y.get() };
   };
@@ -551,7 +572,8 @@ export default function ArvoreTalentosView({ alunoNome, alunoInfo, avatarUrl, da
           {PHASE_ORDER.map((intKey, idx) => (
             <g key={`c-${intKey}`} data-crest-tap>
               <TreeCrest intelligenceKey={intKey} phaseIndex={idx} dimmed={!!focusedCrest && focusedCrest !== intKey}
-                focused={focusedCrest === intKey} onTap={(k) => { pauseIdle(); setFocusedCrest(k); }} />
+                focused={focusedCrest === intKey} onTap={(k) => { pauseIdle(); setFocusedCrest(prev => prev === k ? null : k); }}
+                brasaoUrl={getBrasaoUrl(intKey)} />
             </g>
           ))}
           {intelligencesData.map(({ intKey, nodes }) => {

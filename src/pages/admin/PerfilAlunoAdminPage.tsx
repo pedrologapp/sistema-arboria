@@ -299,7 +299,7 @@ const PerfilAlunoAdminPage = () => {
             <ArvoreTalentosView
               alunoNome={`${nome} ${sobrenome}`.trim() || 'Aluno'}
               alunoInfo={`${serie} ${turma} · Arboria`}
-              dadosPorInteligencia={dadosArvore || {}}
+              dadosPorInteligencia={dadosArvore || {}} brasoes={{}}
             />
           </div>
         )}

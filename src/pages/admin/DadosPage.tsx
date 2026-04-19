@@ -21,6 +21,7 @@ interface Casa {
   nome: string;
   cor_hex: string;
   codigo: string;
+  brasao_url: string | null;
 }
 
 const DadosPage = () => {
@@ -72,7 +73,7 @@ const DadosPage = () => {
   const { data: casas = [] } = useQuery({
     queryKey: ['admin-casas'],
     queryFn: async () => {
-      const { data } = await supabase.from('inteligencias').select('id, nome, cor_hex, codigo').order('id');
+      const { data } = await supabase.from('inteligencias').select('id, nome, cor_hex, codigo, brasao_url').order('id');
       return (data || []) as Casa[];
     },
   });
@@ -121,6 +122,13 @@ const DadosPage = () => {
     });
     return map;
   }, [alunos]);
+
+  // Mapa de brasões para a árvore
+  const brasoesMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    casas.forEach(c => { if (c.brasao_url) map[c.codigo] = c.brasao_url; });
+    return map;
+  }, [casas]);
 
   const getNomeAbreviado = (a: Aluno) => {
     const nome = a.nome || a.full_name?.split(' ')[0] || '?';
@@ -296,7 +304,7 @@ const DadosPage = () => {
                   alunoNome={alunoArvore.full_name || alunoArvore.nome || 'Aluno'}
                   alunoInfo={`${alunoArvore.serie} ${alunoArvore.turma} · Arboria`}
                   avatarUrl={alunoArvore.avatar_url}
-                  dadosPorInteligencia={dadosArvore || {}}
+                  dadosPorInteligencia={dadosArvore || {}} brasoes={brasoesMap}
                 />
               </div>
             </div>
@@ -334,7 +342,7 @@ const DadosPage = () => {
         alunoNome={alunoArvore.full_name || alunoArvore.nome || 'Aluno'}
         alunoInfo={`${alunoArvore.serie} ${alunoArvore.turma} · Arboria`}
         avatarUrl={alunoArvore.avatar_url}
-        dadosPorInteligencia={dadosArvore || {}}
+        dadosPorInteligencia={dadosArvore || {}} brasoes={brasoesMap}
       />
     </div>
   ) : null;
