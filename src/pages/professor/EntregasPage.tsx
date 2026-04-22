@@ -20,19 +20,12 @@ const EntregasPage = () => {
     queryFn: async () => {
       if (!profile?.institution_id) return { 6: 0, 7: 0, 8: 0, 9: 0 };
 
-      // Buscar missões que o professor pode avaliar (gerais + da casa mentor)
-      let missaoQuery = supabase
+      // Buscar todas as missões da instituição (professor avalia todas as casas)
+      const { data: missoes } = await supabase
         .from('missoes')
         .select('id')
-        .eq('institution_id', profile.institution_id);
-
-      if (casaMentor?.id) {
-        missaoQuery = missaoQuery.or(`tipo_missao.eq.geral,tipo_missao.is.null,casa_id.eq.${casaMentor.id}`);
-      } else {
-        missaoQuery = missaoQuery.or('tipo_missao.eq.geral,tipo_missao.is.null');
-      }
-
-      const { data: missoes } = await missaoQuery;
+        .eq('institution_id', profile.institution_id)
+        .in('status', ['liberada', 'rascunho']);
       const missaoIds = missoes?.map(m => m.id) || [];
 
       if (missaoIds.length === 0) {
