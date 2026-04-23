@@ -213,6 +213,7 @@ const MissaoDetalhePage = () => {
   const [reflexaoResposta, setReflexaoResposta] = useState('');
   const [arquivos, setArquivos] = useState<ArquivoParaUpload[]>([]);
   const [enviando, setEnviando] = useState(false);
+  const [entregaEnviada, setEntregaEnviada] = useState(false);
   const [errosValidacao, setErrosValidacao] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -618,18 +619,8 @@ const MissaoDetalhePage = () => {
         })
       );
 
-      // 8. Sucesso
-      toast({
-        title: "🎉 Resposta enviada!",
-        description: "Sua entrega foi registrada com sucesso."
-      });
-
-      // Voltar para a semana de onde veio (não para lista de fases)
-      if (missao.fase_id && missao.semana) {
-        navigate(`/aluno/missoes/fase/${missao.fase_id}/semana/${missao.semana}`);
-      } else {
-        navigate('/aluno/missoes');
-      }
+      // 8. Sucesso — mostrar tela de confirmação
+      setEntregaEnviada(true);
 
     } catch (err: any) {
       console.error('Erro ao enviar:', err);
@@ -697,6 +688,70 @@ const MissaoDetalhePage = () => {
 
   // É missão de outra casa? Só para missões INDIVIDUAIS
   const ehMissaoDeOutraCasa = missao?.tipo_missao === 'individual' && missao?.casa_id !== null && missao?.casa_id !== profile?.casa_id;
+
+  // Tela de sucesso após envio
+  if (entregaEnviada) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="py-6 flex flex-col items-center justify-center min-h-[60vh] text-center px-6"
+      >
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: 'spring', stiffness: 200, delay: 0.1 }}
+          className="w-20 h-20 rounded-full flex items-center justify-center mb-6"
+          style={{ backgroundColor: `${casaColor}20` }}
+        >
+          <CheckCircle2 className="w-10 h-10" style={{ color: casaColor }} />
+        </motion.div>
+        <motion.h2
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="text-xl font-bold text-white mb-2"
+        >
+          Missão enviada!
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="text-white/50 text-sm mb-8"
+        >
+          Sua entrega foi registrada. O professor vai avaliar em breve.
+        </motion.p>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          className="flex gap-3"
+        >
+          <Button
+            onClick={() => {
+              if (missao?.fase_id && missao?.semana) {
+                navigate(`/aluno/missoes/fase/${missao.fase_id}/semana/${missao.semana}`);
+              } else {
+                navigate('/aluno/missoes');
+              }
+            }}
+            className="rounded-xl px-6"
+            style={{ backgroundColor: casaColor, color: 'white' }}
+          >
+            Ver outras missões
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => navigate('/aluno/home')}
+            className="rounded-xl px-6 border-white/20 text-white/60"
+          >
+            Ir para Home
+          </Button>
+        </motion.div>
+      </motion.div>
+    );
+  }
 
   // Loading state
   if (loading) {
