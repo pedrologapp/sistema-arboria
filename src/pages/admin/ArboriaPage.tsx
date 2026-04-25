@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { Search, TrendingUp, BookOpen, Sparkles, ChevronRight, Star, Target, Eye, Heart, Flame, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { CasaBrasao } from '@/components/CasaBrasao';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { hojeBrasil, agoraBrasil } from '@/utils/timezone';
 
 const ArboriaPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [busca, setBusca] = useState('');
   const [emojiAberto, setEmojiAberto] = useState<string | null>(null);
   const [historicoAberto, setHistoricoAberto] = useState<string | null>(null);
@@ -158,6 +162,30 @@ const ArboriaPage = () => {
         .gte('data', seteDiasAtras.toLocaleDateString('en-CA'))
         .order('created_at', { ascending: false })
         .limit(100);
+      return data || [];
+    },
+  });
+
+  // Avisos
+  const [novoAviso, setNovoAviso] = useState('');
+  const [enviandoAviso, setEnviandoAviso] = useState(false);
+  const { data: avisosAtivos = [], refetch: refetchAvisos } = useQuery({
+    queryKey: ['admin-avisos'],
+    queryFn: async () => {
+      const { data } = await supabase.from('avisos').select('id, texto, ativo, created_at').order('created_at', { ascending: false }).limit(10);
+      return data || [];
+    },
+  });
+
+  // Problemas relatados
+  const { data: problemasAlunos = [] } = useQuery({
+    queryKey: ['admin-problemas'],
+    queryFn: async () => {
+      const { data } = await supabase.from('problemas_alunos')
+        .select('id, aluno_id, texto, resolvido, created_at')
+        .eq('resolvido', false)
+        .order('created_at', { ascending: false })
+        .limit(20);
       return data || [];
     },
   });
@@ -711,6 +739,85 @@ const ArboriaPage = () => {
               })()}
             </div>
           </div>
+
+          {/* ═══ AVISOS PARA ALUNOS ═══ */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <div className="w-1 h-3.5 rounded-full bg-amber-500" />
+              <p className="text-[10px] font-semibold text-amber-400/80 uppercase tracking-widest">Avisos para Alunos</p>
+            </div>
+
+            {/* Criar aviso */}
+            <div className="bg-white/5 rounded-xl p-4 space-y-2">
+              <textarea value={novoAviso} onChange={e => setNovoAviso(e.target.value)}
+                placeholder="Escreva um aviso para todos os alunos..."
+                maxLength={500} rows={2}
+                className="w-full bg-white/5 border border-violet-500/10 rounded-xl p-3 text-sm text-white placeholder:text-white/20 resize-none focus:outline-none focus:border-white/20" />
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] text-white/15">{novoAviso.length}/500</span>
+                <button onClick={async () => {
+                  if (!novoAviso.trim()) return;
+                  setEnviandoAviso(true);
+                  await supabase.from('avisos').insert({ texto: novoAviso.trim(), institution_id: alunos[0]?.institution_id, criado_por: user?.id });
+                  setNovoAviso('');
+                  setEnviandoAviso(false);
+                  refetchAvisos();
+                  toast.success('Aviso enviado!');
+                }} disabled={!novoAviso.trim() || enviandoAviso}
+                  className="px-4 py-1.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-400 disabled:opacity-30">
+                  {enviandoAviso ? 'Enviando...' : 'Enviar aviso'}
+                </button>
+              </div>
+            </div>
+
+            {/* Lista de avisos */}
+            {avisosAtivos.length > 0 && (
+              <div className="space-y-1.5">
+                {avisosAtivos.slice(0, 5).map((a: any) => (
+                  <div key={a.id} className={cn('flex items-center gap-2 p-2.5 rounded-lg text-xs', a.ativo ? 'bg-amber-500/10 border border-amber-500/15' : 'bg-white/[0.03] border border-white/5')}>
+                    <p className="flex-1 text-white/60 truncate">{a.texto}</p>
+                    <span className="text-[8px] text-white/20 shrink-0">{new Date(a.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
+                    {a.ativo ? (
+                      <button onClick={async () => { await supabase.from('avisos').update({ ativo: false }).eq('id', a.id); refetchAvisos(); }}
+                        className="text-[8px] text-red-400/60 shrink-0 hover:text-red-400">Desativar</button>
+                    ) : (
+                      <span className="text-[8px] text-white/20 shrink-0">Inativo</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ═══ PROBLEMAS RELATADOS ═══ */}
+          {problemasAlunos.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-1">
+                <div className="w-1 h-3.5 rounded-full bg-red-500" />
+                <p className="text-[10px] font-semibold text-red-400/80 uppercase tracking-widest">Problemas Relatados</p>
+                <span className="text-[10px] text-red-400 ml-auto">{problemasAlunos.length} aberto{problemasAlunos.length > 1 ? 's' : ''}</span>
+              </div>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {problemasAlunos.map((p: any) => {
+                  const aluno = alunos.find(a => a.id === p.aluno_id);
+                  return (
+                    <div key={p.id} className="p-3 rounded-xl bg-[#252547] border border-red-500/10">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-[11px] text-white/70 flex-1 truncate">{aluno?.full_name || 'Aluno'}</p>
+                        <span className="text-[9px] text-white/25">{aluno?.serie} {aluno?.turma}</span>
+                        <button onClick={async () => {
+                          await supabase.from('problemas_alunos').update({ resolvido: true }).eq('id', p.id);
+                          queryClient.invalidateQueries({ queryKey: ['admin-problemas'] });
+                        }} className="text-[8px] text-green-400/60 hover:text-green-400 shrink-0">Resolver</button>
+                      </div>
+                      <p className="text-xs text-white/50 leading-relaxed">"{p.texto}"</p>
+                      <p className="text-[9px] text-white/20 mt-1">{new Date(p.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Call to action */}
           <div className="rounded-2xl border border-amber-500/15 bg-amber-500/5 p-4 text-center">

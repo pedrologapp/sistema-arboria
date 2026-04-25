@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
-import { Target, MessageCircle, Shield, User, Star, AlertTriangle, Trophy, Sparkles } from 'lucide-react';
+import { Target, MessageCircle, Shield, User, Star, AlertTriangle, Trophy, Sparkles, Bell, HelpCircle, Send, Loader2 } from 'lucide-react';
 import { useStudent } from '@/contexts/StudentContext';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
 import { CasaBrasao } from '@/components/CasaBrasao';
@@ -354,6 +354,10 @@ const HomePage = () => {
       )}
 
       {/* Cross-IM */}
+      {/* Avisos do admin */}
+      <AvisosCard />
+
+      {/* Cross-IM */}
       <CrossImHomeCard casaCodigo={casa?.codigo} faseCodigo={faseAtual?.inteligencia?.codigo} corCasa={casaColor} />
 
       {/* Lembrete desafio diário */}
@@ -419,6 +423,9 @@ const HomePage = () => {
 
       {/* Campo de relato */}
       <CampoRelato userId={profile?.id} institutionId={profile?.institution_id} faseId={faseAtual?.id} semana={semanaAtual} casaColor={casaColor} />
+
+      {/* Relatar problema */}
+      <RelatarProblemaCard userId={profile?.id} institutionId={profile?.institution_id} />
 
       {/* Frase viva — rotativa com fade */}
       {frasesDisponiveis.length > 0 && (
@@ -694,6 +701,111 @@ const DesafioDiarioLembrete = ({ casaCodigo, casaColor }: { casaCodigo?: string;
         </div>
       </div>
     </button>
+  );
+};
+
+// === Avisos do Admin ===
+const AvisosCard = () => {
+  const { data: avisos = [] } = useQuery({
+    queryKey: ['avisos-ativos'],
+    queryFn: async () => {
+      const { data } = await supabase.from('avisos')
+        .select('id, texto, created_at')
+        .eq('ativo', true)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      return data || [];
+    },
+    staleTime: 60000,
+  });
+
+  const [fechados, setFechados] = useState<Set<string>>(new Set());
+
+  if (avisos.length === 0) return null;
+
+  const visiveis = avisos.filter((a: any) => !fechados.has(a.id));
+  if (visiveis.length === 0) return null;
+
+  return (
+    <div className="space-y-2 animate-fade-in">
+      {visiveis.map((aviso: any) => (
+        <div key={aviso.id} className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 relative">
+          <button onClick={() => setFechados(prev => new Set(prev).add(aviso.id))}
+            className="absolute top-2 right-2 text-amber-400/40 hover:text-amber-400/80 text-xs p-1">
+            x
+          </button>
+          <div className="flex items-start gap-3">
+            <Bell className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-white/80 leading-relaxed">{aviso.texto}</p>
+              <p className="text-[10px] text-amber-400/40 mt-1">
+                {new Date(aviso.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+              </p>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// === Relatar Problema ===
+const RelatarProblemaCard = ({ userId, institutionId }: { userId?: string; institutionId?: string }) => {
+  const [aberto, setAberto] = useState(false);
+  const [texto, setTexto] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [enviado, setEnviado] = useState(false);
+
+  const enviar = async () => {
+    if (!userId || !institutionId || !texto.trim() || enviando) return;
+    setEnviando(true);
+    const { error } = await supabase.from('problemas_alunos').insert({
+      aluno_id: userId,
+      institution_id: institutionId,
+      texto: texto.trim(),
+    });
+    if (!error) {
+      setTexto('');
+      setEnviado(true);
+      setAberto(false);
+      setTimeout(() => setEnviado(false), 3000);
+    }
+    setEnviando(false);
+  };
+
+  return (
+    <div className="animate-fade-in">
+      {enviado ? (
+        <div className="p-3 rounded-2xl bg-green-500/10 border border-green-500/20 text-center">
+          <p className="text-xs text-green-400">Problema relatado! Vamos verificar.</p>
+        </div>
+      ) : !aberto ? (
+        <button onClick={() => setAberto(true)}
+          className="w-full p-3 rounded-2xl text-left bg-white/[0.03] border border-white/10 hover:bg-white/[0.05] transition-colors">
+          <div className="flex items-center gap-3">
+            <HelpCircle className="w-4 h-4 text-white/25 shrink-0" />
+            <p className="text-xs text-white/30">Está com algum problema? Toque para nos contar</p>
+          </div>
+        </button>
+      ) : (
+        <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2">
+          <p className="text-xs text-white/40">Descreva o problema:</p>
+          <textarea value={texto} onChange={e => setTexto(e.target.value)}
+            placeholder="O que está acontecendo?"
+            maxLength={500} rows={3}
+            className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white placeholder:text-white/20 resize-none focus:outline-none focus:border-white/20"
+          />
+          <div className="flex items-center justify-between">
+            <button onClick={() => { setAberto(false); setTexto(''); }} className="text-xs text-white/30">Cancelar</button>
+            <button onClick={enviar} disabled={!texto.trim() || enviando}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-violet-500/20 text-violet-400 disabled:opacity-30">
+              {enviando ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+              Enviar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
