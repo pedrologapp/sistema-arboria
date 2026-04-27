@@ -404,27 +404,34 @@ const MissaoDetalhePage = () => {
     const draft = localStorage.getItem(DRAFT_KEY);
     if (draft) {
       try {
-        const { texto } = JSON.parse(draft);
+        const { texto, itens, reflexao } = JSON.parse(draft);
         if (texto) setTextoResposta(texto);
+        if (itens && typeof itens === 'object') setRespostasItens(itens);
+        if (reflexao) setReflexaoResposta(reflexao);
       } catch (e) {
         // Ignorar erro de parse
       }
     }
   }, [DRAFT_KEY]);
 
-  // Salvar rascunho (debounced)
+  // Salvar rascunho (debounced) — protege contra reload do navegador no mobile
+  // ao abrir o seletor de arquivos (Android costuma matar a aba por low memory)
   useEffect(() => {
-    if (!textoResposta) return;
-    
+    const temConteudo =
+      textoResposta || reflexaoResposta || Object.keys(respostasItens).length > 0;
+    if (!temConteudo) return;
+
     const timeout = setTimeout(() => {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         texto: textoResposta,
+        itens: respostasItens,
+        reflexao: reflexaoResposta,
         timestamp: Date.now()
       }));
     }, 500);
 
     return () => clearTimeout(timeout);
-  }, [textoResposta, DRAFT_KEY]);
+  }, [textoResposta, respostasItens, reflexaoResposta, DRAFT_KEY]);
 
   // Buscar ao montar
   useEffect(() => {
@@ -436,7 +443,9 @@ const MissaoDetalhePage = () => {
     if (!id || !user) return;
     supabase.from('missao_visualizacoes' as any)
       .upsert({ aluno_id: user.id, missao_id: id }, { onConflict: 'aluno_id,missao_id' })
-      .then(() => {});
+      .then(({ error }) => {
+        if (error) console.error('[missao_visualizacoes] upsert falhou:', error);
+      });
   }, [id, user]);
 
   // Handlers de arquivo
@@ -507,10 +516,7 @@ const MissaoDetalhePage = () => {
       erros.push('Escreva sua resposta antes de enviar');
     }
 
-    // Arquivo obrigatório se requer_arquivo
-    if (missao?.requer_arquivo && arquivos.length === 0) {
-      erros.push('Anexe pelo menos um arquivo');
-    }
+    // Anexar arquivo é sempre opcional para o aluno
 
     // Limite de arquivos
     if (arquivos.length > 10) {
