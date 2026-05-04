@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Target, Home, MessageCircle, User, Shield, LayoutDashboard, Lock } from 'lucide-react';
+import { Target, Home, MessageCircle, User, Shield, LayoutDashboard, Lock, BookOpen } from 'lucide-react';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
 import { useStudent } from '@/contexts/StudentContext';
 import { useQuery } from '@tanstack/react-query';
@@ -33,6 +33,7 @@ const BottomNav = () => {
     { id: 'home', icon: Home, label: 'Home', path: '/aluno/home', color: '#3b82f6' },
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/aluno/dashboard', color: '#06b6d4', locked: !temAcessoDashboard },
     { id: 'missoes', icon: Target, label: 'Missoes', path: '/aluno/missoes', color: '#f59e0b' },
+    { id: 'capitulo', icon: BookOpen, label: 'Capitulo', path: '/aluno/capitulo', color: '#a78bfa' },
     { id: 'casa', icon: Shield, label: 'Casa', path: '/aluno/casa', color: '#10b981' },
     { id: 'chat', icon: MessageCircle, label: 'Chat', path: '/aluno/chat', color: '#8b5cf6' },
     { id: 'perfil', icon: User, label: 'Perfil', path: '/aluno/perfil', color: '#ec4899' },

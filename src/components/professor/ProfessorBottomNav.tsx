@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, ClipboardList, PenLine, Eye, Users, MessageCircle } from 'lucide-react';
+import { Home, ClipboardList, PenLine, Eye, Users, MessageCircle, BookOpen } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +9,7 @@ const navItems = [
   { id: 'home', icon: Home, label: 'Home', path: '/professor', color: '#3b82f6' },
   { id: 'missoes', icon: ClipboardList, label: 'Missoes', path: '/professor/missoes', color: '#f59e0b' },
   { id: 'avaliar', icon: PenLine, label: 'Avaliar', path: '/professor/entregas', color: '#10b981' },
+  { id: 'capitulo', icon: BookOpen, label: 'Capitulo', path: '/professor/capitulo', color: '#a78bfa' },
   { id: 'observar', icon: Eye, label: 'Observar', path: '/professor/circulo', color: '#8b5cf6' },
   { id: 'alunos', icon: Users, label: 'Alunos', path: '/professor/alunos', color: '#ec4899' },
   { id: 'chat', icon: MessageCircle, label: 'Chat', path: '/professor/chat', color: '#06b6d4' },
@@ -50,9 +51,10 @@ const ProfessorBottomNav = () => {
     if (p === '/professor') return 0;
     if (p.startsWith('/professor/missoes')) return 1;
     if (p.startsWith('/professor/entregas')) return 2;
-    if (p.startsWith('/professor/circulo')) return 3;
-    if (p.startsWith('/professor/alunos')) return 4;
-    if (p.startsWith('/professor/chat')) return 5;
+    if (p.startsWith('/professor/capitulo')) return 3;
+    if (p.startsWith('/professor/circulo')) return 4;
+    if (p.startsWith('/professor/alunos')) return 5;
+    if (p.startsWith('/professor/chat')) return 6;
     return 0;
   };
 

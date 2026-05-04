@@ -63,6 +63,7 @@ const PerfilPage = lazy(() => import("./pages/aluno/PerfilPage"));
 const ConfiguracoesPage = lazy(() => import("./pages/aluno/ConfiguracoesPage"));
 const DashboardLiderPage = lazy(() => import("./pages/aluno/DashboardLiderPage"));
 const ConquistasPage = lazy(() => import("./pages/aluno/ConquistasPage"));
+const CapituloPage = lazy(() => import("./pages/aluno/CapituloPage"));
 
 // Professor pages (lazy)
 const ProfessorDashboardWrapper = lazy(() => import("./pages/professor/ProfessorDashboardWrapper"));
@@ -101,6 +102,7 @@ const ConteudoPage = lazy(() => import("./pages/professor/ConteudoPage"));
 const ConteudoGeralPage = lazy(() => import("./pages/professor/ConteudoGeralPage"));
 const ConteudoInteligenciaPage = lazy(() => import("./pages/professor/ConteudoInteligenciaPage"));
 const ReportesMentorPage = lazy(() => import("./pages/professor/ReportesMentorPage"));
+const CapituloProfessorPage = lazy(() => import("./pages/professor/CapituloProfessorPage"));
 
 // Loading fallback
 const PageLoader = () => (
@@ -537,6 +539,15 @@ const App = () => (
               </ProfessorProtectedRoute>
             } />
 
+            {/* O Capítulo - alocação de papéis */}
+            <Route path="/professor/capitulo" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <CapituloProfessorPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+
             {/* Conteúdo Routes (Infantil/F1) */}
             <Route path="/professor/conteudo" element={
               <ProfessorProtectedRoute>
@@ -664,6 +675,13 @@ const App = () => (
               <StudentProtectedRoute>
                 <StudentLayout>
                   <DashboardLiderPage />
+                </StudentLayout>
+              </StudentProtectedRoute>
+            } />
+            <Route path="/aluno/capitulo" element={
+              <StudentProtectedRoute>
+                <StudentLayout>
+                  <CapituloPage />
                 </StudentLayout>
               </StudentProtectedRoute>
             } />
