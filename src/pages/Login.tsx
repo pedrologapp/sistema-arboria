@@ -241,6 +241,16 @@ const Login = () => {
               {isLoading ? 'Entrando...' : 'Entrar no Sistema'}
             </Button>
 
+            {/* Recuperação de acesso pra alunos sem email funcionando */}
+            <div className="text-center pt-2">
+              <Link
+                to="/recuperar-acesso"
+                className="text-sm text-amber-200/80 hover:text-amber-200 transition-colors"
+              >
+                Não consegue acessar ou não lembra o email?
+              </Link>
+            </div>
+
             {/* Link para recuperação admin */}
             <div className="text-center">
               <Link

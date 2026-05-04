@@ -6,6 +6,7 @@ import { useStudent } from '@/contexts/StudentContext';
 import { AlertTriangle, CheckCircle, Users, Trophy, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import SolicitacoesRecuperacao from '@/components/aluno/SolicitacoesRecuperacao';
 
 const DashboardLiderPage = () => {
   const navigate = useNavigate();
@@ -220,6 +221,9 @@ const DashboardLiderPage = () => {
           Casa {casa?.nome} — {isLider ? 'Lider' : `Coordenador ${minhaSerie}º ${minhaTurma}`}
         </p>
       </div>
+
+      {/* Solicitações de recuperação (só pra coordenador da turma+série) */}
+      {isCoordenador && <SolicitacoesRecuperacao />}
 
       {/* Reportar ao mentor/lider */}
       <ReportarMentor userId={profile?.id} institutionId={profile?.institution_id} casaId={casa?.id} casaColor={casaColor} cargo={meuCargo} />

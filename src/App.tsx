@@ -25,6 +25,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AlterarSenha = lazy(() => import("./pages/AlterarSenha"));
 const RecoverAdmin = lazy(() => import("./pages/RecoverAdmin"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const RecuperarAcesso = lazy(() => import("./pages/RecuperarAcesso"));
 
 // Admin pages (lazy)
 const MonitorPage = lazy(() => import("./pages/admin/MonitorPage"));
@@ -129,6 +130,7 @@ const App = () => (
             <Route path="/setup" element={<Setup />} />
             <Route path="/recuperar-admin" element={<RecoverAdmin />} />
             <Route path="/redefinir-senha" element={<ResetPassword />} />
+            <Route path="/recuperar-acesso" element={<RecuperarAcesso />} />
             <Route path="/alterar-senha" element={
               <ProtectedRoute>
                 <AlterarSenha />
