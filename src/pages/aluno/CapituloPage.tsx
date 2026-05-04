@@ -72,6 +72,18 @@ interface AlocacaoComAluno {
   } | null;
 }
 
+interface MembroComAluno {
+  id: string;
+  delegacao_codigo: string;
+  aluno: {
+    id: string;
+    nome: string | null;
+    full_name: string | null;
+    avatar_url: string | null;
+    casa_id: number | null;
+  } | null;
+}
+
 type Brasoes = Record<number, string | null>;
 
 interface TurmaConfig {
@@ -199,6 +211,18 @@ const CapituloPage = () => {
     },
   });
 
+  const { data: membrosDelegacoes = [] } = useQuery<MembroComAluno[]>({
+    queryKey: ['cap-membros-aluno', capitulo?.id, turmaId],
+    enabled: !!capitulo?.id && !!turmaId,
+    queryFn: async () => {
+      const { data } = await sb.from('capitulo_delegacao_membros').select(`
+        id, delegacao_codigo,
+        aluno:profiles!capitulo_delegacao_membros_aluno_id_fkey ( id, nome, full_name, avatar_url, casa_id )
+      `).eq('capitulo_id', capitulo!.id).eq('turma_id', turmaId!);
+      return (data as MembroComAluno[]) ?? [];
+    },
+  });
+
   const brasaoCapitulo = (faseAtual?.inteligencia as any)?.brasao_url
     ?? (faseAtual?.inteligencia?.id ? brasoes[faseAtual.inteligencia.id] : null)
     ?? casa?.brasao_url
@@ -274,6 +298,7 @@ const CapituloPage = () => {
         papeis={papeis}
         alocacoes={alocacoes}
         delegacoes={delegacoesAtivas}
+        membrosDelegacoes={membrosDelegacoes}
         brasoes={brasoes}
         onAbrirGuia={(p) => setPapelAberto(p)}
         meuId={user?.id ?? null}
@@ -474,11 +499,12 @@ const SeuPapel = ({
 // STAGE 4 · ELENCO
 // ============================================
 const Elenco = ({
-  papeis, alocacoes, delegacoes, brasoes, onAbrirGuia, meuId
+  papeis, alocacoes, delegacoes, membrosDelegacoes, brasoes, onAbrirGuia, meuId
 }: {
   papeis: Papel[];
   alocacoes: AlocacaoComAluno[];
   delegacoes: Delegacao[];
+  membrosDelegacoes: MembroComAluno[];
   brasoes: Brasoes;
   onAbrirGuia: (p: Papel) => void;
   meuId: string | null;
@@ -539,42 +565,81 @@ const Elenco = ({
               const papeisDeleg = papeis
                 .filter(p => p.categoria === 'delegacao' && p.delegacao === deleg.codigo)
                 .sort((a, b) => a.ordem - b.ordem);
+              const membrosDeleg = membrosDelegacoes.filter(m => m.delegacao_codigo === deleg.codigo);
               return (
                 <div key={deleg.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
                   <div className="text-sm font-serif text-amber-200/90">{deleg.nome}</div>
                   {deleg.objetivo && (
                     <div className="text-[11px] text-white/50 mt-1 leading-snug">{deleg.objetivo}</div>
                   )}
-                  <div className="grid grid-cols-2 gap-2 mt-3">
-                    {papeisDeleg.map(p => {
-                      const alocs = alocPorPapel[p.id] || [];
-                      const al = alocs[0];
-                      return (
-                        <button
-                          key={p.id}
-                          onClick={() => onAbrirGuia(p)}
-                          className={cn(
-                            'flex items-center gap-2 p-2 rounded-lg transition text-left',
-                            al?.aluno_id === meuId
-                              ? 'bg-amber-200/10 ring-1 ring-amber-200/30'
-                              : 'bg-white/[0.03] hover:bg-white/[0.07]'
-                          )}
-                        >
-                          <Avatar
-                            nome={al ? nomeAluno(al.aluno) : '·'}
-                            url={al?.aluno?.avatar_url ?? null}
-                            brasao={al?.aluno?.casa_id ? brasoes[al.aluno.casa_id] : null}
-                            vazio={!al}
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="text-[10px] tracking-wide uppercase text-white/40 leading-none mb-0.5">{p.nome}</div>
-                            <div className="text-[12px] text-white/85 leading-tight break-words">
-                              {al ? nomeESobrenome(al.aluno) : <span className="text-white/30 italic">vaga aberta</span>}
+
+                  {/* Membros da delegação */}
+                  {membrosDeleg.length > 0 && (
+                    <div className="mt-3">
+                      <div className="text-[10px] tracking-[0.25em] uppercase text-white/40 mb-1.5">
+                        Membros · {membrosDeleg.length}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {membrosDeleg.map(m => {
+                          const eh_meu = m.aluno?.id === meuId;
+                          return (
+                            <span
+                              key={m.id}
+                              className={cn(
+                                'inline-flex items-center gap-1.5 pl-1 pr-2 py-0.5 rounded-full text-[11px]',
+                                eh_meu ? 'bg-amber-200/15 ring-1 ring-amber-200/30 text-white' : 'bg-white/[0.04] text-white/85'
+                              )}
+                            >
+                              <Avatar
+                                nome={nomeAluno(m.aluno)}
+                                url={m.aluno?.avatar_url ?? null}
+                                brasao={m.aluno?.casa_id ? brasoes[m.aluno.casa_id] : null}
+                                pequeno
+                              />
+                              {nomeESobrenome(m.aluno)}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Papéis da delegação */}
+                  <div className="mt-3">
+                    {membrosDeleg.length > 0 && (
+                      <div className="text-[10px] tracking-[0.25em] uppercase text-white/40 mb-1.5">Papéis</div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      {papeisDeleg.map(p => {
+                        const alocs = alocPorPapel[p.id] || [];
+                        const al = alocs[0];
+                        return (
+                          <button
+                            key={p.id}
+                            onClick={() => onAbrirGuia(p)}
+                            className={cn(
+                              'flex items-center gap-2 p-2 rounded-lg transition text-left',
+                              al?.aluno_id === meuId
+                                ? 'bg-amber-200/10 ring-1 ring-amber-200/30'
+                                : 'bg-white/[0.03] hover:bg-white/[0.07]'
+                            )}
+                          >
+                            <Avatar
+                              nome={al ? nomeAluno(al.aluno) : '·'}
+                              url={al?.aluno?.avatar_url ?? null}
+                              brasao={al?.aluno?.casa_id ? brasoes[al.aluno.casa_id] : null}
+                              vazio={!al}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="text-[10px] tracking-wide uppercase text-white/40 leading-none mb-0.5">{p.nome}</div>
+                              <div className="text-[12px] text-white/85 leading-tight break-words">
+                                {al ? nomeESobrenome(al.aluno) : <span className="text-white/30 italic">vaga aberta</span>}
+                              </div>
                             </div>
-                          </div>
-                        </button>
-                      );
-                    })}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               );
