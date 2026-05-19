@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, ChevronRight, Users, ScrollText } from 'lucide-react';
+import { Calendar, ChevronRight, Users, ScrollText, Download, BookOpen } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -123,6 +123,20 @@ const nomeESobrenome = (a: AlocacaoComAluno['aluno']): string => {
 
 const primeiroNome = (n: string) => n.split(' ')[0];
 
+const PDF_POR_DELEGACAO: Record<string, string> = {
+  big_techs: 'delegacao-big-techs',
+  adolescentes_organizados: 'delegacao-adolescentes-organizados',
+  criadores_conteudo: 'delegacao-criadores-conteudo',
+  industria_jogos: 'delegacao-industria-jogos',
+  vozes_internet: 'delegacao-vozes-internet',
+  familias: 'delegacao-familias-conselho',
+};
+
+const pdfDaDelegacao = (codigo: string): string | null => {
+  const slug = PDF_POR_DELEGACAO[codigo];
+  return slug ? `/docs/delegacoes/${slug}.pdf` : null;
+};
+
 const iniciais = (nome: string) =>
   nome.split(' ').slice(0, 2).map(n => n[0]?.toUpperCase()).join('');
 
@@ -130,6 +144,7 @@ const CapituloPage = () => {
   const { user } = useAuth();
   const { profile, faseAtual, casa, casaColor, isLoading: loadingStudent } = useStudent();
   const [papelAberto, setPapelAberto] = useState<Papel | null>(null);
+  const [delegacaoAberta, setDelegacaoAberta] = useState<Delegacao | null>(null);
 
   const { data: turmaId } = useQuery({
     queryKey: ['minha-turma-cap', user?.id],
@@ -301,16 +316,24 @@ const CapituloPage = () => {
         membrosDelegacoes={membrosDelegacoes}
         brasoes={brasoes}
         onAbrirGuia={(p) => setPapelAberto(p)}
+        onAbrirDelegacao={(d) => setDelegacaoAberta(d)}
         meuId={user?.id ?? null}
       />
 
       {/* ============ STAGE 5 · O DIA ============ */}
       <ODia capitulo={capitulo} />
 
-      {/* ============ DRAWER · GUIA ============ */}
+      {/* ============ DRAWER · GUIA DA FUNÇÃO ============ */}
       <Drawer open={!!papelAberto} onOpenChange={(o) => !o && setPapelAberto(null)}>
         <DrawerContent className="bg-[#1A1A2E] border-white/10 text-white max-h-[92vh]">
           {papelAberto && <GuiaConteudo papel={papelAberto} delegacoes={delegacoes} />}
+        </DrawerContent>
+      </Drawer>
+
+      {/* ============ DRAWER · GUIA DA DELEGAÇÃO ============ */}
+      <Drawer open={!!delegacaoAberta} onOpenChange={(o) => !o && setDelegacaoAberta(null)}>
+        <DrawerContent className="bg-[#1A1A2E] border-white/10 text-white max-h-[92vh]">
+          {delegacaoAberta && <GuiaConteudoDelegacao delegacao={delegacaoAberta} />}
         </DrawerContent>
       </Drawer>
     </div>
@@ -499,7 +522,7 @@ const SeuPapel = ({
 // STAGE 4 · ELENCO
 // ============================================
 const Elenco = ({
-  papeis, alocacoes, delegacoes, membrosDelegacoes, brasoes, onAbrirGuia, meuId
+  papeis, alocacoes, delegacoes, membrosDelegacoes, brasoes, onAbrirGuia, onAbrirDelegacao, meuId
 }: {
   papeis: Papel[];
   alocacoes: AlocacaoComAluno[];
@@ -507,6 +530,7 @@ const Elenco = ({
   membrosDelegacoes: MembroComAluno[];
   brasoes: Brasoes;
   onAbrirGuia: (p: Papel) => void;
+  onAbrirDelegacao: (d: Delegacao) => void;
   meuId: string | null;
 }) => {
   const alocPorPapel = useMemo(() => {
@@ -526,6 +550,13 @@ const Elenco = ({
     <section>
       <div className="text-[10px] tracking-[0.4em] uppercase text-white/40 mb-3 flex items-center gap-2">
         <Users className="w-3 h-3" /> Parte 2 · O elenco
+      </div>
+
+      <div className="rounded-lg bg-amber-200/[0.06] border border-amber-200/20 px-3.5 py-2.5 mb-5 flex items-start gap-2.5">
+        <BookOpen className="w-3.5 h-3.5 text-amber-200/80 mt-0.5 flex-shrink-0" />
+        <p className="text-[12px] text-white/75 leading-relaxed">
+          <span className="text-amber-200/90 font-semibold">Toque em qualquer função</span> para abrir o guia completo — o que você faz, como fazer e exemplos de fala.
+        </p>
       </div>
 
       {/* TIME 2 — MESA */}
@@ -560,6 +591,9 @@ const Elenco = ({
       {delegacoes.length > 0 && (
         <>
           <SubHeader>Delegações</SubHeader>
+          <p className="text-[11px] text-white/45 leading-relaxed -mt-1 mb-3 italic">
+            Toque no nome da delegação para abrir o guia (quem são, o que defendem, o que não cedem) e baixar o PDF de apoio.
+          </p>
           <div className="space-y-3">
             {delegacoes.map(deleg => {
               const papeisDeleg = papeis
@@ -568,7 +602,16 @@ const Elenco = ({
               const membrosDeleg = membrosDelegacoes.filter(m => m.delegacao_codigo === deleg.codigo);
               return (
                 <div key={deleg.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                  <div className="text-sm font-serif text-amber-200/90">{deleg.nome}</div>
+                  <button
+                    onClick={() => onAbrirDelegacao(deleg)}
+                    className="group flex items-center gap-1.5 text-left"
+                  >
+                    <span className="text-sm font-serif text-amber-200/90 group-hover:text-amber-200 transition">
+                      {deleg.nome}
+                    </span>
+                    <BookOpen className="w-3 h-3 text-amber-200/50 group-hover:text-amber-200/80 transition" />
+                    <ChevronRight className="w-3 h-3 text-amber-200/40 group-hover:text-amber-200/70 group-hover:translate-x-0.5 transition" />
+                  </button>
                   {deleg.objetivo && (
                     <div className="text-[11px] text-white/50 mt-1 leading-snug">{deleg.objetivo}</div>
                   )}
@@ -870,6 +913,73 @@ const GuiaConteudo = ({ papel, delegacoes }: { papel: Papel; delegacoes: Delegac
                 </div>
               ))}
             </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
+
+// ============================================
+// DRAWER · GUIA DA DELEGAÇÃO
+// ============================================
+const GuiaConteudoDelegacao = ({ delegacao }: { delegacao: Delegacao }) => {
+  const pdf = pdfDaDelegacao(delegacao.codigo);
+  return (
+    <>
+      <DrawerHeader className="text-left border-b border-white/10">
+        <div className="text-[10px] tracking-[0.3em] uppercase text-white/40 mb-1">
+          Delegação
+        </div>
+        <DrawerTitle className="font-serif text-2xl text-white">{delegacao.nome}</DrawerTitle>
+        {delegacao.quem_sao && (
+          <DrawerDescription className="text-white/70 text-sm mt-1">
+            {delegacao.quem_sao}
+          </DrawerDescription>
+        )}
+      </DrawerHeader>
+
+      <div className="px-6 pb-10 pt-5 overflow-y-auto space-y-6">
+        {delegacao.objetivo && (
+          <div>
+            <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-2">O que defendem</div>
+            <p className="text-[14px] text-white/80 leading-relaxed">
+              {delegacao.objetivo}
+            </p>
+          </div>
+        )}
+
+        {delegacao.nao_cedem && (
+          <div>
+            <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-2">Não cedem em</div>
+            <p className="text-[14px] text-white/80 leading-relaxed">
+              {delegacao.nao_cedem}
+            </p>
+          </div>
+        )}
+
+        {delegacao.topam_negociar && (
+          <div>
+            <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-2">Topam negociar</div>
+            <p className="text-[14px] text-white/80 leading-relaxed">
+              {delegacao.topam_negociar}
+            </p>
+          </div>
+        )}
+
+        {pdf && (
+          <div className="pt-2">
+            <a
+              href={pdf}
+              download
+              className="flex items-center justify-center gap-2 rounded-xl bg-amber-200/15 hover:bg-amber-200/25 ring-1 ring-amber-200/40 px-4 py-3.5 text-amber-100 transition"
+            >
+              <Download className="w-4 h-4" />
+              <span className="text-sm font-medium">Baixar guia completo da delegação</span>
+            </a>
+            <p className="text-[11px] text-white/40 text-center mt-2">
+              PDF com argumentos detalhados, dados e estratégia de negociação.
+            </p>
           </div>
         )}
       </div>
