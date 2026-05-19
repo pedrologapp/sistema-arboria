@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, ChevronRight, Users, ScrollText, Download, BookOpen } from 'lucide-react';
+import { Calendar, ChevronRight, Users, ScrollText, Download, BookOpen, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -678,6 +678,10 @@ const Elenco = ({
                               <div className="text-[12px] text-white/85 leading-tight break-words">
                                 {al ? nomeESobrenome(al.aluno) : <span className="text-white/30 italic">vaga aberta</span>}
                               </div>
+                              <div className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-full bg-amber-200/15 ring-1 ring-amber-200/30">
+                                <Info className="w-2.5 h-2.5 text-amber-200/90" />
+                                <span className="text-[9px] font-semibold text-amber-100 tracking-wide">Saiba mais</span>
+                              </div>
                             </div>
                           </button>
                         );
@@ -728,6 +732,10 @@ const CardElenco = ({
       <div className="text-[12px] text-white/85 leading-tight line-clamp-2 break-words">
         {al ? nomeESobrenome(al.aluno) : <span className="text-white/30 italic">vaga aberta</span>}
       </div>
+      <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-amber-200/15 ring-1 ring-amber-200/30">
+        <Info className="w-2.5 h-2.5 text-amber-200/90" />
+        <span className="text-[9px] font-semibold text-amber-100 tracking-wide">Saiba mais</span>
+      </div>
     </button>
   );
 };
@@ -742,11 +750,18 @@ const SlotsLista = ({
   const slots = Array.from({ length: slotsCount }).map((_, i) => alocacoes[i] ?? null);
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 mb-2">
-      <button onClick={onClick} className="text-[10px] tracking-[0.25em] uppercase text-white/50 hover:text-white/80 mb-2 flex items-center gap-1">
-        <ScrollText className="w-3 h-3" /> {papel.nome}
-        {ilimitado
-          ? alocacoes.length > 0 && <span className="ml-1">· {alocacoes.length}</span>
-          : <span className="ml-1">· {papel.vagas_por_turma} vagas</span>}
+      <button onClick={onClick} className="group w-full flex items-center justify-between mb-2.5">
+        <span className="flex items-center gap-1.5 text-[11px] tracking-[0.2em] uppercase text-amber-200/90 group-hover:text-amber-200 transition">
+          <ScrollText className="w-3 h-3" />
+          {papel.nome}
+          {ilimitado
+            ? alocacoes.length > 0 && <span className="text-white/40 normal-case tracking-normal ml-0.5">· {alocacoes.length}</span>
+            : <span className="text-white/40 normal-case tracking-normal ml-0.5">· {papel.vagas_por_turma} vagas</span>}
+        </span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-200/15 ring-1 ring-amber-200/30 group-hover:bg-amber-200/25 transition">
+          <Info className="w-2.5 h-2.5 text-amber-200/90" />
+          <span className="text-[9px] font-semibold text-amber-100 tracking-wide normal-case">Saiba mais</span>
+        </span>
       </button>
       {ilimitado && alocacoes.length === 0 && (
         <div className="text-[11px] text-white/30 italic py-1">Ainda sem ninguém alocado.</div>
