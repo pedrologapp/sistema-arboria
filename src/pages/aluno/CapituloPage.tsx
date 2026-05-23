@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, ChevronRight, Users, ScrollText, Download, BookOpen, Info, Clock } from 'lucide-react';
+import { Calendar, ChevronRight, Users, ScrollText, Download, BookOpen, Info, Clock, Shirt } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -852,6 +852,25 @@ const ODia = ({ capitulo }: { capitulo: Capitulo }) => {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Traje do dia */}
+      <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Shirt className="w-4 h-4 text-amber-200/80" />
+          <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70">O que vestir</div>
+        </div>
+        <p className="text-[13px] text-white/70 leading-relaxed">
+          Veja o aviso com os trajes permitidos para o dia da Assembleia.
+        </p>
+        <a
+          href="/docs/aviso-traje-assembleia.pdf"
+          download
+          className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-amber-200/15 hover:bg-amber-200/25 ring-1 ring-amber-200/40 px-4 py-3.5 text-amber-100 transition"
+        >
+          <Download className="w-4 h-4" />
+          <span className="text-sm font-medium">Baixar aviso de trajes</span>
+        </a>
       </div>
 
       {capitulo.regra_de_ouro && (
