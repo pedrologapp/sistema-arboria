@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, type CSSProperties } from 'react';
 import { Trophy, Users, RefreshCw, ChevronRight, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
@@ -7,9 +7,15 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { CasaBrasao } from '@/components/CasaBrasao';
-import { Progress } from '@/components/ui/progress';
 import DesafioDiarioCard from '@/components/aluno/DesafioDiarioCard';
 import { useDesafioDiario } from '@/hooks/useDesafioDiario';
+import '@/styles/missoes-scifi.css';
+
+// "#a78bfa" -> "167, 139, 250" (alimenta a var --sf-accent-rgb com a cor da casa)
+const hexToRgb = (hex: string): string | null => {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
+  return m ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}` : null;
+};
 
 interface MembroComCargo {
   aluno_id: string;
@@ -194,11 +200,16 @@ const CasaPage = () => {
   const meuspontos = meusDados?.total_pontos || 0;
   const contribuicao = pontosTotaisCasa > 0 ? Math.round((meuspontos / pontosTotaisCasa) * 100) : 0;
 
+  // Acento dos cards = cor da casa do aluno (fallback roxo)
+  const accentColor = casaColor || casa?.cor_hex || '#a78bfa';
+  const accentRgb = hexToRgb(accentColor) || '167, 139, 250';
+  const scifiVars = { '--sf-accent': accentColor, '--sf-accent-rgb': accentRgb } as CSSProperties;
+
   return (
-    <div className="p-4 space-y-5 pb-24">
-      {/* Header com refresh */}
+    <div className="scifi p-4 space-y-5 pb-24" style={scifiVars}>
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-white">Minha Casa</h1>
+        <h1 className="text-xl font-semibold text-white tracking-tight">Minha Casa</h1>
         <button
           onClick={handleRefresh}
           disabled={isRefreshing}
@@ -208,9 +219,10 @@ const CasaPage = () => {
         </button>
       </div>
 
-      {/* Card principal: Brasao + Nome + Descricao */}
+      {/* Card principal: brasão + nome + descrição */}
       <div
-        className="relative overflow-hidden p-5 rounded-2xl bg-[#252547] backdrop-blur-xl border border-violet-500/10"
+        data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
+        className="sf-panel sf-accent-border relative overflow-hidden p-5"
         style={{ boxShadow: `0 16px 32px -8px ${casaColor}25` }}
       >
         <div
@@ -229,25 +241,28 @@ const CasaPage = () => {
             Casa {casa.nome}
           </h2>
           {descricao && (
-            <p className="text-white/50 text-sm leading-relaxed">
-              {descricao}
-            </p>
+            <p className="text-white/50 text-sm leading-relaxed">{descricao}</p>
           )}
         </div>
       </div>
 
-      {/* Stats: Posicao da casa + Pontos da casa */}
+      {/* Stats: Posição da casa + Pontos da casa */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="p-4 rounded-xl text-center bg-[#252547] border border-violet-500/10">
-          <span className="text-2xl font-bold text-white">{posicaoCasa || '--'}</span>
-          <span className="text-white/40 text-sm">a</span>
-          <span className="text-white/40 text-sm ml-0.5">de {totalCasas}</span>
-          <p className="text-xs text-white/40 mt-1">Posicao geral</p>
+        <div data-augmented-ui="tl-clip br-clip border" className="sf-panel p-4 text-center">
+          <div>
+            <span className="text-2xl font-bold text-white tabular-nums">
+              {posicaoCasa || '--'}
+            </span>
+            <span className="text-white/40 text-sm ml-1">/ {totalCasas}</span>
+          </div>
+          <p className="text-xs text-white/40 mt-1">Posição geral</p>
         </div>
-        <div className="p-4 rounded-xl text-center bg-[#252547] border border-violet-500/10">
+        <div data-augmented-ui="tl-clip br-clip border" className="sf-panel p-4 text-center">
           <div className="flex items-center justify-center gap-1.5">
             <Trophy className="w-4 h-4 text-yellow-500" />
-            <span className="text-2xl font-bold text-white">{pontosTotaisCasa.toLocaleString('pt-BR')}</span>
+            <span className="text-2xl font-bold text-white tabular-nums">
+              {pontosTotaisCasa.toLocaleString('pt-BR')}
+            </span>
           </div>
           <p className="text-xs text-white/40 mt-1">Pontos da casa</p>
         </div>
@@ -258,16 +273,23 @@ const CasaPage = () => {
         <DesafioDiarioCard desafio={desafioHoje} saudacao={saudacaoDesafio} />
       )}
 
-      {/* Sua contribuicao */}
-      <div className="p-4 rounded-xl bg-[#252547] border border-violet-500/10">
+      {/* Sua contribuição */}
+      <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-white/60">Sua contribuicao</span>
-          <span className="text-sm text-white font-medium">{meuspontos} pts ({contribuicao}%)</span>
+          <span className="text-sm text-white/60">Sua contribuição</span>
+          <span className="text-sm text-white font-medium tabular-nums">
+            {meuspontos} pts ({contribuicao}%)
+          </span>
         </div>
-        <Progress value={contribuicao} className="h-2 bg-white/10" />
+        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${Math.min(contribuicao, 100)}%`, backgroundColor: casaColor }}
+          />
+        </div>
         {minhaPosicao > 0 && (
-          <p className="text-xs text-white/30 mt-2">
-            Voce esta em {minhaPosicao}º lugar entre {totalMembros} membros
+          <p className="text-xs text-white/40 mt-2">
+            Você está em {minhaPosicao}º lugar entre {totalMembros} membros
           </p>
         )}
       </div>
@@ -275,10 +297,8 @@ const CasaPage = () => {
       {/* Destaques da fase (top 5) */}
       {top5.length > 0 && top5.some(m => m.total_pontos > 0) && (
         <div>
-          <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">
-            Destaques
-          </h3>
-          <div className="rounded-xl overflow-hidden bg-[#252547] border border-violet-500/10">
+          <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">Destaques</h3>
+          <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel overflow-hidden">
             {top5.filter(m => m.total_pontos > 0).map((membro, idx) => {
               const isMe = membro.aluno_id === user?.id;
               return (
@@ -286,12 +306,12 @@ const CasaPage = () => {
                   key={membro.aluno_id}
                   className={cn(
                     'flex items-center justify-between py-2.5 px-3',
-                    isMe && 'bg-white/5',
-                    idx > 0 && 'border-t border-violet-500/5'
+                    isMe && 'bg-white/[0.04]',
+                    idx > 0 && 'border-t border-white/[0.05]'
                   )}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-5 text-center text-sm text-white/40">{idx + 1}</span>
+                    <span className="w-5 text-center text-sm text-white/40 tabular-nums">{idx + 1}</span>
                     <div className="w-6 h-6 rounded-full bg-white/10 overflow-hidden shrink-0">
                       {membro.avatar_url ? (
                         <img src={membro.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -303,10 +323,12 @@ const CasaPage = () => {
                     </div>
                     <span className={cn('text-sm truncate', isMe ? 'text-white font-medium' : 'text-white/80')}>
                       {membro.aluno_nome}
-                      {isMe && <span className="text-white/30 ml-1">(voce)</span>}
+                      {isMe && <span className="text-white/30 ml-1">(você)</span>}
                     </span>
                   </div>
-                  <span className="text-sm text-green-400 shrink-0">{membro.total_pontos} pts</span>
+                  <span className="text-sm font-medium text-emerald-400 shrink-0 tabular-nums">
+                    +{membro.total_pontos} pts
+                  </span>
                 </div>
               );
             })}
@@ -314,13 +336,11 @@ const CasaPage = () => {
         </div>
       )}
 
-      {/* Lideranca */}
+      {/* Liderança */}
       <div>
-        <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">
-          Lideranca
-        </h3>
-        <div className="rounded-xl overflow-hidden bg-[#252547] border border-violet-500/10">
-          {lider && (
+        <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">Liderança</h3>
+        <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel overflow-hidden">
+          {lider ? (
             <div className="flex items-center justify-between py-2.5 px-3">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-6 h-6 rounded-full bg-white/10 overflow-hidden shrink-0">
@@ -335,15 +355,14 @@ const CasaPage = () => {
                 <span className="text-sm text-white truncate">{lider.aluno_nome}</span>
                 {lider.serie && <span className="text-white/25 text-xs">{lider.serie.replace(' Ano', '')}</span>}
               </div>
-              <span className="text-xs text-amber-400/80 font-medium">Lider</span>
+              <span className="text-xs font-medium" style={{ color: casaColor }}>Líder</span>
             </div>
-          )}
-          {!lider && (
-            <div className="py-2.5 px-3 text-sm text-white/30">Nenhum lider eleito</div>
+          ) : (
+            <div className="py-2.5 px-3 text-sm text-white/30">Nenhum líder eleito</div>
           )}
           {coordenadores.length > 0 && (
             <>
-              <div className="border-t border-violet-500/5" />
+              <div className="border-t border-white/[0.05]" />
               {(expandirCoords ? coordenadores : coordenadores.slice(0, 4)).map(coord => (
                 <div key={coord.aluno_id} className="flex items-center justify-between py-2 px-3">
                   <div className="flex items-center gap-2 min-w-0">
@@ -362,22 +381,16 @@ const CasaPage = () => {
                   <span className="text-[10px] text-white/30">Coord.</span>
                 </div>
               ))}
-              {coordenadores.length > 4 && !expandirCoords && (
+              {coordenadores.length > 4 && (
                 <button
-                  onClick={() => setExpandirCoords(true)}
+                  onClick={() => setExpandirCoords(!expandirCoords)}
                   className="w-full py-2 px-3 text-xs text-white/40 text-center hover:bg-white/[0.04] transition-colors flex items-center justify-center gap-1"
                 >
-                  +{coordenadores.length - 4} coordenadores
-                  <ChevronDown className="w-3 h-3" />
-                </button>
-              )}
-              {coordenadores.length > 4 && expandirCoords && (
-                <button
-                  onClick={() => setExpandirCoords(false)}
-                  className="w-full py-2 px-3 text-xs text-white/40 text-center hover:bg-white/[0.04] transition-colors flex items-center justify-center gap-1"
-                >
-                  Recolher
-                  <ChevronUp className="w-3 h-3" />
+                  {expandirCoords ? (
+                    <>Recolher <ChevronUp className="w-3 h-3" /></>
+                  ) : (
+                    <>+{coordenadores.length - 4} coordenadores <ChevronDown className="w-3 h-3" /></>
+                  )}
                 </button>
               )}
             </>
@@ -388,34 +401,32 @@ const CasaPage = () => {
       {/* Conquistas */}
       <button
         onClick={() => navigate('/aluno/conquistas')}
-        className="w-full flex items-center justify-between p-4 rounded-xl
-          bg-[#252547] border border-violet-500/10
-          hover:bg-white/[0.06] transition-colors active:scale-[0.98]"
+        data-augmented-ui="tl-clip br-clip border"
+        className="sf-card w-full flex items-center justify-between p-4 active:scale-[0.98] transition-transform"
       >
         <div className="flex items-center gap-3">
           <Trophy className="w-5 h-5 text-amber-400" />
-          <span className="text-sm text-white/70">Conquistas da Casa</span>
+          <span className="text-sm text-white/80">Conquistas da Casa</span>
         </div>
-        <ChevronRight className="w-4 h-4 text-white/30" />
+        <ChevronRight className="w-4 h-4 text-white/40" />
       </button>
 
       {/* Ver todos os membros */}
-      <div>
+      <div className="space-y-2">
         <button
           onClick={() => setExpandirMembros(!expandirMembros)}
-          className="w-full flex items-center justify-between p-4 rounded-xl
-            bg-[#252547] border border-violet-500/10
-            hover:bg-white/[0.06] transition-colors active:scale-[0.98]"
+          data-augmented-ui="tl-clip br-clip border"
+          className="sf-card w-full flex items-center justify-between p-4 active:scale-[0.98] transition-transform"
         >
           <div className="flex items-center gap-3">
-            <Users className="w-5 h-5 text-white/40" />
-            <span className="text-sm text-white/70">Ver todos os {totalMembros} membros</span>
+            <Users className="w-5 h-5 text-white/50" />
+            <span className="text-sm text-white/80">Ver todos os {totalMembros} membros</span>
           </div>
-          {expandirMembros ? <ChevronUp className="w-4 h-4 text-white/30" /> : <ChevronDown className="w-4 h-4 text-white/30" />}
+          {expandirMembros ? <ChevronUp className="w-4 h-4 text-white/40" /> : <ChevronDown className="w-4 h-4 text-white/40" />}
         </button>
 
         {expandirMembros && (
-          <div className="mt-2 rounded-xl overflow-hidden bg-[#252547] border border-violet-500/10">
+          <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel overflow-hidden">
             {[...membros].sort((a, b) => b.total_pontos - a.total_pontos).map((membro, idx) => {
               const isMe = membro.aluno_id === user?.id;
               return (
@@ -423,12 +434,12 @@ const CasaPage = () => {
                   key={membro.aluno_id}
                   className={cn(
                     'flex items-center justify-between py-2.5 px-3',
-                    isMe && 'bg-white/5',
-                    idx > 0 && 'border-t border-violet-500/5'
+                    isMe && 'bg-white/[0.04]',
+                    idx > 0 && 'border-t border-white/[0.05]'
                   )}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-5 text-center text-xs text-white/30">{idx + 1}</span>
+                    <span className="w-5 text-center text-xs text-white/30 tabular-nums">{idx + 1}</span>
                     <div className="w-6 h-6 rounded-full bg-white/10 overflow-hidden shrink-0">
                       {membro.avatar_url ? (
                         <img src={membro.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -441,12 +452,14 @@ const CasaPage = () => {
                     <div className="min-w-0">
                       <span className={cn('text-sm truncate block', isMe ? 'text-white font-medium' : 'text-white/80')}>
                         {membro.aluno_nome}
-                        {isMe && <span className="text-white/30 ml-1">(voce)</span>}
+                        {isMe && <span className="text-white/30 ml-1">(você)</span>}
                       </span>
                       {membro.serie && <span className="text-[10px] text-white/25">{membro.serie}</span>}
                     </div>
                   </div>
-                  <span className="text-sm text-green-400 shrink-0">{membro.total_pontos} pts</span>
+                  <span className="text-sm font-medium text-emerald-400 shrink-0 tabular-nums">
+                    +{membro.total_pontos} pts
+                  </span>
                 </div>
               );
             })}

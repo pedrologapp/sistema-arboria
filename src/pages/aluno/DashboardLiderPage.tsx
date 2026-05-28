@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,6 +7,13 @@ import { AlertTriangle, CheckCircle, Users, Trophy, ChevronDown, ChevronUp, Mess
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import SolicitacoesRecuperacao from '@/components/aluno/SolicitacoesRecuperacao';
+import '@/styles/missoes-scifi.css';
+
+// "#a78bfa" -> "167, 139, 250" (alimenta --sf-accent-rgb com a cor da casa)
+const hexToRgb = (hex: string): string | null => {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
+  return m ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}` : null;
+};
 
 const DashboardLiderPage = () => {
   const navigate = useNavigate();
@@ -212,8 +219,13 @@ const DashboardLiderPage = () => {
     </button>
   );
 
+  // Acento dos cards = cor da casa
+  const accentColor = casaColor || casa?.cor_hex || '#a78bfa';
+  const accentRgb = hexToRgb(accentColor) || '167, 139, 250';
+  const scifiVars = { '--sf-accent': accentColor, '--sf-accent-rgb': accentRgb } as CSSProperties;
+
   return (
-    <div className="p-4 space-y-5 pb-24">
+    <div className="scifi p-4 space-y-5 pb-24" style={scifiVars}>
       {/* Header */}
       <div>
         <h1 className="text-xl font-semibold text-white">Dashboard</h1>
@@ -241,7 +253,11 @@ const DashboardLiderPage = () => {
           {entregasData && entregasData.naoEntregaram && entregasData.naoEntregaram.length > 0 && (
             <div className="space-y-2">
               {entregasData.dentroPrazo.length > 0 && (
-                <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                <div
+                  data-augmented-ui="tl-clip br-clip border"
+                  className="sf-card p-3.5"
+                  style={{ ['--aug-border-bg' as string]: 'rgba(96, 165, 250, 0.45)' }}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <CheckCircle className="w-4 h-4 text-blue-400" />
@@ -255,7 +271,11 @@ const DashboardLiderPage = () => {
                 </div>
               )}
               {entregasData.prazoApertado.length > 0 && (
-                <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20">
+                <div
+                  data-augmented-ui="tl-clip br-clip border"
+                  className="sf-card p-3.5"
+                  style={{ ['--aug-border-bg' as string]: 'rgba(248, 113, 113, 0.45)' }}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4 text-red-400" />
@@ -268,11 +288,16 @@ const DashboardLiderPage = () => {
               )}
             </div>
           )}
-          <div className={cn('p-3.5 rounded-xl border',
-            aulaStatus === 'confirmada' ? 'bg-emerald-500/10 border-emerald-500/20' :
-            aulaStatus === 'cancelada' ? 'bg-red-500/10 border-red-500/20' :
-            'bg-white/[0.04] border-violet-500/10'
-          )}>
+          <div
+            data-augmented-ui="tl-clip br-clip border"
+            className="sf-card p-3.5"
+            style={{
+              ['--aug-border-bg' as string]:
+                aulaStatus === 'confirmada' ? 'rgba(52, 211, 153, 0.45)' :
+                aulaStatus === 'cancelada' ? 'rgba(248, 113, 113, 0.45)' :
+                undefined
+            }}
+          >
             <div className="flex items-center gap-2">
               {aulaStatus === 'confirmada' ? <CheckCircle className="w-4 h-4 text-emerald-400" /> :
                aulaStatus === 'cancelada' ? <AlertTriangle className="w-4 h-4 text-red-400" /> :
@@ -287,19 +312,19 @@ const DashboardLiderPage = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="p-3.5 rounded-xl text-center bg-[#252547] border border-violet-500/10">
+        <div data-augmented-ui="tl-clip br-clip border" className="sf-panel p-3.5 text-center">
           <div className="flex items-center justify-center gap-1 mb-0.5">
             <Trophy className="w-3.5 h-3.5 text-yellow-500" />
             <span className="text-xl font-bold text-white">{rankingCasa?.total_pontos || 0}</span>
           </div>
           <p className="text-[10px] text-white/40">Pontos</p>
         </div>
-        <div className="p-3.5 rounded-xl text-center bg-[#252547] border border-violet-500/10">
+        <div data-augmented-ui="tl-clip br-clip border" className="sf-panel p-3.5 text-center">
           <Users className="w-3.5 h-3.5 text-blue-400 mx-auto mb-0.5" />
           <span className="text-xl font-bold text-white">{membros.length}</span>
           <p className="text-[10px] text-white/40">Membros</p>
         </div>
-        <div className="p-3.5 rounded-xl text-center bg-[#252547] border border-violet-500/10">
+        <div data-augmented-ui="tl-clip br-clip border" className="sf-panel p-3.5 text-center">
           <span className={cn('text-xl font-bold', pctEntrega >= 80 ? 'text-emerald-400' : pctEntrega >= 50 ? 'text-amber-400' : 'text-red-400')}>{pctEntrega}%</span>
           <p className="text-[10px] text-white/40">Entregas</p>
         </div>
@@ -315,7 +340,7 @@ const DashboardLiderPage = () => {
           {turmaStat.map(([key, stat]) => {
             const pct = stat.total > 0 ? Math.round((stat.entregaram / stat.total) * 100) : 0;
             return (
-              <div key={key} className="flex items-center gap-3 p-2.5 rounded-lg bg-[#252547] border border-violet-500/10">
+              <div key={key} data-augmented-ui="tl-clip br-clip border" className="sf-card flex items-center gap-3 p-2.5">
                 <span className="text-xs font-bold text-white w-12">{stat.serie}º {stat.turma}</span>
                 <div className="flex-1">
                   <div className="h-2 bg-white/10 rounded-full overflow-hidden">
@@ -339,7 +364,7 @@ const DashboardLiderPage = () => {
             {expandirSemEntrega ? <ChevronUp className="w-3.5 h-3.5 text-white/30" /> : <ChevronDown className="w-3.5 h-3.5 text-white/30" />}
           </button>
           {expandirSemEntrega && (
-            <div className="rounded-xl bg-[#252547] border border-violet-500/10 p-3">
+            <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-3">
               <div className="flex flex-wrap gap-2">
                 {entregasData.naoEntregaram.map(a => (
                   <AvatarPequeno key={a.id} aluno={a} onClick={() => iniciarDM(a.id)} />
@@ -358,9 +383,9 @@ const DashboardLiderPage = () => {
             <div className="w-1 h-3.5 rounded-full bg-yellow-500" />
             <p className="text-[10px] font-semibold text-yellow-400/80 uppercase tracking-widest">Destaques</p>
           </div>
-          <div className="rounded-xl bg-[#252547] border border-violet-500/10 overflow-hidden">
+          <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel overflow-hidden">
             {top5.filter(m => (m.total_pontos || 0) > 0).map((m, idx) => (
-              <div key={m.aluno_id} className={cn('flex items-center gap-3 py-2.5 px-3.5', idx > 0 && 'border-t border-violet-500/5')}>
+              <div key={m.aluno_id} className={cn('flex items-center gap-3 py-2.5 px-3.5', idx > 0 && 'border-t border-white/[0.05]')}>
                 <span className="text-sm text-white/40 w-5 text-center">{idx + 1}</span>
                 <span className="text-sm text-white/80 flex-1 truncate">{m.aluno_nome}</span>
                 <span className="text-sm text-emerald-400 font-medium">{m.total_pontos} pts</span>
@@ -377,7 +402,7 @@ const DashboardLiderPage = () => {
             <div className="w-1 h-3.5 rounded-full bg-amber-500" />
             <p className="text-[10px] font-semibold text-amber-400/80 uppercase tracking-widest">Coordenadores</p>
           </div>
-          <div className="rounded-xl bg-[#252547] border border-violet-500/10 overflow-hidden">
+          <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel overflow-hidden">
             {coordenadores.map((c: any, idx) => {
               const prof = c.profiles as any;
               const serie = prof?.serie?.replace(/\D/g, '') || '?';
@@ -386,7 +411,7 @@ const DashboardLiderPage = () => {
               return (
                 <button key={c.aluno_id}
                   onClick={() => iniciarDM(c.aluno_id)}
-                  className={cn('w-full flex items-center gap-3 py-2.5 px-3.5 hover:bg-white/[0.04] transition-colors text-left', idx > 0 && 'border-t border-violet-500/5')}>
+                  className={cn('w-full flex items-center gap-3 py-2.5 px-3.5 hover:bg-white/[0.04] transition-colors text-left', idx > 0 && 'border-t border-white/[0.05]')}>
                   <div className="w-8 h-8 rounded-full overflow-hidden border-2 shrink-0" style={{ borderColor: casaColor }}>
                     {prof?.avatar_url ? <img src={prof.avatar_url} alt="" className="w-full h-full object-cover" /> :
                     <span className="flex items-center justify-center w-full h-full text-[10px] text-white/50" style={{ backgroundColor: `${casaColor}20` }}>
@@ -410,11 +435,11 @@ const DashboardLiderPage = () => {
             <div className="w-1 h-3.5 rounded-full bg-amber-500" />
             <p className="text-[10px] font-semibold text-amber-400/80 uppercase tracking-widest">Meus Alunos</p>
           </div>
-          <div className="rounded-xl bg-[#252547] border border-violet-500/10 overflow-hidden">
+          <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel overflow-hidden">
             {membros.filter(m => m.id !== profile?.id).map((m, idx) => (
               <button key={m.id}
                 onClick={() => iniciarDM(m.id)}
-                className={cn('w-full flex items-center gap-3 py-2.5 px-3.5 hover:bg-white/[0.04] transition-colors text-left', idx > 0 && 'border-t border-violet-500/5')}>
+                className={cn('w-full flex items-center gap-3 py-2.5 px-3.5 hover:bg-white/[0.04] transition-colors text-left', idx > 0 && 'border-t border-white/[0.05]')}>
                 <div className="w-8 h-8 rounded-full overflow-hidden border-2 shrink-0" style={{ borderColor: casaColor }}>
                   {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover" /> :
                   <span className="flex items-center justify-center w-full h-full text-[10px] text-white/50" style={{ backgroundColor: `${casaColor}20` }}>
@@ -433,9 +458,9 @@ const DashboardLiderPage = () => {
 
       {/* Fase */}
       {faseAtual && (
-        <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center">
-          <p className="text-xs text-white/30">
-            Fase {faseAtual.numero_fase} — {faseAtual.inteligencia?.nome} · Semana {faseAtual.semana_atual || 1} de 4
+        <div data-augmented-ui="tl-clip br-clip border" className="sf-card p-3 text-center">
+          <p className="text-xs text-white/40">
+            Fase {faseAtual.numero_fase} — {faseAtual.inteligencia?.nome}
           </p>
         </div>
       )}
@@ -485,7 +510,12 @@ const ReportesCoordSection = ({ institutionId, casaId, casaColor }: {
           const hora = new Date(r.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
           const dia = new Date(r.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
           return (
-            <div key={r.id} className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20">
+            <div
+              key={r.id}
+              data-augmented-ui="tl-clip br-clip border"
+              className="sf-card p-3"
+              style={{ ['--aug-border-bg' as string]: 'rgba(249, 115, 22, 0.45)' }}
+            >
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-6 h-6 rounded-full overflow-hidden bg-white/10 shrink-0">
                   {aluno?.avatar_url ? <img src={aluno.avatar_url} alt="" className="w-full h-full object-cover" /> :
@@ -543,8 +573,8 @@ const ReportarMentor = ({ userId, institutionId, casaId, casaColor, cargo }: {
       {!aberto ? (
         <button
           onClick={() => setAberto(true)}
-          className="w-full p-3.5 rounded-2xl border text-left transition-all hover:bg-white/[0.03] active:scale-[0.98]"
-          style={{ borderColor: `${casaColor}15`, background: `linear-gradient(135deg, ${casaColor}05, #252547)` }}
+          data-augmented-ui="tl-clip br-clip border"
+          className="sf-card w-full p-3.5 text-left active:scale-[0.98] transition-transform"
         >
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl" style={{ backgroundColor: `${casaColor}15` }}>
@@ -561,7 +591,7 @@ const ReportarMentor = ({ userId, institutionId, casaId, casaColor, cargo }: {
           </div>
         </button>
       ) : (
-        <div className="rounded-2xl border p-4" style={{ borderColor: `${casaColor}20`, background: `linear-gradient(135deg, ${casaColor}08, #252547)` }}>
+        <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-4">
           <p className="text-sm text-white/60 mb-1">Fale com seu {destinatarioLabel}</p>
           <p className="text-[10px] text-white/25 mb-2">
             {isCoordenador

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { Target, MessageCircle, Shield, User, Star, AlertTriangle, Trophy, Sparkles, Bell, HelpCircle, Send, Loader2 } from 'lucide-react';
 import { useStudent } from '@/contexts/StudentContext';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
@@ -10,6 +10,13 @@ import { Progress } from '@/components/ui/progress';
 import { hojeBrasil } from '@/utils/timezone';
 import { CROSS_IM_COMBINACOES, MECANISMOS_CASA } from '@/data/crossImData';
 import OnboardingModal from '@/components/aluno/OnboardingModal';
+import '@/styles/missoes-scifi.css';
+
+// "#a78bfa" -> "167, 139, 250" (alimenta --sf-accent-rgb com a cor da casa)
+const hexToRgb = (hex: string): string | null => {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
+  return m ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}` : null;
+};
 
 const saudacoes = [
   'Bom te ver por aqui',
@@ -199,8 +206,13 @@ const HomePage = () => {
     return () => clearInterval(interval);
   }, [frasesDisponiveis.length]);
 
+  // Acento dos cards = cor da casa (fallback roxo)
+  const accentColor = casaColor || casa?.cor_hex || '#a78bfa';
+  const accentRgb = hexToRgb(accentColor) || '167, 139, 250';
+  const scifiVars = { '--sf-accent': accentColor, '--sf-accent-rgb': accentRgb } as CSSProperties;
+
   return (
-    <div className="p-4 space-y-4 pb-24">
+    <div className="scifi p-4 space-y-4 pb-24" style={scifiVars}>
       {/* Onboarding primeiro acesso */}
       <OnboardingModal
         isOpen={showOnboarding}
@@ -230,7 +242,9 @@ const HomePage = () => {
               navigate('/aluno/missoes');
             }
           }}
-          className="w-full p-3 rounded-2xl text-left bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/15 transition-colors active:scale-[0.98]"
+          data-augmented-ui="tl-clip br-clip border"
+          className="sf-card w-full p-3 text-left active:scale-[0.98] transition-transform"
+          style={{ ['--aug-border-bg' as string]: 'rgba(245, 158, 11, 0.4)' }}
         >
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
@@ -238,7 +252,7 @@ const HomePage = () => {
               <p className="text-white text-sm font-medium">
                 {missoesUrgentes.length === 1 ? '1 missão para entregar' : `${missoesUrgentes.length} missões para entregar`}
               </p>
-              <p className="text-amber-400/50 text-[10px] mt-0.5">
+              <p className="text-amber-400/60 text-[10px] mt-0.5">
                 {missoesUrgentes.length === 1 ? 'Toque para abrir' : 'Prazo encerrando'}
               </p>
             </div>
@@ -248,7 +262,7 @@ const HomePage = () => {
 
       {/* CARD: Aluno sem casa */}
       {!casa && (
-        <div className="animate-fade-in p-5 rounded-2xl bg-[#252547] border border-violet-500/10 text-center">
+        <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel animate-fade-in p-5 text-center">
           <p className="text-white font-medium">Bem-vindo ao Arboria!</p>
           <p className="text-white/40 text-sm mt-2">Você ainda não foi alocado a uma casa. Aguarde seu professor — em breve você vai descobrir a qual casa pertence!</p>
         </div>
@@ -257,11 +271,12 @@ const HomePage = () => {
       {/* CARD DA CASA */}
       {casa && (
         <div
-          className="relative overflow-hidden rounded-3xl border animate-fade-in animate-fade-in-d1"
-          style={{ borderColor: `${casaColor}30`, boxShadow: `0 20px 50px -12px ${casaColor}35` }}
+          data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
+          className="sf-panel sf-accent-border relative overflow-hidden animate-fade-in animate-fade-in-d1"
+          style={{ boxShadow: `0 20px 50px -12px ${casaColor}35` }}
         >
           {/* Background gradient com cor da casa */}
-          <div className="absolute inset-0" style={{ background: `linear-gradient(160deg, ${casaColor}20 0%, #252547 50%, #1A1A2E 100%)` }} />
+          <div className="absolute inset-0 pointer-events-none" style={{ background: `linear-gradient(160deg, ${casaColor}20 0%, transparent 50%, transparent 100%)` }} />
           <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full blur-3xl opacity-25 pointer-events-none" style={{ backgroundColor: casaColor }} />
           <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full blur-2xl opacity-15 pointer-events-none" style={{ backgroundColor: casaColor }} />
 
@@ -316,15 +331,9 @@ const HomePage = () => {
             {/* Fase */}
             {faseAtual && faseAtual.inteligencia && (
               <div className="mt-4 pt-4 border-t" style={{ borderColor: `${casaColor}15` }}>
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-white/50">
-                    Fase {faseAtual.numero_fase} — {faseAtual.inteligencia.nome}
-                  </p>
-                  <span className="text-[10px] text-white/30">Semana {semanaAtual} de 4</span>
-                </div>
-                <div className="mt-1.5 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full transition-all" style={{ width: `${(semanaAtual / 4) * 100}%`, backgroundColor: casaColor }} />
-                </div>
+                <p className="text-xs text-white/50">
+                  Fase {faseAtual.numero_fase} — {faseAtual.inteligencia.nome}
+                </p>
               </div>
             )}
           </div>
@@ -335,8 +344,8 @@ const HomePage = () => {
       {isLiderOuCoord && resumoCasa && (
         <button
           onClick={() => navigate('/aluno/dashboard')}
-          className="w-full p-3.5 rounded-2xl text-left border animate-fade-in animate-fade-in-d2 hover:bg-white/[0.03] transition-colors active:scale-[0.98]"
-          style={{ borderColor: `${casaColor}20`, background: `linear-gradient(135deg, ${casaColor}08, #252547)` }}
+          data-augmented-ui="tl-clip br-clip border"
+          className="sf-card w-full p-3.5 text-left animate-fade-in animate-fade-in-d2 active:scale-[0.98] transition-transform"
         >
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl" style={{ backgroundColor: `${casaColor}20` }}>
@@ -365,15 +374,9 @@ const HomePage = () => {
 
       {/* MISSOES em destaque */}
       <button
-        onClick={() => {
-          if (faseAtual?.id && semanaAtual) {
-            navigate(`/aluno/missoes/fase/${faseAtual.id}/semana/${semanaAtual}`);
-          } else {
-            navigate('/aluno/missoes');
-          }
-        }}
-        className="relative w-full p-4 rounded-2xl text-left overflow-hidden border active:scale-[0.98] transition-all animate-fade-in animate-fade-in-d2"
-        style={{ borderColor: `${casaColor}20`, background: `linear-gradient(135deg, ${casaColor}12, #252547)` }}
+        onClick={() => navigate('/aluno/missoes')}
+        data-augmented-ui="tl-clip br-clip border"
+        className="sf-card relative w-full p-4 text-left overflow-hidden active:scale-[0.98] transition-transform animate-fade-in animate-fade-in-d2"
       >
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl" style={{ backgroundColor: `${casaColor}20` }}>
@@ -382,7 +385,7 @@ const HomePage = () => {
           <div className="flex-1">
             <p className="text-white font-semibold text-sm">Missões da Fase</p>
             <p className="text-white/40 text-[11px] mt-0.5">
-              {faseAtual ? `Semana ${semanaAtual} de 4` : 'Nenhuma fase ativa'}
+              {faseAtual ? faseAtual.inteligencia?.nome ?? 'Fase ativa' : 'Nenhuma fase ativa'}
             </p>
           </div>
           {missoesPendentes > 0 && (
@@ -406,13 +409,14 @@ const HomePage = () => {
             <button
               key={item.label}
               onClick={() => navigate(item.path)}
-              className="relative flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-[#252547] border border-violet-500/10 hover:bg-white/[0.06] transition-all active:scale-[0.95]"
+              data-augmented-ui="tl-clip br-clip border"
+              className="sf-card relative flex-1 flex flex-col items-center gap-1.5 py-3 active:scale-[0.95] transition-transform"
             >
               {(item.badge ?? 0) > 0 && (
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
               )}
               <Icon className="w-5 h-5" style={{ color: item.color }} />
-              <span className="text-[10px] text-white/50">{item.label}</span>
+              <span className="text-[10px] text-white/60">{item.label}</span>
             </button>
           );
         })}
@@ -500,7 +504,7 @@ const CheckInEmocional = ({ userId, casaColor }: { userId?: string; casaColor: s
   if (jaRespondeu) return null;
 
   return (
-    <div className="animate-fade-in animate-fade-in-d4 rounded-2xl border p-4" style={{ borderColor: `${casaColor}20`, background: `linear-gradient(135deg, ${casaColor}08, #252547)` }}>
+    <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel animate-fade-in animate-fade-in-d4 p-4">
       <p className="text-sm text-white/60 mb-3">Como voce esta se sentindo hoje?</p>
       <div className="grid grid-cols-4 gap-2">
         {emojisCheckin.map(({ emoji, label }) => (
@@ -551,7 +555,7 @@ const CampoRelato = ({ userId, institutionId, faseId, semana, casaColor }: {
   };
 
   return (
-    <div className="animate-fade-in animate-fade-in-d4 rounded-2xl border p-4" style={{ borderColor: `${casaColor}20`, background: `linear-gradient(135deg, ${casaColor}08, #252547)` }}>
+    <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel animate-fade-in animate-fade-in-d4 p-4">
       <p className="text-sm text-white/60 mb-2">Quer falar algo sobre essa fase? Ou sobre voce?</p>
       <textarea
         value={texto}
@@ -599,8 +603,8 @@ const CrossImHomeCard = ({ casaCodigo, faseCodigo, corCasa }: {
 
   return (
     <div
-      className="animate-fade-in animate-fade-in-d2 rounded-2xl border overflow-hidden transition-all"
-      style={{ borderColor: `${corCasa}15`, background: `linear-gradient(135deg, ${corCasa}08, #252547)` }}
+      data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
+      className="sf-panel animate-fade-in animate-fade-in-d2 overflow-hidden transition-all"
     >
       <button
         onClick={() => setExpandido(!expandido)}
@@ -688,8 +692,8 @@ const DesafioDiarioLembrete = ({ casaCodigo, casaColor }: { casaCodigo?: string;
   return (
     <button
       onClick={() => navigate('/aluno/casa')}
-      className="w-full p-3.5 rounded-2xl text-left border animate-fade-in animate-fade-in-d3 hover:bg-white/[0.03] transition-colors active:scale-[0.98]"
-      style={{ borderColor: `${casaColor}20`, background: `linear-gradient(135deg, ${casaColor}08, #252547)` }}
+      data-augmented-ui="tl-clip br-clip border"
+      className="sf-card w-full p-3.5 text-left animate-fade-in animate-fade-in-d3 active:scale-[0.98] transition-transform"
     >
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-xl" style={{ backgroundColor: `${casaColor}20` }}>
@@ -729,7 +733,12 @@ const AvisosCard = () => {
   return (
     <div className="space-y-2 animate-fade-in">
       {visiveis.map((aviso: any) => (
-        <div key={aviso.id} className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 relative">
+        <div
+          key={aviso.id}
+          data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
+          className="sf-panel p-3.5 relative"
+          style={{ ['--aug-border-bg' as string]: 'rgba(245, 158, 11, 0.45)' }}
+        >
           <button onClick={() => setFechados(prev => new Set(prev).add(aviso.id))}
             className="absolute top-2 right-2 text-amber-400/40 hover:text-amber-400/80 text-xs p-1">
             x
@@ -776,19 +785,26 @@ const RelatarProblemaCard = ({ userId, institutionId }: { userId?: string; insti
   return (
     <div className="animate-fade-in">
       {enviado ? (
-        <div className="p-3 rounded-2xl bg-green-500/10 border border-green-500/20 text-center">
+        <div
+          data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
+          className="sf-panel p-3 text-center"
+          style={{ ['--aug-border-bg' as string]: 'rgba(52, 211, 153, 0.4)' }}
+        >
           <p className="text-xs text-green-400">Problema relatado! Vamos verificar.</p>
         </div>
       ) : !aberto ? (
-        <button onClick={() => setAberto(true)}
-          className="w-full p-3 rounded-2xl text-left bg-white/[0.03] border border-white/10 hover:bg-white/[0.05] transition-colors">
+        <button
+          onClick={() => setAberto(true)}
+          data-augmented-ui="tl-clip br-clip border"
+          className="sf-card w-full p-3 text-left"
+        >
           <div className="flex items-center gap-3">
-            <HelpCircle className="w-4 h-4 text-white/25 shrink-0" />
-            <p className="text-xs text-white/30">Está com algum problema? Toque para nos contar</p>
+            <HelpCircle className="w-4 h-4 text-white/35 shrink-0" />
+            <p className="text-xs text-white/40">Está com algum problema? Toque para nos contar</p>
           </div>
         </button>
       ) : (
-        <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2">
+        <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-3.5 space-y-2">
           <p className="text-xs text-white/40">Descreva o problema:</p>
           <textarea value={texto} onChange={e => setTexto(e.target.value)}
             placeholder="O que está acontecendo?"

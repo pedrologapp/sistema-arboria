@@ -28,7 +28,8 @@ export const useNotificacoes = () => {
     queryFn: async () => {
       if (!user?.id) return null;
 
-      const [missaoRes, aprovadasRes, missaoInfoRes] = await Promise.all([
+      // Chama o RPC pesado UMA vez só (antes era chamado 2x) + entregas em paralelo
+      const [missaoRes, aprovadasRes] = await Promise.all([
         supabase.rpc('get_missoes_do_aluno', { p_aluno_id: user.id }),
         supabase
           .from('entregas')
@@ -36,17 +37,22 @@ export const useNotificacoes = () => {
           .eq('aluno_id', user.id)
           .eq('status', 'aprovada')
           .eq('visualizada_pelo_aluno', false),
-        supabase.rpc('get_missoes_do_aluno', { p_aluno_id: user.id }).then(async (res) => {
-          if (!res.data?.length) return { data: [] };
-          const ids = res.data.map((m: any) => m.id);
-          return supabase.from('missoes').select('id, fase_id, semana').in('id', ids);
-        }),
       ]);
 
+      const missoes = missaoRes.data || [];
+
+      // Info de fase/semana das mesmas missões (reaproveita os ids do RPC)
+      let missaoInfo: { id: string; fase_id: string | null; semana: number | null }[] = [];
+      if (missoes.length > 0) {
+        const ids = missoes.map((m: { id: string }) => m.id);
+        const { data } = await supabase.from('missoes').select('id, fase_id, semana').in('id', ids);
+        missaoInfo = data || [];
+      }
+
       return {
-        missoes: missaoRes.data || [],
+        missoes,
         aprovadas: aprovadasRes.data || [],
-        missaoInfo: missaoInfoRes.data || [],
+        missaoInfo,
       };
     },
     enabled: !!user?.id,

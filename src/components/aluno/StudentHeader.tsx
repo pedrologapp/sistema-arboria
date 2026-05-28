@@ -26,14 +26,11 @@ const StudentHeader = ({ notificationCount = 0 }: StudentHeaderProps) => {
               <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
             ) : faseAtual?.inteligencia ? (
               <div className="flex flex-col items-end">
-                <span 
+                <span
                   className="text-sm font-medium"
                   style={{ color: faseAtual.inteligencia.cor_hex || '#fff' }}
                 >
                   Fase {faseAtual.inteligencia.nome}
-                </span>
-                <span className="text-xs text-white/50">
-                  Semana {faseAtual.semana_atual || 1}
                 </span>
               </div>
             ) : null}

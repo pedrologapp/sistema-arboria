@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, MessageCircle, Hash, Users, Lock } from 'lucide-react';
@@ -10,6 +10,13 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ConselhoLideresLocked } from '@/components/chat/ConselhoLideresLocked';
 import { LiderancaCasaLocked } from '@/components/chat/LiderancaCasaLocked';
+import '@/styles/missoes-scifi.css';
+
+// "#a78bfa" -> "167, 139, 250" (alimenta --sf-accent-rgb com a cor da casa)
+const hexToRgb = (hex: string): string | null => {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
+  return m ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}` : null;
+};
 
 const ChatPage = () => {
   const navigate = useNavigate();
@@ -405,8 +412,13 @@ const ChatPage = () => {
   const dmsPermitidas = dmsNaoLidas.filter(d => idsMinhaCasa.has(d.outroUsuarioId));
   const dmNaoLidaIds = new Set(dmsPermitidas.map(d => d.outroUsuarioId));
 
+  // Acento dos cards = cor da casa
+  const accentColor = casaColor || casa?.cor_hex || '#a78bfa';
+  const accentRgb = hexToRgb(accentColor) || '167, 139, 250';
+  const scifiVars = { '--sf-accent': accentColor, '--sf-accent-rgb': accentRgb } as CSSProperties;
+
   return (
-    <div className="p-4 space-y-5 pb-24">
+    <div className="scifi p-4 space-y-5 pb-24" style={scifiVars}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-white">Chat</h1>
@@ -417,13 +429,13 @@ const ChatPage = () => {
       </div>
 
       {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+      <div data-augmented-ui="tl-clip br-clip border" className="sf-card relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none z-10" />
         <Input
           placeholder="Buscar canais ou membros..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 bg-white/[0.04] border-violet-500/10 text-white placeholder:text-white/30 h-9 text-sm"
+          className="pl-10 bg-transparent border-0 text-white placeholder:text-white/30 h-10 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
         />
       </div>
 
@@ -435,7 +447,7 @@ const ChatPage = () => {
             Minha Casa
           </p>
         </div>
-        <div className="space-y-0.5">
+        <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-2 space-y-0.5">
           {filteredCasaCanais.map(canal => (
             <CanalRow key={canal.id} canal={canal} hashColor="text-blue-400/50" />
           ))}
@@ -467,7 +479,7 @@ const ChatPage = () => {
               Escola
             </p>
           </div>
-          <div className="space-y-0.5">
+          <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-2 space-y-0.5">
             {filteredEscolaCanais.map(canal => (
               <CanalRow key={canal.id} canal={canal} hashColor="text-emerald-400/50" />
             ))}
@@ -485,7 +497,7 @@ const ChatPage = () => {
             </p>
           </div>
         </div>
-        <div className="space-y-2">
+        <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-2 space-y-2">
           {/* Nao lidas (prioridade, sempre visivel) */}
           {[mentorCasa, ...filteredLideranca, ...filteredMembros].filter(Boolean).filter(m => dmNaoLidaIds.has(m!.id)).length > 0 && (
             <div>

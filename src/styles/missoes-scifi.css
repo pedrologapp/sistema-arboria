@@ -1,0 +1,93 @@
+/* =========================================================
+   "Card chanfrado" — linguagem visual padrão (Arboria)
+   Cards de fundo escuro #0A0E1A + cantos chanfrados (augmented-ui)
+   + borda na cor da casa do aluno (via vars). Fonte = Inter (do app).
+   ========================================================= */
+
+.scifi {
+  --sf-accent: #a78bfa;
+  --sf-accent-rgb: 167, 139, 250; /* sobrescrito em runtime pela cor da casa */
+  --sf-success: #34d399;
+  --sf-card-bg: #0A0E1A;
+  --sf-text: #e8f4f8;
+  --sf-text-dim: #94A3B8;
+  position: relative;
+}
+
+.sf-dim { color: var(--sf-text-dim); }
+.sf-accent { color: var(--sf-accent); }
+
+/* ---- Painel chanfrado (cards principais) ---- */
+.sf-panel {
+  --aug-border-all: 1px;
+  --aug-border-bg: rgba(var(--sf-accent-rgb), 0.35);
+  --aug-tl: 10px;
+  --aug-tr: 10px;
+  --aug-bl: 10px;
+  --aug-br: 10px;
+  background: var(--sf-card-bg);
+  color: var(--sf-text);
+  transition: box-shadow 0.22s ease;
+}
+.sf-panel.sf-accent-border {
+  --aug-border-bg: var(--sf-accent);
+  box-shadow: 0 6px 20px -8px rgba(var(--sf-accent-rgb), 0.18);
+}
+
+/* ---- Card menor (linhas, botões chanfrados) ---- */
+.sf-card {
+  --aug-border-all: 1px;
+  --aug-border-bg: rgba(var(--sf-accent-rgb), 0.25);
+  --aug-tl: 6px;
+  --aug-br: 6px;
+  background: var(--sf-card-bg);
+  color: var(--sf-text);
+  transition: box-shadow 0.2s ease, --aug-border-bg 0.2s ease;
+}
+.sf-card:hover {
+  --aug-border-bg: rgba(var(--sf-accent-rgb), 0.6);
+  box-shadow: 0 4px 14px -6px rgba(var(--sf-accent-rgb), 0.22);
+}
+
+/* container chanfrado pequeno (ícones/avatares) */
+.sf-icon-box {
+  --aug-border-all: 1px;
+  --aug-border-bg: rgba(var(--sf-accent-rgb), 0.5);
+  --aug-tl: 5px;
+  --aug-br: 5px;
+  background: var(--sf-card-bg);
+}
+
+/* botão de ação (FAZER) — chanfrado + borda na cor da casa */
+.sf-exec {
+  font-weight: 500;
+  color: var(--sf-accent);
+  background: transparent;
+  border: 1px solid rgba(var(--sf-accent-rgb), 0.5);
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.sf-exec:hover {
+  background: rgba(var(--sf-accent-rgb), 0.12);
+  color: #fff;
+}
+
+/* indicador pulsante (dot do "Ativa") */
+@keyframes sf-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 7px var(--sf-success); }
+  50% { opacity: 0.35; box-shadow: 0 0 2px var(--sf-success); }
+}
+.sf-dot { animation: sf-pulse 1.4s ease-in-out infinite; }
+
+/* entrada suave dos cards */
+@keyframes sf-boot {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.sf-boot { animation: sf-boot 0.35s ease-out both; }
+
+/* chip de filtro ativo (na aba Concluídas) */
+.sf-chip-active {
+  --aug-border-bg: var(--sf-accent);
+  color: var(--sf-accent);
+  box-shadow: 0 0 10px rgba(var(--sf-accent-rgb), 0.2);
+}

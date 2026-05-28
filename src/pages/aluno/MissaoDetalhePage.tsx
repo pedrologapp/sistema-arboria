@@ -18,7 +18,6 @@ import {
   Trophy,
   Info,
   Download,
-  Camera,
   File
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -200,7 +199,6 @@ const MissaoDetalhePage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
   // Estados
   const [missao, setMissao] = useState<MissaoDetalhe | null>(null);
   const [entrega, setEntrega] = useState<Entrega | null>(null);
@@ -456,6 +454,15 @@ const MissaoDetalhePage = () => {
     const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
     Array.from(files).forEach(file => {
+      if (file.type !== 'application/pdf') {
+        toast({
+          variant: "destructive",
+          title: "Formato não permitido",
+          description: `${file.name}: anexe apenas PDF, ou escreva sua resposta no campo de texto.`
+        });
+        return;
+      }
+
       if (file.size > MAX_SIZE) {
         toast({
           variant: "destructive",
@@ -469,11 +476,6 @@ const MissaoDetalhePage = () => {
         file,
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       };
-
-      // Criar preview para imagens
-      if (file.type.startsWith('image/')) {
-        arquivoUpload.preview = URL.createObjectURL(file);
-      }
 
       novosArquivos.push(arquivoUpload);
     });
@@ -1322,20 +1324,11 @@ const MissaoDetalhePage = () => {
 
               {/* Instrução */}
               <p className="text-white/50 text-sm">
-                Escreva sua resposta ou envie fotos e arquivos.
+                Escreva sua resposta abaixo. Se preferir, anexe um PDF. Dica: dá pra digitar no computador ou tablet, ou escrever no celular e colar aqui.
               </p>
 
-              {/* Botões de upload em linha */}
+              {/* Botão de upload */}
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => photoInputRef.current?.click()}
-                  disabled={enviando}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg bg-white/5 border border-violet-500/10 hover:bg-white/10 transition-colors text-white/70"
-                >
-                  <Camera className="w-5 h-5" />
-                  <span className="text-sm">Foto</span>
-                </button>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
@@ -1343,26 +1336,16 @@ const MissaoDetalhePage = () => {
                   className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg bg-white/5 border border-violet-500/10 hover:bg-white/10 transition-colors text-white/70"
                 >
                   <File className="w-5 h-5" />
-                  <span className="text-sm">Arquivo</span>
+                  <span className="text-sm">Anexar PDF</span>
                 </button>
               </div>
 
-              {/* Hidden inputs */}
-              <input
-                ref={photoInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                multiple
-                onChange={(e) => handleFileSelect(e.target.files)}
-                className="hidden"
-                disabled={enviando}
-              />
+              {/* Hidden input */}
               <input
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept="image/*,.pdf,.txt"
+                accept="application/pdf"
                 onChange={(e) => handleFileSelect(e.target.files)}
                 className="hidden"
                 disabled={enviando}

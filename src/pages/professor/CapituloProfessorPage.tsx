@@ -72,6 +72,9 @@ interface TurmaConfig {
   id?: string;
   data_evento: string | null;
   delegacoes_ativas: string[];
+  missoes_liberadas_em?: string | null;
+  missoes_data_prazo?: string | null;
+  missoes_liberadas_por?: string | null;
 }
 
 interface MembroDelegacao {
@@ -153,6 +156,9 @@ const CapituloProfessorPage = () => {
   const { profile, faseAtual, isLoading } = useProfessor();
   const qc = useQueryClient();
   const [turmaAtivaId, setTurmaAtivaId] = useState<string | null>(null);
+  const [editandoPrazo, setEditandoPrazo] = useState(false);
+  const [novoPrazo, setNovoPrazo] = useState('');
+  const [aplicarTodasTurmas, setAplicarTodasTurmas] = useState(false);
   const [papelParaAlocar, setPapelParaAlocar] = useState<Papel | null>(null);
   const [delegacaoParaAddMembro, setDelegacaoParaAddMembro] = useState<Delegacao | null>(null);
   const [savingConfig, setSavingConfig] = useState(false);
@@ -227,7 +233,7 @@ const CapituloProfessorPage = () => {
     enabled: !!capitulo?.id && !!turmaId,
     queryFn: async () => {
       const { data } = await sb.from('capitulo_turma_config')
-        .select('id, data_evento, delegacoes_ativas')
+        .select('id, data_evento, delegacoes_ativas, missoes_liberadas_em, missoes_data_prazo')
         .eq('capitulo_id', capitulo!.id).eq('turma_id', turmaId!).maybeSingle();
       return data ?? null;
     },
@@ -345,6 +351,72 @@ const CapituloProfessorPage = () => {
 
   const setData = (data: string) => {
     upsertConfig({ data_evento: data || null });
+  };
+
+  const liberarMissoes = async () => {
+    const agora = new Date();
+    const prazo = new Date(agora.getTime() + 7 * 24 * 60 * 60 * 1000); // +7 dias
+    await upsertConfig({
+      missoes_liberadas_em: agora.toISOString(),
+      missoes_data_prazo: prazo.toISOString(),
+      missoes_liberadas_por: profile?.id ?? null,
+    });
+    toast.success(`Missões do capítulo liberadas! Prazo: ${prazo.toLocaleDateString('pt-BR')}`);
+  };
+
+  const abrirEditorPrazo = () => {
+    // pré-preenche com o prazo atual OU hoje + 7 dias
+    const base = turmaConfig?.missoes_data_prazo
+      ? new Date(turmaConfig.missoes_data_prazo)
+      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    // input type="date" precisa de YYYY-MM-DD
+    const yyyy = base.getFullYear();
+    const mm = String(base.getMonth() + 1).padStart(2, '0');
+    const dd = String(base.getDate()).padStart(2, '0');
+    setNovoPrazo(`${yyyy}-${mm}-${dd}`);
+    setAplicarTodasTurmas(false);
+    setEditandoPrazo(true);
+  };
+
+  const salvarNovoPrazo = async () => {
+    if (!capitulo?.id || !profile?.id || !novoPrazo) return;
+    setSavingConfig(true);
+    // 23:59:59 -03 do dia escolhido (Brasília)
+    const dataIso = new Date(`${novoPrazo}T23:59:59-03:00`).toISOString();
+
+    if (aplicarTodasTurmas) {
+      // Atualiza TODAS as turmas JÁ liberadas deste capítulo
+      const { error: updErr } = await sb.from('capitulo_turma_config')
+        .update({ missoes_data_prazo: dataIso, missoes_liberadas_por: profile.id })
+        .eq('capitulo_id', capitulo.id)
+        .not('missoes_liberadas_em', 'is', null);
+      if (updErr) {
+        toast.error(updErr.message || 'Erro ao atualizar turmas');
+        setSavingConfig(false);
+        return;
+      }
+      // Se ESTA turma ainda não estava liberada, libera agora
+      if (turmaId && !turmaConfig?.missoes_liberadas_em) {
+        await upsertConfig({
+          missoes_liberadas_em: new Date().toISOString(),
+          missoes_data_prazo: dataIso,
+          missoes_liberadas_por: profile.id,
+        });
+      } else {
+        refetchConfig();
+      }
+      toast.success(`Prazo atualizado em todas as turmas já liberadas: ${new Date(dataIso).toLocaleDateString('pt-BR')}`);
+    } else {
+      // Só esta turma
+      await upsertConfig({
+        missoes_liberadas_em: turmaConfig?.missoes_liberadas_em || new Date().toISOString(),
+        missoes_data_prazo: dataIso,
+        missoes_liberadas_por: profile.id,
+      });
+      toast.success(`Prazo atualizado: ${new Date(dataIso).toLocaleDateString('pt-BR')}`);
+    }
+    setEditandoPrazo(false);
+    setSavingConfig(false);
   };
 
   const alocar = async (papelId: string, alunoId: string) => {
@@ -542,6 +614,95 @@ const CapituloProfessorPage = () => {
             disabled={savingConfig}
             className="bg-[#0F0F1E] border border-white/10 rounded-lg px-3 py-2 text-sm text-white w-full focus:outline-none focus:border-indigo-400"
           />
+        </div>
+
+        {/* Liberar missões do capítulo */}
+        <div className="rounded-lg border border-amber-300/20 bg-amber-300/[0.04] p-3">
+          <label className="text-[11px] uppercase tracking-wider text-amber-200/70 mb-1.5 block">
+            Missões do capítulo
+          </label>
+
+          {editandoPrazo ? (
+            <div className="text-[12px] text-white/70 space-y-2.5">
+              <label className="block">
+                <span className="text-[10px] uppercase tracking-wider text-white/50 block mb-1">Nova data de prazo</span>
+                <input
+                  type="date"
+                  value={novoPrazo}
+                  onChange={e => setNovoPrazo(e.target.value)}
+                  className="bg-[#0F0F1E] border border-white/15 rounded-lg px-3 py-2 text-sm text-white w-full focus:outline-none focus:border-amber-300/50"
+                />
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={aplicarTodasTurmas}
+                  onChange={e => setAplicarTodasTurmas(e.target.checked)}
+                  className="rounded border-white/20"
+                />
+                <span className="text-[12px] text-white/70">Aplicar a <strong>todas as turmas</strong> já liberadas</span>
+              </label>
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  onClick={() => setEditandoPrazo(false)}
+                  disabled={savingConfig}
+                  className="text-[11px] text-white/50 hover:text-white/80 px-2 py-1"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={salvarNovoPrazo}
+                  disabled={savingConfig || !novoPrazo}
+                  className="rounded-lg bg-amber-300/20 hover:bg-amber-300/30 ring-1 ring-amber-300/40 px-3 py-1.5 text-amber-100 text-xs font-medium disabled:opacity-50"
+                >
+                  {savingConfig ? 'Salvando…' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+          ) : turmaConfig?.missoes_liberadas_em ? (
+            <div className="text-[12px] text-white/70">
+              <p>✓ Liberadas para esta turma.</p>
+              <p className="text-white/45 mt-0.5">
+                Prazo de entrega: {turmaConfig.missoes_data_prazo ? new Date(turmaConfig.missoes_data_prazo).toLocaleDateString('pt-BR') : '—'}
+              </p>
+              <div className="flex items-center gap-3 mt-2">
+                <button
+                  onClick={abrirEditorPrazo}
+                  disabled={savingConfig}
+                  className="text-[11px] text-amber-200/90 underline underline-offset-2 hover:text-amber-100 disabled:opacity-50"
+                >
+                  Alterar data
+                </button>
+                <button
+                  onClick={liberarMissoes}
+                  disabled={savingConfig}
+                  className="text-[11px] text-white/50 underline underline-offset-2 hover:text-white/80 disabled:opacity-50"
+                >
+                  Reliberar (+7 dias)
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="text-[11px] text-white/40 mb-2">
+                Ao liberar, os alunos desta turma passam a ver a missão do papel deles. O prazo é automático: 7 dias a partir de agora.
+              </p>
+              <button
+                onClick={liberarMissoes}
+                disabled={savingConfig}
+                className="w-full flex items-center justify-center gap-2 rounded-lg bg-amber-300/15 hover:bg-amber-300/25 ring-1 ring-amber-300/40 px-4 py-2.5 text-amber-100 text-sm font-medium transition disabled:opacity-50"
+              >
+                Liberar missões do capítulo
+              </button>
+              <button
+                onClick={abrirEditorPrazo}
+                disabled={savingConfig}
+                className="mt-2 w-full text-[11px] text-white/50 underline underline-offset-2 hover:text-white/80 disabled:opacity-50"
+              >
+                Liberar escolhendo outra data
+              </button>
+            </>
+          )}
         </div>
 
         {/* Delegações ativas */}

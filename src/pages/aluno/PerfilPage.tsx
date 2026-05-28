@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Trophy, Target, Settings } from 'lucide-react';
 import { useStudent } from '@/contexts/StudentContext';
@@ -8,6 +8,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import InteligenciaBar from '@/components/aluno/InteligenciaBar';
 import InteligenciaDrawer from '@/components/aluno/InteligenciaDrawer';
+import '@/styles/missoes-scifi.css';
+
+// "#a78bfa" -> "167, 139, 250" (alimenta --sf-accent-rgb com a cor da casa)
+const hexToRgb = (hex: string): string | null => {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
+  return m ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}` : null;
+};
 
 const PerfilPage = () => {
   const navigate = useNavigate();
@@ -69,8 +76,13 @@ const PerfilPage = () => {
       return b.score - a.score;
     });
 
+  // Acento dos cards = cor da casa
+  const accentColor = casaColor || casa?.cor_hex || '#a78bfa';
+  const accentRgb = hexToRgb(accentColor) || '167, 139, 250';
+  const scifiVars = { '--sf-accent': accentColor, '--sf-accent-rgb': accentRgb } as CSSProperties;
+
   return (
-    <div className="p-4 space-y-5 pb-24">
+    <div className="scifi p-4 space-y-5 pb-24" style={scifiVars}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-white">Perfil</h1>
@@ -83,7 +95,7 @@ const PerfilPage = () => {
       </div>
 
       {/* Card do aluno */}
-      <div className="relative overflow-hidden p-5 rounded-2xl bg-[#252547] border border-violet-500/10">
+      <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel sf-accent-border relative overflow-hidden p-5">
         <div className="flex items-center gap-4">
           {/* Avatar */}
           <div className="w-16 h-16 rounded-full overflow-hidden bg-white/10 shrink-0">
@@ -120,7 +132,7 @@ const PerfilPage = () => {
 
       {/* Mensagem de boas-vindas para aluno novo */}
       {(ranking?.total_pontos || 0) === 0 && (ranking?.missoes_completadas || 0) === 0 && (
-        <div className="p-4 rounded-xl bg-gradient-to-r from-violet-500/10 to-blue-500/10 border border-violet-500/15 text-center">
+        <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-4 text-center">
           <p className="text-sm text-white/70">Sua jornada está começando!</p>
           <p className="text-xs text-white/40 mt-1">Complete sua primeira missão para ver seus pontos crescerem aqui.</p>
         </div>
@@ -128,22 +140,22 @@ const PerfilPage = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="p-3.5 rounded-xl text-center bg-[#252547] border border-violet-500/10">
+        <div data-augmented-ui="tl-clip br-clip border" className="sf-panel p-3.5 text-center">
           <div className="flex items-center justify-center gap-1 mb-0.5">
             <Trophy className="w-3.5 h-3.5 text-yellow-500" />
-            <span className="text-xl font-bold text-white">{ranking?.total_pontos || 0}</span>
+            <span className="text-xl font-bold text-white tabular-nums">{ranking?.total_pontos || 0}</span>
           </div>
           <p className="text-[10px] text-white/40">Pontos</p>
         </div>
-        <div className="p-3.5 rounded-xl text-center bg-[#252547] border border-violet-500/10">
-          <span className="text-xl font-bold text-white">{ranking?.posicao_na_casa || '--'}</span>
+        <div data-augmented-ui="tl-clip br-clip border" className="sf-panel p-3.5 text-center">
+          <span className="text-xl font-bold text-white tabular-nums">{ranking?.posicao_na_casa || '--'}</span>
           <span className="text-white/40 text-xs align-top">º</span>
           <p className="text-[10px] text-white/40 mt-0.5">Na casa</p>
         </div>
-        <div className="p-3.5 rounded-xl text-center bg-[#252547] border border-violet-500/10">
+        <div data-augmented-ui="tl-clip br-clip border" className="sf-panel p-3.5 text-center">
           <div className="flex items-center justify-center gap-1 mb-0.5">
             <Target className="w-3.5 h-3.5 text-blue-400" />
-            <span className="text-xl font-bold text-white">{ranking?.missoes_completadas || 0}</span>
+            <span className="text-xl font-bold text-white tabular-nums">{ranking?.missoes_completadas || 0}</span>
           </div>
           <p className="text-[10px] text-white/40">Missoes</p>
         </div>
@@ -180,7 +192,7 @@ const PerfilPage = () => {
             </p>
           </div>
         ) : (
-          <div className="p-6 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
+          <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-6 text-center">
             <p className="text-white/30 text-sm">Seus scores aparecerão conforme voce avanca</p>
           </div>
         )}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, ChevronRight, Users, ScrollText, Download, BookOpen, Info, Clock, Shirt } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,8 +12,15 @@ import {
   DrawerDescription,
 } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
+import '@/styles/missoes-scifi.css';
 
 const sb = supabase as any;
+
+// "#a78bfa" -> "167, 139, 250" (alimenta --sf-accent-rgb com a cor da casa)
+const hexToRgb = (hex: string): string | null => {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
+  return m ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}` : null;
+};
 
 type Categoria = 'mesa' | 'mediador' | 'observatorio' | 'delegacao';
 
@@ -288,8 +295,13 @@ const CapituloPage = () => {
     );
   }
 
+  // Acento dos cards = cor da casa (Hero NÃO usa — mantém estilo original)
+  const accentColor = casaColor || '#a78bfa';
+  const accentRgb = hexToRgb(accentColor) || '167, 139, 250';
+  const scifiVars = { '--sf-accent': accentColor, '--sf-accent-rgb': accentRgb } as CSSProperties;
+
   return (
-    <div className="space-y-10 pb-8 -mx-4 px-4">
+    <div className="scifi space-y-10 pb-8 -mx-4 px-4" style={scifiVars}>
 
       {/* ============ STAGE 1 · HERO ============ */}
       <Hero
@@ -446,10 +458,11 @@ const Treta = ({ capitulo }: { capitulo: Capitulo }) => {
 };
 
 const BlocoBriefing = ({ tag, itens, variante }: { tag: string; itens: string[]; variante?: 'alt' }) => (
-  <div className={cn(
-    'rounded-xl border border-white/10 p-4',
-    variante === 'alt' ? 'bg-amber-950/20' : 'bg-white/[0.03]'
-  )}>
+  <div
+    data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
+    className="sf-panel p-4"
+    style={variante === 'alt' ? { ['--aug-border-bg' as string]: 'rgba(252, 211, 77, 0.35)' } : undefined}
+  >
     <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/60 mb-3">{tag}</div>
     <ul className="space-y-2.5">
       {itens.map((it, i) => (
@@ -477,7 +490,7 @@ const SeuPapel = ({
     return (
       <section>
         <div className="text-[10px] tracking-[0.4em] uppercase text-white/40 mb-3">Você</div>
-        <div className="rounded-xl border border-dashed border-white/10 p-5 text-center">
+        <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-5 text-center">
           <p className="text-sm text-white/60">
             Você ainda não foi convocado.
           </p>
@@ -494,8 +507,8 @@ const SeuPapel = ({
       <div className="text-[10px] tracking-[0.4em] uppercase text-white/40 mb-3">Você</div>
       <button
         onClick={onAbrirGuia}
-        className="w-full text-left rounded-xl border bg-gradient-to-br from-[#221E2E] to-[#161423] p-5 transition hover:from-[#2A2536]"
-        style={{ borderColor: `${casaColor}55` }}
+        data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
+        className="sf-panel sf-accent-border w-full text-left p-5 transition"
       >
         <div className="text-[10px] tracking-[0.3em] uppercase text-white/40 mb-2">
           {papel.time_label || 'Sua função'}
@@ -555,7 +568,11 @@ const Elenco = ({
         <Users className="w-3 h-3" /> Parte 2 · O elenco
       </div>
 
-      <div className="rounded-lg bg-amber-200/[0.06] border border-amber-200/20 px-3.5 py-2.5 mb-5 flex items-start gap-2.5">
+      <div
+        data-augmented-ui="tl-clip br-clip border"
+        className="sf-card px-3.5 py-2.5 mb-5 flex items-start gap-2.5"
+        style={{ ['--aug-border-bg' as string]: 'rgba(252, 211, 77, 0.35)' }}
+      >
         <BookOpen className="w-3.5 h-3.5 text-amber-200/80 mt-0.5 flex-shrink-0" />
         <p className="text-[12px] text-white/75 leading-relaxed">
           <span className="text-amber-200/90 font-semibold">Toque em qualquer função</span> para abrir o guia completo — o que você faz, como fazer e exemplos de fala.
@@ -604,7 +621,7 @@ const Elenco = ({
                 .sort((a, b) => a.ordem - b.ordem);
               const membrosDeleg = membrosDelegacoes.filter(m => m.delegacao_codigo === deleg.codigo);
               return (
-                <div key={deleg.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                <div key={deleg.id} data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-4">
                   <button
                     onClick={() => onAbrirDelegacao(deleg)}
                     className="group flex items-center gap-1.5 text-left"
@@ -719,9 +736,10 @@ const CardElenco = ({
   return (
     <button
       onClick={onClick}
+      data-augmented-ui="tl-clip br-clip border"
       className={cn(
-        'flex flex-col items-center gap-2 p-3 rounded-lg transition text-center',
-        eh_meu ? 'bg-amber-200/10 ring-1 ring-amber-200/30' : 'bg-white/[0.03] hover:bg-white/[0.07]'
+        'sf-card flex flex-col items-center gap-2 p-3 transition text-center',
+        eh_meu && 'sf-accent-border'
       )}
     >
       <Avatar
@@ -752,7 +770,7 @@ const SlotsLista = ({
   const slotsCount = ilimitado ? alocacoes.length : papel.vagas_por_turma;
   const slots = Array.from({ length: slotsCount }).map((_, i) => alocacoes[i] ?? null);
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 mb-2">
+    <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-3 mb-2">
       <button onClick={onClick} className="group w-full flex items-center justify-between mb-2.5">
         <span className="flex items-center gap-1.5 text-[11px] tracking-[0.2em] uppercase text-amber-200/90 group-hover:text-amber-200 transition">
           <ScrollText className="w-3 h-3" />
@@ -830,7 +848,7 @@ const ODia = ({ capitulo }: { capitulo: Capitulo }) => {
       <div className="text-[10px] tracking-[0.4em] uppercase text-white/40 mb-3">
         Parte 3 · O dia da Assembleia
       </div>
-      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+      <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-4">
         <div className="space-y-3">
           {capitulo.fases_assembleia.map((f) => (
             <div key={f.numero} className="flex gap-3">
@@ -855,7 +873,7 @@ const ODia = ({ capitulo }: { capitulo: Capitulo }) => {
       </div>
 
       {/* Traje do dia */}
-      <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+      <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel mt-4 p-4">
         <div className="flex items-center gap-2 mb-2">
           <Shirt className="w-4 h-4 text-amber-200/80" />
           <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70">O que vestir</div>
@@ -866,7 +884,8 @@ const ODia = ({ capitulo }: { capitulo: Capitulo }) => {
         <a
           href="/docs/aviso-traje-assembleia.pdf"
           download
-          className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-amber-200/15 hover:bg-amber-200/25 ring-1 ring-amber-200/40 px-4 py-3.5 text-amber-100 transition"
+          data-augmented-ui="tl-clip br-clip border"
+          className="sf-exec mt-3 flex items-center justify-center gap-2 px-4 py-3 transition"
         >
           <Download className="w-4 h-4" />
           <span className="text-sm font-medium">Baixar aviso de trajes</span>
@@ -874,7 +893,11 @@ const ODia = ({ capitulo }: { capitulo: Capitulo }) => {
       </div>
 
       {capitulo.regra_de_ouro && (
-        <div className="mt-4 rounded-xl border border-amber-200/20 bg-amber-950/20 p-4">
+        <div
+          data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
+          className="sf-panel mt-4 p-4"
+          style={{ ['--aug-border-bg' as string]: 'rgba(252, 211, 77, 0.35)' }}
+        >
           <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-2">Regra de ouro</div>
           <p className="text-sm text-white/85 italic font-serif leading-relaxed">{capitulo.regra_de_ouro}</p>
         </div>
