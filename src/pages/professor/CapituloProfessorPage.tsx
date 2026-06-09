@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, X, Calendar, ScrollText, Settings2, Search } from 'lucide-react';
+import { Plus, X, Calendar, ScrollText, Settings2, Search, ClipboardCheck, Users, FileText, Upload, Trash2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
@@ -11,7 +11,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { enviarParaIA } from '@/lib/n8n';
 
 const sb = supabase as any;
 
@@ -23,6 +25,10 @@ interface Capitulo {
   nome: string;
   frase_ancora: string | null;
   tema_curto: string | null;
+  institution_id: string;
+  fase_id: string;
+  relatorio_url: string | null;
+  relatorio_processado_em: string | null;
 }
 
 interface Papel {
@@ -159,18 +165,24 @@ const CapituloProfessorPage = () => {
   const [editandoPrazo, setEditandoPrazo] = useState(false);
   const [novoPrazo, setNovoPrazo] = useState('');
   const [aplicarTodasTurmas, setAplicarTodasTurmas] = useState(false);
+  const [subTab, setSubTab] = useState<'elenco' | 'avaliacao'>('elenco');
+  const [alunoAvaliando, setAlunoAvaliando] = useState<{ id: string; nome: string; papel: string } | null>(null);
+  const [textoObs, setTextoObs] = useState('');
+  const [salvandoObs, setSalvandoObs] = useState(false);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [removendoPdf, setRemovendoPdf] = useState(false);
   const [papelParaAlocar, setPapelParaAlocar] = useState<Papel | null>(null);
   const [delegacaoParaAddMembro, setDelegacaoParaAddMembro] = useState<Delegacao | null>(null);
   const [savingConfig, setSavingConfig] = useState(false);
   const [buscaPapel, setBuscaPapel] = useState('');
   const [buscaMembro, setBuscaMembro] = useState('');
 
-  const { data: capitulo, isLoading: loadingCap } = useQuery<Capitulo | null>({
+  const { data: capitulo, isLoading: loadingCap, refetch: refetchCapitulo } = useQuery<Capitulo | null>({
     queryKey: ['prof-cap-ativo', faseAtual?.id, profile?.institution_id],
     enabled: !!faseAtual?.id && !!profile?.institution_id,
     queryFn: async () => {
       const { data } = await sb.from('capitulos')
-        .select('id, numero, nome, frase_ancora, tema_curto')
+        .select('id, numero, nome, frase_ancora, tema_curto, institution_id, fase_id, relatorio_url, relatorio_processado_em')
         .eq('institution_id', profile!.institution_id)
         .eq('fase_id', faseAtual!.id)
         .eq('ativo', true).maybeSingle();
@@ -258,6 +270,19 @@ const CapituloProfessorPage = () => {
         .select('id, delegacao_codigo, aluno_id')
         .eq('capitulo_id', capitulo!.id).eq('turma_id', turmaId!);
       return (data as MembroDelegacao[]) ?? [];
+    },
+  });
+
+  // Observações da Avaliação deste capítulo (filtrado por turma via aluno_id, depois)
+  const { data: avaliacoes = [], refetch: refetchAvaliacoes } = useQuery<{ id: string; aluno_id: string; observacao_texto: string | null; origem: string }[]>({
+    queryKey: ['prof-cap-avaliacoes', capitulo?.id, turmaId],
+    enabled: !!capitulo?.id && !!turmaId,
+    queryFn: async () => {
+      const { data } = await sb.from('observacoes')
+        .select('id, aluno_id, observacao_texto, origem')
+        .eq('capitulo_id', capitulo!.id)
+        .eq('turma_id', turmaId!);
+      return data ?? [];
     },
   });
 
@@ -415,8 +440,151 @@ const CapituloProfessorPage = () => {
       });
       toast.success(`Prazo atualizado: ${new Date(dataIso).toLocaleDateString('pt-BR')}`);
     }
+
+    // Sincroniza missoes.data_prazo com o MAIOR prazo entre as turmas.
+    // Assim cada turma é limitada pelo seu próprio prazo (em capitulo_turma_config),
+    // e missoes.data_prazo vira o teto global — evita que turmas com prazo maior
+    // expirem antes da hora por causa de uma config com prazo menor.
+    const { data: configs } = await sb.from('capitulo_turma_config')
+      .select('missoes_data_prazo')
+      .eq('capitulo_id', capitulo.id)
+      .not('missoes_data_prazo', 'is', null);
+
+    const prazos = (configs ?? [])
+      .map(c => c.missoes_data_prazo as string | null)
+      .filter((p): p is string => !!p);
+    const maxPrazo = prazos.length > 0
+      ? prazos.reduce((a, b) => (a > b ? a : b))
+      : dataIso;
+
+    const { error: missErr } = await sb.from('missoes')
+      .update({ data_prazo: maxPrazo })
+      .eq('capitulo_id', capitulo.id);
+    if (missErr) {
+      console.warn('[prazo] Falha ao sincronizar missoes.data_prazo:', missErr.message);
+    }
+
     setEditandoPrazo(false);
     setSavingConfig(false);
+  };
+
+  // ===== Avaliação do Capítulo =====
+  const abrirAvaliacao = (aluno: { id: string; nome: string }, papelNome: string) => {
+    const existente = avaliacoes.find(a => a.aluno_id === aluno.id);
+    setAlunoAvaliando({ id: aluno.id, nome: aluno.nome, papel: papelNome });
+    setTextoObs(existente?.observacao_texto || '');
+  };
+
+  const fecharAvaliacao = () => {
+    setAlunoAvaliando(null);
+    setTextoObs('');
+  };
+
+  const salvarAvaliacao = async (confirmarRascunhoIa = false) => {
+    if (!alunoAvaliando || !capitulo || !turmaId || !profile?.id) return;
+    if (!textoObs.trim()) {
+      toast.error('Escreve algo antes de salvar.');
+      return;
+    }
+    setSalvandoObs(true);
+
+    const existente = avaliacoes.find(a => a.aluno_id === alunoAvaliando.id);
+    // Se está confirmando um rascunho IA → origem='ia_confirmada'. Senão 'manual'.
+    const novaOrigem = confirmarRascunhoIa ? 'ia_confirmada' : 'manual';
+
+    let error: unknown;
+    if (existente) {
+      const res = await sb.from('observacoes')
+        .update({ observacao_texto: textoObs.trim(), origem: novaOrigem })
+        .eq('id', existente.id);
+      error = res.error;
+    } else {
+      const res = await sb.from('observacoes').insert({
+        institution_id: capitulo.institution_id,
+        aluno_id: alunoAvaliando.id,
+        professor_id: profile.id,
+        turma_id: turmaId,
+        fase_id: capitulo.fase_id,
+        capitulo_id: capitulo.id,
+        observacao_texto: textoObs.trim(),
+        origem: novaOrigem,
+      });
+      error = res.error;
+    }
+
+    if (error) {
+      const msg = (error as { message?: string }).message || 'Erro ao salvar observação';
+      toast.error(msg);
+      setSalvandoObs(false);
+      return;
+    }
+    toast.success('Observação salva');
+    refetchAvaliacoes();
+    setSalvandoObs(false);
+    fecharAvaliacao();
+  };
+
+  // ===== Upload do relatório (PDF) =====
+  const uploadRelatorio = async (file: File) => {
+    if (!capitulo || !profile?.id) return;
+    if (file.type !== 'application/pdf') {
+      toast.error('Só PDF, por favor.');
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error('PDF acima de 15 MB.');
+      return;
+    }
+    setUploadingPdf(true);
+    const path = `${capitulo.institution_id}/${capitulo.id}/relatorio.pdf`;
+    const { error: upErr } = await sb.storage
+      .from('capitulo-relatorios')
+      .upload(path, file, { upsert: true, contentType: 'application/pdf' });
+    if (upErr) {
+      toast.error(upErr.message || 'Erro ao subir o PDF');
+      setUploadingPdf(false);
+      return;
+    }
+    // Marca o capítulo: PDF anexado, ainda não processado pela IA
+    const { error: updErr } = await sb.from('capitulos')
+      .update({ relatorio_url: path, relatorio_processado_em: null })
+      .eq('id', capitulo.id);
+    if (updErr) {
+      toast.error(updErr.message || 'Erro ao registrar o relatório');
+      setUploadingPdf(false);
+      return;
+    }
+    toast.success('Relatório anexado. A IA vai processar em breve.');
+    refetchCapitulo();
+    setUploadingPdf(false);
+
+    // Dispara o webhook do n8n pra processar o PDF (fire-and-forget).
+    // O n8n insere os rascunhos (origem='ia_rascunho', professor_id = quem
+    // subiu o PDF) e atualiza capitulos.relatorio_processado_em quando termina.
+    enviarParaIA('capitulo_relatorio', capitulo.institution_id, {
+      capitulo_id: capitulo.id,
+      fase_id: capitulo.fase_id,
+      professor_id: profile.id,
+      path,
+    });
+  };
+
+  const removerRelatorio = async () => {
+    if (!capitulo?.relatorio_url) return;
+    if (!confirm('Remover o relatório anexado? (rascunhos já gerados não são apagados)')) return;
+    setRemovendoPdf(true);
+    await sb.storage.from('capitulo-relatorios').remove([capitulo.relatorio_url]);
+    const { error } = await sb.from('capitulos')
+      .update({ relatorio_url: null, relatorio_processado_em: null })
+      .eq('id', capitulo.id);
+    if (error) {
+      toast.error(error.message || 'Erro ao remover');
+      setRemovendoPdf(false);
+      return;
+    }
+    toast.success('Relatório removido.');
+    refetchCapitulo();
+    setRemovendoPdf(false);
   };
 
   const alocar = async (papelId: string, alunoId: string) => {
@@ -575,6 +743,93 @@ const CapituloProfessorPage = () => {
         <h1 className="font-serif text-2xl text-white">{capitulo.nome}</h1>
         {capitulo.frase_ancora && (
           <p className="text-xs italic font-serif text-amber-200/70 mt-1">{capitulo.frase_ancora}</p>
+        )}
+      </div>
+
+      {/* Relatório do Capítulo (PDF para a IA) — global, vale pra todas as turmas */}
+      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <FileText className="w-4 h-4 text-violet-300" />
+          <div className="text-[11px] tracking-[0.25em] uppercase text-white/65">
+            Relatório do Capítulo
+          </div>
+          <span className="text-[10px] text-white/40 ml-auto">vale pra todas as turmas</span>
+        </div>
+
+        {!capitulo.relatorio_url ? (
+          <>
+            <p className="text-[12px] text-white/55 leading-relaxed">
+              Anexe o relatório do evento em PDF. A IA lê o documento e cria{' '}
+              <span className="text-orange-300/90">rascunhos de observação</span> pra cada aluno
+              identificado, em qualquer turma. Você revisa e confirma na aba{' '}
+              <span className="text-white/80">Avaliação</span>.
+            </p>
+            <label className={cn(
+              'flex items-center justify-center gap-2 rounded-lg border border-dashed border-violet-300/40 bg-violet-500/[0.05] hover:bg-violet-500/[0.10] px-4 py-3 text-sm text-violet-100 cursor-pointer transition',
+              uploadingPdf && 'opacity-50 cursor-wait'
+            )}>
+              <Upload className="w-4 h-4" />
+              {uploadingPdf ? 'Enviando…' : 'Anexar relatório (PDF)'}
+              <input
+                type="file"
+                accept="application/pdf"
+                disabled={uploadingPdf}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) uploadRelatorio(f);
+                  e.target.value = '';
+                }}
+                className="hidden"
+              />
+            </label>
+          </>
+        ) : (
+          <div className="space-y-2.5">
+            <div className="flex items-start gap-3 rounded-lg bg-white/[0.04] border border-white/10 p-3">
+              <FileText className="w-5 h-5 text-violet-300 flex-shrink-0 mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm text-white truncate">relatorio.pdf</div>
+                {capitulo.relatorio_processado_em ? (
+                  <div className="text-[11px] text-emerald-300/90 flex items-center gap-1 mt-0.5">
+                    <Sparkles className="w-3 h-3" />
+                    Processado em {new Date(capitulo.relatorio_processado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} — confira os rascunhos na aba Avaliação
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-orange-300/85 mt-0.5">
+                    Aguardando a IA processar… (pode levar alguns minutos)
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <label className={cn(
+                'flex items-center gap-1.5 text-[11px] text-white/60 hover:text-white px-2 py-1 cursor-pointer transition',
+                uploadingPdf && 'opacity-50 cursor-wait'
+              )}>
+                <Upload className="w-3 h-3" />
+                {uploadingPdf ? 'Trocando…' : 'Trocar PDF'}
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  disabled={uploadingPdf}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) uploadRelatorio(f);
+                    e.target.value = '';
+                  }}
+                  className="hidden"
+                />
+              </label>
+              <button
+                onClick={removerRelatorio}
+                disabled={removendoPdf}
+                className="flex items-center gap-1.5 text-[11px] text-red-300/80 hover:text-red-200 px-2 py-1 transition disabled:opacity-50"
+              >
+                <Trash2 className="w-3 h-3" />
+                {removendoPdf ? 'Removendo…' : 'Remover'}
+              </button>
+            </div>
+          </div>
         )}
       </div>
 
@@ -749,6 +1004,19 @@ const CapituloProfessorPage = () => {
         </div>
       </div>
 
+      {/* Tabs: Elenco ↔ Avaliação */}
+      <Tabs value={subTab} onValueChange={(v) => setSubTab(v as 'elenco' | 'avaliacao')} className="space-y-3">
+        <TabsList className="grid grid-cols-2 bg-white/[0.04] border border-white/10 p-1 h-auto">
+          <TabsTrigger value="elenco" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/60 text-xs uppercase tracking-wider gap-1.5">
+            <Users className="w-3.5 h-3.5" /> Elenco
+          </TabsTrigger>
+          <TabsTrigger value="avaliacao" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/60 text-xs uppercase tracking-wider gap-1.5">
+            <ClipboardCheck className="w-3.5 h-3.5" /> Avaliação
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="elenco" className="space-y-3 mt-3">
+
       {/* Status alocação */}
       <div className="text-xs text-white/50 px-1">
         <span className="text-white">{totalAlocacoes}</span> de {totalVagasAtivas} vagas preenchidas
@@ -841,6 +1109,26 @@ const CapituloProfessorPage = () => {
           </div>
         </SecaoCat>
       )}
+
+        </TabsContent>
+
+        {/* ===== ABA AVALIAÇÃO ===== */}
+        <TabsContent value="avaliacao" className="space-y-3 mt-3">
+          <PainelAvaliacao
+            t2Mesa={t2Mesa}
+            t2Med={t2Med}
+            t2Obs={t2Obs}
+            alocPorPapel={alocPorPapel}
+            membrosPorDelegacao={membrosPorDelegacao}
+            delegacoes={delegacoes}
+            delegacoesAtivas={delegacoesAtivas}
+            alunosById={alunosById}
+            brasoes={brasoes}
+            avaliacoes={avaliacoes}
+            onAbrir={abrirAvaliacao}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Modal alocação papel (Mesa/Mediador/Observatório) */}
       <Dialog open={!!papelParaAlocar} onOpenChange={(o) => { if (!o) { setPapelParaAlocar(null); setBuscaPapel(''); } }}>
@@ -948,6 +1236,69 @@ const CapituloProfessorPage = () => {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== Modal: editar/escrever observação do capítulo ===== */}
+      <Dialog open={!!alunoAvaliando} onOpenChange={(o) => { if (!o) fecharAvaliacao(); }}>
+        <DialogContent className="bg-[#12122A] border-white/10 text-white max-w-lg">
+          {alunoAvaliando && (() => {
+            const obsAtual = avaliacoes.find(a => a.aluno_id === alunoAvaliando.id);
+            const eRascunhoIa = obsAtual?.origem === 'ia_rascunho';
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-white font-serif">
+                    {alunoAvaliando.nome}
+                  </DialogTitle>
+                  <DialogDescription className="text-white/60">
+                    Observação do capítulo — papel: <span className="text-white/80">{alunoAvaliando.papel}</span>
+                  </DialogDescription>
+                </DialogHeader>
+
+                {eRascunhoIa && (
+                  <div className="rounded-lg border border-orange-400/40 bg-orange-500/10 px-3 py-2 text-[12px] text-orange-100/90 mb-2">
+                    Rascunho gerado pela IA a partir do relatório. Revise, edite se quiser, e confirme.
+                  </div>
+                )}
+
+                <textarea
+                  value={textoObs}
+                  onChange={(e) => setTextoObs(e.target.value)}
+                  placeholder="O que esse aluno demonstrou nesse capítulo? (atitudes, contribuições, dificuldades)"
+                  rows={6}
+                  className="w-full rounded-lg bg-white/[0.04] border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 resize-none"
+                />
+
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    onClick={fecharAvaliacao}
+                    disabled={salvandoObs}
+                    className="px-3 py-1.5 rounded-lg text-xs text-white/60 hover:text-white hover:bg-white/5 transition disabled:opacity-40"
+                  >
+                    Cancelar
+                  </button>
+                  {eRascunhoIa ? (
+                    <button
+                      onClick={() => salvarAvaliacao(true)}
+                      disabled={salvandoObs || !textoObs.trim()}
+                      className="px-4 py-1.5 rounded-lg bg-emerald-400/15 hover:bg-emerald-400/25 ring-1 ring-emerald-400/40 text-emerald-100 text-xs font-medium transition disabled:opacity-40"
+                    >
+                      Confirmar revisão
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => salvarAvaliacao(false)}
+                      disabled={salvandoObs || !textoObs.trim()}
+                      className="px-4 py-1.5 rounded-lg bg-emerald-400/15 hover:bg-emerald-400/25 ring-1 ring-emerald-400/40 text-emerald-100 text-xs font-medium transition disabled:opacity-40"
+                    >
+                      {obsAtual ? 'Salvar alterações' : 'Salvar observação'}
+                    </button>
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
@@ -1133,6 +1484,262 @@ const PapelLinha = ({
         >
           <Plus className="w-3 h-3" /> alocar
         </button>
+      )}
+    </div>
+  );
+};
+
+// ===== Painel da Avaliação do Capítulo =====
+type Avaliacao = { id: string; aluno_id: string; observacao_texto: string | null; origem: string };
+type AvalByAluno = Map<string, Avaliacao>;
+
+const PainelAvaliacao = ({
+  t2Mesa, t2Med, t2Obs,
+  alocPorPapel, membrosPorDelegacao, delegacoes, delegacoesAtivas,
+  alunosById, brasoes, avaliacoes, onAbrir,
+}: {
+  t2Mesa: Papel[];
+  t2Med: Papel[];
+  t2Obs: Papel[];
+  alocPorPapel: Record<string, Alocacao[]>;
+  membrosPorDelegacao: Record<string, MembroDelegacao[]>;
+  delegacoes: Delegacao[];
+  delegacoesAtivas: Set<string>;
+  alunosById: Record<string, Aluno>;
+  brasoes: Brasoes;
+  avaliacoes: Avaliacao[];
+  onAbrir: (aluno: { id: string; nome: string }, papelNome: string) => void;
+}) => {
+  // Lookup aluno_id → avaliação
+  const avalByAluno: AvalByAluno = new Map(avaliacoes.map(a => [a.aluno_id, a]));
+
+  // Coleta TODOS os alunos que aparecem (pra contadores)
+  const todos: { alunoId: string }[] = [];
+  [...t2Mesa, ...t2Med, ...t2Obs].forEach(p => {
+    (alocPorPapel[p.id] || []).forEach(a => todos.push({ alunoId: a.aluno_id }));
+  });
+  delegacoes.filter(d => delegacoesAtivas.has(d.codigo)).forEach(d => {
+    (membrosPorDelegacao[d.codigo] || []).forEach(m => todos.push({ alunoId: m.aluno_id }));
+  });
+
+  const tot = todos.length;
+  const feitas = todos.filter(t => {
+    const av = avalByAluno.get(t.alunoId);
+    return av && av.origem !== 'ia_rascunho';
+  }).length;
+  const rascunhos = todos.filter(t => avalByAluno.get(t.alunoId)?.origem === 'ia_rascunho').length;
+
+  if (tot === 0) {
+    return (
+      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 text-center text-white/50 text-sm">
+        Ninguém alocado ainda. Volte na aba <span className="text-white/80">Elenco</span> e distribua os papéis primeiro.
+      </div>
+    );
+  }
+
+  const delegAtivas = delegacoes.filter(d => delegacoesAtivas.has(d.codigo));
+
+  return (
+    <div className="space-y-3">
+      {/* Contador */}
+      <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2 text-[11px] text-white/60 flex items-center gap-3 flex-wrap">
+        <span><span className="text-white">{feitas}</span> de {tot} avaliados</span>
+        {rascunhos > 0 && (
+          <span className="text-orange-300/80">· {rascunhos} aguardando revisão</span>
+        )}
+      </div>
+
+      {/* MESA */}
+      <SecaoCat titulo="Mesa Diretora">
+        {t2Mesa.map(p => (
+          <LinhaAvaliacaoPapel
+            key={p.id}
+            papel={p}
+            alocacoes={alocPorPapel[p.id] || []}
+            alunosById={alunosById}
+            brasoes={brasoes}
+            avalByAluno={avalByAluno}
+            onAbrir={onAbrir}
+          />
+        ))}
+      </SecaoCat>
+
+      {/* MEDIADORES */}
+      {t2Med.length > 0 && (
+        <SecaoCat titulo="Mediadores">
+          {t2Med.map(p => (
+            <LinhaAvaliacaoPapel
+              key={p.id}
+              papel={p}
+              alocacoes={alocPorPapel[p.id] || []}
+              alunosById={alunosById}
+              brasoes={brasoes}
+              avalByAluno={avalByAluno}
+              onAbrir={onAbrir}
+            />
+          ))}
+        </SecaoCat>
+      )}
+
+      {/* OBSERVATÓRIO */}
+      {t2Obs.length > 0 && (
+        <SecaoCat titulo="Observatório">
+          {t2Obs.map(p => (
+            <LinhaAvaliacaoPapel
+              key={p.id}
+              papel={p}
+              alocacoes={alocPorPapel[p.id] || []}
+              alunosById={alunosById}
+              brasoes={brasoes}
+              avalByAluno={avalByAluno}
+              onAbrir={onAbrir}
+            />
+          ))}
+        </SecaoCat>
+      )}
+
+      {/* DELEGAÇÕES */}
+      {delegAtivas.length > 0 && (
+        <SecaoCat titulo="Delegações">
+          <div className="space-y-3">
+            {delegAtivas.map(d => (
+              <BlocoAvaliacaoDelegacao
+                key={d.id}
+                delegacao={d}
+                membros={membrosPorDelegacao[d.codigo] || []}
+                alunosById={alunosById}
+                brasoes={brasoes}
+                avalByAluno={avalByAluno}
+                onAbrir={onAbrir}
+              />
+            ))}
+          </div>
+        </SecaoCat>
+      )}
+    </div>
+  );
+};
+
+// Card colorido individual de aluno na aba avaliação
+const CardAvaliacaoAluno = ({
+  aluno, papelNome, brasoes, av, onAbrir,
+}: {
+  aluno: Aluno;
+  papelNome: string;
+  brasoes: Brasoes;
+  av: Avaliacao | undefined;
+  onAbrir: (aluno: { id: string; nome: string }, papelNome: string) => void;
+}) => {
+  let cor: 'amarelo' | 'laranja' | 'verde';
+  if (!av) cor = 'amarelo';
+  else if (av.origem === 'ia_rascunho') cor = 'laranja';
+  else cor = 'verde';
+
+  const styles: Record<typeof cor, string> = {
+    amarelo: 'border-amber-300/40 bg-amber-500/[0.06] hover:bg-amber-500/[0.10]',
+    laranja: 'border-orange-400/50 bg-orange-500/[0.10] hover:bg-orange-500/[0.16]',
+    verde:   'border-emerald-400/40 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.14]',
+  };
+  const dot: Record<typeof cor, string> = {
+    amarelo: 'bg-amber-300',
+    laranja: 'bg-orange-400',
+    verde:   'bg-emerald-400',
+  };
+
+  return (
+    <button
+      onClick={() => onAbrir({ id: aluno.id, nome: nomeCompleto(aluno) }, papelNome)}
+      className={cn(
+        'flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-full border transition text-xs',
+        styles[cor]
+      )}
+    >
+      <AvatarAluno aluno={aluno} brasoes={brasoes} size="sm" />
+      <span className="text-white/90">{nomeCompleto(aluno)}</span>
+      <span className={cn('w-1.5 h-1.5 rounded-full ml-1', dot[cor])} />
+    </button>
+  );
+};
+
+// Linha por papel: nome do papel à esquerda + cards de alunos à direita
+const LinhaAvaliacaoPapel = ({
+  papel, alocacoes, alunosById, brasoes, avalByAluno, onAbrir,
+}: {
+  papel: Papel;
+  alocacoes: Alocacao[];
+  alunosById: Record<string, Aluno>;
+  brasoes: Brasoes;
+  avalByAluno: AvalByAluno;
+  onAbrir: (aluno: { id: string; nome: string }, papelNome: string) => void;
+}) => {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="text-sm text-white/85 min-w-[140px] mr-1">
+        {papel.nome}
+        {alocacoes.length > 0 && papel.vagas_por_turma > 1 && (
+          <span className="text-[10px] text-white/40 ml-1">({alocacoes.length})</span>
+        )}
+      </div>
+      {alocacoes.length === 0 ? (
+        <span className="text-[11px] text-white/30 italic">sem ninguém alocado</span>
+      ) : (
+        alocacoes.map(a => {
+          const al = alunosById[a.aluno_id];
+          if (!al) return null;
+          return (
+            <CardAvaliacaoAluno
+              key={a.id}
+              aluno={al}
+              papelNome={papel.nome}
+              brasoes={brasoes}
+              av={avalByAluno.get(al.id)}
+              onAbrir={onAbrir}
+            />
+          );
+        })
+      )}
+    </div>
+  );
+};
+
+// Bloco de delegação na aba avaliação
+const BlocoAvaliacaoDelegacao = ({
+  delegacao, membros, alunosById, brasoes, avalByAluno, onAbrir,
+}: {
+  delegacao: Delegacao;
+  membros: MembroDelegacao[];
+  alunosById: Record<string, Aluno>;
+  brasoes: Brasoes;
+  avalByAluno: AvalByAluno;
+  onAbrir: (aluno: { id: string; nome: string }, papelNome: string) => void;
+}) => {
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-2.5">
+      <div className="text-[12px] font-serif text-white/85 mb-2 px-1">
+        {delegacao.nome}
+        {membros.length > 0 && (
+          <span className="text-[10px] text-white/40 ml-1">({membros.length})</span>
+        )}
+      </div>
+      {membros.length === 0 ? (
+        <div className="text-[11px] text-white/30 italic px-1 pb-1">sem membros</div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {membros.map(m => {
+            const al = alunosById[m.aluno_id];
+            if (!al) return null;
+            return (
+              <CardAvaliacaoAluno
+                key={m.id}
+                aluno={al}
+                papelNome={delegacao.nome}
+                brasoes={brasoes}
+                av={avalByAluno.get(al.id)}
+                onAbrir={onAbrir}
+              />
+            );
+          })}
+        </div>
       )}
     </div>
   );

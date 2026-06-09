@@ -17,6 +17,11 @@ dist-ssr
 .env.local
 .env.*.local
 
+# n8n workflows exportados (contêm credenciais inline)
+docs/workflow.json
+docs/workflow*.json
+n8n/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
