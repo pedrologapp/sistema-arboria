@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, ChevronDown, ChevronUp, ChevronRight, Plus, RefreshCw, Users, Shield, X } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, ChevronRight, Plus, RefreshCw, Users, Shield, X, UserPlus, Copy, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -26,6 +26,16 @@ const PessoasPage = () => {
   const [salvando, setSalvando] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
   const [filtroCargo, setFiltroCargo] = useState<'todos' | 'lider' | 'coordenador'>('todos');
+  // Novo aluno (manual)
+  const [showAddAluno, setShowAddAluno] = useState(false);
+  const [alunoNome, setAlunoNome] = useState('');
+  const [alunoSobrenome, setAlunoSobrenome] = useState('');
+  const [alunoSerie, setAlunoSerie] = useState('');
+  const [alunoTurmaLetra, setAlunoTurmaLetra] = useState('');
+  const [alunoCasa, setAlunoCasa] = useState<number | null>(null);
+  const [criandoAluno, setCriandoAluno] = useState(false);
+  const [resultadoAluno, setResultadoAluno] = useState<{ email: string; senha: string; full_name: string; turma: string } | null>(null);
+  const [copiado, setCopiado] = useState<'email' | 'senha' | 'tudo' | null>(null);
 
   const { data: institutionId } = useQuery({
     queryKey: ['admin-institution', user?.id],
@@ -43,6 +53,33 @@ const PessoasPage = () => {
       return data || [];
     },
   });
+
+  // Turmas da instituição — usadas no dropdown de "Novo aluno"
+  const { data: turmas = [] } = useQuery({
+    queryKey: ['admin-turmas', institutionId],
+    queryFn: async () => {
+      if (!institutionId) return [];
+      const { data } = await supabase.from('turmas')
+        .select('id, serie, turma_letra')
+        .eq('institution_id', institutionId)
+        .order('serie').order('turma_letra');
+      return data || [];
+    },
+    enabled: !!institutionId,
+  });
+
+  const seriesUnicas = useMemo(
+    () => Array.from(new Set(turmas.map((t: any) => t.serie))).sort(),
+    [turmas]
+  );
+  const letrasPorSerie = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    turmas.forEach((t: any) => {
+      if (!map[t.serie]) map[t.serie] = [];
+      map[t.serie].push(t.turma_letra);
+    });
+    return map;
+  }, [turmas]);
 
   // Alunos F2
   const { data: alunos = [], isLoading: loadingAlunos } = useQuery({
@@ -221,6 +258,55 @@ const PessoasPage = () => {
     finally { setSalvando(false); }
   };
 
+  // Criar aluno manualmente (via edge function que gera email/senha + vincula turma)
+  const criarAluno = async () => {
+    if (!institutionId || !alunoNome.trim() || !alunoSobrenome.trim() || !alunoSerie || !alunoTurmaLetra) {
+      toast.error('Preencha nome, sobrenome, série e turma');
+      return;
+    }
+    setCriandoAluno(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-aluno-manual', {
+        body: {
+          nome: alunoNome.trim(),
+          sobrenome: alunoSobrenome.trim(),
+          serie: alunoSerie,
+          turma_letra: alunoTurmaLetra,
+          casa_id: alunoCasa,
+          institution_id: institutionId,
+          segmento: 'fundamental2',
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setResultadoAluno({
+        email: data.email,
+        senha: data.senha,
+        full_name: data.full_name,
+        turma: data.turma,
+      });
+      setShowAddAluno(false);
+      setAlunoNome(''); setAlunoSobrenome('');
+      setAlunoSerie(''); setAlunoTurmaLetra(''); setAlunoCasa(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-pessoas-alunos'] });
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao criar aluno');
+    } finally {
+      setCriandoAluno(false);
+    }
+  };
+
+  const copiarTexto = async (texto: string, chave: 'email' | 'senha' | 'tudo') => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(chave);
+      setTimeout(() => setCopiado(null), 1500);
+    } catch {
+      toast.error('Falha ao copiar');
+    }
+  };
+
   const getNomeAbreviado = (a: any) => {
     const nome = a.nome || a.full_name?.split(' ')[0] || '?';
     const partes = (a.full_name || '').split(' ');
@@ -299,11 +385,16 @@ const PessoasPage = () => {
       {tab === 'alunos' && (
         <div className="space-y-3">
           {/* Acoes */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button onClick={sincronizarAlunos} disabled={sincronizando}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-blue-500/15 text-blue-300 border border-blue-500/25 hover:bg-blue-500/25 transition-colors disabled:opacity-50">
               <RefreshCw className={cn("w-3 h-3", sincronizando && "animate-spin")} />
               {sincronizando ? 'Sincronizando...' : 'Sincronizar'}
+            </button>
+            <button onClick={() => setShowAddAluno(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 hover:bg-emerald-500/25 transition-colors">
+              <UserPlus className="w-3 h-3" />
+              Cadastrar aluno
             </button>
           </div>
 
@@ -470,6 +561,123 @@ const PessoasPage = () => {
               className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors disabled:opacity-40">
               {salvando ? 'Criando...' : 'Criar professor'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Novo Aluno */}
+      {showAddAluno && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-[#1E1E3A] border border-emerald-500/10 p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-white font-medium">Novo Aluno</p>
+                <p className="text-[10px] text-white/40 mt-0.5">Email e senha são gerados automaticamente</p>
+              </div>
+              <button onClick={() => setShowAddAluno(false)} className="p-1 text-white/30 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-white/30 block mb-1">Nome</label>
+                  <input value={alunoNome} onChange={e => setAlunoNome(e.target.value)} placeholder="Maria"
+                    className="w-full bg-white/[0.06] border border-emerald-500/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-white/30 block mb-1">Sobrenome</label>
+                  <input value={alunoSobrenome} onChange={e => setAlunoSobrenome(e.target.value)} placeholder="Silva"
+                    className="w-full bg-white/[0.06] border border-emerald-500/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-white/30 block mb-1">Série</label>
+                  <select value={alunoSerie} onChange={e => { setAlunoSerie(e.target.value); setAlunoTurmaLetra(''); }}
+                    className="w-full bg-white/[0.06] border border-emerald-500/10 rounded-lg px-3 py-2 text-sm text-white outline-none">
+                    <option value="">Selecione</option>
+                    {seriesUnicas.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] text-white/30 block mb-1">Turma</label>
+                  <select value={alunoTurmaLetra} onChange={e => setAlunoTurmaLetra(e.target.value)}
+                    disabled={!alunoSerie}
+                    className="w-full bg-white/[0.06] border border-emerald-500/10 rounded-lg px-3 py-2 text-sm text-white outline-none disabled:opacity-40">
+                    <option value="">Selecione</option>
+                    {(letrasPorSerie[alunoSerie] || []).map(l => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-white/30 block mb-1">Casa (opcional)</label>
+                <select value={alunoCasa || ''} onChange={e => setAlunoCasa(e.target.value ? Number(e.target.value) : null)}
+                  className="w-full bg-white/[0.06] border border-emerald-500/10 rounded-lg px-3 py-2 text-sm text-white outline-none">
+                  <option value="">Nenhuma</option>
+                  {casas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <button onClick={criarAluno}
+              disabled={!alunoNome || !alunoSobrenome || !alunoSerie || !alunoTurmaLetra || criandoAluno}
+              className="w-full py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-500 transition-colors disabled:opacity-40">
+              {criandoAluno ? 'Criando...' : 'Criar aluno'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Resultado do cadastro (email + senha) */}
+      {resultadoAluno && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-[#1E1E3A] border border-emerald-500/20 p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-white font-medium">Aluno criado ✓</p>
+                <p className="text-[10px] text-white/50 mt-0.5">{resultadoAluno.full_name} · {resultadoAluno.turma}</p>
+              </div>
+              <button onClick={() => setResultadoAluno(null)} className="p-1 text-white/30 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="space-y-2">
+              <div className="rounded-lg bg-white/[0.04] border border-emerald-500/10 px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] text-white/40">Email</p>
+                    <p className="text-sm text-white font-mono truncate">{resultadoAluno.email}</p>
+                  </div>
+                  <button onClick={() => copiarTexto(resultadoAluno.email, 'email')}
+                    className="p-1.5 text-white/40 hover:text-white">
+                    {copiado === 'email' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-white/[0.04] border border-emerald-500/10 px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] text-white/40">Senha</p>
+                    <p className="text-sm text-white font-mono truncate">{resultadoAluno.senha}</p>
+                  </div>
+                  <button onClick={() => copiarTexto(resultadoAluno.senha, 'senha')}
+                    className="p-1.5 text-white/40 hover:text-white">
+                    {copiado === 'senha' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button onClick={() => copiarTexto(`Email: ${resultadoAluno.email}\nSenha: ${resultadoAluno.senha}`, 'tudo')}
+              className="w-full py-2 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 text-xs font-medium hover:bg-emerald-500/25 transition-colors">
+              {copiado === 'tudo' ? '✓ Copiado!' : 'Copiar email e senha'}
+            </button>
+
+            <p className="text-[10px] text-white/30 text-center">
+              Anote ou envie pro aluno — depois ele troca a senha no primeiro acesso.
+            </p>
           </div>
         </div>
       )}
