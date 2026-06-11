@@ -185,6 +185,37 @@ Deno.serve(async (req: Request) => {
       console.warn('[create-aluno-manual] aluno_turma insert warning:', vincErr.message);
     }
 
+    // 7b) Capítulos com missões liberadas pra turma: aluno novo entra na menor
+    // delegação existente, pra já receber as missões ativas de delegação.
+    // (Missões por papel continuam exclusivas de quem tem o papel alocado.)
+    const { data: capitulosAtivos } = await admin
+      .from('capitulo_turma_config')
+      .select('capitulo_id, missoes_data_prazo')
+      .eq('turma_id', turma.id)
+      .not('missoes_liberadas_em', 'is', null);
+
+    for (const cap of capitulosAtivos ?? []) {
+      if (cap.missoes_data_prazo && new Date(cap.missoes_data_prazo) < new Date()) continue;
+      const { data: membros } = await admin
+        .from('capitulo_delegacao_membros')
+        .select('delegacao_codigo')
+        .eq('capitulo_id', cap.capitulo_id)
+        .eq('turma_id', turma.id);
+      if (!membros?.length) continue;
+      const contagem: Record<string, number> = {};
+      for (const m of membros) contagem[m.delegacao_codigo] = (contagem[m.delegacao_codigo] || 0) + 1;
+      const menorDelegacao = Object.entries(contagem).sort((a, b) => a[1] - b[1])[0][0];
+      const { error: delegErr } = await admin.from('capitulo_delegacao_membros').insert({
+        capitulo_id: cap.capitulo_id,
+        turma_id: turma.id,
+        delegacao_codigo: menorDelegacao,
+        aluno_id: userId,
+      });
+      if (delegErr) {
+        console.warn('[create-aluno-manual] delegacao insert warning:', delegErr.message);
+      }
+    }
+
     // 8) Inteligencia scores iniciais
     const anoLetivo = new Date().getFullYear();
     for (let imId = 1; imId <= 8; imId++) {
