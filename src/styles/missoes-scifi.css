@@ -12,6 +12,13 @@
   --sf-text: #e8f4f8;
   --sf-text-dim: #94A3B8;
   position: relative;
+  /* Atmosfera: brilho sutil na cor da Casa vindo do topo e do rodapé,
+     pra que telas vazias/curtas não fiquem pretas e mortas. Fixo na viewport. */
+  background-image:
+    radial-gradient(120% 55% at 50% -10%, rgba(var(--sf-accent-rgb), 0.12), transparent 58%),
+    radial-gradient(95% 45% at 50% 112%, rgba(var(--sf-accent-rgb), 0.06), transparent 55%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
 
 .sf-dim { color: var(--sf-text-dim); }

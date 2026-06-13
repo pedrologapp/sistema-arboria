@@ -249,12 +249,16 @@ const CasaPage = () => {
       {/* Stats: Posição da casa + Pontos da casa */}
       <div className="grid grid-cols-2 gap-3">
         <div data-augmented-ui="tl-clip br-clip border" className="sf-panel p-4 text-center">
-          <div>
-            <span className="text-2xl font-bold text-white tabular-nums">
-              {posicaoCasa || '--'}
-            </span>
-            <span className="text-white/40 text-sm ml-1">/ {totalCasas}</span>
-          </div>
+          {posicaoCasa ? (
+            <div>
+              <span className="text-2xl font-bold text-white tabular-nums">{posicaoCasa}</span>
+              <span className="text-white/40 text-sm ml-1">/ {totalCasas}</span>
+            </div>
+          ) : (
+            <div>
+              <span className="text-lg font-medium text-white/50">Calculando…</span>
+            </div>
+          )}
           <p className="text-xs text-white/40 mt-1">Posição geral</p>
         </div>
         <div data-augmented-ui="tl-clip br-clip border" className="sf-panel p-4 text-center">

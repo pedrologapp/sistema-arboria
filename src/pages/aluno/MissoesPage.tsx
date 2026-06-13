@@ -545,16 +545,24 @@ const MissoesPage = () => {
     );
   };
 
-  const renderEmpty = () => (
-    <div className="flex items-center justify-center py-6">
+  const renderEmpty = (tipo: 'capitulo' | 'fase') => (
+    <div className="flex flex-col items-center justify-center text-center py-6 px-4">
       <motion.div
         animate={{ scale: [1, 1.05, 1] }}
         transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
         data-augmented-ui="tl-clip br-clip border"
-        className="sf-icon-box w-12 h-12 flex items-center justify-center"
+        className="sf-icon-box w-12 h-12 flex items-center justify-center mb-3"
       >
         <ScrollText className="w-5 h-5" style={{ color: 'var(--sf-accent)' }} />
       </motion.div>
+      <h3 className="font-medium text-[14px] mb-1" style={{ color: 'var(--sf-text)' }}>
+        {tipo === 'capitulo' ? 'Nenhuma missão do Capítulo ainda' : 'Nenhuma missão da fase ainda'}
+      </h3>
+      <p className="text-[12px] max-w-[240px]" style={{ color: 'var(--sf-text-dim)' }}>
+        {tipo === 'capitulo'
+          ? 'Quando o Capítulo liberar uma missão pra você, ela aparece aqui.'
+          : 'Conforme sua turma avança na fase, novas missões surgem aqui.'}
+      </p>
     </div>
   );
 
@@ -642,7 +650,7 @@ const MissoesPage = () => {
                 {questsCapitulo.length > 0 ? (
                   <div className="space-y-2">{questsCapitulo.map((q, i) => renderQuest(q, i))}</div>
                 ) : (
-                  renderEmpty()
+                  renderEmpty('capitulo')
                 )}
               </AccordionContent>
             </AccordionItem>
@@ -660,7 +668,7 @@ const MissoesPage = () => {
                 {questsFase.length > 0 ? (
                   <div className="space-y-2">{questsFase.map((q, i) => renderQuest(q, i))}</div>
                 ) : (
-                  renderEmpty()
+                  renderEmpty('fase')
                 )}
               </AccordionContent>
             </AccordionItem>

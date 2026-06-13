@@ -32,8 +32,8 @@ const BottomNav = () => {
   const navItems = [
     { id: 'home', icon: Home, label: 'Home', path: '/aluno/home', color: '#3b82f6' },
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/aluno/dashboard', color: '#06b6d4', locked: !temAcessoDashboard },
-    { id: 'missoes', icon: Target, label: 'Missoes', path: '/aluno/missoes', color: '#f59e0b' },
-    { id: 'capitulo', icon: BookOpen, label: 'Capitulo', path: '/aluno/capitulo', color: '#a78bfa' },
+    { id: 'missoes', icon: Target, label: 'Missões', path: '/aluno/missoes', color: '#f59e0b' },
+    { id: 'capitulo', icon: BookOpen, label: 'Capítulo', path: '/aluno/capitulo', color: '#a78bfa' },
     { id: 'casa', icon: Shield, label: 'Casa', path: '/aluno/casa', color: '#10b981' },
     { id: 'chat', icon: MessageCircle, label: 'Chat', path: '/aluno/chat', color: '#8b5cf6' },
     { id: 'perfil', icon: User, label: 'Perfil', path: '/aluno/perfil', color: '#ec4899' },
@@ -53,7 +53,7 @@ const BottomNav = () => {
 
   const handleClick = (item: typeof navItems[0]) => {
     if (item.locked) {
-      toast.info('Disponivel para lideres e coordenadores');
+      toast.info('Disponível para líderes e coordenadores');
       return;
     }
     navigate(item.path);

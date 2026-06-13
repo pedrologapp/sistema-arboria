@@ -138,7 +138,8 @@ const PerfilPage = () => {
         </div>
       )}
 
-      {/* Stats */}
+      {/* Stats — escondidos pro aluno novo (o card de boas-vindas já cobre o recado) */}
+      {!((ranking?.total_pontos || 0) === 0 && (ranking?.missoes_completadas || 0) === 0) && (
       <div className="grid grid-cols-3 gap-3">
         <div data-augmented-ui="tl-clip br-clip border" className="sf-panel p-3.5 text-center">
           <div className="flex items-center justify-center gap-1 mb-0.5">
@@ -157,14 +158,15 @@ const PerfilPage = () => {
             <Target className="w-3.5 h-3.5 text-blue-400" />
             <span className="text-xl font-bold text-white tabular-nums">{ranking?.missoes_completadas || 0}</span>
           </div>
-          <p className="text-[10px] text-white/40">Missoes</p>
+          <p className="text-[10px] text-white/40">Missões</p>
         </div>
       </div>
+      )}
 
       {/* Inteligencias */}
       <div>
         <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">
-          Minhas Inteligencias
+          Minhas Inteligências
         </h3>
 
         {sortedInteligencias.length > 0 ? (
@@ -193,7 +195,7 @@ const PerfilPage = () => {
           </div>
         ) : (
           <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-6 text-center">
-            <p className="text-white/30 text-sm">Seus scores aparecerão conforme voce avanca</p>
+            <p className="text-white/55 text-sm">Suas inteligências vão aparecer aqui conforme você avança nas missões.</p>
           </div>
         )}
       </div>
