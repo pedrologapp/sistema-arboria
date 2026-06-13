@@ -399,10 +399,10 @@ const HomePage = () => {
       {/* Atalhos menores */}
       <div className="flex gap-3 animate-fade-in animate-fade-in-d3">
         {[
-          { icon: MessageCircle, label: 'Chat', path: '/aluno/chat', badge: mensagensNaoLidas, color: '#8b5cf6' },
-          { icon: Shield, label: 'Casa', path: '/aluno/casa', color: '#10b981' },
-          { icon: Trophy, label: 'Conquistas', path: '/aluno/conquistas', color: '#f59e0b' },
-          { icon: User, label: 'Perfil', path: '/aluno/perfil', color: '#ec4899' },
+          { icon: MessageCircle, label: 'Chat', path: '/aluno/chat', badge: mensagensNaoLidas },
+          { icon: Shield, label: 'Casa', path: '/aluno/casa' },
+          { icon: Trophy, label: 'Conquistas', path: '/aluno/conquistas' },
+          { icon: User, label: 'Perfil', path: '/aluno/perfil' },
         ].map(item => {
           const Icon = item.icon;
           return (
@@ -415,7 +415,7 @@ const HomePage = () => {
               {(item.badge ?? 0) > 0 && (
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
               )}
-              <Icon className="w-5 h-5" style={{ color: item.color }} />
+              <Icon className="w-5 h-5" style={{ color: casaColor }} />
               <span className="text-[10px] text-white/60">{item.label}</span>
             </button>
           );

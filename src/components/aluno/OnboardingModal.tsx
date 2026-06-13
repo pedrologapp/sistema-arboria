@@ -64,7 +64,8 @@ const OnboardingModal = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-[#0A0A1A] flex items-center justify-center p-5 z-50"
+          className="fixed inset-0 flex items-center justify-center p-5 z-50"
+          style={{ background: `radial-gradient(120% 60% at 50% 0%, ${casaCor}1f, transparent 60%), #0A0A1A` }}
         >
           <motion.div
             key={step}
@@ -72,7 +73,9 @@ const OnboardingModal = ({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -30 }}
             transition={{ duration: 0.25 }}
-            className="w-full max-w-sm text-center bg-[#1A1A2E] rounded-2xl p-6 border border-violet-500/10"
+            data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
+            className="w-full max-w-sm text-center p-6"
+            style={{ background: '#0A0E1A', color: '#e8f4f8', '--aug-border-bg': casaCor, '--aug-border-all': '1px' } as React.CSSProperties}
           >
             {/* Emoji / Brasão */}
             <div className="mb-6">

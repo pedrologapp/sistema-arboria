@@ -583,9 +583,9 @@ const MissoesPage = () => {
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className={cn('p-2 transition-colors', refreshing && 'opacity-50')}
+          className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors text-white/40 hover:text-white disabled:opacity-50"
         >
-          <RefreshCw className={cn('w-4 h-4', refreshing && 'animate-spin')} style={{ color: 'var(--sf-accent)' }} />
+          <RefreshCw className={cn('w-4 h-4', refreshing && 'animate-spin')} />
         </button>
       </div>
 
