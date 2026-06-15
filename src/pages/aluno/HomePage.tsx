@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect, type CSSProperties } from 'react';
-import { Target, MessageCircle, Shield, User, Star, AlertTriangle, Trophy, Sparkles, Bell, HelpCircle, Send, Loader2 } from 'lucide-react';
+import { Target, MessageCircle, Shield, User, Star, AlertTriangle, Trophy, Sparkles, Bell, HelpCircle, Send, Loader2, LayoutDashboard } from 'lucide-react';
 import { useStudent } from '@/contexts/StudentContext';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
 import { CasaBrasao } from '@/components/CasaBrasao';
@@ -399,6 +399,7 @@ const HomePage = () => {
       {/* Atalhos menores */}
       <div className="flex gap-3 animate-fade-in animate-fade-in-d3">
         {[
+          ...(isLiderOuCoord ? [{ icon: LayoutDashboard, label: 'Painel', path: '/aluno/dashboard' }] : []),
           { icon: MessageCircle, label: 'Chat', path: '/aluno/chat', badge: mensagensNaoLidas },
           { icon: Shield, label: 'Casa', path: '/aluno/casa' },
           { icon: Trophy, label: 'Conquistas', path: '/aluno/conquistas' },

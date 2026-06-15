@@ -1,4 +1,5 @@
 import { Bell } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useStudent } from '@/contexts/StudentContext';
 
 interface StudentHeaderProps {
@@ -6,7 +7,9 @@ interface StudentHeaderProps {
 }
 
 const StudentHeader = ({ notificationCount = 0 }: StudentHeaderProps) => {
-  const { faseAtual, institutionName, isLoading } = useStudent();
+  const navigate = useNavigate();
+  const { faseAtual, institutionName, isLoading, profile, casa } = useStudent();
+  const inicial = (profile?.nome || profile?.full_name || '?').trim().charAt(0).toUpperCase();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#1A1A2E] border-b border-violet-500/10">
@@ -43,6 +46,16 @@ const StudentHeader = ({ notificationCount = 0 }: StudentHeaderProps) => {
                   {notificationCount > 99 ? '99+' : notificationCount}
                 </span>
               )}
+            </button>
+
+            {/* Avatar -> Perfil */}
+            <button
+              onClick={() => navigate('/aluno/perfil')}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white bg-white/10 transition-transform active:scale-95"
+              style={{ border: `1.5px solid ${casa?.cor_hex || 'rgba(255,255,255,0.2)'}` }}
+              aria-label="Meu perfil"
+            >
+              {inicial}
             </button>
           </div>
         </div>
