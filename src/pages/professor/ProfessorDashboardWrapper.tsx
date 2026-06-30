@@ -1,17 +1,23 @@
 import { useProfessor } from '@/contexts/ProfessorContext';
 import ProfessorDashboard from './ProfessorDashboard';
 import ProfessorDashboardSimplificado from './ProfessorDashboardSimplificado';
+import InfantilArboriaPage from './infantil/InfantilArboriaPage';
 
 /**
- * Wrapper que escolhe o dashboard correto baseado no segmento
- * - Infantil e Fundamental 1: versão simplificada (sem missões/entregas)
+ * Wrapper que escolhe o conteúdo da home do professor baseado no segmento
+ * - Infantil: aba "Arboria" (cockpit) — reforma 26/06
+ * - Fundamental 1: versão simplificada (sem missões/entregas)
  * - Fundamental 2: versão completa (com casa/mentor)
  */
 const ProfessorDashboardWrapper = () => {
   const { segmento } = useProfessor();
 
-  // Infantil e Fundamental 1 usam versão simplificada
-  if (segmento === 'infantil' || segmento === 'fundamental1') {
+  if (segmento === 'infantil') {
+    return <InfantilArboriaPage />;
+  }
+
+  // Fundamental 1 segue na versão simplificada
+  if (segmento === 'fundamental1') {
     return <ProfessorDashboardSimplificado />;
   }
 

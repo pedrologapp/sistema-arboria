@@ -3,6 +3,7 @@ import { ProfessorProvider, useProfessor } from '@/contexts/ProfessorContext';
 import ProfessorHeader from '@/components/professor/ProfessorHeader';
 import ProfessorBottomNav from '@/components/professor/ProfessorBottomNav';
 import ProfessorLayoutSimplificado from '@/layouts/ProfessorLayoutSimplificado';
+import ProfessorLayoutInfantil from '@/layouts/ProfessorLayoutInfantil';
 import { useAppBadge } from '@/hooks/useAppBadge';
 
 interface ProfessorLayoutProps {
@@ -56,8 +57,13 @@ const ProfessorLayoutContent = ({ children }: ProfessorLayoutProps) => {
     );
   }
 
-  // Infantil e Fundamental 1 usam layout simplificado
-  if (segmento === 'infantil' || segmento === 'fundamental1') {
+  // Infantil: nova camada (pele neutra, 3 abas) — reforma 26/06
+  if (segmento === 'infantil') {
+    return <ProfessorLayoutInfantil>{children}</ProfessorLayoutInfantil>;
+  }
+
+  // Fundamental 1 segue no layout simplificado (ainda não reformado)
+  if (segmento === 'fundamental1') {
     return <ProfessorLayoutSimplificado>{children}</ProfessorLayoutSimplificado>;
   }
 

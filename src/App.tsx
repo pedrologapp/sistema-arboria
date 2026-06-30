@@ -84,6 +84,7 @@ const CirculoRegistrarMultiplosPage = lazy(() => import("./pages/professor/circu
 const CirculoPessoalPage = lazy(() => import("./pages/professor/circulo/CirculoPessoalPage"));
 const CirculoRelatoPage = lazy(() => import("./pages/professor/circulo/CirculoRelatoPage"));
 const AlunosPageWrapper = lazy(() => import("./pages/professor/AlunosPageWrapper"));
+const FasePageWrapper = lazy(() => import("./pages/professor/FasePageWrapper"));
 const PerfilAlunoPageWrapper = lazy(() => import("./pages/professor/PerfilAlunoPageWrapper"));
 const ProfessorConfiguracoesPage = lazy(() => import("./pages/professor/ProfessorConfiguracoesPage"));
 const MissoesSeriePage = lazy(() => import("./pages/professor/MissoesSeriePage"));
@@ -296,6 +297,14 @@ const App = () => (
               <ProfessorProtectedRoute>
                 <ProfessorLayout>
                   <MapaDesenvolvimentoPage />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            {/* Aba "Fase" do Infantil (estudo/apoio) — reforma 26/06 */}
+            <Route path="/professor/fase" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <FasePageWrapper />
                 </ProfessorLayout>
               </ProfessorProtectedRoute>
             } />

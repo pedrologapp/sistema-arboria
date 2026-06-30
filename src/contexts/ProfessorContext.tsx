@@ -185,24 +185,24 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
         // 4. Fetch fase atual - filtrar pela serie das turmas vinculadas
         // First get the teacher's series from turmas
         let serieDosProfessor: number | null = null;
+        let turmaIdDoProfessor: string | null = null;
         {
           const { data: turmasData } = await supabase
             .from('professor_turma')
-            .select('turmas!inner(serie)')
+            .select('turma_id, turmas!inner(serie)')
             .eq('professor_id', user.id)
             .eq('ativo', true)
             .limit(1);
-          
+
           if (turmasData && turmasData.length > 0) {
+            turmaIdDoProfessor = (turmasData[0] as { turma_id: string }).turma_id;
             const turma = turmasData[0].turmas as unknown as { serie: string };
             serieDosProfessor = converterSerieTextoParaNumero(turma.serie);
             console.log('[ProfessorContext] serie texto:', turma.serie, '→ número:', serieDosProfessor);
           }
         }
 
-        // Determinar fase atual baseada nas datas (não no flag ativo)
-        const hoje = hojeBrasil();
-
+        // Campos da fase (usados pelo Infantil via marcador e por F1/F2 via data)
         const faseSelectFields = `
             id,
             numero_fase,
@@ -220,54 +220,94 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
             )
           `;
 
-        let faseQuery = supabase
-          .from('fases')
-          .select(faseSelectFields)
-          .eq('institution_id', profileData.institution_id)
-          .lte('data_inicio', hoje)
-          .gte('data_fim', hoje);
+        if (profileData.segmento === 'infantil') {
+          // INFANTIL: a fase atual é "qual fase a turma está" (marcador turma_trilha), SEM datas.
+          const anoLetivo = new Date().getFullYear();
+          let faseInfantilSet = false;
+          if (turmaIdDoProfessor) {
+            const { data: trilha } = await supabase
+              .from('turma_trilha')
+              .select('ordem_atual')
+              .eq('turma_id', turmaIdDoProfessor)
+              .eq('ano_letivo', anoLetivo)
+              .maybeSingle();
+            const ordem = (trilha?.ordem_atual as number | undefined) ?? 0;
+            if (ordem >= 1 && ordem <= 8) {
+              // ordem == inteligencia_id (1..8) na sequência recomendada
+              const { data: faseInf } = await supabase
+                .from('fases')
+                .select(faseSelectFields)
+                .eq('institution_id', profileData.institution_id)
+                .eq('segmento', 'infantil')
+                .eq('ano_letivo', anoLetivo)
+                .eq('inteligencia_id', ordem)
+                .maybeSingle();
+              if (faseInf) {
+                setFaseAtual({
+                  id: faseInf.id,
+                  numero_fase: faseInf.numero_fase,
+                  semana_atual: null,
+                  data_inicio: faseInf.data_inicio,
+                  data_fim: faseInf.data_fim,
+                  inteligencia: faseInf.inteligencias as unknown as Inteligencia || null,
+                });
+                faseInfantilSet = true;
+              }
+            }
+          }
+          if (!faseInfantilSet) setFaseAtual(null);
+        } else {
+          // F1/F2: fase atual baseada nas DATAS (lógica original, intacta)
+          const hoje = hojeBrasil();
 
-        // Filter by serie if professor has turmas (accept specific OR shared/null)
-        if (serieDosProfessor != null) {
-          faseQuery = faseQuery.or(`serie.eq.${serieDosProfessor},serie.is.null`);
-        }
-        if (profileData.segmento) {
-          faseQuery = faseQuery.or(`segmento.eq.${profileData.segmento},segmento.is.null`);
-        }
-
-        let { data: faseData, error: faseError } = await faseQuery.order('numero_fase', { ascending: true }).limit(1).maybeSingle();
-
-        // Fallback: se nenhuma fase cobre hoje, buscar a próxima fase futura
-        if (!faseData && !faseError) {
-          let fallbackQuery = supabase
+          let faseQuery = supabase
             .from('fases')
             .select(faseSelectFields)
             .eq('institution_id', profileData.institution_id)
-            .gt('data_inicio', hoje);
+            .lte('data_inicio', hoje)
+            .gte('data_fim', hoje);
 
           if (serieDosProfessor != null) {
-            fallbackQuery = fallbackQuery.or(`serie.eq.${serieDosProfessor},serie.is.null`);
+            faseQuery = faseQuery.or(`serie.eq.${serieDosProfessor},serie.is.null`);
           }
           if (profileData.segmento) {
-            fallbackQuery = fallbackQuery.or(`segmento.eq.${profileData.segmento},segmento.is.null`);
+            faseQuery = faseQuery.or(`segmento.eq.${profileData.segmento},segmento.is.null`);
           }
 
-          const fallback = await fallbackQuery.order('data_inicio', { ascending: true }).limit(1).maybeSingle();
-          faseData = fallback.data;
-          faseError = fallback.error;
-        }
+          let { data: faseData, error: faseError } = await faseQuery.order('numero_fase', { ascending: true }).limit(1).maybeSingle();
 
-        if (faseError) {
-          console.error('Error fetching fase atual:', faseError);
-        } else if (faseData) {
-          setFaseAtual({
-            id: faseData.id,
-            numero_fase: faseData.numero_fase,
-            semana_atual: calcularSemanaAtualDaFase(faseData.data_inicio, faseData.data_fim),
-            data_inicio: faseData.data_inicio,
-            data_fim: faseData.data_fim,
-            inteligencia: faseData.inteligencias as unknown as Inteligencia || null
-          });
+          // Fallback: se nenhuma fase cobre hoje, buscar a próxima fase futura
+          if (!faseData && !faseError) {
+            let fallbackQuery = supabase
+              .from('fases')
+              .select(faseSelectFields)
+              .eq('institution_id', profileData.institution_id)
+              .gt('data_inicio', hoje);
+
+            if (serieDosProfessor != null) {
+              fallbackQuery = fallbackQuery.or(`serie.eq.${serieDosProfessor},serie.is.null`);
+            }
+            if (profileData.segmento) {
+              fallbackQuery = fallbackQuery.or(`segmento.eq.${profileData.segmento},segmento.is.null`);
+            }
+
+            const fallback = await fallbackQuery.order('data_inicio', { ascending: true }).limit(1).maybeSingle();
+            faseData = fallback.data;
+            faseError = fallback.error;
+          }
+
+          if (faseError) {
+            console.error('Error fetching fase atual:', faseError);
+          } else if (faseData) {
+            setFaseAtual({
+              id: faseData.id,
+              numero_fase: faseData.numero_fase,
+              semana_atual: calcularSemanaAtualDaFase(faseData.data_inicio, faseData.data_fim),
+              data_inicio: faseData.data_inicio,
+              data_fim: faseData.data_fim,
+              inteligencia: faseData.inteligencias as unknown as Inteligencia || null
+            });
+          }
         }
 
         // 5. Fetch fase da casa do mentor (para o banner informativo)
