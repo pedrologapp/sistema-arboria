@@ -137,71 +137,102 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
       if (profileError) throw profileError;
       setProfile(profileData as Profile);
 
-      // 2. Fetch casa mentor (via professor_casa)
-      const { data: professorCasaData, error: professorCasaError } = await supabase
-        .from('professor_casa')
-        .select(`
-          casa_id,
-          inteligencias!professor_casa_casa_id_fkey (
-            id,
-            nome,
-            codigo,
-            cor_hex,
-            emoji,
-            brasao_url,
-            descricao
-          )
-        `)
-        .eq('professor_id', user.id)
-        .eq('ativo', true)
-        .eq('eh_mentor_principal', true)
-        .maybeSingle();
+      // 2-6 EM PARALELO — antes era uma FILA de ~8 idas ao banco (login de ~7s).
+      // Onda 1: profile (acima). Onda 2: tudo que só depende dele, junto.
+      // Onda 3: as duas fases, juntas.
+      const ehInfantilOuF1 =
+        profileData.segmento === 'infantil' || profileData.segmento === 'fundamental1';
 
-      if (professorCasaError) {
-        console.error('Error fetching professor casa:', professorCasaError);
+      const [professorCasaRes, institutionRes, turmaFirstRes, turmasVincRes] = await Promise.all([
+        supabase
+          .from('professor_casa')
+          .select(`
+            casa_id,
+            inteligencias!professor_casa_casa_id_fkey (
+              id,
+              nome,
+              codigo,
+              cor_hex,
+              emoji,
+              brasao_url,
+              descricao
+            )
+          `)
+          .eq('professor_id', user.id)
+          .eq('ativo', true)
+          .eq('eh_mentor_principal', true)
+          .maybeSingle(),
+        profileData?.institution_id
+          ? supabase.from('institutions').select('name').eq('id', profileData.institution_id).single()
+          : Promise.resolve({ data: null, error: null }),
+        supabase
+          .from('professor_turma')
+          .select('turma_id, turmas!inner(serie)')
+          .eq('professor_id', user.id)
+          .eq('ativo', true)
+          .limit(1),
+        ehInfantilOuF1
+          ? supabase
+              .from('professor_turma')
+              .select(`
+                turma_id,
+                turmas!inner (
+                  id,
+                  nome,
+                  serie,
+                  turma_letra
+                )
+              `)
+              .eq('professor_id', user.id)
+              .eq('ativo', true)
+          : Promise.resolve({ data: null, error: null }),
+      ]);
+
+      // Casa mentor
+      if (professorCasaRes.error) {
+        console.error('Error fetching professor casa:', professorCasaRes.error);
       }
-
       let casaMentorData: Inteligencia | null = null;
-      if (professorCasaData?.inteligencias) {
-        const intel = professorCasaData.inteligencias as unknown as Inteligencia;
+      if ((professorCasaRes.data as any)?.inteligencias) {
+        const intel = (professorCasaRes.data as any).inteligencias as unknown as Inteligencia;
         setCasaMentor(intel);
         casaMentorData = intel;
       }
 
-      // 3. Fetch institution name
+      // Nome da instituição
+      if (institutionRes.error) {
+        console.error('Error fetching institution:', institutionRes.error);
+      } else {
+        setInstitutionName((institutionRes.data as { name?: string } | null)?.name || null);
+      }
+
+      // Série/turma de referência (1ª turma vinculada)
+      let serieDosProfessor: number | null = null;
+      let turmaIdDoProfessor: string | null = null;
+      const turmasFirst = turmaFirstRes.data as any[] | null;
+      if (turmasFirst && turmasFirst.length > 0) {
+        turmaIdDoProfessor = (turmasFirst[0] as { turma_id: string }).turma_id;
+        const turma = turmasFirst[0].turmas as unknown as { serie: string };
+        serieDosProfessor = converterSerieTextoParaNumero(turma.serie);
+      }
+
+      // Turmas vinculadas (Infantil/F1)
+      if (turmasVincRes.error) {
+        console.error('Error fetching turmas vinculadas:', turmasVincRes.error);
+      } else if (turmasVincRes.data) {
+        const turmas = (turmasVincRes.data as any[]).map(t => {
+          const turma = t.turmas as unknown as TurmaVinculada;
+          return {
+            id: turma.id,
+            nome: turma.nome,
+            serie: turma.serie,
+            turma_letra: turma.turma_letra
+          };
+        });
+        setTurmasVinculadas(turmas);
+      }
+
       if (profileData?.institution_id) {
-        const { data: institutionData, error: institutionError } = await supabase
-          .from('institutions')
-          .select('name')
-          .eq('id', profileData.institution_id)
-          .single();
-
-        if (institutionError) {
-          console.error('Error fetching institution:', institutionError);
-        } else {
-          setInstitutionName(institutionData?.name || null);
-        }
-
-        // 4. Fetch fase atual - filtrar pela serie das turmas vinculadas
-        // First get the teacher's series from turmas
-        let serieDosProfessor: number | null = null;
-        let turmaIdDoProfessor: string | null = null;
-        {
-          const { data: turmasData } = await supabase
-            .from('professor_turma')
-            .select('turma_id, turmas!inner(serie)')
-            .eq('professor_id', user.id)
-            .eq('ativo', true)
-            .limit(1);
-
-          if (turmasData && turmasData.length > 0) {
-            turmaIdDoProfessor = (turmasData[0] as { turma_id: string }).turma_id;
-            const turma = turmasData[0].turmas as unknown as { serie: string };
-            serieDosProfessor = converterSerieTextoParaNumero(turma.serie);
-            console.log('[ProfessorContext] serie texto:', turma.serie, '→ número:', serieDosProfessor);
-          }
-        }
-
         // Campos da fase (usados pelo Infantil via marcador e por F1/F2 via data)
         const faseSelectFields = `
             id,
@@ -220,98 +251,100 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
             )
           `;
 
-        if (profileData.segmento === 'infantil') {
-          // INFANTIL: a fase atual é "qual fase a turma está" (marcador turma_trilha), SEM datas.
-          const anoLetivo = new Date().getFullYear();
-          let faseInfantilSet = false;
-          if (turmaIdDoProfessor) {
-            const { data: trilha } = await supabase
-              .from('turma_trilha')
-              .select('ordem_atual')
-              .eq('turma_id', turmaIdDoProfessor)
-              .eq('ano_letivo', anoLetivo)
-              .maybeSingle();
-            const ordem = (trilha?.ordem_atual as number | undefined) ?? 0;
-            if (ordem >= 1 && ordem <= 8) {
-              // ordem == inteligencia_id (1..8) na sequência recomendada
-              const { data: faseInf } = await supabase
-                .from('fases')
-                .select(faseSelectFields)
-                .eq('institution_id', profileData.institution_id)
-                .eq('segmento', 'infantil')
+        const carregarFaseAtual = async () => {
+          if (profileData.segmento === 'infantil') {
+            // INFANTIL: a fase atual é "qual fase a turma está" (marcador turma_trilha), SEM datas.
+            const anoLetivo = new Date().getFullYear();
+            let faseInfantilSet = false;
+            if (turmaIdDoProfessor) {
+              const { data: trilha } = await supabase
+                .from('turma_trilha')
+                .select('ordem_atual')
+                .eq('turma_id', turmaIdDoProfessor)
                 .eq('ano_letivo', anoLetivo)
-                .eq('inteligencia_id', ordem)
                 .maybeSingle();
-              if (faseInf) {
-                setFaseAtual({
-                  id: faseInf.id,
-                  numero_fase: faseInf.numero_fase,
-                  semana_atual: null,
-                  data_inicio: faseInf.data_inicio,
-                  data_fim: faseInf.data_fim,
-                  inteligencia: faseInf.inteligencias as unknown as Inteligencia || null,
-                });
-                faseInfantilSet = true;
+              const ordem = (trilha?.ordem_atual as number | undefined) ?? 0;
+              if (ordem >= 1 && ordem <= 8) {
+                // ordem == inteligencia_id (1..8) na sequência recomendada
+                const { data: faseInf } = await supabase
+                  .from('fases')
+                  .select(faseSelectFields)
+                  .eq('institution_id', profileData.institution_id)
+                  .eq('segmento', 'infantil')
+                  .eq('ano_letivo', anoLetivo)
+                  .eq('inteligencia_id', ordem)
+                  .maybeSingle();
+                if (faseInf) {
+                  setFaseAtual({
+                    id: faseInf.id,
+                    numero_fase: faseInf.numero_fase,
+                    semana_atual: null,
+                    data_inicio: faseInf.data_inicio,
+                    data_fim: faseInf.data_fim,
+                    inteligencia: faseInf.inteligencias as unknown as Inteligencia || null,
+                  });
+                  faseInfantilSet = true;
+                }
               }
             }
-          }
-          if (!faseInfantilSet) setFaseAtual(null);
-        } else {
-          // F1/F2: fase atual baseada nas DATAS (lógica original, intacta)
-          const hoje = hojeBrasil();
+            if (!faseInfantilSet) setFaseAtual(null);
+          } else {
+            // F1/F2: fase atual baseada nas DATAS (lógica original, intacta)
+            const hoje = hojeBrasil();
 
-          let faseQuery = supabase
-            .from('fases')
-            .select(faseSelectFields)
-            .eq('institution_id', profileData.institution_id)
-            .lte('data_inicio', hoje)
-            .gte('data_fim', hoje);
-
-          if (serieDosProfessor != null) {
-            faseQuery = faseQuery.or(`serie.eq.${serieDosProfessor},serie.is.null`);
-          }
-          if (profileData.segmento) {
-            faseQuery = faseQuery.or(`segmento.eq.${profileData.segmento},segmento.is.null`);
-          }
-
-          let { data: faseData, error: faseError } = await faseQuery.order('numero_fase', { ascending: true }).limit(1).maybeSingle();
-
-          // Fallback: se nenhuma fase cobre hoje, buscar a próxima fase futura
-          if (!faseData && !faseError) {
-            let fallbackQuery = supabase
+            let faseQuery = supabase
               .from('fases')
               .select(faseSelectFields)
               .eq('institution_id', profileData.institution_id)
-              .gt('data_inicio', hoje);
+              .lte('data_inicio', hoje)
+              .gte('data_fim', hoje);
 
             if (serieDosProfessor != null) {
-              fallbackQuery = fallbackQuery.or(`serie.eq.${serieDosProfessor},serie.is.null`);
+              faseQuery = faseQuery.or(`serie.eq.${serieDosProfessor},serie.is.null`);
             }
             if (profileData.segmento) {
-              fallbackQuery = fallbackQuery.or(`segmento.eq.${profileData.segmento},segmento.is.null`);
+              faseQuery = faseQuery.or(`segmento.eq.${profileData.segmento},segmento.is.null`);
             }
 
-            const fallback = await fallbackQuery.order('data_inicio', { ascending: true }).limit(1).maybeSingle();
-            faseData = fallback.data;
-            faseError = fallback.error;
-          }
+            let { data: faseData, error: faseError } = await faseQuery.order('numero_fase', { ascending: true }).limit(1).maybeSingle();
 
-          if (faseError) {
-            console.error('Error fetching fase atual:', faseError);
-          } else if (faseData) {
-            setFaseAtual({
-              id: faseData.id,
-              numero_fase: faseData.numero_fase,
-              semana_atual: calcularSemanaAtualDaFase(faseData.data_inicio, faseData.data_fim),
-              data_inicio: faseData.data_inicio,
-              data_fim: faseData.data_fim,
-              inteligencia: faseData.inteligencias as unknown as Inteligencia || null
-            });
-          }
-        }
+            // Fallback: se nenhuma fase cobre hoje, buscar a próxima fase futura
+            if (!faseData && !faseError) {
+              let fallbackQuery = supabase
+                .from('fases')
+                .select(faseSelectFields)
+                .eq('institution_id', profileData.institution_id)
+                .gt('data_inicio', hoje);
 
-        // 5. Fetch fase da casa do mentor (para o banner informativo)
-        if (casaMentorData) {
+              if (serieDosProfessor != null) {
+                fallbackQuery = fallbackQuery.or(`serie.eq.${serieDosProfessor},serie.is.null`);
+              }
+              if (profileData.segmento) {
+                fallbackQuery = fallbackQuery.or(`segmento.eq.${profileData.segmento},segmento.is.null`);
+              }
+
+              const fallback = await fallbackQuery.order('data_inicio', { ascending: true }).limit(1).maybeSingle();
+              faseData = fallback.data;
+              faseError = fallback.error;
+            }
+
+            if (faseError) {
+              console.error('Error fetching fase atual:', faseError);
+            } else if (faseData) {
+              setFaseAtual({
+                id: faseData.id,
+                numero_fase: faseData.numero_fase,
+                semana_atual: calcularSemanaAtualDaFase(faseData.data_inicio, faseData.data_fim),
+                data_inicio: faseData.data_inicio,
+                data_fim: faseData.data_fim,
+                inteligencia: faseData.inteligencias as unknown as Inteligencia || null
+              });
+            }
+          }
+        };
+
+        const carregarFaseCasaMentor = async () => {
+          if (!casaMentorData) return;
           const { data: faseProfData, error: faseProfError } = await supabase
             .from('fases')
             .select('id, numero_fase, data_inicio, data_fim, inteligencia_id')
@@ -325,39 +358,9 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
           } else if (faseProfData) {
             setFaseCasaMentor(faseProfData);
           }
-        }
+        };
 
-        // 6. Fetch turmas vinculadas (para Infantil/F1)
-        if (profileData.segmento === 'infantil' || profileData.segmento === 'fundamental1') {
-          const { data: turmasData, error: turmasError } = await supabase
-            .from('professor_turma')
-            .select(`
-              turma_id,
-              turmas!inner (
-                id,
-                nome,
-                serie,
-                turma_letra
-              )
-            `)
-            .eq('professor_id', user.id)
-            .eq('ativo', true);
-
-          if (turmasError) {
-            console.error('Error fetching turmas vinculadas:', turmasError);
-          } else if (turmasData) {
-            const turmas = turmasData.map(t => {
-              const turma = t.turmas as unknown as TurmaVinculada;
-              return {
-                id: turma.id,
-                nome: turma.nome,
-                serie: turma.serie,
-                turma_letra: turma.turma_letra
-              };
-            });
-            setTurmasVinculadas(turmas);
-          }
-        }
+        await Promise.all([carregarFaseAtual(), carregarFaseCasaMentor()]);
       }
     } catch (err) {
       console.error('Error fetching professor data:', err);

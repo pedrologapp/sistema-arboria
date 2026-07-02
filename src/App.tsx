@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ScrollToTop from "@/components/ScrollToTop";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -18,6 +18,19 @@ import ProfessorLayout from "@/layouts/ProfessorLayout";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+
+/**
+ * Shell ÚNICO das rotas do professor: guarda + layout + provider montados UMA
+ * vez; as abas trocam só o <Outlet/>. Sem isso, cada navegação remontava o
+ * ProfessorProvider (refetch completo) e pintava o spinner de tela cheia.
+ */
+const ProfessorShell = () => (
+  <ProfessorProtectedRoute>
+    <ProfessorLayout>
+      <Outlet />
+    </ProfessorLayout>
+  </ProfessorProtectedRoute>
+);
 
 // Páginas comuns (lazy)
 const Setup = lazy(() => import("./pages/Setup"));
@@ -286,309 +299,62 @@ const App = () => (
               </ProtectedRoute>
             } />
 
-            {/* Professor Routes */}
-            <Route path="/professor" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <ProfessorDashboardWrapper />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/mapa" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <MapaDesenvolvimentoPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
+            {/* Professor Routes — shell ÚNICO: layout + contexto persistem entre abas
+                (antes, cada rota remontava o ProfessorProvider = refetch de tudo +
+                tela de loading a cada clique) */}
+            <Route element={<ProfessorShell />}>
+            <Route path="/professor" element={<ProfessorDashboardWrapper />} />
+            <Route path="/professor/mapa" element={<MapaDesenvolvimentoPage />} />
             {/* Aba "Fase" do Infantil (estudo/apoio) — reforma 26/06 */}
-            <Route path="/professor/fase" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <FasePageWrapper />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/missoes" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <ProfessorMissoesPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/missoes/nova" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <NovaMissaoPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/missoes/serie/:serie" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <MissoesSeriePage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/missoes/serie/:serie/semana/:semana" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <MissoesSemanaPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/missoes/serie/:serie/semana/:semana/geral" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <MissoesListaPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/missoes/serie/:serie/semana/:semana/casa/:casaId" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <MissoesListaPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
+            <Route path="/professor/fase" element={<FasePageWrapper />} />
+            <Route path="/professor/missoes" element={<ProfessorMissoesPage />} />
+            <Route path="/professor/missoes/nova" element={<NovaMissaoPage />} />
+            <Route path="/professor/missoes/serie/:serie" element={<MissoesSeriePage />} />
+            <Route path="/professor/missoes/serie/:serie/semana/:semana" element={<MissoesSemanaPage />} />
+            <Route path="/professor/missoes/serie/:serie/semana/:semana/geral" element={<MissoesListaPage />} />
+            <Route path="/professor/missoes/serie/:serie/semana/:semana/casa/:casaId" element={<MissoesListaPage />} />
             {/* Novo fluxo centrado no aluno */}
-            <Route path="/professor/missoes/serie/:serie/semana/:semana/geral/alunos" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <AlunosPorTipoPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/missoes/serie/:serie/semana/:semana/casa/:casaId/alunos" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <AlunosPorTipoPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/missoes/serie/:serie/semana/:semana/aluno/:alunoId" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <AlunoMissoesPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/missoes/:id" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <MissaoDetalhesPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/missoes/:id/editar" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <EditarMissaoPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/entregas" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <EntregasPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/entregas/serie/:serie" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <EntregasSeriePage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/entregas/serie/:serie/semana/:semana" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <EntregasSemanaPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/entregas/serie/:serie/semana/:semana/geral" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <EntregasMissaoListaPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/entregas/serie/:serie/semana/:semana/casa/:casaId" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <EntregasMissaoListaPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/entregas/missao/:missaoId" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <EntregasMissaoPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/entregas/aluno/:alunoId" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <EntregasAlunoPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/entregas/:id" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <AvaliarEntregaPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/circulo" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <CirculoPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/circulo/serie/:serie" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <CirculoTurmaPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/circulo/turma/:turmaId" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <CirculoTurmaDirectPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/circulo/serie/:serie/turma/:turma" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <CirculoAlunosPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/circulo/aluno/:alunoId" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <CirculoRegistrarPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/circulo/multiplos" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <CirculoRegistrarMultiplosPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/circulo/pessoal" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <CirculoPessoalPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/circulo/relato" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <CirculoRelatoPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/alunos" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <AlunosPageWrapper />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/aula" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <InfantilRajadaPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/alunos/:id" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <PerfilAlunoPageWrapper />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/configuracoes" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <ProfessorConfiguracoesPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/chat" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <ProfessorChatPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/chat/canal/:canalId" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <ProfessorCanalViewPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/chat/dm/:conversaId" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <ProfessorDmPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
+            <Route path="/professor/missoes/serie/:serie/semana/:semana/geral/alunos" element={<AlunosPorTipoPage />} />
+            <Route path="/professor/missoes/serie/:serie/semana/:semana/casa/:casaId/alunos" element={<AlunosPorTipoPage />} />
+            <Route path="/professor/missoes/serie/:serie/semana/:semana/aluno/:alunoId" element={<AlunoMissoesPage />} />
+            <Route path="/professor/missoes/:id" element={<MissaoDetalhesPage />} />
+            <Route path="/professor/missoes/:id/editar" element={<EditarMissaoPage />} />
+            <Route path="/professor/entregas" element={<EntregasPage />} />
+            <Route path="/professor/entregas/serie/:serie" element={<EntregasSeriePage />} />
+            <Route path="/professor/entregas/serie/:serie/semana/:semana" element={<EntregasSemanaPage />} />
+            <Route path="/professor/entregas/serie/:serie/semana/:semana/geral" element={<EntregasMissaoListaPage />} />
+            <Route path="/professor/entregas/serie/:serie/semana/:semana/casa/:casaId" element={<EntregasMissaoListaPage />} />
+            <Route path="/professor/entregas/missao/:missaoId" element={<EntregasMissaoPage />} />
+            <Route path="/professor/entregas/aluno/:alunoId" element={<EntregasAlunoPage />} />
+            <Route path="/professor/entregas/:id" element={<AvaliarEntregaPage />} />
+            <Route path="/professor/circulo" element={<CirculoPage />} />
+            <Route path="/professor/circulo/serie/:serie" element={<CirculoTurmaPage />} />
+            <Route path="/professor/circulo/turma/:turmaId" element={<CirculoTurmaDirectPage />} />
+            <Route path="/professor/circulo/serie/:serie/turma/:turma" element={<CirculoAlunosPage />} />
+            <Route path="/professor/circulo/aluno/:alunoId" element={<CirculoRegistrarPage />} />
+            <Route path="/professor/circulo/multiplos" element={<CirculoRegistrarMultiplosPage />} />
+            <Route path="/professor/circulo/pessoal" element={<CirculoPessoalPage />} />
+            <Route path="/professor/circulo/relato" element={<CirculoRelatoPage />} />
+            <Route path="/professor/alunos" element={<AlunosPageWrapper />} />
+            <Route path="/professor/aula" element={<InfantilRajadaPage />} />
+            <Route path="/professor/alunos/:id" element={<PerfilAlunoPageWrapper />} />
+            <Route path="/professor/configuracoes" element={<ProfessorConfiguracoesPage />} />
+            <Route path="/professor/chat" element={<ProfessorChatPage />} />
+            <Route path="/professor/chat/canal/:canalId" element={<ProfessorCanalViewPage />} />
+            <Route path="/professor/chat/dm/:conversaId" element={<ProfessorDmPage />} />
             
             {/* Reportes dos alunos */}
-            <Route path="/professor/reportes" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <ReportesMentorPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
+            <Route path="/professor/reportes" element={<ReportesMentorPage />} />
 
             {/* O Capítulo - alocação de papéis */}
-            <Route path="/professor/capitulo" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <CapituloProfessorPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
+            <Route path="/professor/capitulo" element={<CapituloProfessorPage />} />
 
             {/* Conteúdo Routes (Infantil/F1) */}
-            <Route path="/professor/conteudo" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <ConteudoPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/conteudo/geral" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <ConteudoGeralPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
-            <Route path="/professor/conteudo/inteligencia/:inteligenciaId" element={
-              <ProfessorProtectedRoute>
-                <ProfessorLayout>
-                  <ConteudoInteligenciaPage />
-                </ProfessorLayout>
-              </ProfessorProtectedRoute>
-            } />
+            <Route path="/professor/conteudo" element={<ConteudoPage />} />
+            <Route path="/professor/conteudo/geral" element={<ConteudoGeralPage />} />
+            <Route path="/professor/conteudo/inteligencia/:inteligenciaId" element={<ConteudoInteligenciaPage />} />
+
+            </Route>
 
             {/* Aluno Routes */}
             <Route path="/aluno" element={<Navigate to="/aluno/home" replace />} />

@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, Suspense } from 'react';
 import { ProfessorProvider, useProfessor } from '@/contexts/ProfessorContext';
 import ProfessorHeader from '@/components/professor/ProfessorHeader';
 import ProfessorBottomNav from '@/components/professor/ProfessorBottomNav';
@@ -36,7 +36,15 @@ const ProfessorLayoutF2 = ({ children }: ProfessorLayoutProps) => {
       
       {/* Main content area with padding for header and nav */}
       <main className="pt-16 pb-24 px-4 max-w-lg mx-auto">
-        {children}
+        <Suspense
+          fallback={
+            <div className="pt-8 flex justify-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-indigo-500" />
+            </div>
+          }
+        >
+          {children}
+        </Suspense>
       </main>
       
       <ProfessorBottomNav />

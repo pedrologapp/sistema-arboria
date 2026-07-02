@@ -463,12 +463,11 @@ const InfantilAlunoThreadPage = () => {
         className="fixed bottom-0 left-0 right-0 z-30 pb-safe glass-light"
         style={{ borderTop: `1px solid ${t.border}` }}
       >
-        {/* Input de arquivo escondido — câmera traseira por padrão no celular */}
+        {/* Input de arquivo escondido — sem `capture`: câmera OU galeria (pedido do Fundador 02/07) */}
         <input
           ref={fileRef}
           type="file"
           accept="image/*"
-          capture="environment"
           onChange={escolherArquivo}
           className="hidden"
         />

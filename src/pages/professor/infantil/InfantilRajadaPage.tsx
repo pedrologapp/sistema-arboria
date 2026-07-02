@@ -623,11 +623,11 @@ const InfantilRajadaPage = () => {
             )}
 
             {/* Input de foto escondido (disparado pelo botão do editor) */}
+            {/* Sem `capture`: o celular oferece CÂMERA ou GALERIA (pedido do Fundador 02/07) */}
             <input
               ref={fileRef}
               type="file"
               accept="image/*"
-              capture="environment"
               className="hidden"
               onChange={escolherArquivo}
             />

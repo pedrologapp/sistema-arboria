@@ -1,10 +1,28 @@
-import { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { ReactNode, Suspense, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAppBadge } from '@/hooks/useAppBadge';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 import InfantilBottomNav from '@/components/professor/infantil/InfantilBottomNav';
+
+// Ordem das abas (Arboria=0 · Fase=1 · Diário=2) — dita a DIREÇÃO do deslize
+const tabIndex = (path: string) => {
+  if (path.startsWith('/professor/fase')) return 1;
+  if (path.startsWith('/professor/alunos')) return 2;
+  if (path === '/professor' || path.startsWith('/professor/aula')) return 0;
+  return -1;
+};
+
+/** Fallback de chunk lazy — leve, DENTRO do chrome (nada de tela cheia escura). */
+const PaginaCarregando = () => (
+  <div className="pt-5 space-y-3">
+    <Skeleton className="h-8 w-40 rounded" />
+    <Skeleton className="h-24 w-full rounded-2xl" />
+    <Skeleton className="h-16 w-full rounded-2xl" />
+  </div>
+);
 
 interface ProfessorLayoutInfantilProps {
   children: ReactNode;
@@ -24,7 +42,23 @@ const getIniciais = (nome?: string | null) => {
  */
 const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { profile, institutionName } = useProfessor();
+
+  // Deslize direcional entre abas: pra frente = entra da direita; pra trás,
+  // da esquerda. Navegação dentro da mesma aba (ex.: abrir um thread) = fade.
+  const idx = tabIndex(location.pathname);
+  const prevIdxRef = useRef(idx);
+  const prevIdx = prevIdxRef.current;
+  const slideClass =
+    idx >= 0 && prevIdx >= 0 && idx !== prevIdx
+      ? idx > prevIdx
+        ? 'tab-in-left'
+        : 'tab-in-right'
+      : 'tab-in-fade';
+  useEffect(() => {
+    prevIdxRef.current = idx;
+  }, [idx]);
 
   useAppBadge({
     userId: profile?.id,
@@ -73,8 +107,10 @@ const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => 
         </div>
       </header>
 
-      {/* Conteúdo */}
-      <main className="pt-14 pb-24 px-4 max-w-lg mx-auto">{children}</main>
+      {/* Conteúdo — key pela rota reinicia a animação de entrada a cada troca */}
+      <main key={location.pathname} className={`pt-14 pb-24 px-4 max-w-lg mx-auto ${slideClass}`}>
+        <Suspense fallback={<PaginaCarregando />}>{children}</Suspense>
+      </main>
 
       <InfantilBottomNav />
     </div>

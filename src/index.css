@@ -227,3 +227,23 @@ select option:checked {
   .vf-rise, .vf-draw { animation-duration: 150ms; }
   .vf-rise { transform: none; }
 }
+
+/* Infantil — troca de abas: a tela desliza pro lado (nunca apaga-e-reaparece) */
+@keyframes tab-in-left {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes tab-in-right {
+  from { opacity: 0; transform: translateX(-28px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes tab-in-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.tab-in-left  { animation: tab-in-left 220ms ease-out; }
+.tab-in-right { animation: tab-in-right 220ms ease-out; }
+.tab-in-fade  { animation: tab-in-fade 150ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .tab-in-left, .tab-in-right, .tab-in-fade { animation: tab-in-fade 100ms ease-out; }
+}
