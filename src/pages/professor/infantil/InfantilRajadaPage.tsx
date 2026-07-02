@@ -1,14 +1,21 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronDown, ChevronUp, Search, Eye, List, LayoutGrid, ImagePlus, X, Sprout } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronUp, Search, Eye, ClipboardList, List, LayoutGrid, ImagePlus, X, Sprout } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useRajadaTurma, type AlunoRajada } from '@/hooks/useRajadaTurma';
 import { useFaseTurma } from '@/hooks/useFaseTurma';
-import { getIniciais, formatTurmaLabel, getViewModePreferido, salvarViewModePreferido } from '@/lib/infantil';
+import {
+  getIniciais,
+  formatTurmaLabel,
+  getViewModePreferido,
+  salvarViewModePreferido,
+  getTurmaPreferida,
+  salvarTurmaPreferida,
+} from '@/lib/infantil';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { infantilTheme as t } from '@/styles/infantilTheme';
@@ -167,8 +174,15 @@ const InfantilRajadaPage = () => {
   const { turmasVinculadas, profile } = useProfessor();
 
   const turmaInicial =
-    (location.state as { turmaId?: string } | null)?.turmaId ?? turmasVinculadas?.[0]?.id ?? null;
-  const [turmaSel, setTurmaSel] = useState<string | null>(turmaInicial);
+    (location.state as { turmaId?: string } | null)?.turmaId ??
+    getTurmaPreferida() ??
+    turmasVinculadas?.[0]?.id ??
+    null;
+  const [turmaSel, setTurmaSelState] = useState<string | null>(turmaInicial);
+  const setTurmaSel = (id: string) => {
+    setTurmaSelState(id);
+    salvarTurmaPreferida(id);
+  };
   const [busca, setBusca] = useState('');
   const [activeId, setActiveId] = useState<string | null>(null);
   const [texto, setTexto] = useState('');
@@ -475,6 +489,40 @@ const InfantilRajadaPage = () => {
 
       {/* Conteúdo (o layout já dá pt-14/px-4/pb-24 — aqui só limpa o sub-header) */}
       <div className="pt-16 space-y-4">
+        {/* Seletor de turma — SEMPRE visível (fora do ramo da fase: sem ele aqui,
+            trocar pra uma turma sem trilha prendia a professora na tela vazia).
+            Em GRADE e na cor do "Iniciar aula" — fica óbvio qual turma está ativa. */}
+        {turmasVinculadas && turmasVinculadas.length > 1 && (
+          <div className="grid grid-cols-2 gap-2">
+            {turmasVinculadas.map((tv) => {
+              const ativo = turmaId === tv.id;
+              return (
+                <button
+                  key={tv.id}
+                  onClick={() => {
+                    if (tv.id === turmaId) return;
+                    if (temPendencia) {
+                      setPendencia({ tipo: 'turma', alvoTurmaId: tv.id });
+                      return;
+                    }
+                    setTurmaSel(tv.id);
+                    fecharEditor();
+                  }}
+                  className="rounded-xl py-3 px-3 text-sm font-semibold transition-colors"
+                  style={
+                    ativo
+                      ? { backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowMd }
+                      : { backgroundColor: t.surface, color: t.textMuted, border: `1px solid ${t.border}` }
+                  }
+                  aria-pressed={ativo}
+                >
+                  {formatTurmaLabel(tv.serie, tv.turma_letra)}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {faseLoading ? (
           <div className="space-y-3 pt-2">
             <Skeleton className="h-10 w-full rounded-xl" />
@@ -490,8 +538,8 @@ const InfantilRajadaPage = () => {
             </div>
             <p className="text-sm max-w-xs mx-auto" style={{ color: t.textMuted }}>
               {ordem > 8
-                ? 'As 8 explorações do ano foram concluídas com esta turma. A história de cada criança continua viva no Diário.'
-                : 'Comece uma fase na trilha (aba Arboria → O ano) para registrar a aula.'}
+                ? `As 8 explorações do ano foram concluídas com ${turmaLabel ? `a turma ${turmaLabel}` : 'esta turma'}. A história de cada criança continua viva no Diário.`
+                : `${turmaLabel ? `A turma ${turmaLabel}` : 'Esta turma'} ainda não começou a trilha. Comece a primeira exploração na aba Arboria → O ano — as crianças aparecem aqui em seguida.`}
             </p>
           </div>
         ) : (
@@ -522,23 +570,25 @@ const InfantilRajadaPage = () => {
                 style={{ backgroundColor: t.surfaceAlt, border: `1px solid ${t.border}` }}
               >
                 <span className="flex items-center gap-2 text-sm" style={{ color: t.textMuted }}>
-                  <Eye size={16} style={{ color: t.accent }} strokeWidth={1.75} />
-                  O que observar
+                  <ClipboardList size={16} style={{ color: t.accent }} strokeWidth={1.75} />
+                  Detalhe da atividade
                 </span>
                 <ChevronDown size={16} style={{ color: t.textFaint }} />
               </button>
             ) : (
               <>
-                {/* O que observar */}
+                {/* Detalhe da atividade — especificações da atividade desta aula
+                    (nome, materiais, objetivo, como conduzir, o que observar).
+                    Alimentado pelo banco de atividades — por ora, moldura fantasma. */}
                 <section
                   className="rounded-2xl p-4"
                   style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <Eye size={18} style={{ color: t.accent }} strokeWidth={1.75} />
+                      <ClipboardList size={18} style={{ color: t.accent }} strokeWidth={1.75} />
                       <h2 className="text-sm font-semibold" style={{ color: t.text }}>
-                        O que observar
+                        Detalhe da atividade
                       </h2>
                     </div>
                     <button
@@ -549,12 +599,10 @@ const InfantilRajadaPage = () => {
                       <ChevronUp size={16} style={{ color: t.textFaint }} />
                     </button>
                   </div>
-                  <p className="text-sm leading-relaxed" style={{ color: t.textMuted }}>
-                    {fase.inteligencia?.descricao ||
-                      `Repare por onde cada criança entra quando o contexto convida o mecanismo ${mecanismo} — sem rotular; só registre o que ela fez.`}
-                  </p>
-                  <p className="text-xs mt-2 pt-2" style={{ color: t.textFaint, borderTop: `1px solid ${t.border}` }}>
-                    Materiais e atividades desta aula chegam com o banco de atividades.
+                  <p className="text-sm leading-relaxed" style={{ color: t.textFaint }}>
+                    Nome, materiais, objetivo, como conduzir e o que observar — as
+                    especificações da atividade desta aula aparecem aqui quando o banco de
+                    atividades chegar.
                   </p>
                 </section>
 
@@ -572,36 +620,6 @@ const InfantilRajadaPage = () => {
                   </p>
                 </div>
               </>
-            )}
-
-            {/* Filtro de turma (só se houver mais de uma) */}
-            {turmasVinculadas && turmasVinculadas.length > 1 && (
-              <div className="flex gap-1.5 flex-wrap">
-                {turmasVinculadas.map((tv) => {
-                  const ativo = turmaId === tv.id;
-                  return (
-                    <button
-                      key={tv.id}
-                      onClick={() => {
-                        if (temPendencia) {
-                          setPendencia({ tipo: 'turma', alvoTurmaId: tv.id });
-                          return;
-                        }
-                        setTurmaSel(tv.id);
-                        fecharEditor();
-                      }}
-                      className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
-                      style={
-                        ativo
-                          ? { backgroundColor: t.accent, color: '#FFFFFF' }
-                          : { backgroundColor: t.surface, color: t.textMuted, border: `1px solid ${t.border}` }
-                      }
-                    >
-                      {formatTurmaLabel(tv.serie, tv.turma_letra)}
-                    </button>
-                  );
-                })}
-              </div>
             )}
 
             {/* Input de foto escondido (disparado pelo botão do editor) */}

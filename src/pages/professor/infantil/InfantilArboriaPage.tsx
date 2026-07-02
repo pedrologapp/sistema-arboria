@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Play, Eye, CalendarClock, Check, ChevronRight, ChevronDown, Flag, Route, Sprout } from 'lucide-react';
+import { Play, ClipboardList, CalendarClock, Check, ChevronRight, ChevronDown, Flag, Route, Sprout } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useFaseTurma, type FaseDaTurma } from '@/hooks/useFaseTurma';
-import { formatTurmaLabel } from '@/lib/infantil';
+import { formatTurmaLabel, getTurmaPreferida, salvarTurmaPreferida } from '@/lib/infantil';
+import ViradaFaseExperience, { type ViradaDados } from '@/pages/professor/infantil/ViradaFaseExperience';
 import { Skeleton } from '@/components/ui/skeleton';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 
@@ -227,20 +228,22 @@ const CockpitHoje = ({
         </div>
       </section>
 
-      {/* O que observar hoje */}
+      {/* Detalhe da atividade — as especificações da atividade ATUAL (nome,
+          materiais, objetivo, como conduzir, o que observar). Alimentado pelo
+          banco de atividades que o Fundador vai criar — por ora, moldura fantasma. */}
       <section
         className="rounded-2xl p-4"
         style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
       >
         <div className="flex items-center gap-2 mb-2">
-          <Eye size={18} style={{ color: t.accent }} strokeWidth={1.75} />
+          <ClipboardList size={18} style={{ color: t.accent }} strokeWidth={1.75} />
           <h2 className="text-sm font-semibold" style={{ color: t.text }}>
-            O que observar hoje
+            Detalhe da atividade
           </h2>
         </div>
-        <p className="text-sm leading-relaxed" style={{ color: t.textMuted }}>
-          {faseAtual.inteligencia?.descricao ||
-            `Repare por onde cada criança entra quando o contexto convida o mecanismo ${mecanismo} — sem rotular; só registre o que ela fez.`}
+        <p className="text-sm leading-relaxed" style={{ color: t.textFaint }}>
+          Nome, materiais, objetivo, como conduzir e o que observar — as especificações da
+          atividade desta aula aparecem aqui quando o banco de atividades chegar.
         </p>
       </section>
     </div>
@@ -463,7 +466,7 @@ const FinalizarModal = ({
           )}
 
           <p className="text-sm leading-relaxed italic" style={{ color: t.textMuted }}>
-            Finalizar abre a próxima exploração para a turma. O que ficou de fora não se perde — segue com você e com as crianças.
+            Finalizar fecha esta exploração e abre a próxima. Antes de seguir, você vai ver o que esta fase deixou.
           </p>
 
           <div className="space-y-2 pt-1">
@@ -498,15 +501,23 @@ const FinalizarModal = ({
 const InfantilArboriaPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isLoading, profile, turmasVinculadas, refreshData } = useProfessor();
+  const { isLoading, profile, turmasVinculadas } = useProfessor();
   const [view, setView] = useState<View>('hoje');
   const [acaoLoading, setAcaoLoading] = useState(false);
   const [confirmarOpen, setConfirmarOpen] = useState(false);
-  const [turmaSel, setTurmaSel] = useState<string | null>(null);
+  // Seleção sobrevive a remontagens (sessionStorage) — sem isso, o refresh do
+  // contexto devolvia a professora pra 1ª turma no meio do trabalho.
+  const [turmaSel, setTurmaSelState] = useState<string | null>(getTurmaPreferida());
+  const setTurmaSel = (id: string) => {
+    setTurmaSelState(id);
+    salvarTurmaPreferida(id);
+  };
+  const [virada, setVirada] = useState<ViradaDados | null>(null);
 
   // A fase é DA TURMA selecionada (cada turma tem sua trilha) — nunca do contexto
   // global, que só enxerga a primeira turma vinculada.
-  const turmaId = turmaSel ?? turmasVinculadas?.[0]?.id ?? null;
+  const turmaValida = turmaSel && turmasVinculadas?.some((tv) => tv.id === turmaSel);
+  const turmaId = (turmaValida ? turmaSel : null) ?? turmasVinculadas?.[0]?.id ?? null;
   const { data: faseTurma } = useFaseTurma(turmaId, profile?.institution_id);
   const faseCarregando = faseTurma === undefined && !!turmaId && !!profile?.institution_id;
 
@@ -539,8 +550,9 @@ const InfantilArboriaPage = () => {
       toast.error(error.message || 'Não foi possível atualizar a fase.');
       return false;
     }
+    // SÓ o hook da trilha — refreshData aqui recarregava o contexto inteiro e
+    // (via layout) desmontava a página, resetando a turma selecionada.
     await queryClient.invalidateQueries({ queryKey: ['fase-turma', turmaId] });
-    await refreshData();
     return true;
   };
 
@@ -550,12 +562,90 @@ const InfantilArboriaPage = () => {
 
   const onFinalizar = () => setConfirmarOpen(true);
 
-  const confirmarFinalizar = async () => {
-    if (await moverTrilha('finalizar_fase_turma')) {
-      toast.success('Fase finalizada. Próxima exploração liberada.');
-      setConfirmarOpen(false);
+  // Contagens do FECHAMENTO (Tempo 1 da Virada) — dados da fase que fecha.
+  // Falha aqui NUNCA bloqueia o rito: degrada pro layout sem números.
+  const carregarDadosVirada = async (
+    faseFechada: FaseDaTurma,
+    ordemFechada: number
+  ): Promise<ViradaDados> => {
+    const base: ViradaDados = {
+      ordemFechada,
+      faseFechadaNome: faseFechada.inteligencia?.nome ?? `Fase ${faseFechada.numero_fase}`,
+      turmaLabel: (() => {
+        const tv = turmasVinculadas?.find((x) => x.id === turmaId);
+        return tv ? formatTurmaLabel(tv.serie, tv.turma_letra) : '';
+      })(),
+      momentos: null,
+      criancasObservadas: 0,
+      totalCriancas: 0,
+      multiAutores: false,
+      dataInicio: null,
+      momentosAno: null,
+    };
+    try {
+      const [obsRes, turmaRes, evRes] = await Promise.all([
+        supabase
+          .from('observacoes')
+          .select('aluno_id, professor_id')
+          .eq('fase_id', faseFechada.id)
+          .eq('turma_id', turmaId!)
+          .is('excluida_em' as never, null),
+        supabase
+          .from('aluno_turma')
+          .select('aluno_id', { count: 'exact', head: true })
+          .eq('turma_id', turmaId!)
+          .eq('ativo', true),
+        (supabase.from as any)('turma_fase_evento')
+          .select('ocorrido_em')
+          .eq('turma_id', turmaId!)
+          .eq('ordem', ordemFechada)
+          .eq('evento', 'iniciou')
+          .order('ocorrido_em', { ascending: true })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+      const obs = obsRes.data ?? [];
+      base.momentos = obsRes.error ? null : obs.length;
+      base.criancasObservadas = new Set(obs.map((o: any) => o.aluno_id)).size;
+      base.totalCriancas = turmaRes.count ?? 0;
+      base.multiAutores = new Set(obs.map((o: any) => o.professor_id)).size > 1;
+      base.dataInicio = evRes?.data?.ocorrido_em ?? null;
+
+      // Fase 8: o Tempo 2 vira o encerramento do ano — contagem anual da turma
+      if (ordemFechada >= 8) {
+        const inicioAno = new Date(new Date().getFullYear(), 0, 1).toISOString();
+        const { count } = await supabase
+          .from('observacoes')
+          .select('id', { count: 'exact', head: true })
+          .eq('turma_id', turmaId!)
+          .is('excluida_em' as never, null)
+          .gte('created_at', inicioAno);
+        base.momentosAno = count ?? null;
+      }
+    } catch {
+      /* segue com base degradada — o rito acontece mesmo sem números */
     }
-    // Em erro: modal fica aberto, o toast de erro já apareceu (permite tentar de novo ou Voltar).
+    return base;
+  };
+
+  const confirmarFinalizar = async () => {
+    const faseFechada = faseAtual;
+    const ordemFechada = atualOrdem;
+    if (!faseFechada || !turmaId) return;
+
+    setAcaoLoading(true);
+    const { error } = await supabase.rpc('finalizar_fase_turma', { p_turma_id: turmaId });
+    if (error) {
+      setAcaoLoading(false);
+      toast.error(error.message || 'Não foi possível atualizar a fase.');
+      return; // modal fica aberto — permite tentar de novo ou Voltar
+    }
+
+    const dados = await carregarDadosVirada(faseFechada, ordemFechada);
+    await queryClient.invalidateQueries({ queryKey: ['fase-turma', turmaId] });
+    setAcaoLoading(false);
+    setConfirmarOpen(false);
+    setVirada(dados); // sem toast: a experiência É a confirmação
   };
 
   return (
@@ -565,21 +655,23 @@ const InfantilArboriaPage = () => {
         {saudacao}, <span className="font-bold">{primeiroNome}</span>
       </p>
 
-      {/* Seletor de turma — cada turma tem sua própria trilha */}
+      {/* Seletor de turma — cada turma tem sua própria trilha. Em GRADE e na cor
+          do acento (pedido do Fundador 02/07): óbvio qual turma está ativa. */}
       {turmasVinculadas && turmasVinculadas.length > 1 && (
-        <div className="flex gap-1.5 flex-wrap mb-3">
+        <div className="grid grid-cols-2 gap-2 mb-3">
           {turmasVinculadas.map((tv) => {
             const ativo = turmaId === tv.id;
             return (
               <button
                 key={tv.id}
                 onClick={() => setTurmaSel(tv.id)}
-                className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+                className="rounded-xl py-3 px-3 text-sm font-semibold transition-colors"
                 style={
                   ativo
-                    ? { backgroundColor: t.accent, color: '#FFFFFF' }
+                    ? { backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowMd }
                     : { backgroundColor: t.surface, color: t.textMuted, border: `1px solid ${t.border}` }
                 }
+                aria-pressed={ativo}
               >
                 {formatTurmaLabel(tv.serie, tv.turma_letra)}
               </button>
@@ -637,6 +729,8 @@ const InfantilArboriaPage = () => {
           onFechar={() => setConfirmarOpen(false)}
         />
       )}
+
+      {virada && <ViradaFaseExperience dados={virada} onFechar={() => setVirada(null)} />}
     </div>
   );
 };

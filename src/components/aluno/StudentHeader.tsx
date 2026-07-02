@@ -16,9 +16,19 @@ const StudentHeader = ({ notificationCount = 0 }: StudentHeaderProps) => {
       <div className="flex flex-col px-4 py-2 max-w-lg mx-auto">
         {/* Linha 1: Logo + Fase + Notificações */}
         <div className="flex items-center justify-between">
-          {/* Logo */}
+          {/* Logo — "A que Brota" (marca oficial, decisão do Fundador 02/07) */}
           <div className="flex items-center gap-2">
-            <span className="text-xl">🌳</span>
+            <svg viewBox="0 0 100 100" className="w-5 h-5 text-white" aria-hidden="true">
+              <path
+                d="M30 79 L50 27 L70 79"
+                stroke="currentColor"
+                strokeWidth="8.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+              <path d="M50 27 C50 16 58 9 68 8 C69 19 61 26 50 27 Z" fill="currentColor" />
+            </svg>
             <span className="font-semibold text-white text-sm">Projeto Arboria</span>
           </div>
 

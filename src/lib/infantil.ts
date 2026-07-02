@@ -20,6 +20,25 @@ export const formatTurmaLabel = (serie?: string | number | null, letra?: string 
   return /^\d+$/.test(s) ? `${rotulo} ${letra}` : `${rotulo} · ${letra}`;
 };
 
+const TURMA_KEY = 'infantil-turma-sel';
+
+/** Turma selecionada — sobrevive a remontagens (Arboria e Rajada compartilham). */
+export const getTurmaPreferida = (): string | null => {
+  try {
+    return sessionStorage.getItem(TURMA_KEY);
+  } catch {
+    return null;
+  }
+};
+
+export const salvarTurmaPreferida = (turmaId: string) => {
+  try {
+    sessionStorage.setItem(TURMA_KEY, turmaId);
+  } catch {
+    /* segue só em memória */
+  }
+};
+
 const VIEW_KEY = 'infantil-view-criancas';
 
 /** Preferência lista/círculos compartilhada entre Rajada e Diário. */

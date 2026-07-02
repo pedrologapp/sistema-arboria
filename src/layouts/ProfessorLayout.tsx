@@ -48,8 +48,10 @@ const ProfessorLayoutF2 = ({ children }: ProfessorLayoutProps) => {
 const ProfessorLayoutContent = ({ children }: ProfessorLayoutProps) => {
   const { segmento, isLoading } = useProfessor();
 
-  // Enquanto carrega, mostra loading
-  if (isLoading) {
+  // Spinner SÓ no primeiro load (segmento ainda desconhecido). Em refreshes
+  // (refreshData após finalizar fase etc.), manter as páginas MONTADAS —
+  // desmontar aqui apagava estado local (ex.: turma selecionada voltava pra 1ª).
+  if (isLoading && !segmento) {
     return (
       <div className="min-h-screen bg-[#1A1A2E] flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
