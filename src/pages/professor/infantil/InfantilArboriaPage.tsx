@@ -655,10 +655,18 @@ const InfantilArboriaPage = () => {
         {saudacao}, <span className="font-bold">{primeiroNome}</span>
       </p>
 
-      {/* Seletor de turma — cada turma tem sua própria trilha. Em GRADE e na cor
-          do acento (pedido do Fundador 02/07): óbvio qual turma está ativa. */}
+      {/* Seletor de turma — cada turma tem sua própria trilha. Em GRADE, na cor
+          do acento, e com RÓTULO-GUIA (professora comum: tudo falado diretamente). */}
       {turmasVinculadas && turmasVinculadas.length > 1 && (
-        <div className="grid grid-cols-2 gap-2 mb-3">
+        <p
+          className="text-[11px] uppercase tracking-wide font-semibold mb-1.5"
+          style={{ color: t.accentText }}
+        >
+          Escolha a turma
+        </p>
+      )}
+      {turmasVinculadas && turmasVinculadas.length > 1 && (
+        <div className="grid grid-cols-2 gap-2 mb-4">
           {turmasVinculadas.map((tv) => {
             const ativo = turmaId === tv.id;
             return (
@@ -680,7 +688,13 @@ const InfantilArboriaPage = () => {
         </div>
       )}
 
-      {/* Seletor de sub-abas */}
+      {/* Seletor de sub-abas — com rótulo-guia e explicação breve (professora comum) */}
+      <p
+        className="text-[11px] uppercase tracking-wide font-semibold mb-1.5"
+        style={{ color: t.accentText }}
+      >
+        O que você quer ver
+      </p>
       <div className="flex p-1 rounded-full" style={{ backgroundColor: t.surfaceSunken }}>
         {([['hoje', 'Hoje'], ['ano', 'O ano']] as [View, string][]).map(([k, label]) => {
           const ativo = view === k;
@@ -700,6 +714,13 @@ const InfantilArboriaPage = () => {
           );
         })}
       </div>
+
+      {/* Explicação breve do que a visão atual mostra */}
+      <p className="text-xs mt-2 px-1" style={{ color: t.textFaint }}>
+        {view === 'hoje'
+          ? 'A prática de agora: a fase da turma e o registro da aula.'
+          : 'O caminho do ano: as 8 explorações da turma, do começo ao fim.'}
+      </p>
 
       <div className="mt-5">
         {view === 'hoje' ? (

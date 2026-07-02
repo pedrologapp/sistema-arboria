@@ -15,6 +15,11 @@ const tabIndex = (path: string) => {
   return -1;
 };
 
+// Rotas onde o SWIPE troca de aba — só as 3 abas de topo. Nunca na aula
+// (rajada) nem no thread: um gesto acidental não pode tirar a professora
+// do meio do registro.
+const TAB_PATHS = ['/professor', '/professor/fase', '/professor/alunos'];
+
 /** Fallback de chunk lazy — leve, DENTRO do chrome (nada de tela cheia escura). */
 const PaginaCarregando = () => (
   <div className="pt-5 space-y-3">
@@ -60,6 +65,28 @@ const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => 
     prevIdxRef.current = idx;
   }, [idx]);
 
+  // Swipe entre abas (pedido do Fundador 02/07): arrastar ← avança, → volta.
+  // Guardas: gesto claramente horizontal, rápido, e só nas 3 abas de topo.
+  const toqueRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t0 = e.touches[0];
+    toqueRef.current = { x: t0.clientX, y: t0.clientY, t: Date.now() };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const ini = toqueRef.current;
+    toqueRef.current = null;
+    if (!ini) return;
+    const pos = TAB_PATHS.indexOf(location.pathname);
+    if (pos < 0) return; // fora das abas de topo (aula, thread) — swipe desligado
+    const fim = e.changedTouches[0];
+    const dx = fim.clientX - ini.x;
+    const dy = fim.clientY - ini.y;
+    const dt = Date.now() - ini.t;
+    if (Math.abs(dx) < 64 || Math.abs(dx) < Math.abs(dy) * 1.8 || dt > 600) return;
+    const destino = dx < 0 ? pos + 1 : pos - 1;
+    if (destino >= 0 && destino < TAB_PATHS.length) navigate(TAB_PATHS[destino]);
+  };
+
   useAppBadge({
     userId: profile?.id,
     institutionId: profile?.institution_id,
@@ -73,7 +100,12 @@ const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => 
     'Professor';
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: t.bg, color: t.text }}>
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: t.bg, color: t.text }}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       {/* Header */}
       <header
         className="fixed top-0 left-0 right-0 z-40 glass-light"
