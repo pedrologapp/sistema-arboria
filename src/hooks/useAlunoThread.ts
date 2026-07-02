@@ -9,6 +9,8 @@ export interface ObservacaoThread {
   origem: string;      // 'manual' | 'caixa_hipotese' | 'ia_rascunho' | ...
   faseNome: string;    // nome da inteligência da fase (agrupador)
   anexoUrl?: string;   // signed URL da foto do trabalho (bucket privado 'observacoes')
+  professorId?: string;   // quem escreveu (thread é compartilhado entre professores da turma)
+  professorNome?: string; // primeiro nome de quem escreveu (autoria visível quando não for quem lê)
 }
 
 export interface AlunoThreadData {
@@ -49,11 +51,12 @@ export const useAlunoThread = (alunoId?: string) => {
         .eq('ativo', true)
         .maybeSingle();
 
-      // 3. Observações (ordem cronológica = conversa)
+      // 3. Observações (ordem cronológica = conversa) — excluídas (soft-delete) ficam fora
       const { data: obs } = await supabase
         .from('observacoes')
-        .select('id, observacao_texto, data_observacao, created_at, fase_id, origem, anexo_url')
+        .select('id, observacao_texto, data_observacao, created_at, fase_id, origem, anexo_url, professor_id')
         .eq('aluno_id', alunoId)
+        .is('excluida_em' as never, null)
         .order('data_observacao', { ascending: true })
         .order('created_at', { ascending: true });
 
@@ -73,6 +76,23 @@ export const useAlunoThread = (alunoId?: string) => {
         const intelMap = new Map((intels || []).map((i) => [i.id, i.nome]));
         for (const f of fases || []) {
           faseNomeMap.set(f.id, intelMap.get(f.inteligencia_id) || 'Fase');
+        }
+      }
+
+      // 4b. Nome de quem escreveu (o thread é compartilhado — titular + auxiliar
+      //     precisam se enxergar; a autoria só é EXIBIDA quando não é quem lê).
+      const professorIds = [
+        ...new Set((obs || []).map((o) => (o as { professor_id?: string }).professor_id).filter(Boolean)),
+      ] as string[];
+      const professorNomeMap = new Map<string, string>();
+      if (professorIds.length > 0) {
+        const { data: profs } = await supabase
+          .from('profiles')
+          .select('id, full_name, nome')
+          .in('id', professorIds);
+        for (const p of profs || []) {
+          const nome = (p.nome || p.full_name || '').split(' ')[0];
+          if (nome) professorNomeMap.set(p.id, nome);
         }
       }
 
@@ -118,8 +138,12 @@ export const useAlunoThread = (alunoId?: string) => {
           data: o.data_observacao,
           dataHora: o.created_at || o.data_observacao,
           origem: (o as { origem?: string }).origem || 'manual',
-          faseNome: o.fase_id ? faseNomeMap.get(o.fase_id) || 'Fase' : 'Sem fase',
+          faseNome: o.fase_id ? faseNomeMap.get(o.fase_id) || 'Fase' : 'Registro avulso',
           anexoUrl: anexoUrlMap.get(o.id),
+          professorId: (o as { professor_id?: string }).professor_id,
+          professorNome: (o as { professor_id?: string }).professor_id
+            ? professorNomeMap.get((o as { professor_id?: string }).professor_id!)
+            : undefined,
         })),
       };
     },

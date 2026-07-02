@@ -1,0 +1,803 @@
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ChevronLeft, ChevronDown, ChevronUp, Search, Eye, List, LayoutGrid, ImagePlus, X, Sprout } from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useProfessor } from '@/contexts/ProfessorContext';
+import { useRajadaTurma, type AlunoRajada } from '@/hooks/useRajadaTurma';
+import { useFaseTurma } from '@/hooks/useFaseTurma';
+import { getIniciais, formatTurmaLabel, getViewModePreferido, salvarViewModePreferido } from '@/lib/infantil';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { infantilTheme as t } from '@/styles/infantilTheme';
+
+/** Modal de fechamento — celebra o que o professor VIU, nunca o que faltou. */
+const ConcluirModal = ({
+  registrados,
+  onFechar,
+}: {
+  registrados: number;
+  onFechar: () => void;
+}) => {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onFechar();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onFechar]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
+      style={{ backgroundColor: 'rgba(28,34,48,0.30)' }}
+      onClick={onFechar}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Aula concluída"
+    >
+      <div
+        className="w-full max-w-[360px] rounded-2xl overflow-hidden"
+        style={{ backgroundColor: t.surface, boxShadow: t.shadowLg }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ height: 3, backgroundColor: t.accent }} />
+        <div className="p-5 space-y-4">
+          <p className="text-[11px] uppercase tracking-wide font-semibold" style={{ color: t.accentText }}>
+            A aula de hoje
+          </p>
+          <h2 className="text-lg font-bold leading-snug" style={{ color: t.text }}>
+            {registrados > 0
+              ? `Você enxergou ${registrados} ${registrados === 1 ? 'criança' : 'crianças'} hoje.`
+              : 'Aula conduzida. Hoje você observou sem escrever — também faz parte.'}
+          </h2>
+          <p className="text-sm leading-relaxed italic" style={{ color: t.textMuted }}>
+            O que você viu agora vive no Diário de cada uma. O resto da turma segue com você — não some, só não pediu palavra hoje.
+          </p>
+          <button
+            onClick={onFechar}
+            autoFocus
+            className="w-full rounded-xl py-3 text-sm font-semibold"
+            style={{ backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowMd }}
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Modal de texto pendente — substitui o auto-save SILENCIOSO ao trocar de
+ * criança/sair. Nada entra no diário de uma criança sem a professora ver
+ * (o erro mais provável é exatamente texto na criança errada).
+ */
+const PendenteModal = ({
+  alunoNome,
+  onGuardar,
+  onDescartar,
+  onFechar,
+}: {
+  alunoNome: string;
+  onGuardar: () => void;
+  onDescartar: () => void;
+  onFechar: () => void;
+}) => {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onFechar();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onFechar]);
+
+  const primeiroNome = alunoNome.split(' ')[0];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
+      style={{ backgroundColor: 'rgba(28,34,48,0.30)' }}
+      onClick={onFechar}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Registro em andamento"
+    >
+      <div
+        className="w-full max-w-[360px] rounded-2xl overflow-hidden"
+        style={{ backgroundColor: t.surface, boxShadow: t.shadowLg }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ height: 3, backgroundColor: t.accent }} />
+        <div className="p-5 space-y-4">
+          <p className="text-[11px] uppercase tracking-wide font-semibold" style={{ color: t.accentText }}>
+            Registro em andamento
+          </p>
+          <h2 className="text-lg font-bold leading-snug" style={{ color: t.text }}>
+            Guardar o que você escreveu sobre {primeiroNome}?
+          </h2>
+          <div className="space-y-2 pt-1">
+            <button
+              onClick={onGuardar}
+              className="w-full rounded-xl py-3 text-sm font-semibold"
+              style={{ backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowMd }}
+            >
+              Guardar no diário de {primeiroNome}
+            </button>
+            <button
+              onClick={onDescartar}
+              className="w-full rounded-xl py-3 text-sm font-medium"
+              style={{ backgroundColor: 'transparent', color: t.textMuted }}
+            >
+              Descartar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+type Pendencia =
+  | { tipo: 'trocar'; alvoId: string }
+  | { tipo: 'turma'; alvoTurmaId: string }
+  | { tipo: 'sair' }
+  | { tipo: 'finalizar' };
+
+/**
+ * REGISTRO EM RAJADA ("Iniciar aula") — Infantil.
+ *
+ * A aula do dia no topo (o mecanismo + o que observar), a turma em lista, e o
+ * professor toca em quem se destacou pra escrever ali mesmo. Uma observação por
+ * criança, texto livre, grava em `observacoes` e vai pro histórico dela (thread).
+ *
+ * A FASE vem da TURMA SELECIONADA (useFaseTurma) — nunca do contexto global,
+ * que só enxerga a primeira turma (professora com 2 turmas gravaria na fase errada).
+ *
+ * LEI DO MODELO: nunca empurra a preencher a turma toda. Quem não é tocado é o
+ * estado natural — sem contador de restantes, sem "sem registro", sem cobrança.
+ */
+const InfantilRajadaPage = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { turmasVinculadas, profile } = useProfessor();
+
+  const turmaInicial =
+    (location.state as { turmaId?: string } | null)?.turmaId ?? turmasVinculadas?.[0]?.id ?? null;
+  const [turmaSel, setTurmaSel] = useState<string | null>(turmaInicial);
+  const [busca, setBusca] = useState('');
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [texto, setTexto] = useState('');
+  const [concluirOpen, setConcluirOpen] = useState(false);
+  const [pendencia, setPendencia] = useState<Pendencia | null>(null);
+  const [viewMode, setViewModeState] = useState<'lista' | 'circulos'>(getViewModePreferido());
+  const [contextoRecolhidoManual, setContextoRecolhidoManual] = useState<boolean | null>(null);
+  const [imagem, setImagem] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const setViewMode = (modo: 'lista' | 'circulos') => {
+    setViewModeState(modo);
+    salvarViewModePreferido(modo);
+  };
+
+  const escolherArquivo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setImagem(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+    e.target.value = '';
+  };
+
+  const removerImagem = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setImagem(null);
+    setPreviewUrl(null);
+  };
+
+  const turmaId = turmaSel ?? turmasVinculadas?.[0]?.id ?? null;
+  // Fase da TURMA selecionada (não do contexto — cada turma tem sua trilha)
+  const { data: faseTurma, isLoading: faseLoading } = useFaseTurma(turmaId, profile?.institution_id);
+  const fase = faseTurma?.fase ?? null;
+  const ordem = faseTurma?.ordem ?? 0;
+  const { data: alunos, isLoading } = useRajadaTurma(turmaId, fase?.id ?? null);
+  const rajadaKey = ['rajada-turma', turmaId, fase?.id ?? null];
+
+  const mecanismo = fase?.inteligencia?.nome ?? null;
+  const turmaLabel = useMemo(() => {
+    const tv = turmasVinculadas?.find((x) => x.id === turmaId);
+    return tv ? formatTurmaLabel(tv.serie, tv.turma_letra) : '';
+  }, [turmasVinculadas, turmaId]);
+
+  const podeRegistrar = !!user?.id && !!turmaId && !!fase?.id && !!profile?.institution_id;
+
+  const alunosFiltrados = useMemo(() => {
+    if (!alunos) return [];
+    if (!busca) return alunos;
+    return alunos.filter((a) => a.nome.toLowerCase().includes(busca.toLowerCase()));
+  }, [alunos, busca]);
+
+  // Contagem do fechamento vem do SERVIDOR (crianças únicas com registro hoje) —
+  // sobrevive a refresh no meio da aula e nunca conta a mesma criança duas vezes.
+  const registradosCount = useMemo(
+    () => (alunos ?? []).filter((a) => a.registradoHoje).length,
+    [alunos]
+  );
+
+  // Contexto (o que observar + convite) recolhe sozinho após o primeiro registro
+  // do dia — a lista sobe pra perto do polegar. A professora pode reabrir.
+  const contextoRecolhido = contextoRecolhidoManual ?? registradosCount > 0;
+
+  const registrar = useMutation({
+    mutationFn: async ({ alunoId, textoObs, file }: { alunoId: string; textoObs: string; file: File | null }) => {
+      if (!podeRegistrar || !fase?.id) {
+        throw new Error('Sem fase ativa ou turma — não dá pra registrar agora.');
+      }
+      // Se há foto, sobe primeiro no bucket privado 'observacoes' ({aluno_id}/{uuid}.{ext})
+      let anexoPath: string | null = null;
+      if (file) {
+        const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+        const rid =
+          typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const path = `${alunoId}/${rid}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('observacoes').upload(path, file);
+        if (upErr) throw upErr;
+        anexoPath = path;
+      }
+      const { error } = await supabase.from('observacoes').insert({
+        aluno_id: alunoId,
+        professor_id: user!.id,
+        turma_id: turmaId,
+        fase_id: fase.id,
+        institution_id: profile?.institution_id,
+        observacao_texto: textoObs,
+        anexo_url: anexoPath,
+      } as any);
+      if (error) throw error;
+    },
+    // O selo acende NA HORA (otimista) — o gesto mais repetido do dia não pode ser mudo.
+    onMutate: async ({ alunoId }) => {
+      await queryClient.cancelQueries({ queryKey: rajadaKey });
+      const prev = queryClient.getQueryData<AlunoRajada[]>(rajadaKey);
+      if (prev) {
+        queryClient.setQueryData<AlunoRajada[]>(
+          rajadaKey,
+          prev.map((a) =>
+            a.id === alunoId
+              ? { ...a, registradoHoje: true, momentosNaFase: a.momentosNaFase + 1 }
+              : a
+          )
+        );
+      }
+      return { prev };
+    },
+    onSuccess: (_data, { alunoId }) => {
+      queryClient.invalidateQueries({ queryKey: ['aluno-thread', alunoId] });
+      queryClient.invalidateQueries({ queryKey: ['alunos-turmas-com-status'] });
+    },
+    onError: (e: Error, vars, context) => {
+      // Não perde o texto: desfaz o selo otimista e reabre o card com o que foi escrito.
+      if (context?.prev) queryClient.setQueryData(rajadaKey, context.prev);
+      toast.error(e.message || 'Não foi possível registrar agora.');
+      setActiveId(vars.alunoId);
+      setTexto(vars.textoObs);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['rajada-turma'] });
+    },
+  });
+
+  const temPendencia = !!activeId && (!!texto.trim() || !!imagem);
+
+  const abrirDireto = (alunoId: string) => {
+    setActiveId(alunoId);
+    setTexto('');
+    removerImagem();
+    // Traz o editor pra vista (teclado cobre a metade de baixo; nos círculos ele abre acima da grade)
+    setTimeout(() => {
+      const el =
+        document.getElementById('rajada-editor-ativo') ??
+        document.getElementById(`rajada-card-${alunoId}`);
+      el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 80);
+  };
+
+  const fecharEditor = () => {
+    setActiveId(null);
+    setTexto('');
+    removerImagem();
+  };
+
+  const abrirCard = (alunoId: string) => {
+    if (activeId === alunoId) {
+      fecharEditor();
+      return;
+    }
+    if (temPendencia) {
+      // NUNCA salva em silêncio na criança anterior — pergunta antes.
+      setPendencia({ tipo: 'trocar', alvoId: alunoId });
+      return;
+    }
+    abrirDireto(alunoId);
+  };
+
+  const guardar = (alunoId: string) => {
+    const conteudo = texto.trim();
+    if ((!conteudo && !imagem) || registrar.isPending || !podeRegistrar) return;
+    registrar.mutate({ alunoId, textoObs: conteudo, file: imagem });
+    // Recolhe o card na hora (otimista); se der erro, o onError reabre com o texto.
+    fecharEditor();
+  };
+
+  const resolverPendencia = (guardarAntes: boolean) => {
+    const p = pendencia;
+    if (!p) return;
+    if (guardarAntes && activeId && podeRegistrar && !registrar.isPending) {
+      registrar.mutate({ alunoId: activeId, textoObs: texto.trim(), file: imagem });
+    }
+    setPendencia(null);
+    fecharEditor();
+    if (p.tipo === 'trocar') abrirDireto(p.alvoId);
+    if (p.tipo === 'turma') setTurmaSel(p.alvoTurmaId);
+    if (p.tipo === 'sair') navigate(-1);
+    if (p.tipo === 'finalizar') setConcluirOpen(true);
+  };
+
+  const onVoltar = () => {
+    if (temPendencia) setPendencia({ tipo: 'sair' });
+    else navigate(-1);
+  };
+
+  const onFinalizar = () => {
+    if (temPendencia) setPendencia({ tipo: 'finalizar' });
+    else setConcluirOpen(true);
+  };
+
+  const activeAluno = useMemo(
+    () => alunosFiltrados.find((a) => a.id === activeId) ?? null,
+    [alunosFiltrados, activeId]
+  );
+
+  const alunoPendente = useMemo(
+    () => (alunos ?? []).find((a) => a.id === activeId) ?? null,
+    [alunos, activeId]
+  );
+
+  // Editor de observação (texto + foto) — reusado na lista e nos círculos.
+  const renderEditor = (aluno: AlunoRajada) => (
+    <div className="px-3 pb-3" id="rajada-editor-ativo">
+      {previewUrl && (
+        <div className="relative mb-2 inline-block">
+          <img src={previewUrl} alt="" className="h-16 w-16 rounded-lg object-cover" />
+          <button
+            onClick={removerImagem}
+            className="absolute -top-1.5 -right-1.5 rounded-full p-0.5"
+            style={{ backgroundColor: t.surface, border: `1px solid ${t.border}` }}
+            aria-label="Remover foto"
+          >
+            <X size={14} style={{ color: t.textMuted }} />
+          </button>
+        </div>
+      )}
+      <textarea
+        autoFocus
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+        placeholder={`Como ${aluno.nome.split(' ')[0]} entrou na atividade hoje?`}
+        rows={3}
+        className="w-full rounded-xl p-3 text-sm resize-none focus:outline-none focus-visible:ring-2"
+        style={{
+          backgroundColor: t.surfaceSunken,
+          border: `1px solid ${t.border}`,
+          color: t.text,
+          ['--tw-ring-color' as string]: t.accent,
+        }}
+      />
+      {/* Fio de continuidade — SÓ dentro do editor aberto e SÓ quando > 0
+          (zero não aparece: silêncio não é marcado — lei do modelo) */}
+      {aluno.momentosNaFase > 0 && (
+        <button
+          onClick={() => navigate(`/professor/alunos/${aluno.id}`)}
+          className="text-xs mt-1 underline-offset-2 hover:underline"
+          style={{ color: t.textMuted }}
+        >
+          {aluno.momentosNaFase} {aluno.momentosNaFase === 1 ? 'momento' : 'momentos'} nesta fase · ver no Diário
+        </button>
+      )}
+      <div className="flex items-center justify-between mt-2">
+        <button
+          onClick={() => fileRef.current?.click()}
+          className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-2 py-2"
+          style={{ color: t.textMuted }}
+        >
+          <ImagePlus size={16} /> Foto do trabalho (não da criança)
+        </button>
+        <button
+          onClick={() => guardar(aluno.id)}
+          disabled={(!texto.trim() && !imagem) || registrar.isPending}
+          className="text-sm font-semibold rounded-xl px-4 py-2.5 disabled:opacity-50"
+          style={{ backgroundColor: t.accent, color: '#FFFFFF' }}
+        >
+          Guardar
+        </button>
+      </div>
+    </div>
+  );
+
+  const seloRegistrado = (
+    <p className="text-xs mt-0.5 flex items-center gap-1 sprout-in" style={{ color: t.presenteText }}>
+      <Sprout size={13} strokeWidth={2} style={{ color: t.presente }} /> registrado hoje
+    </p>
+  );
+
+  return (
+    <div>
+      {/* Sub-header (sob o header da instituição) */}
+      <div
+        className="fixed top-14 left-0 right-0 z-30 glass-light"
+        style={{ borderBottom: `1px solid ${t.border}` }}
+      >
+        <div className="max-w-lg mx-auto h-14 px-2 flex items-center gap-2">
+          <button
+            onClick={onVoltar}
+            className="p-1.5 rounded-full active:scale-95"
+            style={{ color: t.textMuted }}
+            aria-label="Voltar"
+          >
+            <ChevronLeft size={22} />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold truncate" style={{ color: t.text }}>
+              Registro da turma
+            </p>
+            <p className="text-[11px] truncate" style={{ color: t.textFaint }}>
+              {mecanismo ? `Fase ${mecanismo}` : 'Sem fase ativa'}
+              {turmaLabel ? ` · ${turmaLabel}` : ''}
+            </p>
+          </div>
+          <button
+            onClick={onFinalizar}
+            className="flex-shrink-0 text-sm font-semibold rounded-full px-4 py-2.5"
+            style={{ backgroundColor: t.accentSoft, color: t.accentText }}
+          >
+            Finalizar aula
+          </button>
+        </div>
+      </div>
+
+      {/* Conteúdo (o layout já dá pt-14/px-4/pb-24 — aqui só limpa o sub-header) */}
+      <div className="pt-16 space-y-4">
+        {faseLoading ? (
+          <div className="space-y-3 pt-2">
+            <Skeleton className="h-10 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-2xl" />
+          </div>
+        ) : !fase ? (
+          <div className="pt-10 text-center space-y-3">
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center mx-auto"
+              style={{ backgroundColor: t.accentSoft }}
+            >
+              <Eye size={28} style={{ color: t.accent }} strokeWidth={1.5} />
+            </div>
+            <p className="text-sm max-w-xs mx-auto" style={{ color: t.textMuted }}>
+              {ordem > 8
+                ? 'As 8 explorações do ano foram concluídas com esta turma. A história de cada criança continua viva no Diário.'
+                : 'Comece uma fase na trilha (aba Arboria → O ano) para registrar a aula.'}
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Faixa de status — fina, com pulso (não imita o botão do cockpit) */}
+            <div
+              className="w-full rounded-xl px-3.5 py-2.5 flex items-center gap-2.5"
+              style={{ backgroundColor: t.surface, border: `1px solid ${t.accentBorder}`, boxShadow: t.shadowSm }}
+            >
+              <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
+                <span
+                  className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60"
+                  style={{ backgroundColor: t.accent }}
+                />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ backgroundColor: t.accent }} />
+              </span>
+              <p className="text-sm min-w-0 truncate" style={{ color: t.text }}>
+                <span className="font-semibold">Aula em andamento</span>
+                <span style={{ color: t.textMuted }}> · Fase {mecanismo}</span>
+              </p>
+            </div>
+
+            {/* Contexto da aula — recolhe após o primeiro registro (a lista sobe) */}
+            {contextoRecolhido ? (
+              <button
+                onClick={() => setContextoRecolhidoManual(false)}
+                className="w-full rounded-xl px-3.5 py-2.5 flex items-center justify-between"
+                style={{ backgroundColor: t.surfaceAlt, border: `1px solid ${t.border}` }}
+              >
+                <span className="flex items-center gap-2 text-sm" style={{ color: t.textMuted }}>
+                  <Eye size={16} style={{ color: t.accent }} strokeWidth={1.75} />
+                  O que observar
+                </span>
+                <ChevronDown size={16} style={{ color: t.textFaint }} />
+              </button>
+            ) : (
+              <>
+                {/* O que observar */}
+                <section
+                  className="rounded-2xl p-4"
+                  style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <Eye size={18} style={{ color: t.accent }} strokeWidth={1.75} />
+                      <h2 className="text-sm font-semibold" style={{ color: t.text }}>
+                        O que observar
+                      </h2>
+                    </div>
+                    <button
+                      onClick={() => setContextoRecolhidoManual(true)}
+                      className="p-1 rounded-lg"
+                      aria-label="Recolher"
+                    >
+                      <ChevronUp size={16} style={{ color: t.textFaint }} />
+                    </button>
+                  </div>
+                  <p className="text-sm leading-relaxed" style={{ color: t.textMuted }}>
+                    {fase.inteligencia?.descricao ||
+                      `Repare por onde cada criança entra quando o contexto convida o mecanismo ${mecanismo} — sem rotular; só registre o que ela fez.`}
+                  </p>
+                  <p className="text-xs mt-2 pt-2" style={{ color: t.textFaint, borderTop: `1px solid ${t.border}` }}>
+                    Materiais e atividades desta aula chegam com o banco de atividades.
+                  </p>
+                </section>
+
+                {/* Convite — centrado no MECANISMO (não em "quem se destacou"), sem forçar */}
+                <div
+                  className="rounded-2xl p-3.5"
+                  style={{ backgroundColor: t.accentSoft, border: `1px solid ${t.accentBorder}` }}
+                >
+                  <p className="text-sm font-semibold" style={{ color: t.accentText }}>
+                    Conseguiu observar o mecanismo {mecanismo} em alguma criança?
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: t.accentText }}>
+                    Se você percebeu outros mecanismos também, pode comentar. Toque no nome para
+                    escrever — ou dite pelo microfone do teclado.
+                  </p>
+                </div>
+              </>
+            )}
+
+            {/* Filtro de turma (só se houver mais de uma) */}
+            {turmasVinculadas && turmasVinculadas.length > 1 && (
+              <div className="flex gap-1.5 flex-wrap">
+                {turmasVinculadas.map((tv) => {
+                  const ativo = turmaId === tv.id;
+                  return (
+                    <button
+                      key={tv.id}
+                      onClick={() => {
+                        if (temPendencia) {
+                          setPendencia({ tipo: 'turma', alvoTurmaId: tv.id });
+                          return;
+                        }
+                        setTurmaSel(tv.id);
+                        fecharEditor();
+                      }}
+                      className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+                      style={
+                        ativo
+                          ? { backgroundColor: t.accent, color: '#FFFFFF' }
+                          : { backgroundColor: t.surface, color: t.textMuted, border: `1px solid ${t.border}` }
+                      }
+                    >
+                      {formatTurmaLabel(tv.serie, tv.turma_letra)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Input de foto escondido (disparado pelo botão do editor) */}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={escolherArquivo}
+            />
+
+            {/* Busca + alternador de visão (lista / círculos) */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: t.textFaint }} />
+                <input
+                  type="text"
+                  placeholder="Buscar criança..."
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm focus:outline-none focus-visible:ring-2"
+                  style={{
+                    backgroundColor: t.surfaceSunken,
+                    border: `1px solid ${t.border}`,
+                    color: t.text,
+                    ['--tw-ring-color' as string]: t.accent,
+                  }}
+                />
+              </div>
+              <div className="flex p-0.5 rounded-xl flex-shrink-0" style={{ backgroundColor: t.surfaceSunken }}>
+                {([['lista', List], ['circulos', LayoutGrid]] as const).map(([modo, Icon]) => {
+                  const ativo = viewMode === modo;
+                  return (
+                    <button
+                      key={modo}
+                      onClick={() => setViewMode(modo)}
+                      className="p-2.5 rounded-lg transition-colors"
+                      style={ativo ? { backgroundColor: t.surface, boxShadow: t.shadowSm } : { backgroundColor: 'transparent' }}
+                      aria-label={modo === 'lista' ? 'Ver em lista' : 'Ver em círculos'}
+                      aria-pressed={ativo}
+                    >
+                      <Icon size={18} style={{ color: ativo ? t.accent : t.textMuted }} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Turma */}
+            {isLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="h-16 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : alunosFiltrados.length === 0 ? (
+              <p className="text-sm text-center py-10" style={{ color: t.textMuted }}>
+                {busca ? 'Nenhuma criança com esse nome.' : 'Não há crianças nesta turma.'}
+              </p>
+            ) : viewMode === 'lista' ? (
+              /* VISÃO EM LISTA — um abaixo do outro, escrita inline */
+              <div className="space-y-2">
+                {alunosFiltrados.map((aluno) => {
+                  const aberto = activeId === aluno.id;
+                  return (
+                    <div
+                      key={aluno.id}
+                      id={`rajada-card-${aluno.id}`}
+                      className="rounded-xl overflow-hidden"
+                      style={{
+                        backgroundColor: t.surface,
+                        border: `1px solid ${aberto ? t.accent : t.border}`,
+                        boxShadow: t.shadowSm,
+                      }}
+                    >
+                      <button
+                        onClick={() => abrirCard(aluno.id)}
+                        className="w-full flex items-center gap-3 p-3 text-left active:scale-[0.99] transition-transform"
+                      >
+                        <Avatar className="h-11 w-11 flex-shrink-0">
+                          <AvatarImage src={aluno.avatarUrl} className="object-cover" />
+                          <AvatarFallback
+                            className="text-sm font-semibold"
+                            style={{ backgroundColor: t.accentSoft, color: t.accentText }}
+                          >
+                            {getIniciais(aluno.nome)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium leading-snug" style={{ color: t.text }}>
+                            {aluno.nome}
+                          </p>
+                          {aluno.registradoHoje && seloRegistrado}
+                        </div>
+                      </button>
+
+                      {aberto && renderEditor(aluno)}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* VISÃO EM CÍRCULOS — foto + nome e sobrenome; o editor abre acima da grade */
+              <div className="space-y-3">
+                {activeAluno && (
+                  <div
+                    className="rounded-xl overflow-hidden"
+                    style={{ backgroundColor: t.surface, border: `1px solid ${t.accent}`, boxShadow: t.shadowMd }}
+                  >
+                    <div className="flex items-center gap-3 p-3">
+                      <Avatar className="h-11 w-11 flex-shrink-0">
+                        <AvatarImage src={activeAluno.avatarUrl} className="object-cover" />
+                        <AvatarFallback
+                          className="text-sm font-semibold"
+                          style={{ backgroundColor: t.accentSoft, color: t.accentText }}
+                        >
+                          {getIniciais(activeAluno.nome)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <p className="text-sm font-semibold" style={{ color: t.text }}>
+                        {activeAluno.nome}
+                      </p>
+                    </div>
+                    {renderEditor(activeAluno)}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-3 gap-2">
+                  {alunosFiltrados.map((aluno) => {
+                    const ativo = activeId === aluno.id;
+                    return (
+                      <button
+                        key={aluno.id}
+                        id={`rajada-card-${aluno.id}`}
+                        onClick={() => abrirCard(aluno.id)}
+                        className="flex flex-col items-center gap-1.5 p-2 rounded-xl active:scale-[0.98] transition-transform"
+                        style={{
+                          backgroundColor: t.surface,
+                          border: `1px solid ${ativo ? t.accent : t.border}`,
+                          boxShadow: t.shadowSm,
+                        }}
+                      >
+                        <div className="relative">
+                          <Avatar className="h-16 w-16">
+                            <AvatarImage src={aluno.avatarUrl} className="object-cover" />
+                            <AvatarFallback
+                              className="text-base font-semibold"
+                              style={{ backgroundColor: t.accentSoft, color: t.accentText }}
+                            >
+                              {getIniciais(aluno.nome)}
+                            </AvatarFallback>
+                          </Avatar>
+                          {aluno.registradoHoje && (
+                            <span
+                              className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center sprout-in"
+                              style={{ backgroundColor: t.presente, border: `2px solid ${t.surface}` }}
+                              aria-label="registrado hoje"
+                            >
+                              <Sprout size={11} strokeWidth={2.5} color="#FFFFFF" />
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-center leading-tight line-clamp-2" style={{ color: t.text }}>
+                          {aluno.nome}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {pendencia && alunoPendente && (
+        <PendenteModal
+          alunoNome={alunoPendente.nome}
+          onGuardar={() => resolverPendencia(true)}
+          onDescartar={() => resolverPendencia(false)}
+          onFechar={() => setPendencia(null)}
+        />
+      )}
+
+      {concluirOpen && (
+        <ConcluirModal
+          registrados={registradosCount}
+          onFechar={() => {
+            setConcluirOpen(false);
+            navigate(-1);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+export default InfantilRajadaPage;

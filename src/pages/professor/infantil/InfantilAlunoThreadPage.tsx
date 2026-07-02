@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Send, ImagePlus, X } from 'lucide-react';
+import { ChevronLeft, Send, ImagePlus, X, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -9,16 +9,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useAlunoThread, type AlunoThreadData, type ObservacaoThread } from '@/hooks/useAlunoThread';
+import { useFaseTurma } from '@/hooks/useFaseTurma';
+import { getIniciais } from '@/lib/infantil';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { infantilTheme as t } from '@/styles/infantilTheme';
-
-const getIniciais = (nome: string) => {
-  const parts = nome.split(' ').filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-};
 
 const fmtDataHora = (iso: string) => {
   try {
@@ -26,6 +21,122 @@ const fmtDataHora = (iso: string) => {
   } catch {
     return iso;
   }
+};
+
+const fmtDia = (isoDate: string) => {
+  try {
+    return format(parseISO(isoDate), "d 'de' MMMM", { locale: ptBR });
+  } catch {
+    return isoDate;
+  }
+};
+
+// No celular não existe Shift+Enter — Enter precisa quebrar linha, não enviar.
+const isTouch =
+  typeof window !== 'undefined' &&
+  ('ontouchstart' in window || (navigator.maxTouchPoints ?? 0) > 0);
+
+// Motivos da exclusão (auditoria — parecer Riscos 01/07). Presets, não texto livre.
+const MOTIVOS_EXCLUSAO = ['Criança errada', 'Erro de digitação', 'Foto errada', 'Outro'] as const;
+
+/**
+ * Modal da "borracha" — remover um registro do diário (soft-delete auditado).
+ * Corrigir = remover + reescrever. O registro some da UI mas permanece
+ * auditável no banco; a foto sai do bucket imediatamente (RPC).
+ */
+const ExcluirModal = ({
+  alunoNome,
+  loading,
+  onConfirmar,
+  onFechar,
+}: {
+  alunoNome: string;
+  loading: boolean;
+  onConfirmar: (motivo: string) => void;
+  onFechar: () => void;
+}) => {
+  const [motivo, setMotivo] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onFechar();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onFechar]);
+
+  const primeiroNome = alunoNome.split(' ')[0];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
+      style={{ backgroundColor: 'rgba(28,34,48,0.30)' }}
+      onClick={onFechar}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Remover registro"
+    >
+      <div
+        className="w-full max-w-[360px] rounded-2xl overflow-hidden"
+        style={{ backgroundColor: t.surface, boxShadow: t.shadowLg }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ height: 3, backgroundColor: t.accent }} />
+        <div className="p-5 space-y-4">
+          <div className="space-y-1.5">
+            <p className="text-[11px] uppercase tracking-wide font-semibold" style={{ color: t.accentText }}>
+              Corrigir o diário
+            </p>
+            <h2 className="text-lg font-bold leading-snug" style={{ color: t.text }}>
+              Remover este registro do diário de {primeiroNome}?
+            </h2>
+            <p className="text-sm leading-relaxed" style={{ color: t.textMuted }}>
+              Se algo ficou no lugar errado, remova e escreva de novo. O que aconteceu?
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            {MOTIVOS_EXCLUSAO.map((m) => {
+              const ativo = motivo === m;
+              return (
+                <button
+                  key={m}
+                  onClick={() => setMotivo(m)}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+                  style={
+                    ativo
+                      ? { backgroundColor: t.accent, color: '#FFFFFF' }
+                      : { backgroundColor: t.surfaceSunken, color: t.textMuted, border: `1px solid ${t.border}` }
+                  }
+                >
+                  {m}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="space-y-2 pt-1">
+            <button
+              onClick={() => motivo && onConfirmar(motivo)}
+              disabled={!motivo || loading}
+              className="w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-50"
+              style={{ backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowMd }}
+            >
+              Remover registro
+            </button>
+            <button
+              onClick={onFechar}
+              disabled={loading}
+              className="w-full rounded-xl py-3 text-sm font-medium disabled:opacity-60"
+              style={{ backgroundColor: 'transparent', color: t.textMuted }}
+            >
+              Voltar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 /**
@@ -38,8 +149,11 @@ const InfantilAlunoThreadPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { faseAtual, profile } = useProfessor();
+  const { profile } = useProfessor();
   const { data: thread, isLoading } = useAlunoThread(alunoId);
+  // A fase vem da TURMA DESTA CRIANÇA (não do contexto, que só vê a 1ª turma do professor)
+  const { data: faseTurma } = useFaseTurma(thread?.turmaId, profile?.institution_id);
+  const faseAtual = faseTurma?.fase ?? null;
 
   const primeiroNome = (thread?.aluno?.nome || '').split(' ')[0] || 'a criança';
   const totalMomentos = thread?.observacoes.length || 0;
@@ -47,6 +161,7 @@ const InfantilAlunoThreadPage = () => {
   const [texto, setTexto] = useState('');
   const [imagem, setImagem] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [excluirObs, setExcluirObs] = useState<ObservacaoThread | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const fimRef = useRef<HTMLDivElement>(null);
 
@@ -71,12 +186,14 @@ const InfantilAlunoThreadPage = () => {
     fimRef.current?.scrollIntoView({ behavior: 'auto' });
   }, [thread?.observacoes.length]);
 
-  const podeRegistrar = !!user?.id && !!thread?.turmaId && !!faseAtual?.id;
+  // O avulso NÃO exige fase ativa: antes da fase 1 (adaptação) e depois da 8,
+  // o registro segue vivo — grava com fase_id null ("não havia fase de exploração").
+  const podeRegistrar = !!user?.id && !!thread?.turmaId;
 
   const registrar = useMutation({
     mutationFn: async ({ textoObs, file }: { textoObs: string; file: File | null }) => {
-      if (!alunoId || !user?.id || !thread?.turmaId || !faseAtual?.id) {
-        throw new Error('Sem fase ativa ou turma — não dá pra registrar agora.');
+      if (!alunoId || !user?.id || !thread?.turmaId) {
+        throw new Error('Sem turma — não dá pra registrar agora.');
       }
 
       // Se há foto, sobe primeiro no bucket privado 'observacoes'.
@@ -102,7 +219,8 @@ const InfantilAlunoThreadPage = () => {
         aluno_id: alunoId,
         professor_id: user.id,
         turma_id: thread.turmaId,
-        fase_id: faseAtual.id,
+        // null SÓ quando a turma não tem fase ativa (nunca silenciador de bug de carregamento)
+        fase_id: faseAtual?.id ?? null,
         institution_id: profile?.institution_id,
         observacao_texto: textoObs,
         anexo_url: anexoPath,
@@ -123,8 +241,7 @@ const InfantilAlunoThreadPage = () => {
           data: agora.toISOString().slice(0, 10),
           dataHora: agora.toISOString(),
           origem: 'manual',
-          faseNome:
-            faseAtual?.inteligencia?.nome || prev.observacoes.at(-1)?.faseNome || 'Fase',
+          faseNome: faseAtual?.inteligencia?.nome || 'Registro avulso',
           anexoUrl: file ? URL.createObjectURL(file) : undefined,
         };
         queryClient.setQueryData<AlunoThreadData>(['aluno-thread', alunoId], {
@@ -139,10 +256,31 @@ const InfantilAlunoThreadPage = () => {
       toast.error(e.message || 'Erro ao registrar');
     },
     onSuccess: () => {
-      toast.success(`Você enxergou ${primeiroNome}. Mais um momento na história. 🌱`);
+      toast.success(`Você enxergou ${primeiroNome}. Mais um momento na história.`);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['aluno-thread', alunoId] });
+    },
+  });
+
+  // Borracha: soft-delete auditado via RPC (nunca DELETE físico — o rio é preservado)
+  const excluir = useMutation({
+    mutationFn: async ({ obsId, motivo }: { obsId: string; motivo: string }) => {
+      const { error } = await (supabase.rpc as any)('excluir_observacao', {
+        p_obs_id: obsId,
+        p_motivo: motivo,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setExcluirObs(null);
+      toast.success('Registro removido. Se quiser, escreva de novo do jeito certo.');
+      queryClient.invalidateQueries({ queryKey: ['aluno-thread', alunoId] });
+      queryClient.invalidateQueries({ queryKey: ['rajada-turma'] });
+      queryClient.invalidateQueries({ queryKey: ['alunos-turmas-com-status'] });
+    },
+    onError: (e: Error) => {
+      toast.error(e.message || 'Não foi possível remover agora.');
     },
   });
 
@@ -167,8 +305,8 @@ const InfantilAlunoThreadPage = () => {
     <div style={{ backgroundColor: t.bg, minHeight: '100vh' }}>
       {/* Header do aluno (sob o header da instituição) */}
       <div
-        className="fixed top-14 left-0 right-0 z-30"
-        style={{ backgroundColor: t.surface, borderBottom: `1px solid ${t.border}` }}
+        className="fixed top-14 left-0 right-0 z-30 glass-light"
+        style={{ borderBottom: `1px solid ${t.border}` }}
       >
         <div className="max-w-lg mx-auto h-14 px-2 flex items-center gap-2">
           <button
@@ -214,8 +352,8 @@ const InfantilAlunoThreadPage = () => {
         </div>
       </div>
 
-      {/* Thread */}
-      <div className="max-w-lg mx-auto px-4 pt-32 pb-28">
+      {/* Thread (o layout já dá pt-14/px-4/pb-24 — aqui só limpa o sub-header do aluno) */}
+      <div className="pt-16">
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -242,39 +380,77 @@ const InfantilAlunoThreadPage = () => {
                     className="rounded-full px-3 py-1 text-[11px] font-medium"
                     style={{ backgroundColor: t.accentSoft, color: t.accentText }}
                   >
-                    Fase {grupo.faseNome}
+                    {grupo.faseNome === 'Registro avulso' ? grupo.faseNome : `Fase ${grupo.faseNome}`}
                   </span>
                   <div className="flex-1 h-px" style={{ backgroundColor: t.border }} />
                 </div>
 
-                {grupo.itens.map((obs) => (
-                  <div
-                    key={obs.id}
-                    className="rounded-2xl rounded-tl-sm p-3 max-w-[85%]"
-                    style={{
-                      backgroundColor: t.surface,
-                      borderLeft: `3px solid ${t.accent}`,
-                      boxShadow: t.shadowSm,
-                    }}
-                  >
-                    {obs.texto && (
-                      <p className="text-sm leading-relaxed" style={{ color: t.text }}>
-                        {obs.texto}
-                      </p>
-                    )}
-                    {obs.anexoUrl && (
-                      <img
-                        src={obs.anexoUrl}
-                        alt="Trabalho da criança"
-                        className="mt-2 rounded-lg max-h-48 w-auto"
-                        style={{ border: '1px solid ' + t.border }}
-                      />
-                    )}
-                    <p className="text-[11px] mt-1.5 text-right" style={{ color: t.textFaint }}>
-                      {fmtDataHora(obs.dataHora)}
-                    </p>
-                  </div>
-                ))}
+                {grupo.itens.map((obs, oi) => {
+                  // Separador de dia dentro da fase — uma fase dura semanas;
+                  // sem isso, escanear o rio fica difícil.
+                  const diaAnterior = oi > 0 ? grupo.itens[oi - 1].data : null;
+                  const mudouDia = obs.data !== diaAnterior && oi > 0;
+                  const deOutroProfessor = !!obs.professorId && obs.professorId !== user?.id;
+                  return (
+                    <div key={obs.id}>
+                      {mudouDia && (
+                        <div className="flex justify-center my-2.5">
+                          <span
+                            className="rounded-full px-2.5 py-0.5 text-[10px] font-medium"
+                            style={{ backgroundColor: t.surfaceSunken, color: t.textMuted }}
+                          >
+                            {fmtDia(obs.data)}
+                          </span>
+                        </div>
+                      )}
+                      <div
+                        className="rounded-2xl rounded-tl-sm p-3 max-w-[85%]"
+                        style={{
+                          backgroundColor: t.surface,
+                          borderLeft: `3px solid ${t.accent}`,
+                          boxShadow: t.shadowSm,
+                        }}
+                      >
+                        {deOutroProfessor && obs.professorNome && (
+                          <p className="text-[11px] font-semibold mb-0.5" style={{ color: t.accentText }}>
+                            {obs.professorNome}
+                          </p>
+                        )}
+                        {obs.texto && (
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: t.text }}>
+                            {obs.texto}
+                          </p>
+                        )}
+                        {obs.anexoUrl && (
+                          <img
+                            src={obs.anexoUrl}
+                            alt="Trabalho da criança"
+                            className="mt-2 rounded-lg max-h-48 w-auto"
+                            style={{ border: '1px solid ' + t.border }}
+                          />
+                        )}
+                        <div className="flex items-center justify-between mt-1.5 gap-2">
+                          {/* Borracha — só no registro PRÓPRIO já salvo (não no otimista) */}
+                          {obs.professorId === user?.id && !obs.id.startsWith('temp-') ? (
+                            <button
+                              onClick={() => setExcluirObs(obs)}
+                              className="p-1 -m-1 rounded"
+                              style={{ color: t.silencio }}
+                              aria-label="Remover registro"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          ) : (
+                            <span />
+                          )}
+                          <p className="text-[11px] text-right" style={{ color: t.textFaint }}>
+                            {fmtDataHora(obs.dataHora)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
@@ -282,10 +458,10 @@ const InfantilAlunoThreadPage = () => {
         <div ref={fimRef} />
       </div>
 
-      {/* Campo de registro (fixo embaixo) */}
+      {/* Campo de registro (fixo embaixo; pb-safe = não encosta na barra de gesto do iPhone) */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-30"
-        style={{ backgroundColor: t.surface, borderTop: `1px solid ${t.border}` }}
+        className="fixed bottom-0 left-0 right-0 z-30 pb-safe glass-light"
+        style={{ borderTop: `1px solid ${t.border}` }}
       >
         {/* Input de arquivo escondido — câmera traseira por padrão no celular */}
         <input
@@ -322,7 +498,7 @@ const InfantilAlunoThreadPage = () => {
               </button>
             </div>
             <p className="text-[11px] leading-snug" style={{ color: t.textFaint }}>
-              Foto do trabalho, não da criança 🌿
+              Foto do trabalho, não da criança
             </p>
           </div>
         )}
@@ -344,12 +520,19 @@ const InfantilAlunoThreadPage = () => {
           </button>
           <textarea
             value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-            placeholder={podeRegistrar ? `O que ${primeiroNome} te mostrou hoje?` : 'Sem fase ativa para registrar'}
+            onChange={(e) => {
+              setTexto(e.target.value);
+              // Auto-grow: observação de 3 linhas não vira fresta com scroll interno
+              e.currentTarget.style.height = 'auto';
+              e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 128)}px`;
+            }}
+            placeholder={podeRegistrar ? `O que ${primeiroNome} te mostrou hoje?` : 'Sem turma ativa para registrar'}
             disabled={!podeRegistrar}
             rows={1}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              // No touch, Enter quebra linha (não há Shift no teclado do celular);
+              // o envio é sempre pelo botão. No desktop, Enter envia.
+              if (!isTouch && e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 enviar();
               }
@@ -379,6 +562,15 @@ const InfantilAlunoThreadPage = () => {
           </button>
         </div>
       </div>
+
+      {excluirObs && thread?.aluno && (
+        <ExcluirModal
+          alunoNome={thread.aluno.nome}
+          loading={excluir.isPending}
+          onConfirmar={(motivo) => excluir.mutate({ obsId: excluirObs.id, motivo })}
+          onFechar={() => setExcluirObs(null)}
+        />
+      )}
     </div>
   );
 };

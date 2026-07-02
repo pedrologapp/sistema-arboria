@@ -281,7 +281,8 @@ const CapituloProfessorPage = () => {
       const { data } = await sb.from('observacoes')
         .select('id, aluno_id, observacao_texto, origem')
         .eq('capitulo_id', capitulo!.id)
-        .eq('turma_id', turmaId!);
+        .eq('turma_id', turmaId!)
+        .is('excluida_em' as never, null);
       return data ?? [];
     },
   });

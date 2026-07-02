@@ -19,8 +19,10 @@ const InfantilBottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Dentro de um aluno (thread), a barra some — vira conversa em tela cheia.
+  // Dentro de um aluno (thread) e durante a AULA (rajada), a barra some —
+  // tela cheia: no meio do caos da sala, um toque perdido não sai da aula.
   if (/^\/professor\/alunos\/.+/.test(location.pathname)) return null;
+  if (location.pathname === '/professor/aula') return null;
 
   const navItems: NavItemConfig[] = [
     {
@@ -48,8 +50,8 @@ const InfantilBottomNav = () => {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 pb-safe"
-      style={{ backgroundColor: t.surface, boxShadow: '0 -1px 3px rgba(28,34,48,0.06)' }}
+      className="fixed bottom-0 left-0 right-0 z-50 pb-safe glass-light"
+      style={{ boxShadow: '0 -1px 3px rgba(28,34,48,0.06)' }}
     >
       <div className="max-w-lg mx-auto flex items-stretch justify-around">
         {navItems.map((item) => {

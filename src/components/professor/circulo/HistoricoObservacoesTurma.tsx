@@ -67,6 +67,7 @@ const HistoricoObservacoesTurma = ({
         `)
         .eq('turma_id', turmaId)
         .eq('fase_id', faseId)
+        .is('excluida_em' as never, null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

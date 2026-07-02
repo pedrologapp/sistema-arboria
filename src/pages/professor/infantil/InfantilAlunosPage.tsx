@@ -1,18 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Search, NotebookPen } from 'lucide-react';
+import { Users, Search, NotebookPen, List, LayoutGrid } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useAlunosTurmasComStatus } from '@/hooks/useAlunosTurmasComStatus';
+import { getIniciais, formatTurmaLabel, getViewModePreferido, salvarViewModePreferido } from '@/lib/infantil';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { infantilTheme as t } from '@/styles/infantilTheme';
-
-const getIniciais = (nome: string) => {
-  const parts = nome.split(' ').filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-};
 
 /**
  * Aba DIÁRIO (Infantil) — as crianças cuja história o professor escreve.
@@ -25,6 +19,12 @@ const InfantilAlunosPage = () => {
 
   const [turmaFiltro, setTurmaFiltro] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
+  // Preferência compartilhada com a Rajada (quem escolhe círculos lá, encontra círculos aqui)
+  const [viewMode, setViewModeState] = useState<'lista' | 'circulos'>(getViewModePreferido());
+  const setViewMode = (modo: 'lista' | 'circulos') => {
+    setViewModeState(modo);
+    salvarViewModePreferido(modo);
+  };
 
   const alunosFiltrados = useMemo(() => {
     if (!alunos) return [];
@@ -34,8 +34,6 @@ const InfantilAlunosPage = () => {
       return true;
     });
   }, [alunos, turmaFiltro, busca]);
-
-  const semRegistro = (alunos || []).filter((a) => a.quantidadeObservacoes === 0).length;
 
   return (
     <div className="pt-5 space-y-4">
@@ -55,18 +53,14 @@ const InfantilAlunosPage = () => {
       {!isLoading && (alunos?.length ?? 0) > 0 && (
         <div
           className="rounded-2xl p-3.5"
-          style={{ backgroundColor: t.accentSoft, border: `1px solid ${t.border}` }}
+          style={{ backgroundColor: t.accentSoft, border: `1px solid ${t.accentBorder}` }}
         >
+          {/* Só o convite — SEM contador de sem-registro (era "N crianças ainda esperam
+              um momento seu": contador de falta com roupa afetuosa, viola a lei do modelo.
+              Revisado e removido pelo Fundador em 01/07). */}
           <p className="text-sm font-semibold" style={{ color: t.accentText }}>
             Quem você vai enxergar hoje?
           </p>
-          {semRegistro > 0 && (
-            <p className="text-xs mt-0.5" style={{ color: t.accentText }}>
-              {semRegistro === 1
-                ? '1 criança ainda espera um momento seu.'
-                : `${semRegistro} crianças ainda esperam um momento seu.`}
-            </p>
-          )}
         </div>
       )}
 
@@ -82,38 +76,57 @@ const InfantilAlunosPage = () => {
               ativo={turmaFiltro === turma.id}
               onClick={() => setTurmaFiltro(turma.id)}
             >
-              {turma.serie}º {turma.turma_letra}
+              {formatTurmaLabel(turma.serie, turma.turma_letra)}
             </FiltroChip>
           ))}
         </div>
       )}
 
-      {/* Busca */}
-      <div className="relative">
-        <Search
-          size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2"
-          style={{ color: t.textFaint }}
-        />
-        <input
-          type="text"
-          placeholder="Buscar aluno..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm transition-colors focus:outline-none focus-visible:ring-2"
-          style={{
-            backgroundColor: t.surfaceSunken,
-            border: `1px solid ${t.border}`,
-            color: t.text,
-            ['--tw-ring-color' as string]: t.accent,
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = t.accent;
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = t.border;
-          }}
-        />
+      {/* Busca + alternador de visão (lista / círculos) — mesmo padrão da Rajada */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2"
+            style={{ color: t.textFaint }}
+          />
+          <input
+            type="text"
+            placeholder="Buscar criança..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm transition-colors focus:outline-none focus-visible:ring-2"
+            style={{
+              backgroundColor: t.surfaceSunken,
+              border: `1px solid ${t.border}`,
+              color: t.text,
+              ['--tw-ring-color' as string]: t.accent,
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = t.accent;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = t.border;
+            }}
+          />
+        </div>
+        <div className="flex p-0.5 rounded-xl flex-shrink-0" style={{ backgroundColor: t.surfaceSunken }}>
+          {([['lista', List], ['circulos', LayoutGrid]] as const).map(([modo, Icon]) => {
+            const ativo = viewMode === modo;
+            return (
+              <button
+                key={modo}
+                onClick={() => setViewMode(modo)}
+                className="p-2 rounded-lg transition-colors"
+                style={ativo ? { backgroundColor: t.surface, boxShadow: t.shadowSm } : { backgroundColor: 'transparent' }}
+                aria-label={modo === 'lista' ? 'Ver em lista' : 'Ver em círculos'}
+                aria-pressed={ativo}
+              >
+                <Icon size={18} style={{ color: ativo ? t.accent : t.textMuted }} />
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Lista */}
@@ -132,10 +145,10 @@ const InfantilAlunosPage = () => {
             <Users size={28} style={{ color: t.accent }} strokeWidth={1.5} />
           </div>
           <p className="text-sm" style={{ color: t.textMuted }}>
-            {busca || turmaFiltro ? 'Nenhum aluno com esse filtro.' : 'Não há alunos nas suas turmas.'}
+            {busca || turmaFiltro ? 'Nenhuma criança com esse filtro.' : 'Não há crianças nas suas turmas.'}
           </p>
         </div>
-      ) : (
+      ) : viewMode === 'lista' ? (
         <div className="space-y-2">
           {alunosFiltrados.map((aluno) => (
             <button
@@ -157,11 +170,13 @@ const InfantilAlunosPage = () => {
                 <p className="text-sm font-medium leading-snug" style={{ color: t.text }}>
                   {aluno.nome}
                 </p>
-                <p className="text-xs mt-0.5" style={{ color: t.textFaint }}>
-                  {aluno.quantidadeObservacoes > 0
-                    ? `${aluno.quantidadeObservacoes} ${aluno.quantidadeObservacoes === 1 ? 'momento registrado' : 'momentos registrados'}`
-                    : 'História ainda em branco'}
-                </p>
+                {/* Sem registro = linha limpa (nenhum subtítulo marcando ausência) */}
+                {aluno.quantidadeObservacoes > 0 && (
+                  <p className="text-xs mt-0.5" style={{ color: t.textFaint }}>
+                    {aluno.quantidadeObservacoes}{' '}
+                    {aluno.quantidadeObservacoes === 1 ? 'momento registrado' : 'momentos registrados'}
+                  </p>
+                )}
               </div>
               {aluno.serie && (
                 <span
@@ -172,6 +187,31 @@ const InfantilAlunosPage = () => {
                   {aluno.turma ? ` · ${aluno.turma}` : ''}
                 </span>
               )}
+            </button>
+          ))}
+        </div>
+      ) : (
+        /* VISÃO EM CÍRCULOS — foto + nome, grade 3 colunas (mesmo padrão da Rajada) */
+        <div className="grid grid-cols-3 gap-2">
+          {alunosFiltrados.map((aluno) => (
+            <button
+              key={aluno.id}
+              onClick={() => navigate(`/professor/alunos/${aluno.id}`)}
+              className="flex flex-col items-center gap-1.5 p-2 rounded-xl active:scale-[0.98] transition-transform"
+              style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
+            >
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={aluno.avatarUrl} className="object-cover" />
+                <AvatarFallback
+                  className="text-base font-semibold"
+                  style={{ backgroundColor: t.accentSoft, color: t.accentText }}
+                >
+                  {getIniciais(aluno.nome)}
+                </AvatarFallback>
+              </Avatar>
+              <p className="text-[11px] text-center leading-tight line-clamp-2" style={{ color: t.text }}>
+                {aluno.nome}
+              </p>
             </button>
           ))}
         </div>

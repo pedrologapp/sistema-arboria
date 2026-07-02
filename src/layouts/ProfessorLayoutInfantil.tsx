@@ -42,8 +42,8 @@ const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => 
     <div className="min-h-screen" style={{ backgroundColor: t.bg, color: t.text }}>
       {/* Header */}
       <header
-        className="fixed top-0 left-0 right-0 z-40"
-        style={{ backgroundColor: t.surface, boxShadow: '0 1px 3px rgba(28,34,48,0.06)' }}
+        className="fixed top-0 left-0 right-0 z-40 glass-light"
+        style={{ boxShadow: '0 1px 3px rgba(28,34,48,0.06)' }}
       >
         <div className="max-w-lg mx-auto h-14 px-4 flex items-center justify-between">
           <div className="min-w-0">

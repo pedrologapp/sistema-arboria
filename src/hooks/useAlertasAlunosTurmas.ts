@@ -109,6 +109,7 @@ export const useAlertasAlunosTurmas = () => {
           .select('aluno_id, created_at, sinal_id')
           .in('aluno_id', alunoIds)
           .eq('fase_id', faseAtual.id)
+          .is('excluida_em' as never, null)
           .order('created_at', { ascending: false });
 
         // Buscar sinais para saber a valencia

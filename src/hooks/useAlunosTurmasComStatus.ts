@@ -65,7 +65,8 @@ export const useAlunosTurmasComStatus = () => {
       const { data: observacoesData } = await supabase
         .from('observacoes')
         .select('aluno_id')
-        .in('aluno_id', alunoIds);
+        .in('aluno_id', alunoIds)
+        .is('excluida_em' as never, null);
 
       // Criar mapa de quantidade de observações por aluno
       const obsMap = new Map<string, number>();

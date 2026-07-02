@@ -1,4 +1,4 @@
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -186,4 +186,28 @@ select option:focus {
 
 select option:checked {
   background-color: rgba(99, 102, 241, 0.3);
+}
+
+/* Infantil — o broto que "nasce" quando um momento é guardado (Rajada) */
+@keyframes sprout-in {
+  from { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.15); }
+  to   { transform: scale(1); opacity: 1; }
+}
+.sprout-in {
+  animation: sprout-in 250ms ease-out both;
+}
+
+/* Infantil — "liquid glass" (referência do Fundador: iOS). Só no CHROME fixo
+   (header, nav, sub-headers, composer) — nunca em cards de conteúdo.
+   Fallback: branco sólido onde backdrop-filter não existe. */
+.glass-light {
+  background-color: #ffffff;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-light {
+    background-color: rgba(255, 255, 255, 0.55);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    backdrop-filter: blur(20px) saturate(1.8);
+  }
 }

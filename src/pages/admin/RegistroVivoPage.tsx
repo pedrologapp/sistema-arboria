@@ -144,6 +144,7 @@ const RegistroVivoPage = () => {
         .from('observacoes')
         .select('id, observacao_texto, data_observacao, intensidade, professor_id, profiles!observacoes_professor_id_fkey(nome)')
         .eq('aluno_id', id)
+        .is('excluida_em' as never, null)
         .order('data_observacao', { ascending: false });
       return data || [];
     },

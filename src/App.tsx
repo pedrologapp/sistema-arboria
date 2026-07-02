@@ -86,6 +86,7 @@ const CirculoRelatoPage = lazy(() => import("./pages/professor/circulo/CirculoRe
 const AlunosPageWrapper = lazy(() => import("./pages/professor/AlunosPageWrapper"));
 const FasePageWrapper = lazy(() => import("./pages/professor/FasePageWrapper"));
 const PerfilAlunoPageWrapper = lazy(() => import("./pages/professor/PerfilAlunoPageWrapper"));
+const InfantilRajadaPage = lazy(() => import("./pages/professor/infantil/InfantilRajadaPage"));
 const ProfessorConfiguracoesPage = lazy(() => import("./pages/professor/ProfessorConfiguracoesPage"));
 const MissoesSeriePage = lazy(() => import("./pages/professor/MissoesSeriePage"));
 const MissoesSemanaPage = lazy(() => import("./pages/professor/MissoesSemanaPage"));
@@ -502,6 +503,13 @@ const App = () => (
               <ProfessorProtectedRoute>
                 <ProfessorLayout>
                   <AlunosPageWrapper />
+                </ProfessorLayout>
+              </ProfessorProtectedRoute>
+            } />
+            <Route path="/professor/aula" element={
+              <ProfessorProtectedRoute>
+                <ProfessorLayout>
+                  <InfantilRajadaPage />
                 </ProfessorLayout>
               </ProfessorProtectedRoute>
             } />

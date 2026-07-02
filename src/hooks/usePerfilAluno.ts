@@ -364,6 +364,7 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           sinal_id
         `)
         .eq('aluno_id', alunoId)
+        .is('excluida_em' as never, null)
         .order('data_observacao', { ascending: false })
         .limit(20);
 
@@ -395,8 +396,9 @@ export const usePerfilAluno = (alunoId: string | undefined) => {
           .from('observacoes')
           .select('id', { count: 'exact', head: true })
           .eq('aluno_id', alunoId)
-          .eq('fase_id', faseAtual.id);
-        
+          .eq('fase_id', faseAtual.id)
+          .is('excluida_em' as never, null);
+
         temObsFaseAtual = (count || 0) > 0;
       }
 
