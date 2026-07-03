@@ -79,6 +79,8 @@ const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => 
     const ini = toqueRef.current;
     toqueRef.current = null;
     if (!ini) return;
+    // Dentro do santuário (aba Fase) o swipe troca de MECANISMO — a página cuida
+    if (location.pathname.startsWith('/professor/fase')) return;
     const pos = TAB_PATHS.indexOf(location.pathname);
     if (pos < 0) return; // fora das abas de topo (aula, thread) — swipe desligado
     const fim = e.changedTouches[0];

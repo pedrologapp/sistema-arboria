@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { Feather, Library } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Feather, Library, ChevronLeft } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useFaseTurma } from '@/hooks/useFaseTurma';
 import { getTurmaPreferida } from '@/lib/infantil';
-import { SANTUARIO_INFANTIL } from '@/lib/infantilSantuario';
+import { SANTUARIO_INFANTIL, ATIVIDADE_OITO_CAMINHOS } from '@/lib/infantilSantuario';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 
 const TOTAL = 8;
@@ -31,11 +31,58 @@ const InfantilFasePage = () => {
   const faseAtualValida = ordemAtual >= 1 && ordemAtual <= 8 ? ordemAtual : 0;
 
   const [lendo, setLendo] = useState<number | null>(null);
+
+  // Swipe DENTRO do santuário troca de MECANISMO (o modelo mental natural aqui;
+  // o swipe de abas do layout ignora esta rota)
+  const toqueRef = useRef<{ x: number; y: number; t: number } | null>(null);
+
+  // GATE de carregamento: nunca renderizar um mecanismo "default" que depois
+  // troca sozinho (a simulação mostrou que isso assusta quem teme apertar errado)
+  const carregando = faseTurma === undefined && !!turmaId && !!profile?.institution_id;
+  if (carregando) {
+    return (
+      <>
+        <div
+          className="fixed inset-0 z-0"
+          style={{ background: 'radial-gradient(120% 90% at 50% -10%, #322B8F 0%, #2B2580 100%)' }}
+          aria-hidden="true"
+        />
+        <div className="relative z-10 pt-24 flex justify-center">
+          <div
+            className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2"
+            style={{ borderColor: 'rgba(255,255,255,0.6)' }}
+          />
+        </div>
+      </>
+    );
+  }
+
   const atual = lendo ?? (faseAtualValida || 1);
   const m = SANTUARIO_INFANTIL[atual];
 
   const kicker =
-    atual === faseAtualValida ? `Fase atual · ${atual} de ${TOTAL}` : `Mecanismo · ${m.nome}`;
+    faseAtualValida === 0
+      ? 'Conheça os 8 mecanismos'
+      : atual === faseAtualValida
+        ? `Fase atual · ${atual} de ${TOTAL}`
+        : `Mecanismo · ${m.nome}`;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t0 = e.touches[0];
+    toqueRef.current = { x: t0.clientX, y: t0.clientY, t: Date.now() };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const ini = toqueRef.current;
+    toqueRef.current = null;
+    if (!ini) return;
+    const fim = e.changedTouches[0];
+    const dx = fim.clientX - ini.x;
+    const dy = fim.clientY - ini.y;
+    const dt = Date.now() - ini.t;
+    if (Math.abs(dx) < 64 || Math.abs(dx) < Math.abs(dy) * 1.8 || dt > 600) return;
+    const destino = dx < 0 ? atual + 1 : atual - 1;
+    if (destino >= 1 && destino <= TOTAL) setLendo(destino);
+  };
 
   return (
     <>
@@ -51,9 +98,10 @@ const InfantilFasePage = () => {
         aria-hidden="true"
       />
 
-      <div className="relative z-10 pt-4 pb-6" key={atual}>
-        {/* Seletor dos 8 — a fase atual da turma tem o anel; o lido fica sólido */}
-        <div className="flex gap-1.5 justify-center flex-wrap mb-5 vf-rise">
+      <div className="relative z-10 pt-4 pb-6" key={atual} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        {/* Seletor dos 8 — com CORPO DE BOTÃO e a cor de cada mecanismo
+            (a simulação mostrou: círculos transparentes liam como decoração) */}
+        <div className="flex gap-1.5 justify-center flex-wrap mb-2 vf-rise">
           {Array.from({ length: TOTAL }).map((_, i) => {
             const n = i + 1;
             const ehLido = n === atual;
@@ -62,12 +110,14 @@ const InfantilFasePage = () => {
               <button
                 key={n}
                 onClick={() => setLendo(n)}
-                className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold transition-all"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold transition-all active:scale-95"
                 style={{
-                  backgroundColor: ehLido ? '#FFFFFF' : 'transparent',
-                  color: ehLido ? SANTUARIO_INFANTIL[n].cor : 'rgba(255,255,255,0.75)',
-                  border: `1.5px solid ${ehLido ? '#FFFFFF' : 'rgba(255,255,255,0.3)'}`,
-                  boxShadow: ehFaseAtual ? '0 0 0 3px rgba(255,255,255,0.22)' : 'none',
+                  backgroundColor: ehLido ? '#FFFFFF' : `${SANTUARIO_INFANTIL[n].cor}55`,
+                  color: ehLido ? SANTUARIO_INFANTIL[n].cor : '#FFFFFF',
+                  border: `1.5px solid ${ehLido ? '#FFFFFF' : 'rgba(255,255,255,0.4)'}`,
+                  boxShadow: ehFaseAtual
+                    ? '0 0 0 3px rgba(255,255,255,0.35)'
+                    : '0 2px 6px rgba(0,0,0,0.25)',
                 }}
                 aria-label={`${SANTUARIO_INFANTIL[n].nome}${ehFaseAtual ? ' (fase atual da turma)' : ''}`}
                 aria-pressed={ehLido}
@@ -77,6 +127,31 @@ const InfantilFasePage = () => {
             );
           })}
         </div>
+
+        {/* Dica de toque — 12 palavras que dobram a descoberta dos 8 */}
+        <p className="text-[11px] text-center mb-3 vf-rise" style={{ color: 'rgba(255,255,255,0.65)' }}>
+          Toque num número para conhecer outro mecanismo
+        </p>
+
+        {/* Pílula "voltar" — sempre que estiver visitando outro mecanismo */}
+        {faseAtualValida > 0 && atual !== faseAtualValida && (
+          <div className="flex justify-center mb-3 vf-rise">
+            <button
+              onClick={() => setLendo(faseAtualValida)}
+              className="flex items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-semibold"
+              style={{ backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', border: '1px solid rgba(255,255,255,0.25)' }}
+            >
+              <ChevronLeft size={13} /> Voltar à fase atual ({SANTUARIO_INFANTIL[faseAtualValida].nome})
+            </button>
+          </div>
+        )}
+
+        {/* Turma ainda em planejamento — diz explicitamente (sem "você está aqui" fantasma) */}
+        {faseAtualValida === 0 && (
+          <p className="text-[11px] text-center mb-3 vf-rise" style={{ color: 'rgba(255,255,255,0.55)' }}>
+            Sua turma ainda não começou a trilha — comece na aba Arboria.
+          </p>
+        )}
 
         <div className="vf-rise" style={{ animationDelay: '80ms' }}>
           <p
@@ -121,7 +196,7 @@ const InfantilFasePage = () => {
 
         <section className="mb-5 vf-rise" style={{ animationDelay: '320ms' }}>
           <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
-            O que não define
+            O que NÃO é sinal deste mecanismo
           </h2>
           <ul className="space-y-1.5">
             {m.naoDefine.map((x, i) => (
@@ -173,10 +248,57 @@ const InfantilFasePage = () => {
           </p>
         </div>
 
+        {/* UMA ATIVIDADE, OITO CAMINHOS — a peça comparativa (ideia do Fundador):
+            a mesma atividade vista pela porta de cada mecanismo. O atual destacado. */}
+        <section className="mb-5 vf-rise" style={{ animationDelay: '600ms' }}>
+          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-1" style={{ color: m.corAcento }}>
+            {ATIVIDADE_OITO_CAMINHOS.titulo}
+          </h2>
+          <p className="text-[12.5px] italic mb-3" style={{ color: 'rgba(255,255,255,0.7)' }}>
+            {ATIVIDADE_OITO_CAMINHOS.intro}
+          </p>
+          <div className="space-y-1.5">
+            {Array.from({ length: TOTAL }).map((_, i) => {
+              const n = i + 1;
+              const ehAtual = n === atual;
+              const mec = SANTUARIO_INFANTIL[n];
+              return (
+                <button
+                  key={n}
+                  onClick={() => !ehAtual && setLendo(n)}
+                  className="w-full text-left rounded-xl px-3 py-2.5 flex gap-2.5 transition-colors"
+                  style={{
+                    backgroundColor: ehAtual ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${ehAtual ? 'rgba(255,255,255,0.3)' : 'transparent'}`,
+                  }}
+                >
+                  <span
+                    className="w-3 h-3 rounded-full flex-shrink-0 mt-1"
+                    style={{ backgroundColor: mec.cor, boxShadow: '0 0 0 1.5px rgba(255,255,255,0.35)' }}
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-[12px] font-bold" style={{ color: ehAtual ? '#FFFFFF' : 'rgba(255,255,255,0.85)' }}>
+                      {mec.nome}
+                    </span>
+                    <span className="block text-[12.5px] leading-relaxed" style={{ color: ehAtual ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.72)' }}>
+                      {ATIVIDADE_OITO_CAMINHOS.caminhos[n]}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
         <section className="mb-5 vf-rise" style={{ animationDelay: '640ms' }}>
           <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
             Como observar na sua sala
           </h2>
+          {/* Antídoto NO TOPO da lista (a simulação mostrou: no fim, só protege quem lê tudo) */}
+          <p className="text-[12.5px] italic mb-2.5" style={{ color: 'rgba(255,255,255,0.75)' }}>
+            Isto não é lista pra marcar criança — registre a cena; a leitura vem depois.
+          </p>
           <ul className="space-y-1.5">
             {m.observar.map((x, i) => (
               <li key={i} className="text-sm leading-relaxed flex gap-2" style={{ color: 'rgba(255,255,255,0.92)' }}>
@@ -214,10 +336,11 @@ const InfantilFasePage = () => {
         >
           <Library size={16} strokeWidth={1.5} className="mx-auto mb-1.5" style={{ color: 'rgba(255,255,255,0.7)' }} />
           <p className="text-[13px] font-semibold" style={{ color: 'rgba(255,255,255,0.9)' }}>
-            Atividades desta fase
+            Atividades desta fase · em breve
           </p>
           <p className="text-xs leading-relaxed mt-0.5" style={{ color: 'rgba(255,255,255,0.65)' }}>
-            Chegam com o banco de atividades — cards com PDF, direto daqui.
+            Aqui vão morar as atividades prontas para usar na sala — uma a uma, com tudo que
+            você precisa.
           </p>
         </div>
       </div>

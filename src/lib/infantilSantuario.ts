@@ -45,8 +45,8 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
       'Corrige você quando você muda uma palavra da história de sempre — ela guardou o texto, não só o enredo',
       'Inventa nomes para bonecos, lugares e brincadeiras — e os nomes têm lógica, som, intenção',
       'Reconta na segunda-feira, com começo, meio e fim, algo que viveu no sábado',
-      'Contra-intuitivo: pode ser a criança quieta, que quase não fala na roda — e em casa reconta sua aula inteira. O mecanismo opera por dentro, sem plateia',
-      'Contra-intuitivo: pode trocar sons, pronunciar "errado" — e construir histórias com estrutura. A pronúncia é habilidade; a narrativa é o mecanismo',
+      'Pode enganar: pode ser a criança quieta, que quase não fala na roda — e em casa reconta sua aula inteira. O mecanismo opera por dentro, sem plateia',
+      'Pode enganar: pode trocar sons, pronunciar "errado" — e construir histórias com estrutura. A pronúncia é habilidade; a narrativa é o mecanismo',
     ],
     veMundo: 'O mundo chega em palavras antes de chegar em qualquer outra coisa. Quando você muda o tom do "bom dia", ela não registra "algo mudou" — registra a diferença entre o de hoje e o de ontem. Ela não pensa e depois coloca em palavras. As palavras já estão lá quando o pensamento começa. Esse é o filtro: a experiência chega narrada.',
     lente: 'Quando você repara na criança que processa em palavras, ganha uma porta: o que não entrou pela demonstração entra pela história — vire narrativa o que era instrução. A tagarelice durante a atividade deixa de ser dispersão e vira o rascunho falado do pensamento dela. E a criança calada deixa de ser lida como "sem linguagem" — talvez a narração esteja acontecendo onde você não ouve. Só reparar já muda o que você oferece amanhã.',
@@ -77,7 +77,7 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
       'Nota na hora quando a rotina quebra: "hoje não teve o lanche antes do parque?"',
       'Emenda perguntas: cada resposta gera a próxima. A cadeia de "por quês" não para sozinha',
       'Ordena sozinha por tamanho, distribui "um para cada um" — ninguém ensinou a regra; ela a encontrou',
-      'Contra-intuitivo: pode parecer lenta ou cuidadosa demais — está conferindo cada passo. A velocidade não é o sinal; a busca do padrão é',
+      'Pode enganar: pode parecer lenta ou cuidadosa demais — está conferindo cada passo. A velocidade não é o sinal; a busca do padrão é',
     ],
     veMundo: 'O mundo chega como sistema esperando ser decifrado. Ela não decide procurar padrões — eles aparecem. A colher que cai, a torre que tomba, a fila que anda: tudo é pergunta. O mundo não é feito de fatos — é feito de relações entre fatos. E o filtro é a pergunta que nunca para: "por quê? e se? e de novo?"',
     lente: 'Quando você repara na criança que entra pelo padrão, a repetição dela deixa de ser capricho e vira método — e você pode alimentar o método em vez de interrompê-lo. A pergunta encadeada deixa de ser desafio à sua paciência e vira o mecanismo pedindo mais um elo. E a criança que "demora" ganha o tempo que o raciocínio dela precisa. Você só passa a oferecer mundos com regras para descobrir.',
@@ -108,8 +108,8 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
       'Sabe onde cada coisa fica guardada — inclusive o que você mesma perdeu. Busca pela imagem do lugar, não pelo nome',
       'Constrói com blocos algo que planejou por dentro: procura uma peça específica, não qualquer peça',
       'Monta o brinquedo novo sem esperar demonstração',
-      'Contra-intuitivo: pode parecer dispersa na roda de história — e depois reconstruir a cena inteira com blocos. Ela entendeu; entendeu em imagem',
-      'Contra-intuitivo: o canto "bagunçado" dela pode ter lógica precisa — a bagunça é relacional, não aleatória',
+      'Pode enganar: pode parecer dispersa na roda de história — e depois reconstruir a cena inteira com blocos. Ela entendeu; entendeu em imagem',
+      'Pode enganar: o canto "bagunçado" dela pode ter lógica precisa — a bagunça é relacional, não aleatória',
     ],
     veMundo: 'O mundo chega como imagem antes de chegar como palavra. Quando precisa lembrar onde deixou algo, ela busca pela imagem do lugar. A sala existe inteira na cabeça dela, com cada coisa em posição. Quando tem um problema, muitas vezes vê a solução antes de conseguir contá-la. O filtro é a forma, a posição, a relação no espaço.',
     lente: 'Quando você repara na criança que entra pela imagem, ganha uma porta: o que não entrou pela fala entra pelo mostrar, pelo montar, pelo lugar das coisas. A criança "perdida" na explicação longa deixa de parecer desatenta — o canal verbal saturou, não o entendimento. E você passa a dar espaço para ela responder construindo, não só falando.',
@@ -140,7 +140,7 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
       'Percebe quando você canta a música de sempre num tom diferente — e estranha antes de saber explicar o quê',
       'Bate ritmos na mesa enquanto faz outra coisa — não é dispersão: é o canal padrão dela funcionando',
       'O que não fica falado, fica em 48 horas quando vira cantiga',
-      'Contra-intuitivo: pode ficar inquieta justamente no silêncio absoluto. Para ela, o som não distrai — ancora',
+      'Pode enganar: pode ficar inquieta justamente no silêncio absoluto. Para ela, o som não distrai — ancora',
     ],
     veMundo: 'O mundo chega com textura sonora. Quando entra num ambiente, ela registra o ritmo das conversas, a melodia de como as pessoas falam — antes do que dizem. Uma música ouvida uma vez fica — não como lembrança, mas como estrutura interna. O filtro não procura primeiro o significado. Procura o padrão. O ritmo. A repetição que revela a regra.',
     lente: 'Quando você repara na criança que entra pelo som, ganha a porta mais barata que existe: transformar em ritmo ou cantiga o que não entrou falado. O batuque na mesa deixa de ser indisciplina e vira pista de como aquela mente organiza o mundo. E você para de exigir silêncio absoluto de quem precisa de padrão sonoro para pensar.',
@@ -171,7 +171,7 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
       'Sabe fazer e não sabe explicar: quando você pergunta como, ela mostra de novo. O saber mora no gesto',
       'Tem intuição sobre peso, equilíbrio e encaixe — a torre dela para em pé porque a mão sentiu onde apoiar',
       'O que o corpo aprendeu, não esquece: a sequência de movimentos volta inteira semanas depois',
-      'Contra-intuitivo: pode ser quieta, nada esportiva — e só compreender quando toca e manipula. E pode se atrapalhar com tesoura: motricidade fina é habilidade treinável; o mecanismo é outra coisa',
+      'Pode enganar: pode ser quieta, nada esportiva — e só compreender quando toca e manipula. E pode se atrapalhar com tesoura: motricidade fina é habilidade treinável; o mecanismo é outra coisa',
     ],
     veMundo: 'O mundo chega pelo corpo antes de chegar pelo pensamento. Quando aprende algo novo, a compreensão acontece no momento em que as mãos fazem. Quando processa algo difícil, o corpo se move: levanta, gesticula, pega. Não é inquietação — é o mecanismo pensando. O filtro é o fazer: a experiência só vira real quando passa pelo movimento.',
     lente: 'Quando você repara na criança que pensa com o corpo, o levantar no meio da explicação deixa de ser afronta e vira sinal: o canal dela ainda não foi aberto. Você ganha uma regra prática: se não entrou pelo ouvir, ofereça pelo fazer. E para de cobrar pela porta errada: exigir imobilidade dessa criança é fechar justamente o canal por onde ela aprende.',
@@ -201,8 +201,8 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
       'Separa espontaneamente qualquer conjunto — por critérios que ninguém ensinou',
       'Acha na hora o "intruso": a peça que não pertence, a folha diferente. Não é análise — é percepção direta do desvio',
       'Guarda com facilidade nomes que vêm em famílias — dinossauros, cores — porque nomes em sistema encaixam',
-      'Contra-intuitivo: pode ser criança de apartamento, sem interesse por natureza — e o mecanismo aparecer inteiro na fileira de carrinhos',
-      'Contra-intuitivo: pode parecer desligada em atividades muito abertas, sem nada pra comparar. Não é desinteresse — é o mecanismo sem material para operar',
+      'Pode enganar: pode ser criança de apartamento, sem interesse por natureza — e o mecanismo aparecer inteiro na fileira de carrinhos',
+      'Pode enganar: pode parecer desligada em atividades muito abertas, sem nada pra comparar. Não é desinteresse — é o mecanismo sem material para operar',
     ],
     veMundo: 'O mundo chega em categorias. Diante de qualquer conjunto — objetos, figuras, pessoas — o mecanismo começa a trabalhar: o que é igual? o que é diferente? onde termina um grupo e começa o outro? Ela não decide perceber a distinção. A distinção já chegou antes da decisão de percebê-la.',
     lente: 'Quando você percebe que uma criança entra pelo olhar que classifica, você ganha uma porta: o conteúdo que não entrou pela explicação entra pela coleção, pela comparação, pelo "qual é o diferente?". A bagunça de tampinhas deixa de ser bagunça — vira o rascunho do pensamento dela. E você não precisa concluir nada: só reparar já muda o que você oferece amanhã.',
@@ -232,8 +232,8 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
       'Percebe que o colega vai chorar antes de qualquer adulto — e às vezes antes do próprio colega',
       'Ajusta o jeito de brincar conforme o parceiro: com um é mais firme, com outro mais devagar. Ninguém ensinou — ela leu',
       'Nota a sua mudança de humor pelo tom, pela postura — e reage antes de você dizer qualquer coisa',
-      'Contra-intuitivo: pode ser a criança quieta, de poucos parceiros, que passa o pátio observando — e lê a dinâmica do grupo inteiro',
-      'Contra-intuitivo: pode usar a leitura a favor de si — conseguir o que quer porque percebeu como cada adulto reage. É mecanismo sem a parte ética, que ainda está em construção. Mecanismo não é virtude',
+      'Pode enganar: pode ser a criança quieta, de poucos parceiros, que passa o pátio observando — e lê a dinâmica do grupo inteiro',
+      'Pode enganar: pode usar a leitura a favor de si — conseguir o que quer porque percebeu como cada adulto reage. É mecanismo sem a parte ética, que ainda está em construção. Mecanismo não é virtude',
     ],
     veMundo: 'O mundo chega através das pessoas. Quando entra num ambiente, ela registra o estado de cada um antes de qualquer conversa — a postura, o desvio do olhar, a tensão numa voz que parece normal. O filtro é relacional: a realidade não é feita de coisas. É feita de pessoas e do que se passa entre elas.',
     lente: 'Quando você repara na criança que entra pelas pessoas, os "movimentos sociais" dela durante a atividade deixam de ser dispersão — são o processamento principal dela acontecendo. Conteúdo com gente dentro (quem sentiu, quem ajudou) entra mais fundo do que conteúdo sem ninguém. E a criança que "manipula" pede orientação, não rótulo — a leitura dela é potente e ainda não tem bússola.',
@@ -265,7 +265,7 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
       'Se retira sozinha para se recompor — e volta. Não é isolamento: é regulação. Ela sabe do que precisa',
       'Recusa uma atividade e sabe dizer por quê — é leitura do próprio limite naquele momento',
       'Pede tempo antes de entrar: observa a brincadeira antes de entrar nela',
-      'Contra-intuitivo: pode ser a criança mais agitada e falante da sala — e ainda assim, depois do conflito, ser a única que reconstrói o que sentiu passo a passo',
+      'Pode enganar: pode ser a criança mais agitada e falante da sala — e ainda assim, depois do conflito, ser a única que reconstrói o que sentiu passo a passo',
     ],
     veMundo: 'O mundo chega filtrado pelo estado interno. Antes de reagir, há um instante — quase imperceptível — em que o mecanismo registra como ela está e por quê. O que para outras crianças é um sentimento embolado, para ela chega com etiqueta: não era bem raiva, era frustração. A experiência interna vira informação antes de virar comportamento.',
     lente: 'Quando você repara na criança que processa por dentro, o "tempo dela" deixa de ser lentidão e vira etapa: ela precisa acessar o próprio estado antes de agir, e cobrar resposta imediata é fechar a porta. O canto onde ela se recompõe deixa de ser fuga e vira ferramenta — que você pode proteger em vez de interromper. E como esse mecanismo quase não se mostra sozinho, o seu olhar é o que impede que ele passe despercebido. Reparar já é a metade do trabalho.',
@@ -278,4 +278,27 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
     ],
     cuidado: 'É o mais silencioso dos oito filtros: só aparece através de outra porta — a fala, o corpo, o desenho. Timidez não é o sinal, e a criança "fechada" pode estar com esse processamento a todo vapor.',
   },
+};
+
+/**
+ * "UMA ATIVIDADE, OITO CAMINHOS" — a peça didática comparativa (ideia do
+ * Fundador, 02/07): a MESMA atividade de sempre vista pela porta de cada
+ * mecanismo. É o multi-caminho ficando visível — a professora entende cada
+ * mecanismo COMPARANDO, não decorando. O caminho é o que importa, não a torre.
+ */
+export const ATIVIDADE_OITO_CAMINHOS = {
+  titulo: 'Uma atividade, oito caminhos',
+  atividade: 'A caixa de blocos',
+  intro:
+    'A mesma caixa de blocos, no mesmo tapete. Repare por onde cada criança entra — o caminho é o que importa, não a torre.',
+  caminhos: {
+    1: 'Enquanto empilha, narra: "agora o vermelho… não, esse não!". A torre vira história — tem nome, tem drama, tem final.',
+    2: 'Empilha, derruba de propósito, empilha de novo mudando UMA peça. Está testando a regra da queda — a torre é um experimento.',
+    3: 'Olha as peças antes de tocar. Escolhe uma específica, que já tinha lugar na torre que existe na cabeça dela.',
+    4: 'Empilha num ritmo — toc, toc, toc — e o corpo marca o compasso. Se você cantarolar, a torre cresce no tempo da música.',
+    5: 'As mãos decidem: sentem o peso, ajeitam o equilíbrio milímetro a milímetro. Ela não pensa a torre — sente a torre.',
+    6: 'Antes de empilhar, separa: grandes com grandes, azuis com azuis. A torre só começa quando a coleção está em ordem.',
+    7: 'Constrói olhando pros lados: oferece peça, negocia o topo, percebe quem ficou de fora da brincadeira.',
+    8: 'Observa os outros construírem antes de entrar. Quando entra, sabe exatamente qual torre quer fazer — a dela.',
+  } as Record<number, string>,
 };
