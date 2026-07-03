@@ -558,7 +558,7 @@ const InfantilArboriaPage = () => {
     const { error } = await supabase.rpc(rpc, { p_turma_id: turmaId });
     setAcaoLoading(false);
     if (error) {
-      toast.error(error.message || 'Não foi possível atualizar a fase.');
+      toast.error(error.message || 'Não foi possível atualizar a exploração.');
       return false;
     }
     // SÓ o hook da trilha: refreshData aqui recarregava o contexto inteiro e
@@ -648,7 +648,7 @@ const InfantilArboriaPage = () => {
     const { error } = await supabase.rpc('finalizar_fase_turma', { p_turma_id: turmaId });
     if (error) {
       setAcaoLoading(false);
-      toast.error(error.message || 'Não foi possível atualizar a fase.');
+      toast.error(error.message || 'Não foi possível atualizar a exploração.');
       return; // modal fica aberto: permite tentar de novo ou Voltar
     }
 

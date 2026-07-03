@@ -68,10 +68,10 @@ const InfantilFasePage = () => {
 
   const kicker =
     faseAtualValida === 0
-      ? 'Conheça os 8 mecanismos'
+      ? 'Conheça as 8 inteligências'
       : atual === faseAtualValida
-        ? `Fase atual · ${atual} de ${TOTAL}`
-        : `Mecanismo · ${m.nome}`;
+        ? `Exploração atual · ${atual} de ${TOTAL}`
+        : `Inteligência · ${m.nome}`;
 
   const onTouchStart = (e: React.TouchEvent) => {
     const t0 = e.touches[0];
