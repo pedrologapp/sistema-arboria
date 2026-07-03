@@ -247,3 +247,15 @@ select option:checked {
 @media (prefers-reduced-motion: reduce) {
   .tab-in-left, .tab-in-right, .tab-in-fade { animation: tab-in-fade 100ms ease-out; }
 }
+
+/* Infantil — glass ESCURO (chrome sobre o santuário da aba Fase) */
+.glass-dark {
+  background-color: rgba(35, 30, 95, 0.92);
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-dark {
+    background-color: rgba(50, 44, 130, 0.42);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    backdrop-filter: blur(18px) saturate(1.4);
+  }
+}

@@ -15,7 +15,7 @@ interface NavItemConfig {
  * Arboria (a prática) · Fase (estudo/apoio) · Alunos (threads).
  * Sem Chat (chat é das Casas = F2). Pele neutra, alvo de toque confortável.
  */
-const InfantilBottomNav = () => {
+const InfantilBottomNav = ({ dark = false }: { dark?: boolean }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -50,13 +50,19 @@ const InfantilBottomNav = () => {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 pb-safe glass-light"
+      className={`fixed bottom-0 left-0 right-0 z-50 pb-safe ${dark ? 'glass-dark' : 'glass-light'}`}
       style={{ boxShadow: '0 -1px 3px rgba(28,34,48,0.06)' }}
     >
       <div className="max-w-lg mx-auto flex items-stretch justify-around">
         {navItems.map((item) => {
           const isActive = item.match(location.pathname);
-          const color = isActive ? t.accent : t.textFaint;
+          const color = dark
+            ? isActive
+              ? '#FFFFFF'
+              : 'rgba(255,255,255,0.55)'
+            : isActive
+              ? t.accent
+              : t.textFaint;
 
           return (
             <button
@@ -69,7 +75,7 @@ const InfantilBottomNav = () => {
               {/* Indicador ativo */}
               <span
                 className="absolute top-0 h-0.5 w-10 rounded-full transition-opacity duration-200"
-                style={{ backgroundColor: t.accent, opacity: isActive ? 1 : 0 }}
+                style={{ backgroundColor: dark ? '#FFFFFF' : t.accent, opacity: isActive ? 1 : 0 }}
               />
               {item.icon}
               <span className="text-[11px] font-medium">{item.label}</span>

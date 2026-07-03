@@ -65,6 +65,9 @@ const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => 
     prevIdxRef.current = idx;
   }, [idx]);
 
+  // Aba Fase = santuário imersivo escuro → o chrome (header/nav) escurece junto
+  const santuario = location.pathname.startsWith('/professor/fase');
+
   // Swipe entre abas (pedido do Fundador 02/07): arrastar ← avança, → volta.
   // Guardas: gesto claramente horizontal, rápido, e só nas 3 abas de topo.
   const toqueRef = useRef<{ x: number; y: number; t: number } | null>(null);
@@ -106,17 +109,23 @@ const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => 
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {/* Header */}
+      {/* Header — no santuário (aba Fase) o glass escurece junto com a tela */}
       <header
-        className="fixed top-0 left-0 right-0 z-40 glass-light"
+        className={`fixed top-0 left-0 right-0 z-40 ${santuario ? 'glass-dark' : 'glass-light'}`}
         style={{ boxShadow: '0 1px 3px rgba(28,34,48,0.06)' }}
       >
         <div className="max-w-lg mx-auto h-14 px-4 flex items-center justify-between">
           <div className="min-w-0">
-            <p className="text-[11px] uppercase tracking-wide" style={{ color: t.textFaint }}>
+            <p
+              className="text-[11px] uppercase tracking-wide"
+              style={{ color: santuario ? 'rgba(255,255,255,0.6)' : t.textFaint }}
+            >
               Arboria
             </p>
-            <p className="text-sm font-semibold truncate" style={{ color: t.text }}>
+            <p
+              className="text-sm font-semibold truncate"
+              style={{ color: santuario ? '#FFFFFF' : t.text }}
+            >
               {institutionName || 'Educação Infantil'}
             </p>
           </div>
@@ -144,7 +153,7 @@ const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => 
         <Suspense fallback={<PaginaCarregando />}>{children}</Suspense>
       </main>
 
-      <InfantilBottomNav />
+      <InfantilBottomNav dark={santuario} />
     </div>
   );
 };
