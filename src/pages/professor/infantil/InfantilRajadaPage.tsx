@@ -15,18 +15,22 @@ import {
   salvarViewModePreferido,
   getTurmaPreferida,
   salvarTurmaPreferida,
+  normalizarBusca,
 } from '@/lib/infantil';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 
-/** Modal de fechamento — celebra o que o professor VIU, nunca o que faltou. */
+/** Modal de fechamento — celebra o que o professor VIU, nunca o que faltou.
+ *  Backdrop/Esc = só fecha o modal (fica na aula); o botão é quem SAI. */
 const ConcluirModal = ({
   registrados,
   onFechar,
+  onSair,
 }: {
   registrados: number;
   onFechar: () => void;
+  onSair: () => void;
 }) => {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -64,7 +68,7 @@ const ConcluirModal = ({
             O que você viu agora vive no Diário de cada uma. O resto da turma segue com você — não some, só não pediu palavra hoje.
           </p>
           <button
-            onClick={onFechar}
+            onClick={onSair}
             autoFocus
             className="w-full rounded-xl py-3 text-sm font-semibold"
             style={{ backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowMd }}
@@ -150,6 +154,7 @@ const PendenteModal = ({
 type Pendencia =
   | { tipo: 'trocar'; alvoId: string }
   | { tipo: 'turma'; alvoTurmaId: string }
+  | { tipo: 'diario'; alunoId: string }
   | { tipo: 'sair' }
   | { tipo: 'finalizar' };
 
@@ -220,8 +225,8 @@ const InfantilRajadaPage = () => {
   const { data: faseTurma, isLoading: faseLoading } = useFaseTurma(turmaId, profile?.institution_id);
   const fase = faseTurma?.fase ?? null;
   const ordem = faseTurma?.ordem ?? 0;
-  const { data: alunos, isLoading } = useRajadaTurma(turmaId, fase?.id ?? null);
-  const rajadaKey = ['rajada-turma', turmaId, fase?.id ?? null];
+  const { data: alunos, isLoading } = useRajadaTurma(turmaId, fase?.id ?? null, user?.id ?? null);
+  const rajadaKey = ['rajada-turma', turmaId, fase?.id ?? null, user?.id ?? null];
 
   const mecanismo = fase?.inteligencia?.nome ?? null;
   const turmaLabel = useMemo(() => {
@@ -234,13 +239,14 @@ const InfantilRajadaPage = () => {
   const alunosFiltrados = useMemo(() => {
     if (!alunos) return [];
     if (!busca) return alunos;
-    return alunos.filter((a) => a.nome.toLowerCase().includes(busca.toLowerCase()));
+    return alunos.filter((a) => normalizarBusca(a.nome).includes(normalizarBusca(busca)));
   }, [alunos, busca]);
 
-  // Contagem do fechamento vem do SERVIDOR (crianças únicas com registro hoje) —
-  // sobrevive a refresh no meio da aula e nunca conta a mesma criança duas vezes.
+  // Contagem do fechamento: crianças únicas registradas hoje POR QUEM ESTÁ LOGADA
+  // (a simulação pegou o número inflando com registros da auxiliar/outros turnos —
+  // "Você enxergou N" tem que ser honesto). Sobrevive a refresh.
   const registradosCount = useMemo(
-    () => (alunos ?? []).filter((a) => a.registradoHoje).length,
+    () => (alunos ?? []).filter((a) => a.registradoHojePorMim).length,
     [alunos]
   );
 
@@ -286,7 +292,12 @@ const InfantilRajadaPage = () => {
           rajadaKey,
           prev.map((a) =>
             a.id === alunoId
-              ? { ...a, registradoHoje: true, momentosNaFase: a.momentosNaFase + 1 }
+              ? {
+                  ...a,
+                  registradoHoje: true,
+                  registradoHojePorMim: true,
+                  momentosNaFase: a.momentosNaFase + 1,
+                }
               : a
           )
         );
@@ -298,11 +309,16 @@ const InfantilRajadaPage = () => {
       queryClient.invalidateQueries({ queryKey: ['alunos-turmas-com-status'] });
     },
     onError: (e: Error, vars, context) => {
-      // Não perde o texto: desfaz o selo otimista e reabre o card com o que foi escrito.
+      // Não perde NADA: desfaz o selo otimista e reabre o card com texto E foto
+      // (a simulação pegou a foto evaporando no erro de rede).
       if (context?.prev) queryClient.setQueryData(rajadaKey, context.prev);
       toast.error(e.message || 'Não foi possível registrar agora.');
       setActiveId(vars.alunoId);
       setTexto(vars.textoObs);
+      if (vars.file) {
+        setImagem(vars.file);
+        setPreviewUrl(URL.createObjectURL(vars.file));
+      }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['rajada-turma'] });
@@ -354,15 +370,34 @@ const InfantilRajadaPage = () => {
   const resolverPendencia = (guardarAntes: boolean) => {
     const p = pendencia;
     if (!p) return;
-    if (guardarAntes && activeId && podeRegistrar && !registrar.isPending) {
-      registrar.mutate({ alunoId: activeId, textoObs: texto.trim(), file: imagem });
-    }
     setPendencia(null);
+
+    const prosseguir = () => {
+      if (p.tipo === 'trocar') abrirDireto(p.alvoId);
+      if (p.tipo === 'turma') setTurmaSel(p.alvoTurmaId);
+      if (p.tipo === 'diario') navigate(`/professor/alunos/${p.alunoId}`);
+      if (p.tipo === 'sair') navigate(-1);
+      if (p.tipo === 'finalizar') setConcluirOpen(true);
+    };
+
+    if (!guardarAntes || !activeId || !podeRegistrar || registrar.isPending) {
+      fecharEditor();
+      prosseguir();
+      return;
+    }
+
+    const vars = { alunoId: activeId, textoObs: texto.trim(), file: imagem };
+    const mesmaTela = p.tipo === 'trocar' || p.tipo === 'turma';
     fecharEditor();
-    if (p.tipo === 'trocar') abrirDireto(p.alvoId);
-    if (p.tipo === 'turma') setTurmaSel(p.alvoTurmaId);
-    if (p.tipo === 'sair') navigate(-1);
-    if (p.tipo === 'finalizar') setConcluirOpen(true);
+    if (mesmaTela) {
+      // Continua na tela: pode prosseguir já (em erro, o onError reabre o card)
+      registrar.mutate(vars);
+      prosseguir();
+    } else {
+      // Sair/diário/finalizar: SÓ prossegue depois do guardar CONFIRMAR — a
+      // simulação pegou perda silenciosa quando a rede caía após navegar.
+      registrar.mutate(vars, { onSuccess: prosseguir });
+    }
   };
 
   const onVoltar = () => {
@@ -419,7 +454,11 @@ const InfantilRajadaPage = () => {
           (zero não aparece: silêncio não é marcado — lei do modelo) */}
       {aluno.momentosNaFase > 0 && (
         <button
-          onClick={() => navigate(`/professor/alunos/${aluno.id}`)}
+          onClick={() => {
+            // NUNCA navegar por cima de texto pendente (perdia em silêncio)
+            if (texto.trim() || imagem) setPendencia({ tipo: 'diario', alunoId: aluno.id });
+            else navigate(`/professor/alunos/${aluno.id}`);
+          }}
           className="text-xs mt-1 underline-offset-2 hover:underline"
           style={{ color: t.textMuted }}
         >
@@ -539,8 +578,19 @@ const InfantilRajadaPage = () => {
             <p className="text-sm max-w-xs mx-auto" style={{ color: t.textMuted }}>
               {ordem > 8
                 ? `As 8 explorações do ano foram concluídas com ${turmaLabel ? `a turma ${turmaLabel}` : 'esta turma'}. A história de cada criança continua viva no Diário.`
-                : `${turmaLabel ? `A turma ${turmaLabel}` : 'Esta turma'} ainda não começou a trilha. Comece a primeira exploração na aba Arboria → O ano — as crianças aparecem aqui em seguida.`}
+                : `${turmaLabel ? `A turma ${turmaLabel}` : 'Esta turma'} ainda não começou a trilha — as crianças aparecem aqui assim que a primeira exploração começar.`}
             </p>
+            {/* Botão de ação (a nav está escondida dentro da aula — a simulação
+                pegou professoras procurando uma "aba" que não existe aqui) */}
+            {ordem <= 8 && (
+              <button
+                onClick={() => navigate('/professor')}
+                className="rounded-full px-4 py-2.5 text-sm font-semibold"
+                style={{ backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowMd }}
+              >
+                Começar a trilha em "O ano"
+              </button>
+            )}
           </div>
         ) : (
           <>
@@ -808,7 +858,8 @@ const InfantilRajadaPage = () => {
       {concluirOpen && (
         <ConcluirModal
           registrados={registradosCount}
-          onFechar={() => {
+          onFechar={() => setConcluirOpen(false)}
+          onSair={() => {
             setConcluirOpen(false);
             navigate(-1);
           }}

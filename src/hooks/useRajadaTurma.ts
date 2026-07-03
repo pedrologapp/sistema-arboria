@@ -5,9 +5,11 @@ export interface AlunoRajada {
   id: string;
   nome: string;
   avatarUrl?: string;
-  registradoHoje: boolean; // já ganhou um momento HOJE (afirmativo — nunca marca ausência)
-  momentosNaFase: number;  // observações da criança NA FASE ATUAL (contexto de continuidade;
-                           // só é EXIBIDO dentro do editor aberto e quando > 0 — nunca na lista)
+  registradoHoje: boolean;       // já ganhou um momento HOJE, por qualquer educadora (selo afirmativo)
+  registradoHojePorMim: boolean; // ganhou um momento hoje POR QUEM ESTÁ LOGADA — é o que o
+                                 // fechamento "Você enxergou N" conta (honestidade do rito)
+  momentosNaFase: number;        // observações da criança NA FASE ATUAL (contexto de continuidade;
+                                 // só é EXIBIDO dentro do editor aberto e quando > 0 — nunca na lista)
 }
 
 /**
@@ -23,9 +25,13 @@ export interface AlunoRajada {
  *
  * Observações excluídas (soft-delete) ficam fora de tudo.
  */
-export const useRajadaTurma = (turmaId?: string | null, faseId?: string | null) => {
+export const useRajadaTurma = (
+  turmaId?: string | null,
+  faseId?: string | null,
+  professorId?: string | null
+) => {
   return useQuery({
-    queryKey: ['rajada-turma', turmaId, faseId ?? null],
+    queryKey: ['rajada-turma', turmaId, faseId ?? null, professorId ?? null],
     enabled: !!turmaId,
     queryFn: async (): Promise<AlunoRajada[]> => {
       if (!turmaId) return [];
@@ -49,11 +55,16 @@ export const useRajadaTurma = (turmaId?: string | null, faseId?: string | null) 
       inicioHoje.setHours(0, 0, 0, 0);
       const { data: obsHoje } = await supabase
         .from('observacoes')
-        .select('aluno_id')
+        .select('aluno_id, professor_id')
         .in('aluno_id', alunoIds)
         .is('excluida_em' as never, null)
         .gte('created_at', inicioHoje.toISOString());
       const registradosHoje = new Set((obsHoje || []).map((o) => o.aluno_id));
+      const registradosPorMim = new Set(
+        (obsHoje || [])
+          .filter((o: any) => professorId && o.professor_id === professorId)
+          .map((o) => o.aluno_id)
+      );
 
       // 3. Momentos de cada criança NA FASE atual (fio de continuidade do editor)
       const momentosMap = new Map<string, number>();
@@ -79,6 +90,7 @@ export const useRajadaTurma = (turmaId?: string | null, faseId?: string | null) 
           nome,
           avatarUrl: p.avatar_url || undefined,
           registradoHoje: registradosHoje.has(p.id),
+          registradoHojePorMim: registradosPorMim.has(p.id),
           momentosNaFase: momentosMap.get(p.id) ?? 0,
         };
       });

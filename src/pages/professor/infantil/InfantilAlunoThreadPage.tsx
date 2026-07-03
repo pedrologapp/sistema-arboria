@@ -162,8 +162,42 @@ const InfantilAlunoThreadPage = () => {
   const [imagem, setImagem] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [excluirObs, setExcluirObs] = useState<ObservacaoThread | null>(null);
+  const [avisoFotoOpen, setAvisoFotoOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const fimRef = useRef<HTMLDivElement>(null);
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Aviso da foto ANTES do seletor abrir (uma vez só) — a simulação pegou fotos
+  // DA CRIANÇA sendo anexadas porque o aviso só aparecia depois, em letra miúda.
+  const abrirSeletorFoto = () => {
+    let visto = false;
+    try {
+      visto = localStorage.getItem('infantil-aviso-foto') === 'ok';
+    } catch {
+      /* sem localStorage */
+    }
+    if (visto) fileRef.current?.click();
+    else setAvisoFotoOpen(true);
+  };
+  const confirmarAvisoFoto = () => {
+    try {
+      localStorage.setItem('infantil-aviso-foto', 'ok');
+    } catch {
+      /* segue */
+    }
+    setAvisoFotoOpen(false);
+    fileRef.current?.click();
+  };
+
+  // Long-press no balão próprio = caminho alternativo pra "Corrigir o diário"
+  // (a lixeira é discreta de propósito; discreta demais pros segmentos básicos)
+  const iniciarLongPress = (obs: ObservacaoThread) => {
+    longPressRef.current = setTimeout(() => setExcluirObs(obs), 550);
+  };
+  const cancelarLongPress = () => {
+    if (longPressRef.current) clearTimeout(longPressRef.current);
+    longPressRef.current = null;
+  };
 
   const escolherArquivo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -251,9 +285,16 @@ const InfantilAlunoThreadPage = () => {
       }
       return { prev };
     },
-    onError: (e: Error, _vars, context) => {
+    onError: (e: Error, vars, context) => {
       if (context?.prev) queryClient.setQueryData(['aluno-thread', alunoId], context.prev);
       toast.error(e.message || 'Erro ao registrar');
+      // NUNCA perder o que foi escrito: devolve texto E foto pro composer
+      // (a simulação pegou o textão da noite evaporando quando o wifi caía)
+      setTexto(vars.textoObs);
+      if (vars.file) {
+        setImagem(vars.file);
+        setPreviewUrl(URL.createObjectURL(vars.file));
+      }
     },
     onSuccess: () => {
       toast.success(`Você enxergou ${primeiroNome}. Mais um momento na história.`);
@@ -410,6 +451,13 @@ const InfantilAlunoThreadPage = () => {
                           borderLeft: `3px solid ${t.accent}`,
                           boxShadow: t.shadowSm,
                         }}
+                        onTouchStart={
+                          deOutroProfessor || obs.id.startsWith('temp-')
+                            ? undefined
+                            : () => iniciarLongPress(obs)
+                        }
+                        onTouchEnd={cancelarLongPress}
+                        onTouchMove={cancelarLongPress}
                       >
                         {deOutroProfessor && obs.professorNome && (
                           <p className="text-[11px] font-semibold mb-0.5" style={{ color: t.accentText }}>
@@ -434,11 +482,11 @@ const InfantilAlunoThreadPage = () => {
                           {obs.professorId === user?.id && !obs.id.startsWith('temp-') ? (
                             <button
                               onClick={() => setExcluirObs(obs)}
-                              className="p-1 -m-1 rounded"
-                              style={{ color: t.silencio }}
-                              aria-label="Remover registro"
+                              className="p-3 -m-2.5 rounded-full"
+                              style={{ color: t.textFaint }}
+                              aria-label="Corrigir: remover este registro"
                             >
-                              <Trash2 size={13} />
+                              <Trash2 size={15} />
                             </button>
                           ) : (
                             <span />
@@ -504,7 +552,7 @@ const InfantilAlunoThreadPage = () => {
 
         <div className="max-w-lg mx-auto px-3 py-2.5 flex items-end gap-2">
           <button
-            onClick={() => fileRef.current?.click()}
+            onClick={abrirSeletorFoto}
             disabled={!podeRegistrar}
             className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-opacity disabled:opacity-40 focus:outline-none focus-visible:ring-2"
             style={{
@@ -569,6 +617,43 @@ const InfantilAlunoThreadPage = () => {
           onConfirmar={(motivo) => excluir.mutate({ obsId: excluirObs.id, motivo })}
           onFechar={() => setExcluirObs(null)}
         />
+      )}
+
+      {/* Aviso da foto — ANTES do seletor, uma vez só */}
+      {avisoFotoOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
+          style={{ backgroundColor: 'rgba(28,34,48,0.30)' }}
+          onClick={() => setAvisoFotoOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Sobre a foto"
+        >
+          <div
+            className="w-full max-w-[340px] rounded-2xl overflow-hidden"
+            style={{ backgroundColor: t.surface, boxShadow: t.shadowLg }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ height: 3, backgroundColor: t.accent }} />
+            <div className="p-5 space-y-3">
+              <h2 className="text-base font-bold leading-snug" style={{ color: t.text }}>
+                Fotografe o trabalho, não a criança.
+              </h2>
+              <p className="text-sm leading-relaxed" style={{ color: t.textMuted }}>
+                A torre, o desenho, a coleção — o que as mãos dela fizeram. O rosto dela não
+                entra no diário.
+              </p>
+              <button
+                onClick={confirmarAvisoFoto}
+                autoFocus
+                className="w-full rounded-xl py-3 text-sm font-semibold"
+                style={{ backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowMd }}
+              >
+                Entendi
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

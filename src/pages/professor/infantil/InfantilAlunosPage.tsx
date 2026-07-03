@@ -3,7 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Users, Search, NotebookPen, List, LayoutGrid } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useAlunosTurmasComStatus } from '@/hooks/useAlunosTurmasComStatus';
-import { getIniciais, formatTurmaLabel, getViewModePreferido, salvarViewModePreferido } from '@/lib/infantil';
+import {
+  getIniciais,
+  formatTurmaLabel,
+  getViewModePreferido,
+  salvarViewModePreferido,
+  normalizarBusca,
+} from '@/lib/infantil';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { infantilTheme as t } from '@/styles/infantilTheme';
@@ -17,7 +23,24 @@ const InfantilAlunosPage = () => {
   const { turmasVinculadas, faseAtual } = useProfessor();
   const { data: alunos, isLoading } = useAlunosTurmasComStatus();
 
-  const [turmaFiltro, setTurmaFiltro] = useState<string | null>(null);
+  // Filtro de turma persiste ao entrar/voltar de um thread (a simulação pegou
+  // 500 professoras refazendo o filtro a cada criança, toda noite)
+  const [turmaFiltro, setTurmaFiltroState] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem('infantil-diario-filtro');
+    } catch {
+      return null;
+    }
+  });
+  const setTurmaFiltro = (id: string | null) => {
+    setTurmaFiltroState(id);
+    try {
+      if (id) sessionStorage.setItem('infantil-diario-filtro', id);
+      else sessionStorage.removeItem('infantil-diario-filtro');
+    } catch {
+      /* segue só em memória */
+    }
+  };
   const [busca, setBusca] = useState('');
   // Preferência compartilhada com a Rajada (quem escolhe círculos lá, encontra círculos aqui)
   const [viewMode, setViewModeState] = useState<'lista' | 'circulos'>(getViewModePreferido());
@@ -30,7 +53,7 @@ const InfantilAlunosPage = () => {
     if (!alunos) return [];
     return alunos.filter((a) => {
       if (turmaFiltro && a.turmaId !== turmaFiltro) return false;
-      if (busca && !a.nome.toLowerCase().includes(busca.toLowerCase())) return false;
+      if (busca && !normalizarBusca(a.nome).includes(normalizarBusca(busca))) return false;
       return true;
     });
   }, [alunos, turmaFiltro, busca]);

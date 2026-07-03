@@ -1,5 +1,12 @@
 /** Utilidades compartilhadas das telas do Infantil (evita cópias divergindo). */
 
+/** Busca sem acento: "joao" acha "João" (teclado de celular quase nunca acentua). */
+export const normalizarBusca = (s: string) =>
+  s
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase();
+
 export const getIniciais = (nome?: string | null) => {
   if (!nome) return '?';
   const parts = nome.split(' ').filter(Boolean);

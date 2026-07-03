@@ -189,11 +189,13 @@ const CockpitHoje = ({
             O caminho desta fase
           </h2>
         </div>
-        <p className="text-xs mb-3" style={{ color: t.textMuted }}>
-          Ilustração — as suas atividades reais chegam com o banco de atividades.
+        <p className="text-sm mb-3 font-medium" style={{ color: t.textMuted }}>
+          Estas atividades são só ILUSTRAÇÃO — não prepare nenhuma delas. As suas atividades
+          reais chegam com o banco de atividades.
         </p>
 
-        {/* Fluxo de atividades — FANTASMA (fictício, não pode parecer dado real) */}
+        {/* Fluxo de atividades — FANTASMA (a simulação pegou ~18% preparando a
+            atividade fictícia: nomes plausíveis demais → selo por item) */}
         <div aria-hidden="true">
           {ATIVIDADES_EXEMPLO.map((a, i) => {
             const ultimo = i === ATIVIDADES_EXEMPLO.length - 1;
@@ -213,8 +215,14 @@ const CockpitHoje = ({
                   >
                     {i + 1}
                   </span>
-                  <span className="text-sm" style={{ color: t.textFaint }}>
+                  <span className="text-sm flex-1 min-w-0" style={{ color: t.textFaint }}>
                     {a.nome}
+                  </span>
+                  <span
+                    className="flex-shrink-0 text-[9px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded"
+                    style={{ color: t.textFaint, border: `1px dashed ${t.silencio}` }}
+                  >
+                    exemplo
                   </span>
                 </div>
                 {!ultimo && (
@@ -347,7 +355,7 @@ const TrilhaAno = ({
                       className="flex-1 rounded-xl py-2 text-sm font-medium flex items-center justify-center gap-1.5 disabled:opacity-50"
                       style={{ backgroundColor: t.surfaceSunken, color: t.textMuted }}
                     >
-                      <Flag size={14} /> Finalizar
+                      <Flag size={14} /> Finalizar fase
                     </button>
                   </div>
                 </div>
