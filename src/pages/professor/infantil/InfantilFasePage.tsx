@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Feather, Library, ChevronLeft } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useFaseTurma } from '@/hooks/useFaseTurma';
@@ -31,6 +31,12 @@ const InfantilFasePage = () => {
   const faseAtualValida = ordemAtual >= 1 && ordemAtual <= 8 ? ordemAtual : 0;
 
   const [lendo, setLendo] = useState<number | null>(null);
+
+  // Scroll pro TOPO em toda troca de mecanismo — sem isso, quem troca no meio
+  // da página continua lendo achando que é o mecanismo anterior (simulação r2)
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [lendo]);
 
   // Swipe DENTRO do santuário troca de MECANISMO (o modelo mental natural aqui;
   // o swipe de abas do layout ignora esta rota)
@@ -129,8 +135,14 @@ const InfantilFasePage = () => {
         </div>
 
         {/* Dica de toque — 12 palavras que dobram a descoberta dos 8 */}
-        <p className="text-[11px] text-center mb-3 vf-rise" style={{ color: 'rgba(255,255,255,0.65)' }}>
+        <p className="text-[11px] text-center mb-1 vf-rise" style={{ color: 'rgba(255,255,255,0.65)' }}>
           Toque num número para conhecer outro mecanismo
+        </p>
+        {/* Legenda dos dois destaques (simulação r2: "meu é o branco ou o que brilha?") */}
+        <p className="text-[10px] text-center mb-3 vf-rise" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          {faseAtualValida > 0
+            ? 'Branco = você está lendo · Anel = a fase da sua turma'
+            : 'Branco = você está lendo'}
         </p>
 
         {/* Pílula "voltar" — sempre que estiver visitando outro mecanismo */}
@@ -194,6 +206,53 @@ const InfantilFasePage = () => {
           </p>
         </section>
 
+        {/* UMA ATIVIDADE, OITO CAMINHOS — a peça que produz o "aha" (simulação r2),
+            PROMOVIDA pra logo depois de "O mecanismo": entender é comparar. */}
+        <section className="mb-5 vf-rise" style={{ animationDelay: '300ms' }}>
+          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-1" style={{ color: m.corAcento }}>
+            {ATIVIDADE_OITO_CAMINHOS.titulo}
+          </h2>
+          <p className="text-[12.5px] italic mb-3" style={{ color: 'rgba(255,255,255,0.7)' }}>
+            {ATIVIDADE_OITO_CAMINHOS.intro}
+          </p>
+          <div className="space-y-1.5">
+            {Array.from({ length: TOTAL }).map((_, i) => {
+              const n = i + 1;
+              const ehAtual = n === atual;
+              const mec = SANTUARIO_INFANTIL[n];
+              return (
+                <button
+                  key={n}
+                  onClick={() => !ehAtual && setLendo(n)}
+                  className="w-full text-left rounded-xl px-3 py-2.5 flex gap-2.5 transition-colors"
+                  style={{
+                    backgroundColor: ehAtual ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${ehAtual ? 'rgba(255,255,255,0.3)' : 'transparent'}`,
+                  }}
+                >
+                  <span
+                    className="w-3 h-3 rounded-full flex-shrink-0 mt-1"
+                    style={{ backgroundColor: mec.cor, boxShadow: '0 0 0 1.5px rgba(255,255,255,0.35)' }}
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-[12px] font-bold" style={{ color: ehAtual ? '#FFFFFF' : 'rgba(255,255,255,0.85)' }}>
+                      {mec.nome}
+                    </span>
+                    <span className="block text-[12.5px] leading-relaxed" style={{ color: ehAtual ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.72)' }}>
+                      {ATIVIDADE_OITO_CAMINHOS.caminhos[n]}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {/* Anti-veredito: a caixa de blocos não é teste de uma tentativa */}
+          <p className="text-[11.5px] italic mt-2.5 text-center" style={{ color: 'rgba(255,255,255,0.6)' }}>
+            Uma torre não diz nada — dez torres começam a dizer.
+          </p>
+        </section>
+
         <section className="mb-5 vf-rise" style={{ animationDelay: '320ms' }}>
           <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
             O que NÃO é sinal deste mecanismo
@@ -246,50 +305,15 @@ const InfantilFasePage = () => {
           <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.95)' }}>
             {m.lente}
           </p>
-        </div>
-
-        {/* UMA ATIVIDADE, OITO CAMINHOS — a peça comparativa (ideia do Fundador):
-            a mesma atividade vista pela porta de cada mecanismo. O atual destacado. */}
-        <section className="mb-5 vf-rise" style={{ animationDelay: '600ms' }}>
-          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-1" style={{ color: m.corAcento }}>
-            {ATIVIDADE_OITO_CAMINHOS.titulo}
-          </h2>
-          <p className="text-[12.5px] italic mb-3" style={{ color: 'rgba(255,255,255,0.7)' }}>
-            {ATIVIDADE_OITO_CAMINHOS.intro}
+          {/* Anti-"estilos de aprendizagem" (simulação r2: ~24/100 saíam com o
+              modelo de canal único — "com ela agora só faço atividade de movimento") */}
+          <p
+            className="text-[12.5px] font-semibold mt-2.5 pt-2.5"
+            style={{ color: '#FFFFFF', borderTop: '1px solid rgba(255,255,255,0.2)' }}
+          >
+            Ela usa as oito portas — esta é a que abre mais fácil. Nunca ofereça só uma.
           </p>
-          <div className="space-y-1.5">
-            {Array.from({ length: TOTAL }).map((_, i) => {
-              const n = i + 1;
-              const ehAtual = n === atual;
-              const mec = SANTUARIO_INFANTIL[n];
-              return (
-                <button
-                  key={n}
-                  onClick={() => !ehAtual && setLendo(n)}
-                  className="w-full text-left rounded-xl px-3 py-2.5 flex gap-2.5 transition-colors"
-                  style={{
-                    backgroundColor: ehAtual ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${ehAtual ? 'rgba(255,255,255,0.3)' : 'transparent'}`,
-                  }}
-                >
-                  <span
-                    className="w-3 h-3 rounded-full flex-shrink-0 mt-1"
-                    style={{ backgroundColor: mec.cor, boxShadow: '0 0 0 1.5px rgba(255,255,255,0.35)' }}
-                    aria-hidden="true"
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-[12px] font-bold" style={{ color: ehAtual ? '#FFFFFF' : 'rgba(255,255,255,0.85)' }}>
-                      {mec.nome}
-                    </span>
-                    <span className="block text-[12.5px] leading-relaxed" style={{ color: ehAtual ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.72)' }}>
-                      {ATIVIDADE_OITO_CAMINHOS.caminhos[n]}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        </div>
 
         <section className="mb-5 vf-rise" style={{ animationDelay: '640ms' }}>
           <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
