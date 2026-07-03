@@ -106,7 +106,7 @@ const InfantilFasePage = () => {
         </div>
 
         <section className="mb-5 vf-rise" style={{ animationDelay: '240ms' }}>
-          <h2 className="text-[10.5px] uppercase tracking-widest font-bold mb-2" style={{ color: m.corAcento }}>
+          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
             O mecanismo
           </h2>
           <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.92)' }}>
@@ -115,7 +115,7 @@ const InfantilFasePage = () => {
         </section>
 
         <section className="mb-5 vf-rise" style={{ animationDelay: '320ms' }}>
-          <h2 className="text-[10.5px] uppercase tracking-widest font-bold mb-2" style={{ color: m.corAcento }}>
+          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
             O que não define
           </h2>
           <ul className="space-y-1.5">
@@ -129,7 +129,7 @@ const InfantilFasePage = () => {
         </section>
 
         <section className="mb-5 vf-rise" style={{ animationDelay: '400ms' }}>
-          <h2 className="text-[10.5px] uppercase tracking-widest font-bold mb-2" style={{ color: m.corAcento }}>
+          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
             Como se revela de verdade
           </h2>
           <ul className="space-y-2">
@@ -143,7 +143,7 @@ const InfantilFasePage = () => {
         </section>
 
         <section className="mb-5 vf-rise" style={{ animationDelay: '480ms' }}>
-          <h2 className="text-[10.5px] uppercase tracking-widest font-bold mb-2" style={{ color: m.corAcento }}>
+          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
             Como a criança vê o mundo
           </h2>
           <p className="font-serif italic text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.88)' }}>
@@ -160,7 +160,7 @@ const InfantilFasePage = () => {
             animationDelay: '560ms',
           }}
         >
-          <h2 className="text-[10.5px] uppercase tracking-widest font-bold mb-2" style={{ color: '#FFFFFF' }}>
+          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: '#FFFFFF' }}>
             O que essa lente muda na sua aula
           </h2>
           <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.95)' }}>
@@ -169,7 +169,7 @@ const InfantilFasePage = () => {
         </div>
 
         <section className="mb-5 vf-rise" style={{ animationDelay: '640ms' }}>
-          <h2 className="text-[10.5px] uppercase tracking-widest font-bold mb-2" style={{ color: m.corAcento }}>
+          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
             Como observar na sua sala
           </h2>
           <ul className="space-y-1.5">
