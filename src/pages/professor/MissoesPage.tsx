@@ -385,7 +385,7 @@ const MissoesPage = () => {
     enabled: !!casaMentor?.id && !!profile?.institution_id
   });
 
-  // Status dos alunos — filtra por séries que têm missões ativas
+  // Status dos alunos: filtra por séries que têm missões ativas
   const { data: statusAlunos } = useQuery({
     queryKey: ['status-alunos-missoes', profile?.institution_id],
     queryFn: async () => {

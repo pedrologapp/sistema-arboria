@@ -66,7 +66,7 @@ const AlunosPorTipoPage = () => {
     queryFn: async (): Promise<{ alunos: AlunoComStatus[]; missaoIds: string[] }> => {
       if (!profile?.institution_id || !casaMentor?.id) return { alunos: [], missaoIds: [] };
 
-      // 1. Buscar alunos — para missões gerais: todos da série; para individuais: só da casa
+      // 1. Buscar alunos: para missões gerais: todos da série; para individuais: só da casa
       let alunosQuery = supabase
         .from('profiles')
         .select('id, nome, sobrenome, serie, turma, avatar_url, casa_id')

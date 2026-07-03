@@ -8,14 +8,14 @@ import { infantilTheme as t } from '@/styles/infantilTheme';
 const TOTAL_FASES = 8;
 
 export interface ViradaDados {
-  ordemFechada: number;       // 1..8 — a fase que acabou de fechar
+  ordemFechada: number;       // 1..8; a fase que acabou de fechar
   faseFechadaNome: string;
   turmaLabel: string;
   momentos: number | null;    // null = contagem indisponível (degrada sem números)
   criancasObservadas: number;
   totalCriancas: number;
   multiAutores: boolean;      // >1 professora escreveu na fase → "vocês enxergaram"
-  dataInicio: string | null;  // ISO — quando a fase fechada começou
+  dataInicio: string | null;  // ISO, quando a fase fechada começou
   momentosAno: number | null; // só usado na fase 8 (encerramento do ano)
 }
 
@@ -35,7 +35,7 @@ const Casc = ({ i, children, className = '' }: { i: number; children: React.Reac
 );
 
 /**
- * VIRADA DE FASE — o momento de pico do Infantil, em 2 tempos.
+ * VIRADA DE FASE: o momento de pico do Infantil, em 2 tempos.
  *
  * "O caderno que fecha à noite e abre numa página nova": o Tempo 1 (Fechamento)
  * escurece para o índigo profundo do tema e celebra o que a PROFESSORA enxergou;
@@ -45,7 +45,7 @@ const Casc = ({ i, children, className = '' }: { i: number; children: React.Reac
  * LEI DO MODELO nesta tela: números só afirmativos (nunca "X de Y" como fração/
  * barra), silêncio nunca em cor de alerta (pena, não triângulo), zero nunca vira
  * numeral, datas como memória (nunca métrica de velocidade), sem lista nominal,
- * sem confete — a solenidade É a recompensa. X/Esc sempre disponíveis: o rito
+ * sem confete: a solenidade É a recompensa. X/Esc sempre disponíveis: o rito
  * nunca prende a professora que está com a turma esperando.
  */
 const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFechar: () => void }) => {
@@ -81,7 +81,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
       }}
     >
       {tempo === 1 ? (
-        /* ============ TEMPO 1 — FECHAMENTO (o caderno escurece) ============ */
+        /* ============ TEMPO 1. FECHAMENTO (o caderno escurece) ============ */
         <div key="t1" className="min-h-full flex flex-col max-w-sm mx-auto px-6 pt-14 pb-8 pb-safe">
           <button
             onClick={onFechar}
@@ -121,22 +121,22 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
               {dados.dataInicio && (
                 <>
                   <br />
-                  {fmtDia(dados.dataInicio)} — {fmtDia(new Date().toISOString())}
+                  {fmtDia(dados.dataInicio)}: {fmtDia(new Date().toISOString())}
                 </>
               )}
             </p>
           </Casc>
 
           {semRegistros || contagemIndisponivel ? (
-            /* Zero nunca vira numeral — a tela encurta e segue, sem culpa. */
+            /* Zero nunca vira numeral: a tela encurta e segue, sem culpa. */
             <Casc i={3} className="my-auto py-10">
               <p
                 className="font-serif italic text-[15px] leading-relaxed text-center max-w-[260px] mx-auto"
                 style={{ color: 'rgba(255,255,255,0.85)' }}
               >
                 {contagemIndisponivel && !semRegistros
-                  ? 'O que você enxergou nesta fase vive no Diário de cada criança — e segue com a turma.'
-                  : 'Esta fase se encerra sem registros no diário — e o diário é só uma parte do olhar. O que você viveu com a turma não se perde. A próxima exploração abre uma página nova.'}
+                  ? 'O que você enxergou nesta fase vive no Diário de cada criança, e segue com a turma.'
+                  : 'Esta fase se encerra sem registros no diário, e o diário é só uma parte do olhar. O que você viveu com a turma não se perde. A próxima exploração abre uma página nova.'}
               </p>
             </Casc>
           ) : (
@@ -161,7 +161,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
 
               <Casc i={5} className="mt-7">
                 {silencio != null && silencio > 0 ? (
-                  /* O cuidado — pena, não alerta. Sem nomes: a superfície nominal é o Diário. */
+                  /* O cuidado: pena, não alerta. Sem nomes: a superfície nominal é o Diário. */
                   <div
                     className="rounded-2xl p-4 flex gap-3"
                     style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.18)' }}
@@ -174,7 +174,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
                           : `${silencio} crianças atravessaram a fase em silêncio no diário.`}
                       </p>
                       <p className="text-[13px] leading-relaxed mt-1" style={{ color: 'rgba(255,255,255,0.85)' }}>
-                        Silêncio não é ausência — às vezes o canal ainda não abriu. Leve um olhar
+                        Silêncio não é ausência: às vezes o canal ainda não abriu. Leve um olhar
                         especial para elas na próxima exploração.
                       </p>
                     </div>
@@ -192,8 +192,8 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
                   style={{ color: 'rgba(255,255,255,0.85)' }}
                 >
                   {dados.multiAutores
-                    ? 'Nada do que vocês enxergaram se perde — agora é história da turma.'
-                    : 'Nada do que você enxergou se perde — agora é história da turma.'}
+                    ? 'Nada do que vocês enxergaram se perde. Agora é história da turma.'
+                    : 'Nada do que você enxergou se perde. Agora é história da turma.'}
                 </p>
               </Casc>
             </>
@@ -211,7 +211,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
           </Casc>
         </div>
       ) : (
-        /* ============ TEMPO 2 — ABERTURA (o amanhecer) ============ */
+        /* ============ TEMPO 2. ABERTURA (o amanhecer) ============ */
         <div key="t2" className="min-h-full flex flex-col max-w-sm mx-auto px-6 pt-5 pb-8 pb-safe">
           <div className="flex items-center justify-between mb-6">
             <button
@@ -226,7 +226,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
             </button>
           </div>
 
-          {/* Régua — o ponto novo acende por último, com o broto */}
+          {/* Régua: o ponto novo acende por último, com o broto */}
           <Casc i={0}>
             <div className="flex items-center justify-center mb-6" aria-hidden="true">
               {Array.from({ length: TOTAL_FASES }).map((_, i) => {
@@ -295,7 +295,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
                   style={{ color: t.textMuted }}
                 >
                   A turma atravessou os 8 mecanismos com você. O que você enxergou vive no Diário
-                  de cada criança — e segue com elas.
+                  de cada criança, e segue com elas.
                 </p>
               </Casc>
               <Casc i={5} className="mt-auto">
@@ -380,7 +380,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
                       </p>
                       <p className="text-[13px] leading-relaxed mt-1" style={{ color: t.textMuted }}>
                         As atividades desta fase chegam com o banco de atividades. Por enquanto,
-                        comece pelo olhar: repare onde esse mecanismo aparece na sua sala — o
+                        comece pelo olhar: repare onde esse mecanismo aparece na sua sala; o
                         diário faz o resto.
                       </p>
                     </div>

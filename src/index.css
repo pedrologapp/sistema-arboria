@@ -188,7 +188,7 @@ select option:checked {
   background-color: rgba(99, 102, 241, 0.3);
 }
 
-/* Infantil — o broto que "nasce" quando um momento é guardado (Rajada) */
+/* Infantil: o broto que "nasce" quando um momento é guardado (Rajada) */
 @keyframes sprout-in {
   from { transform: scale(0); opacity: 0; }
   60%  { transform: scale(1.15); }
@@ -198,8 +198,8 @@ select option:checked {
   animation: sprout-in 250ms ease-out both;
 }
 
-/* Infantil — "liquid glass" (referência do Fundador: iOS). Só no CHROME fixo
-   (header, nav, sub-headers, composer) — nunca em cards de conteúdo.
+/* Infantil: "liquid glass" (referência do Fundador: iOS). Só no CHROME fixo
+   (header, nav, sub-headers, composer), nunca em cards de conteúdo.
    Fallback: branco sólido onde backdrop-filter não existe. */
 .glass-light {
   background-color: #ffffff;
@@ -212,7 +212,7 @@ select option:checked {
   }
 }
 
-/* Infantil — Virada de Fase: cascata suave e linha que se desenha (tom caderno) */
+/* Infantil. Virada de Fase: cascata suave e linha que se desenha (tom caderno) */
 @keyframes vf-rise {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: none; }
@@ -228,7 +228,7 @@ select option:checked {
   .vf-rise { transform: none; }
 }
 
-/* Infantil — troca de abas: a tela desliza pro lado (nunca apaga-e-reaparece) */
+/* Infantil: troca de abas: a tela desliza pro lado (nunca apaga-e-reaparece) */
 @keyframes tab-in-left {
   from { opacity: 0; transform: translateX(28px); }
   to   { opacity: 1; transform: none; }
@@ -248,7 +248,7 @@ select option:checked {
   .tab-in-left, .tab-in-right, .tab-in-fade { animation: tab-in-fade 100ms ease-out; }
 }
 
-/* Infantil — glass ESCURO (chrome sobre o santuário da aba Fase) */
+/* Infantil: glass ESCURO (chrome sobre o santuário da aba Fase) */
 .glass-dark {
   background-color: rgba(35, 30, 95, 0.92);
 }

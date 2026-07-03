@@ -164,7 +164,7 @@ const AlunosPage = () => {
                   className="w-full p-3.5 hover:bg-white/[0.04] transition-colors text-left"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-base font-bold text-white">{grupo.serieNum}o Ano — Turma {grupo.turma}</span>
+                    <span className="text-base font-bold text-white">{grupo.serieNum}o Ano. Turma {grupo.turma}</span>
                     {isOpen
                       ? <ChevronUp className="w-4 h-4 text-white/30" />
                       : <ChevronDown className="w-4 h-4 text-white/30" />

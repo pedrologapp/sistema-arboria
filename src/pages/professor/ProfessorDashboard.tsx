@@ -329,7 +329,7 @@ const ProfessorDashboard = () => {
               {faseAtual && faseAtual.inteligencia ? (
                 <div className="mt-1">
                   <p className="text-white/70 text-sm">
-                    Fase {faseAtual.numero_fase} — {faseAtual.inteligencia.nome}
+                    Fase {faseAtual.numero_fase}: {faseAtual.inteligencia.nome}
                   </p>
                   <div className="flex items-center gap-2 mt-1.5">
                     <p className="text-white/40 text-xs">
@@ -351,7 +351,7 @@ const ProfessorDashboard = () => {
         </div>
       )}
 
-      {/* Organize sua Fase — Card expansivel */}
+      {/* Organize sua Fase. Card expansivel */}
       {faseAtual && (
         <div className="rounded-xl bg-[#252547] border border-violet-500/10 overflow-hidden">
           {/* Header colapsavel */}
@@ -362,7 +362,7 @@ const ProfessorDashboard = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-violet-400" />
-                <span className="text-xs font-medium text-white">Organize sua Fase — Semana {faseAtual?.semana_atual || 1}</span>
+                <span className="text-xs font-medium text-white">Organize sua Fase. Semana {faseAtual?.semana_atual || 1}</span>
               </div>
               <div className="flex items-center gap-2">
                 {/* Resumo quando fechado */}
@@ -405,7 +405,7 @@ const ProfessorDashboard = () => {
                     )}>
                       <div className="flex items-center gap-2.5">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-white font-medium">{t.serie}º Ano — Turma {t.turma}</p>
+                          <p className="text-sm text-white font-medium">{t.serie}º Ano. Turma {t.turma}</p>
                           {ag ? (
                             <button
                               onClick={(e) => { e.stopPropagation(); setAgendaSerie(t.serie); setAgendaTurma(t.turma); setAgendaDia(ag.dia_semana); setAgendaHorario(ag.horario?.slice(0, 5) || '08:00'); setShowAgendaModal(true); }}
@@ -482,7 +482,7 @@ const ProfessorDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-white font-medium">Definir horario</p>
-                <p className="text-xs text-white/30">{agendaSerie}º Ano — Turma {agendaTurma}</p>
+                <p className="text-xs text-white/30">{agendaSerie}º Ano. Turma {agendaTurma}</p>
               </div>
               <button onClick={() => setShowAgendaModal(false)} className="p-1 text-white/30 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
@@ -537,7 +537,7 @@ const ProfessorDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-white font-medium">Aula nao ocorreu</p>
-                <p className="text-xs text-white/30">{showMotivoModal.serie}º Ano — Turma {showMotivoModal.turma}</p>
+                <p className="text-xs text-white/30">{showMotivoModal.serie}º Ano. Turma {showMotivoModal.turma}</p>
               </div>
               <button onClick={() => { setShowMotivoModal(null); setMotivo(''); }} className="p-1 text-white/30 hover:text-white"><X className="w-5 h-5" /></button>
             </div>

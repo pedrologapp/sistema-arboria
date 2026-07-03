@@ -412,7 +412,7 @@ const MissaoDetalhePage = () => {
     }
   }, [DRAFT_KEY]);
 
-  // Salvar rascunho (debounced) — protege contra reload do navegador no mobile
+  // Salvar rascunho (debounced): protege contra reload do navegador no mobile
   // ao abrir o seletor de arquivos (Android costuma matar a aba por low memory)
   useEffect(() => {
     const temConteudo =
@@ -627,7 +627,7 @@ const MissaoDetalhePage = () => {
         })
       );
 
-      // 8. Sucesso — mostrar tela de confirmação
+      // 8. Sucesso: mostrar tela de confirmação
       setEntregaEnviada(true);
 
     } catch (err: any) {
@@ -857,7 +857,7 @@ const MissaoDetalhePage = () => {
           boxShadow: `0 0 40px ${casaColor}08, inset 0 1px 0 ${casaColor}15`,
         }}
       >
-        {/* Borda decorativa superior — estilo selo do pergaminho */}
+        {/* Borda decorativa superior: estilo selo do pergaminho */}
         <div
           className="h-1 w-full"
           style={{ background: `linear-gradient(90deg, transparent, ${casaColor}, transparent)` }}
@@ -895,17 +895,17 @@ const MissaoDetalhePage = () => {
             >
               {entrega.status === 'pendente' && (
                 <span className="text-xs px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                  Enviada — Aguardando avaliacao
+                  Enviada. Aguardando avaliacao
                 </span>
               )}
               {entrega.status === 'aprovada' && (
                 <span className="text-xs px-3 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
-                  Aprovada — {entrega.nota}/10
+                  Aprovada: {entrega.nota}/10
                 </span>
               )}
               {entrega.status === 'refazer' && (
                 <span className="text-xs px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                  Refazer — Veja o feedback
+                  Refazer. Veja o feedback
                 </span>
               )}
             </motion.div>

@@ -49,7 +49,7 @@ export const BannerObservarVsMapa = () => {
           <div className="rounded-lg border border-amber-500/30 p-2.5 space-y-1.5" style={{ backgroundColor: 'rgba(245,158,11,0.05)' }}>
             <p className="font-semibold text-xs text-amber-400">👁️ OBSERVAR</p>
             <p className="text-[11px] text-white/80 leading-snug">Apenas para momentos relevantes ou de muita atenção.</p>
-            <p className="text-[10px] text-white/50 leading-snug">Algo que se destacou — positivo ou preocupante. Um sinal claro que precisa ser registrado.</p>
+            <p className="text-[10px] text-white/50 leading-snug">Algo que se destacou: positivo ou preocupante. Um sinal claro que precisa ser registrado.</p>
             <div className="flex flex-wrap gap-1 pt-1">
               {['⭐ Brilhou', '🧱 Travou', '💡 Inovou'].map(t => (
                 <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300/80">{t}</span>

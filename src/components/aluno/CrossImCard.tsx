@@ -49,7 +49,7 @@ const CrossImCard = ({ casaCodigo, faseCodigo, corCasa, faseNome }: CrossImCardP
             style={{ color: `${corCasa}AA` }}
           >
             {ehFasePropria
-              ? `Fase ${faseNome || ''} — sua fase`
+              ? `Fase ${faseNome || ''}: sua fase`
               : `Você na fase ${faseNome || ''}`
             }
           </span>

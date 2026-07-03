@@ -232,7 +232,7 @@ const RegistroVivoPage = () => {
           data: new Date(e.data_entrega),
           titulo: `Aprovada: ${titulo}`,
           descricao: e.feedback_professor
-            ? `"${e.feedback_professor}" — ${e.pontos_concedidos || 0} pts`
+            ? `"${e.feedback_professor}": ${e.pontos_concedidos || 0} pts`
             : `${e.pontos_concedidos || 0} pontos concedidos`,
           cor: tipoCores.missao_aprovada,
           icon: tipoIcons.missao_aprovada,

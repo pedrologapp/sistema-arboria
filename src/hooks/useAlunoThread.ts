@@ -5,7 +5,7 @@ export interface ObservacaoThread {
   id: string;
   texto: string;
   data: string;        // data_observacao (YYYY-MM-DD)
-  dataHora: string;    // created_at (quando foi escrito — data + hora)
+  dataHora: string;    // created_at (quando foi escrito; data + hora)
   origem: string;      // 'manual' | 'caixa_hipotese' | 'ia_rascunho' | ...
   faseNome: string;    // nome da inteligência da fase (agrupador)
   anexoUrl?: string;   // signed URL da foto do trabalho (bucket privado 'observacoes')
@@ -51,7 +51,7 @@ export const useAlunoThread = (alunoId?: string) => {
         .eq('ativo', true)
         .maybeSingle();
 
-      // 3. Observações (ordem cronológica = conversa) — excluídas (soft-delete) ficam fora
+      // 3. Observações (ordem cronológica = conversa): excluídas (soft-delete) ficam fora
       const { data: obs } = await supabase
         .from('observacoes')
         .select('id, observacao_texto, data_observacao, created_at, fase_id, origem, anexo_url, professor_id')
@@ -79,7 +79,7 @@ export const useAlunoThread = (alunoId?: string) => {
         }
       }
 
-      // 4b. Nome de quem escreveu (o thread é compartilhado — titular + auxiliar
+      // 4b. Nome de quem escreveu (o thread é compartilhado: titular + auxiliar
       //     precisam se enxergar; a autoria só é EXIBIDA quando não é quem lê).
       const professorIds = [
         ...new Set((obs || []).map((o) => (o as { professor_id?: string }).professor_id).filter(Boolean)),

@@ -24,13 +24,12 @@ export interface FaseTurmaResult {
 }
 
 /**
- * Fase atual DA TURMA (Infantil) — lida da turma_trilha POR turma.
+ * Fase atual DA TURMA (Infantil): lida da turma_trilha POR turma.
  *
  * Corrige o bug de professora com 2+ turmas: o ProfessorContext deriva a
  * faseAtual só da primeira turma vinculada, mas cada turma tem sua própria
  * trilha (a turma A pode estar na fase 3 e a B na 1). Toda tela do Infantil
- * que registra ou move trilha deve usar ESTE hook com a turma selecionada —
- * senão a observação nasce presa à fase errada no rio longitudinal.
+ * que registra ou move trilha deve usar ESTE hook com a turma selecionada: * senão a observação nasce presa à fase errada no rio longitudinal.
  */
 export const useFaseTurma = (turmaId?: string | null, institutionId?: string | null) => {
   return useQuery({

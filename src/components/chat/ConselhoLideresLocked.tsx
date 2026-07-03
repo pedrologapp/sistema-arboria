@@ -31,7 +31,7 @@ export const ConselhoLideresLocked = ({ open, onOpenChange }: ConselhoLideresLoc
             Este canal é exclusivo para <span className="text-yellow-400 font-semibold">Líderes das Casas</span> e a <span className="text-yellow-400 font-semibold">Diretoria</span>.
           </p>
           <p className="text-center text-white/50 text-xs italic">
-            Continue sua jornada — quem sabe um dia você estará aqui. 👑
+            Continue sua jornada: quem sabe um dia você estará aqui. 👑
           </p>
         </div>
       </DialogContent>

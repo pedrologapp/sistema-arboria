@@ -138,7 +138,7 @@ const PerfilPage = () => {
         </div>
       )}
 
-      {/* Stats — escondidos pro aluno novo (o card de boas-vindas já cobre o recado) */}
+      {/* Stats: escondidos pro aluno novo (o card de boas-vindas já cobre o recado) */}
       {!((ranking?.total_pontos || 0) === 0 && (ranking?.missoes_completadas || 0) === 0) && (
       <div className="grid grid-cols-3 gap-3">
         <div data-augmented-ui="tl-clip br-clip border" className="sf-panel p-3.5 text-center">

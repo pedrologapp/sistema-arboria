@@ -301,7 +301,7 @@ const RelatoriosPage = () => {
         <div className="p-5 bg-white/5 border border-violet-500/10 rounded-2xl space-y-4">
           <div>
             <h2 className="text-base font-semibold text-white flex items-center gap-2">
-              🔑 Credenciais dos Alunos — F2
+              🔑 Credenciais dos Alunos. F2
             </h2>
             <p className="text-sm text-white/50 mt-1">
               Exporta nome, série, turma, casa, email de login e senha de todos os alunos do Fundamental 2 que possuem conta criada.
@@ -310,7 +310,7 @@ const RelatoriosPage = () => {
 
           <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
             <p className="text-xs text-amber-400">
-              ⚠️ Documento sensível — contém senhas. Compartilhe com cuidado.
+              ⚠️ Documento sensível: contém senhas. Compartilhe com cuidado.
             </p>
           </div>
 

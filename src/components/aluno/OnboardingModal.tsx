@@ -21,13 +21,13 @@ const slides = [
   },
   {
     titulo: 'Sua Casa',
-    texto: 'Você pertence a uma Casa — um grupo de alunos que pensam de um jeito parecido. Sua casa tem cor, nome, brasão e uma identidade própria. Vocês vão competir e crescer juntos!',
+    texto: 'Você pertence a uma Casa; um grupo de alunos que pensam de um jeito parecido. Sua casa tem cor, nome, brasão e uma identidade própria. Vocês vão competir e crescer juntos!',
     emoji: '🏠',
     usaCasa: true,
   },
   {
     titulo: 'As Fases',
-    texto: 'Durante o ano, vocês passam por 8 fases. Cada fase dura 4 semanas e trabalha uma inteligência diferente. Não importa qual é a sua casa — todas as fases são para você.',
+    texto: 'Durante o ano, vocês passam por 8 fases. Cada fase dura 4 semanas e trabalha uma inteligência diferente. Não importa qual é a sua casa: todas as fases são para você.',
     emoji: '🔄',
   },
   {

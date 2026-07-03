@@ -65,7 +65,7 @@ const ConfigPage = () => {
             </div>
             <div className="flex-1">
               <span className="text-white font-medium block">Relatorios</span>
-              <span className="text-white/40 text-sm">Credenciais, lideres, coordenadores — PDF e CSV</span>
+              <span className="text-white/40 text-sm">Credenciais, lideres, coordenadores. PDF e CSV</span>
             </div>
             <span className="text-white/30 group-hover:text-white/60 transition-colors">→</span>
           </button>

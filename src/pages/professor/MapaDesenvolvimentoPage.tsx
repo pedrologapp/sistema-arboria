@@ -362,7 +362,7 @@ const MapaDesenvolvimentoPage = () => {
         <h1 className="text-xl font-bold text-white">Mapa de Desenvolvimento</h1>
         {activeFase && (
           <p className="text-sm text-white/50 mt-1">
-            Fase {activeFase.numero_fase} — <span style={{ color: activeFase.inteligencia?.cor_hex || '#fff' }}>{activeFase.inteligencia?.nome}</span> | Semana {selectedSemana}
+            Fase {activeFase.numero_fase}: <span style={{ color: activeFase.inteligencia?.cor_hex || '#fff' }}>{activeFase.inteligencia?.nome}</span> | Semana {selectedSemana}
           </p>
         )}
       </div>

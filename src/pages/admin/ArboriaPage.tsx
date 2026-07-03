@@ -136,7 +136,7 @@ const ArboriaPage = () => {
     },
   });
 
-  // Desafios diários — respostas de hoje e recentes
+  // Desafios diários: respostas de hoje e recentes
   const [filtroDesafioSerie, setFiltroDesafioSerie] = useState<string | null>(null);
   const { data: desafiosHoje = [] } = useQuery({
     queryKey: ['arboria-desafios-hoje', hojeData],
@@ -492,7 +492,7 @@ const ArboriaPage = () => {
                     onClick={() => navigate(`/admin/arboria/aluno/${r.aluno_id}`)}
                     className="w-full p-3 rounded-xl bg-[#252547] border border-violet-500/10 hover:bg-white/[0.06] transition-colors text-left"
                   >
-                    <p className="text-[10px] text-white/40 mb-1">{getAlunoNome(r.aluno_id)} — {new Date(r.created_at).toLocaleDateString('pt-BR')}</p>
+                    <p className="text-[10px] text-white/40 mb-1">{getAlunoNome(r.aluno_id)}: {new Date(r.created_at).toLocaleDateString('pt-BR')}</p>
                     <p className="text-sm text-white/70 line-clamp-2">"{r.texto}"</p>
                   </button>
                 ))}
@@ -822,7 +822,7 @@ const ArboriaPage = () => {
           {/* Call to action */}
           <div className="rounded-2xl border border-amber-500/15 bg-amber-500/5 p-4 text-center">
             <p className="text-sm text-white/70">Busque um aluno para ver seu <span className="font-semibold text-amber-300">Registro Vivo</span></p>
-            <p className="text-[10px] text-white/30 mt-1">Missões, observações, emoções, relatos — a história completa</p>
+            <p className="text-[10px] text-white/30 mt-1">Missões, observações, emoções, relatos: a história completa</p>
           </div>
         </>
       )}

@@ -134,7 +134,7 @@ const AdminChatPage = () => {
     staleTime: 60000,
   });
 
-  // Msgs privadas por casa (24h) — para badges nos cards
+  // Msgs privadas por casa (24h): para badges nos cards
   const { data: msgsPrivadasPorCasa = {} } = useQuery({
     queryKey: ['admin-msgs-privadas-por-casa', casas.length, institutionId],
     queryFn: async () => {
@@ -166,7 +166,7 @@ const AdminChatPage = () => {
     staleTime: 60000,
   });
 
-  // Msgs canais por casa (24h) — para badges nos cards de Casas
+  // Msgs canais por casa (24h): para badges nos cards de Casas
   const { data: msgsCanalPorCasa = {} } = useQuery({
     queryKey: ['admin-msgs-canal-por-casa', casas.length],
     queryFn: async () => {

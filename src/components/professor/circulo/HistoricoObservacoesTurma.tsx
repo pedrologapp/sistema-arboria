@@ -102,7 +102,7 @@ const HistoricoObservacoesTurma = ({
       <div className="flex items-center gap-2 text-white/40 text-xs">
         <History className="w-3.5 h-3.5" strokeWidth={1.5} />
         <span className="uppercase tracking-wide">
-          Observações {semanaSelecionada ? `— Semana ${semanaSelecionada}` : '— Todas'}
+          Observações {semanaSelecionada ? `. Semana ${semanaSelecionada}` : '. Todas'}
         </span>
         <span className="ml-auto text-white/30">{obsFiltradas.length} registros</span>
       </div>

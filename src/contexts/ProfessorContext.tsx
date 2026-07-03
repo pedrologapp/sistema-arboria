@@ -137,7 +137,7 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
       if (profileError) throw profileError;
       setProfile(profileData as Profile);
 
-      // 2-6 EM PARALELO — antes era uma FILA de ~8 idas ao banco (login de ~7s).
+      // 2-6 EM PARALELO, antes era uma FILA de ~8 idas ao banco (login de ~7s).
       // Onda 1: profile (acima). Onda 2: tudo que só depende dele, junto.
       // Onda 3: as duas fases, juntas.
       const ehInfantilOuF1 =

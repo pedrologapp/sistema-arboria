@@ -143,7 +143,7 @@ const RecuperarAcesso = () => {
         </div>
         <p className="text-white/60 text-sm mb-8 leading-relaxed">
           Sem problema. Preenche os dados abaixo e o coordenador da sua casa vai te ajudar a recuperar
-          seu acesso. Não vai vir email — você vai receber direto da pessoa.
+          seu acesso. Não vai vir email: você vai receber direto da pessoa.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -185,7 +185,7 @@ const RecuperarAcesso = () => {
                 disabled={!institutionId}
                 className="w-full bg-white/5 border border-violet-500/10 rounded-md px-3 py-2 text-sm text-white disabled:opacity-50"
               >
-                <option value="">—</option>
+                <option value="">: </option>
                 {seriesDisponiveis.map(s => (
                   <option key={s} value={s}>{s}º Ano</option>
                 ))}
@@ -200,7 +200,7 @@ const RecuperarAcesso = () => {
                 disabled={!serie}
                 className="w-full bg-white/5 border border-violet-500/10 rounded-md px-3 py-2 text-sm text-white disabled:opacity-50"
               >
-                <option value="">—</option>
+                <option value="">: </option>
                 {turmasDisponiveis.map(t => (
                   <option key={t} value={t}>{t}</option>
                 ))}

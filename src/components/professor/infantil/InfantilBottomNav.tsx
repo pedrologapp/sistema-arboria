@@ -11,7 +11,7 @@ interface NavItemConfig {
 }
 
 /**
- * Barra do professor — INFANTIL. 3 abas, conforme decisão de 26/06:
+ * Barra do professor. INFANTIL. 3 abas, conforme decisão de 26/06:
  * Arboria (a prática) · Fase (estudo/apoio) · Alunos (threads).
  * Sem Chat (chat é das Casas = F2). Pele neutra, alvo de toque confortável.
  */
@@ -19,8 +19,7 @@ const InfantilBottomNav = ({ dark = false }: { dark?: boolean }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Dentro de um aluno (thread) e durante a AULA (rajada), a barra some —
-  // tela cheia: no meio do caos da sala, um toque perdido não sai da aula.
+  // Dentro de um aluno (thread) e durante a AULA (rajada), a barra some: // tela cheia: no meio do caos da sala, um toque perdido não sai da aula.
   if (/^\/professor\/alunos\/.+/.test(location.pathname)) return null;
   if (location.pathname === '/professor/aula') return null;
 

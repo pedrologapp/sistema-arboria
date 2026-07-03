@@ -505,7 +505,7 @@ const ConteudoInteligenciaPage = () => {
               if (!pdf) {
                 return (
                   <div key={semana} className="p-3 rounded-xl bg-white/5 border border-violet-500/10">
-                    <p className="text-white/40 text-sm">Semana {semana} — Nenhum material</p>
+                    <p className="text-white/40 text-sm">Semana {semana}. Nenhum material</p>
                   </div>
                 );
               }

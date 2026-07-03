@@ -579,7 +579,7 @@ const TabConteudo = ({ faseId, institutionId, dataInicio, dataFim }: TabConteudo
             {/* Header Modal */}
             <div className="flex items-center justify-between p-4 border-b border-violet-500/10">
               <h3 className="text-white font-semibold">
-                {semanaAtual === 0 ? 'Adicionar Conteúdo Geral' : `Adicionar Conteúdo — Semana ${semanaAtual}`}
+                {semanaAtual === 0 ? 'Adicionar Conteúdo Geral' : `Adicionar Conteúdo. Semana ${semanaAtual}`}
               </h3>
               <button onClick={fecharModal} className="text-white/40 hover:text-white">
                 <X className="w-5 h-5" />

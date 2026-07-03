@@ -57,8 +57,7 @@ const ProfessorLayoutContent = ({ children }: ProfessorLayoutProps) => {
   const { segmento, isLoading } = useProfessor();
 
   // Spinner SÓ no primeiro load (segmento ainda desconhecido). Em refreshes
-  // (refreshData após finalizar fase etc.), manter as páginas MONTADAS —
-  // desmontar aqui apagava estado local (ex.: turma selecionada voltava pra 1ª).
+  // (refreshData após finalizar fase etc.), manter as páginas MONTADAS: // desmontar aqui apagava estado local (ex.: turma selecionada voltava pra 1ª).
   if (isLoading && !segmento) {
     return (
       <div className="min-h-screen bg-[#1A1A2E] flex items-center justify-center">
@@ -67,7 +66,7 @@ const ProfessorLayoutContent = ({ children }: ProfessorLayoutProps) => {
     );
   }
 
-  // Infantil: nova camada (pele neutra, 3 abas) — reforma 26/06
+  // Infantil: nova camada (pele neutra, 3 abas); reforma 26/06
   if (segmento === 'infantil') {
     return <ProfessorLayoutInfantil>{children}</ProfessorLayoutInfantil>;
   }

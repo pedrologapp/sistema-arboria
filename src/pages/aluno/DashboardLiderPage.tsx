@@ -230,7 +230,7 @@ const DashboardLiderPage = () => {
       <div>
         <h1 className="text-xl font-semibold text-white">Dashboard</h1>
         <p className="text-xs text-white/30 mt-0.5">
-          Casa {casa?.nome} — {isLider ? 'Lider' : `Coordenador ${minhaSerie}º ${minhaTurma}`}
+          Casa {casa?.nome}: {isLider ? 'Lider' : `Coordenador ${minhaSerie}º ${minhaTurma}`}
         </p>
       </div>
 
@@ -419,7 +419,7 @@ const DashboardLiderPage = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-white/70 truncate">{prof?.full_name || 'Coordenador'}</p>
-                    <p className="text-[10px] text-white/30">{prof?.serie} {prof?.turma} {tData ? `— ${tData[1].entregaram}/${tData[1].total} entregas` : ''}</p>
+                    <p className="text-[10px] text-white/30">{prof?.serie} {prof?.turma} {tData ? `: ${tData[1].entregaram}/${tData[1].total} entregas` : ''}</p>
                   </div>
                   <MessageCircle className="w-4 h-4 text-white/20" />
                 </button>
@@ -460,7 +460,7 @@ const DashboardLiderPage = () => {
       {faseAtual && (
         <div data-augmented-ui="tl-clip br-clip border" className="sf-card p-3 text-center">
           <p className="text-xs text-white/40">
-            Fase {faseAtual.numero_fase} — {faseAtual.inteligencia?.nome}
+            Fase {faseAtual.numero_fase}: {faseAtual.inteligencia?.nome}
           </p>
         </div>
       )}

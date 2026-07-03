@@ -9,7 +9,7 @@ import InfantilBottomNav from '@/components/professor/infantil/InfantilBottomNav
 import TutorialInfantil, { abrirTutorialInfantil } from '@/components/professor/infantil/TutorialInfantil';
 import { HelpCircle } from 'lucide-react';
 
-// Ordem das abas (Arboria=0 · Fase=1 · Diário=2) — dita a DIREÇÃO do deslize
+// Ordem das abas (Arboria=0 · Fase=1 · Diário=2): dita a DIREÇÃO do deslize
 const tabIndex = (path: string) => {
   if (path.startsWith('/professor/fase')) return 1;
   if (path.startsWith('/professor/alunos')) return 2;
@@ -17,12 +17,12 @@ const tabIndex = (path: string) => {
   return -1;
 };
 
-// Rotas onde o SWIPE troca de aba — só as 3 abas de topo. Nunca na aula
+// Rotas onde o SWIPE troca de aba, só as 3 abas de topo. Nunca na aula
 // (rajada) nem no thread: um gesto acidental não pode tirar a professora
 // do meio do registro.
 const TAB_PATHS = ['/professor', '/professor/fase', '/professor/alunos'];
 
-/** Fallback de chunk lazy — leve, DENTRO do chrome (nada de tela cheia escura). */
+/** Fallback de chunk lazy: leve, DENTRO do chrome (nada de tela cheia escura). */
 const PaginaCarregando = () => (
   <div className="pt-5 space-y-3">
     <Skeleton className="h-8 w-40 rounded" />
@@ -44,7 +44,7 @@ const getIniciais = (nome?: string | null) => {
 };
 
 /**
- * Layout do professor — INFANTIL. Pele neutra/clara, de ferramenta.
+ * Layout do professor. INFANTIL. Pele neutra/clara, de ferramenta.
  * Header sóbrio (instituição + avatar → menu pessoal) e a barra de 3 abas.
  */
 const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => {
@@ -81,10 +81,10 @@ const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => 
     const ini = toqueRef.current;
     toqueRef.current = null;
     if (!ini) return;
-    // Dentro do santuário (aba Fase) o swipe troca de MECANISMO — a página cuida
+    // Dentro do santuário (aba Fase) o swipe troca de MECANISMO: a página cuida
     if (location.pathname.startsWith('/professor/fase')) return;
     const pos = TAB_PATHS.indexOf(location.pathname);
-    if (pos < 0) return; // fora das abas de topo (aula, thread) — swipe desligado
+    if (pos < 0) return; // fora das abas de topo (aula, thread): swipe desligado
     const fim = e.changedTouches[0];
     const dx = fim.clientX - ini.x;
     const dy = fim.clientY - ini.y;
@@ -113,7 +113,7 @@ const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => 
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {/* Header — no santuário (aba Fase) o glass escurece junto com a tela */}
+      {/* Header: no santuário (aba Fase) o glass escurece junto com a tela */}
       <header
         className={`fixed top-0 left-0 right-0 z-40 ${santuario ? 'glass-dark' : 'glass-light'}`}
         style={{ boxShadow: '0 1px 3px rgba(28,34,48,0.06)' }}
@@ -135,12 +135,12 @@ const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => 
           </div>
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            {/* Ajuda — abre o tutorial "Como usar o Arboria" (pedido do Fundador 03/07) */}
+            {/* Ajuda: abre o tutorial "Como usar o Arboria" (pedido do Fundador 03/07) */}
             <button
               onClick={abrirTutorialInfantil}
               className="p-2 rounded-full transition-transform active:scale-95"
               style={{ color: santuario ? 'rgba(255,255,255,0.75)' : t.textMuted }}
-              aria-label="Ajuda — como usar o Arboria"
+              aria-label="Ajuda, como usar o Arboria"
             >
               <HelpCircle size={21} strokeWidth={1.75} />
             </button>
@@ -163,14 +163,14 @@ const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => 
         </div>
       </header>
 
-      {/* Conteúdo — key pela rota reinicia a animação de entrada a cada troca */}
+      {/* Conteúdo: key pela rota reinicia a animação de entrada a cada troca */}
       <main key={location.pathname} className={`pt-14 pb-24 px-4 max-w-lg mx-auto ${slideClass}`}>
         <Suspense fallback={<PaginaCarregando />}>{children}</Suspense>
       </main>
 
       <InfantilBottomNav dark={santuario} />
 
-      {/* Tutorial "caderninho de bolso" — abre sozinho na 1ª entrada; reabrível
+      {/* Tutorial "caderninho de bolso": abre sozinho na 1ª entrada; reabrível
           pelo ícone Ajuda (acima) e por Configurações → Como usar o Arboria */}
       <TutorialInfantil />
     </div>

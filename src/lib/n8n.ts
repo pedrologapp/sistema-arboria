@@ -31,7 +31,7 @@ const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL as string | undefined;
 
 /**
  * Envia um evento pro webhook do n8n.
- * Fire-and-forget — não aguarda resposta nem propaga erro.
+ * Fire-and-forget, não aguarda resposta nem propaga erro.
  * Se VITE_N8N_WEBHOOK_URL não estiver setado, vira no-op (com warn no console).
  */
 export async function enviarParaIA(
@@ -40,7 +40,7 @@ export async function enviarParaIA(
   payload: Record<string, unknown>,
 ): Promise<void> {
   if (!WEBHOOK_URL) {
-    console.warn('[n8n] VITE_N8N_WEBHOOK_URL não configurado — evento ignorado:', tipo);
+    console.warn('[n8n] VITE_N8N_WEBHOOK_URL não configurado: evento ignorado:', tipo);
     return;
   }
 
@@ -60,7 +60,7 @@ export async function enviarParaIA(
       keepalive: true,
     });
   } catch (err) {
-    // Não bloqueia a UX se o webhook estiver fora — só loga.
+    // Não bloqueia a UX se o webhook estiver fora, só loga.
     console.warn('[n8n] falha ao enviar evento', tipo, err);
   }
 }

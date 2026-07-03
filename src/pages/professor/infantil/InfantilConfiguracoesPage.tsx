@@ -10,7 +10,7 @@ import { abrirTutorialInfantil } from '@/components/professor/infantil/TutorialI
 import { infantilTheme as t } from '@/styles/infantilTheme';
 
 /**
- * Configurações do professor — INFANTIL (pele do caderno claro).
+ * Configurações do professor. INFANTIL (pele do caderno claro).
  * A versão compartilhada era do tema escuro do F2 e ficava branca/ilegível
  * dentro do layout claro. Sem Casa/mentor (Infantil não tem Casas).
  */
@@ -176,7 +176,7 @@ const InfantilConfiguracoesPage = () => {
         <Item
           icone={<BookOpen size={19} strokeWidth={1.75} />}
           titulo="Como usar o Arboria"
-          sub="O tutorial aba por aba — releia quando quiser"
+          sub="O tutorial aba por aba: releia quando quiser"
           onClick={abrirTutorialInfantil}
         />
       </Secao>

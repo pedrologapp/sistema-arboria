@@ -444,7 +444,7 @@ const CapituloProfessorPage = () => {
 
     // Sincroniza missoes.data_prazo com o MAIOR prazo entre as turmas.
     // Assim cada turma é limitada pelo seu próprio prazo (em capitulo_turma_config),
-    // e missoes.data_prazo vira o teto global — evita que turmas com prazo maior
+    // e missoes.data_prazo vira o teto global: evita que turmas com prazo maior
     // expirem antes da hora por causa de uma config com prazo menor.
     const { data: configs } = await sb.from('capitulo_turma_config')
       .select('missoes_data_prazo')
@@ -747,7 +747,7 @@ const CapituloProfessorPage = () => {
         )}
       </div>
 
-      {/* Relatório do Capítulo (PDF para a IA) — global, vale pra todas as turmas */}
+      {/* Relatório do Capítulo (PDF para a IA): global, vale pra todas as turmas */}
       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-3">
         <div className="flex items-center gap-2">
           <FileText className="w-4 h-4 text-violet-300" />
@@ -793,7 +793,7 @@ const CapituloProfessorPage = () => {
                 {capitulo.relatorio_processado_em ? (
                   <div className="text-[11px] text-emerald-300/90 flex items-center gap-1 mt-0.5">
                     <Sparkles className="w-3 h-3" />
-                    Processado em {new Date(capitulo.relatorio_processado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} — confira os rascunhos na aba Avaliação
+                    Processado em {new Date(capitulo.relatorio_processado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}; confira os rascunhos na aba Avaliação
                   </div>
                 ) : (
                   <div className="text-[11px] text-orange-300/85 mt-0.5">
@@ -919,7 +919,7 @@ const CapituloProfessorPage = () => {
             <div className="text-[12px] text-white/70">
               <p>✓ Liberadas para esta turma.</p>
               <p className="text-white/45 mt-0.5">
-                Prazo de entrega: {turmaConfig.missoes_data_prazo ? new Date(turmaConfig.missoes_data_prazo).toLocaleDateString('pt-BR') : '—'}
+                Prazo de entrega: {turmaConfig.missoes_data_prazo ? new Date(turmaConfig.missoes_data_prazo).toLocaleDateString('pt-BR') : '; '}
               </p>
               <div className="flex items-center gap-3 mt-2">
                 <button
@@ -1049,7 +1049,7 @@ const CapituloProfessorPage = () => {
         </div>
       )}
 
-      {/* TIME 2 — MESA */}
+      {/* TIME 2. MESA */}
       <SecaoCat titulo="Mesa Diretora">
         {t2Mesa.map(p => (
           <PapelLinha
@@ -1060,7 +1060,7 @@ const CapituloProfessorPage = () => {
         ))}
       </SecaoCat>
 
-      {/* TIME 2 — MEDIADORES */}
+      {/* TIME 2. MEDIADORES */}
       {t2Med.length > 0 && (
         <SecaoCat titulo="Mediadores">
           {t2Med.map(p => (
@@ -1073,7 +1073,7 @@ const CapituloProfessorPage = () => {
         </SecaoCat>
       )}
 
-      {/* TIME 2 — OBSERVATÓRIO */}
+      {/* TIME 2. OBSERVATÓRIO */}
       {t2Obs.length > 0 && (
         <SecaoCat titulo="Observatório">
           {t2Obs.map(p => (
@@ -1086,7 +1086,7 @@ const CapituloProfessorPage = () => {
         </SecaoCat>
       )}
 
-      {/* TIME 1 — DELEGAÇÕES (só ativas) */}
+      {/* TIME 1. DELEGAÇÕES (só ativas) */}
       {delegacoes.filter(d => delegacoesAtivas.has(d.codigo)).length > 0 && (
         <SecaoCat titulo="Delegações">
           <div className="space-y-3">
@@ -1253,7 +1253,7 @@ const CapituloProfessorPage = () => {
                     {alunoAvaliando.nome}
                   </DialogTitle>
                   <DialogDescription className="text-white/60">
-                    Observação do capítulo — papel: <span className="text-white/80">{alunoAvaliando.papel}</span>
+                    Observação do capítulo: papel: <span className="text-white/80">{alunoAvaliando.papel}</span>
                   </DialogDescription>
                 </DialogHeader>
 

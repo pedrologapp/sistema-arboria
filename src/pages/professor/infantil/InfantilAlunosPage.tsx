@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 
 /**
- * Aba DIÁRIO (Infantil) — as crianças cuja história o professor escreve.
+ * Aba DIÁRIO (Infantil): as crianças cuja história o professor escreve.
  * Lista as crianças das turmas do professor; tocar abre a história (thread).
  */
 const InfantilAlunosPage = () => {
@@ -79,14 +79,14 @@ const InfantilAlunosPage = () => {
           className="rounded-2xl p-3.5"
           style={{ backgroundColor: t.accentSoft, border: `1px solid ${t.accentBorder}` }}
         >
-          {/* Só o convite — SEM contador de sem-registro (era "N crianças ainda esperam
+          {/* Só o convite, SEM contador de sem-registro (era "N crianças ainda esperam
               um momento seu": contador de falta com roupa afetuosa, viola a lei do modelo.
               Revisado e removido pelo Fundador em 01/07). */}
           <p className="text-sm font-semibold" style={{ color: t.accentText }}>
             Quem você vai enxergar hoje?
           </p>
 
-          {/* EXPANSÍVEL: como registrar bem (ideia do Fundador 03/07) — a maior
+          {/* EXPANSÍVEL: como registrar bem (ideia do Fundador 03/07); a maior
               alavanca de qualidade do dado: ensinar "chegou assim" vs "foi bem". */}
           <button
             onClick={() => setExemplosAbertos((v) => !v)}
@@ -111,7 +111,7 @@ const InfantilAlunosPage = () => {
                 </p>
                 <p className="text-xs leading-relaxed" style={{ color: t.text }}>
                   <span className="font-semibold" style={{ color: t.presenteText }}>✓</span>{' '}
-                  "Separou as tampinhas por cor antes de colar — só começou quando a coleção
+                  "Separou as tampinhas por cor antes de colar, só começou quando a coleção
                   ficou em ordem."
                 </p>
               </div>
@@ -133,13 +133,12 @@ const InfantilAlunosPage = () => {
                 </p>
                 <p className="text-xs leading-relaxed" style={{ color: t.text }}>
                   <span className="font-semibold" style={{ color: t.presenteText }}>✓</span>{' '}
-                  "Recusou a pintura, mas passou o tempo todo olhando as cores dos colegas —
-                  entrou pela observação, não pelo pincel."
+                  "Recusou a pintura, mas passou o tempo todo olhando as cores dos colegas: entrou pela observação, não pelo pincel."
                 </p>
               </div>
 
               <p className="text-xs italic leading-relaxed" style={{ color: t.accentText }}>
-                Você não precisa concluir nada — descreva a cena; a leitura vem depois.
+                Você não precisa concluir nada: descreva a cena; a leitura vem depois.
               </p>
             </div>
           )}
@@ -164,7 +163,7 @@ const InfantilAlunosPage = () => {
         </div>
       )}
 
-      {/* Busca + alternador de visão (lista / círculos) — mesmo padrão da Rajada */}
+      {/* Busca + alternador de visão (lista / círculos): mesmo padrão da Rajada */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search
@@ -273,7 +272,7 @@ const InfantilAlunosPage = () => {
           ))}
         </div>
       ) : (
-        /* VISÃO EM CÍRCULOS — foto + nome, grade 3 colunas (mesmo padrão da Rajada) */
+        /* VISÃO EM CÍRCULOS: foto + nome, grade 3 colunas (mesmo padrão da Rajada) */
         <div className="grid grid-cols-3 gap-2">
           {alunosFiltrados.map((aluno) => (
             <button

@@ -153,7 +153,7 @@ const PAGINAS: Pagina[] = [
     ),
   },
   {
-    titulo: 'Arboria — o seu dia começa aqui.',
+    titulo: 'Arboria; o seu dia começa aqui.',
     fundo: t.bg,
     ilus: <MiniArboria />,
     corpo: (
@@ -164,28 +164,28 @@ const PAGINAS: Pagina[] = [
     ),
   },
   {
-    titulo: '"O ano" — a trilha das 8 explorações.',
+    titulo: '"O ano"; a trilha das 8 explorações.',
     fundo: t.bg,
     ilus: <MiniTrilha />,
     corpo: (
       <>
         A turma atravessa <b>8 fases no ano</b>, uma por mecanismo. Você começa e finaliza cada
-        fase quando sentir que é hora — e a virada é um momento bonito, pode confiar.
+        fase quando sentir que é hora, e a virada é um momento bonito, pode confiar.
         <span className="block mt-2.5 italic text-[13px]" style={{ color: t.accentText }}>
-          A fase é da TURMA — nunca da criança.
+          A fase é da TURMA, nunca da criança.
         </span>
       </>
     ),
   },
   {
-    titulo: 'A aula — toque no nome, escreva, pronto.',
+    titulo: 'A aula; toque no nome, escreva, pronto.',
     fundo: t.bg,
     ilus: <MiniAula />,
     corpo: (
       <>
         Na aula, a turma aparece em lista. <b>Tocou numa criança, abre o campo</b>: escreva como
         ela chegou (pode ditar pelo microfone!) e toque em Guardar. O brotinho acende.{' '}
-        <b>Quem você não registrar, tudo bem</b> — ninguém precisa registrar todo mundo.
+        <b>Quem você não registrar, tudo bem</b>: ninguém precisa registrar todo mundo.
         <span className="block mt-2.5 italic text-[13px]" style={{ color: t.accentText }}>
           Registre o caminho, não o resultado.
         </span>
@@ -193,28 +193,28 @@ const PAGINAS: Pagina[] = [
     ),
   },
   {
-    titulo: 'Fase — o lugar de estudar o mecanismo.',
+    titulo: 'Fase; o lugar de estudar o mecanismo.',
     fundo: t.accentDeep,
     ilus: <MiniSantuario />,
     corpo: (
       <>
         A aba escura é o seu <b>santuário de estudo</b>: o que é o mecanismo da fase, como ele
-        aparece na sala, o que NÃO é sinal. Toque nos números pra conhecer os 8 — a qualquer
+        aparece na sala, o que NÃO é sinal. Toque nos números pra conhecer os 8: a qualquer
         momento do ano.
         <span className="block mt-2.5 italic text-[13px]" style={{ color: t.accentText }}>
-          Não é lista pra diagnosticar criança — é lente pro seu olhar.
+          Não é lista pra diagnosticar criança: é lente pro seu olhar.
         </span>
       </>
     ),
   },
   {
-    titulo: 'Diário — a história de cada criança.',
+    titulo: 'Diário; a história de cada criança.',
     fundo: t.bg,
     ilus: <MiniDiario />,
     corpo: (
       <>
         Cada criança tem um <b>diário estilo conversa</b>: tudo que você (e sua colega de sala)
-        já escreveram, fase a fase. Registre a qualquer hora — não precisa estar em aula. Errou?{' '}
+        já escreveram, fase a fase. Registre a qualquer hora, não precisa estar em aula. Errou?{' '}
         <b>Segure o balão</b> pra corrigir.
       </>
     ),
@@ -226,17 +226,17 @@ const PAGINAS: Pagina[] = [
       <div className="text-center px-6">
         <Sprout size={34} strokeWidth={1.5} className="mx-auto mb-3" style={{ color: t.accent }} />
         <p className="font-serif italic text-[13.5px] leading-relaxed" style={{ color: t.accentText }}>
-          "Nada do que você enxerga se perde — vira história."
+          "Nada do que você enxerga se perde: vira história."
         </p>
       </div>
     ),
     corpo: (
       <>
-        <b>1.</b> A fase é da turma — nunca da criança.
+        <b>1.</b> A fase é da turma, nunca da criança.
         <br />
         <b>2.</b> Registre o caminho, não o resultado: "chegou assim", não "foi bem".
         <br />
-        <b>3.</b> Silêncio não é ausência — a criança sem registro está só esperando o contexto
+        <b>3.</b> Silêncio não é ausência: a criança sem registro está só esperando o contexto
         dela.
       </>
     ),
@@ -244,11 +244,11 @@ const PAGINAS: Pagina[] = [
 ];
 
 /**
- * TUTORIAL DO PROFESSOR — "o caderninho de bolso" (aprovado pelo Fundador 03/07).
+ * TUTORIAL DO PROFESSOR: "o caderninho de bolso" (aprovado pelo Fundador 03/07).
  *
  * Abre SOZINHO na primeira entrada (localStorage) e fica sempre à mão: ícone
  * Ajuda no header + Configurações → "Como usar o Arboria". Swipe entre páginas,
- * "Pular" sempre visível — tutorial nunca é prisão.
+ * "Pular" sempre visível: tutorial nunca é prisão.
  */
 const TutorialInfantil = () => {
   const [aberto, setAberto] = useState(false);

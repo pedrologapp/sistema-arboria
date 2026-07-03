@@ -30,7 +30,7 @@ const saudacoes = [
 const frasesVivas: Record<string, string[]> = {
   linguistica: [
     'As palavras certas mudam tudo',
-    'Sua voz tem poder — use com sabedoria',
+    'Sua voz tem poder: use com sabedoria',
     'Cada historia que voce conta deixa uma marca',
     'O mundo precisa ouvir o que voce tem a dizer',
   ],
@@ -43,32 +43,32 @@ const frasesVivas: Record<string, string[]> = {
   espacial: [
     'Feche os olhos. O que voce ve?',
     'Voce enxerga o que outros ainda nao imaginam',
-    'O mundo e uma tela — e voce esta pintando',
+    'O mundo e uma tela, e voce esta pintando',
     'Cada forma esconde uma ideia esperando nascer',
   ],
   musical: [
     'O ritmo do dia esta em voce',
     'Voce ouve o que outros nao percebem',
-    'A musica nao e so som — e como voce sente o mundo',
+    'A musica nao e so som, e como voce sente o mundo',
     'Cada silencio tem um compasso',
   ],
   corporal_cinestesica: [
     'Seu corpo sabe mais do que imagina',
     'O movimento e a sua linguagem',
-    'Nao pense demais — sinta e aja',
+    'Nao pense demais: sinta e aja',
     'Cada gesto seu conta uma historia',
   ],
   naturalista: [
     'Olhe ao redor. O que voce nota?',
-    'A natureza fala — voce so precisa ouvir',
+    'A natureza fala: voce so precisa ouvir',
     'Padroes estao em todo lugar esperando por voce',
-    'O mundo e um sistema vivo — e voce faz parte dele',
+    'O mundo e um sistema vivo, e voce faz parte dele',
   ],
   interpessoal: [
     'Alguem precisa de voce hoje',
     'Voce entende as pessoas como ninguem',
     'Conexoes verdadeiras mudam o mundo',
-    'Liderar e servir — e voce sabe como',
+    'Liderar e servir, e voce sabe como',
   ],
   intrapessoal: [
     'O que voce esta sentindo agora?',
@@ -264,7 +264,7 @@ const HomePage = () => {
       {!casa && (
         <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel animate-fade-in p-5 text-center">
           <p className="text-white font-medium">Bem-vindo ao Arboria!</p>
-          <p className="text-white/40 text-sm mt-2">Você ainda não foi alocado a uma casa. Aguarde seu professor — em breve você vai descobrir a qual casa pertence!</p>
+          <p className="text-white/40 text-sm mt-2">Você ainda não foi alocado a uma casa. Aguarde seu professor: em breve você vai descobrir a qual casa pertence!</p>
         </div>
       )}
 
@@ -332,7 +332,7 @@ const HomePage = () => {
             {faseAtual && faseAtual.inteligencia && (
               <div className="mt-4 pt-4 border-t" style={{ borderColor: `${casaColor}15` }}>
                 <p className="text-xs text-white/50">
-                  Fase {faseAtual.numero_fase} — {faseAtual.inteligencia.nome}
+                  Fase {faseAtual.numero_fase}: {faseAtual.inteligencia.nome}
                 </p>
               </div>
             )}
@@ -432,7 +432,7 @@ const HomePage = () => {
       {/* Relatar problema */}
       <RelatarProblemaCard userId={profile?.id} institutionId={profile?.institution_id} />
 
-      {/* Frase viva — rotativa com fade */}
+      {/* Frase viva: rotativa com fade */}
       {frasesDisponiveis.length > 0 && (
         <div className="animate-fade-in animate-fade-in-d5 text-center py-6 mb-4">
           <p

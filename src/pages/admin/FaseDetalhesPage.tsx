@@ -9,14 +9,14 @@ import { toast } from 'sonner';
 import MissoesPorCasa from '@/components/admin/MissoesPorCasa';
 
 const mecanismos: Record<string, string> = {
-  linguistica: 'A experiencia chega narrada. O linguistico pensa em palavras antes de agir, enquanto age e depois de agir — o processamento verbal e anterior e simultaneo ao comportamento.',
-  logico_matematica: 'O mundo chega como sistema esperando ser decifrado. O logico-matematico percebe relacoes, padroes e inconsistencias automaticamente — antes de decidir procura-las.',
-  espacial: 'A realidade chega como imagem. O espacial ve antes de pensar — a solucao existe como representacao visual antes de poder ser descrita em palavras.',
-  musical: 'O mundo chega com textura sonora. O musical percebe padroes nos sons — ritmo, melodia, estrutura — de forma automatica, antes de qualquer analise consciente.',
-  corporal_cinestesica: 'O corpo pensa junto com a mente. O corporal-cinestesico nao planeja e depois move — ele move para descobrir. O gesto precede e produz a compreensao.',
-  naturalista: 'O mundo chega em categorias. O naturalista percebe distincoes, agrupa, classifica e nomeia espontaneamente — qualquer conjunto de coisas convoca o mecanismo de organizacao.',
-  interpessoal: 'O mundo chega atraves das pessoas. O interpessoal le estados internos, intencoes e dinamicas de grupo automaticamente — antes de qualquer decisao consciente de observar.',
-  intrapessoal: 'O mundo chega filtrado pelo estado interno. O intrapessoal acessa com precisao o que sente e por que sente — e usa esse autoconhecimento para orientar o comportamento.',
+  linguistica: 'A experiencia chega narrada. O linguistico pensa em palavras antes de agir, enquanto age e depois de agir: o processamento verbal e anterior e simultaneo ao comportamento.',
+  logico_matematica: 'O mundo chega como sistema esperando ser decifrado. O logico-matematico percebe relacoes, padroes e inconsistencias automaticamente, antes de decidir procura-las.',
+  espacial: 'A realidade chega como imagem. O espacial ve antes de pensar: a solucao existe como representacao visual antes de poder ser descrita em palavras.',
+  musical: 'O mundo chega com textura sonora. O musical percebe padroes nos sons: ritmo, melodia, estrutura; de forma automatica, antes de qualquer analise consciente.',
+  corporal_cinestesica: 'O corpo pensa junto com a mente. O corporal-cinestesico nao planeja e depois move: ele move para descobrir. O gesto precede e produz a compreensao.',
+  naturalista: 'O mundo chega em categorias. O naturalista percebe distincoes, agrupa, classifica e nomeia espontaneamente: qualquer conjunto de coisas convoca o mecanismo de organizacao.',
+  interpessoal: 'O mundo chega atraves das pessoas. O interpessoal le estados internos, intencoes e dinamicas de grupo automaticamente, antes de qualquer decisao consciente de observar.',
+  intrapessoal: 'O mundo chega filtrado pelo estado interno. O intrapessoal acessa com precisao o que sente e por que sente, e usa esse autoconhecimento para orientar o comportamento.',
 };
 
 const dimLabels: Record<string, string> = {
@@ -339,7 +339,7 @@ const FaseDetalhesPage = () => {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-lg font-semibold text-white">Fase {fase.numero_fase} — {int?.nome || '?'}</h1>
+          <h1 className="text-lg font-semibold text-white">Fase {fase.numero_fase}: {int?.nome || '?'}</h1>
           <p className="text-xs text-white/30">{formatDate(fase.data_inicio)} a {formatDate(fase.data_fim)} · {getStatus()}</p>
         </div>
       </div>
@@ -451,7 +451,7 @@ const FaseDetalhesPage = () => {
                     <div key={s} className={cn('flex items-center gap-2 text-[9px] py-1 px-1.5 rounded', ativa && 'bg-violet-500/10')}>
                       <span className={cn('w-16', ativa ? 'text-violet-400 font-bold' : 'text-white/50')}>Semana {s}:</span>
                       <span className={cn(ativa ? 'text-violet-300' : 'text-white/30')}>
-                        {semInicio.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} — {semFim.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                        {semInicio.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}; {semFim.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                       </span>
                       <span className="text-[8px] text-white/15 ml-auto">{dias}d</span>
                       {ativa && <span className="text-[8px] text-violet-400">atual</span>}
@@ -749,7 +749,7 @@ const FaseDetalhesPage = () => {
   );
 };
 
-// Componente de calibração — lista alunos por estado
+// Componente de calibração: lista alunos por estado
 const CalibracaoLista = ({ faseId, estado }: { faseId: string; estado: string }) => {
   const { data: observacoes = [], isLoading } = useQuery({
     queryKey: ['calibracao', faseId, estado],

@@ -5,7 +5,7 @@ import InfantilArboriaPage from './infantil/InfantilArboriaPage';
 
 /**
  * Wrapper que escolhe o conteúdo da home do professor baseado no segmento
- * - Infantil: aba "Arboria" (cockpit) — reforma 26/06
+ * - Infantil: aba "Arboria" (cockpit); reforma 26/06
  * - Fundamental 1: versão simplificada (sem missões/entregas)
  * - Fundamental 2: versão completa (com casa/mentor)
  */

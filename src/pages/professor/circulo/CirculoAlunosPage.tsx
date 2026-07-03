@@ -501,7 +501,7 @@ const CirculoAlunosPage = () => {
             <Check className="w-7 h-7 text-emerald-400" />
           </div>
           <h1 className="text-xl font-bold text-white mb-1">Observacoes enviadas!</h1>
-          <p className="text-white/40 text-sm">{serieNumero}o Ano {turmaLetra} — Semana {faseAtual?.semana_atual || 1}</p>
+          <p className="text-white/40 text-sm">{serieNumero}o Ano {turmaLetra}. Semana {faseAtual?.semana_atual || 1}</p>
         </div>
 
         <div className="space-y-3">
@@ -551,7 +551,7 @@ const CirculoAlunosPage = () => {
         <div>
           <h1 className="text-lg font-semibold text-white">{serieNumero}o Ano {turmaLetra}</h1>
           <p className="text-xs text-white/30">
-            Semana {faseAtual?.semana_atual || 1} — {faseAtual?.inteligencia?.nome || 'Fase'} — {alunos.length} alunos
+            Semana {faseAtual?.semana_atual || 1}: {faseAtual?.inteligencia?.nome || 'Fase'}; {alunos.length} alunos
           </p>
         </div>
       </div>
@@ -652,10 +652,10 @@ const CirculoAlunosPage = () => {
                 </div>
               </div>
 
-              {/* Cross-IM — registro rápido */}
+              {/* Cross-IM: registro rápido */}
               <div>
                 <p className="text-[9px] text-white/25 uppercase tracking-wider mb-1.5">
-                  Cross-IM — Usou outra inteligência?
+                  Cross-IM. Usou outra inteligência?
                 </p>
                 <div className="grid grid-cols-4 gap-1.5">
                   {inteligencias.map(intel => {

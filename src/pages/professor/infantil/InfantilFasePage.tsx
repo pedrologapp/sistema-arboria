@@ -9,15 +9,15 @@ import { infantilTheme as t } from '@/styles/infantilTheme';
 const TOTAL = 8;
 
 /**
- * Aba FASE (Infantil) — o SANTUÁRIO DO MECANISMO.
+ * Aba FASE (Infantil): o SANTUÁRIO DO MECANISMO.
  *
  * Imersiva: índigo profundo com o véu da COR OFICIAL de cada inteligência
- * (a mesma cor que um dia será a Casa da criança no F2 — a cor é a língua
+ * (a mesma cor que um dia será a Casa da criança no F2: a cor é a língua
  * comum dos 12 anos; brasões são exclusivos do F2). Conteúdo do tópico 3.2
  * do mestre na voz do caderno, aprovado pelo Fundador em 02/07/2026.
  *
  * A fase ATUAL da turma ganha o anel no seletor; a professora pode visitar
- * os outros 7 mecanismos a qualquer momento — a aba vive o ano inteiro.
+ * os outros 7 mecanismos a qualquer momento: a aba vive o ano inteiro.
  */
 const InfantilFasePage = () => {
   const { profile, turmasVinculadas } = useProfessor();
@@ -32,7 +32,7 @@ const InfantilFasePage = () => {
 
   const [lendo, setLendo] = useState<number | null>(null);
 
-  // Scroll pro TOPO em toda troca de mecanismo — sem isso, quem troca no meio
+  // Scroll pro TOPO em toda troca de mecanismo, sem isso, quem troca no meio
   // da página continua lendo achando que é o mecanismo anterior (simulação r2)
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -92,7 +92,7 @@ const InfantilFasePage = () => {
 
   return (
     <>
-      {/* Fundo full-bleed — atrás do conteúdo, sob o chrome glass. O véu da cor
+      {/* Fundo full-bleed: atrás do conteúdo, sob o chrome glass. O véu da cor
           do mecanismo se mescla ao índigo; transição suave na troca. */}
       <div
         className="fixed inset-0 z-0"
@@ -105,7 +105,7 @@ const InfantilFasePage = () => {
       />
 
       <div className="relative z-10 pt-4 pb-6" key={atual} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        {/* Seletor dos 8 — com CORPO DE BOTÃO e a cor de cada mecanismo
+        {/* Seletor dos 8: com CORPO DE BOTÃO e a cor de cada mecanismo
             (a simulação mostrou: círculos transparentes liam como decoração) */}
         <div className="flex gap-1.5 justify-center flex-wrap mb-2 vf-rise">
           {Array.from({ length: TOTAL }).map((_, i) => {
@@ -134,7 +134,7 @@ const InfantilFasePage = () => {
           })}
         </div>
 
-        {/* Dica de toque — 12 palavras que dobram a descoberta dos 8 */}
+        {/* Dica de toque: 12 palavras que dobram a descoberta dos 8 */}
         <p className="text-[11px] text-center mb-1 vf-rise" style={{ color: 'rgba(255,255,255,0.65)' }}>
           Toque num número para conhecer outro mecanismo
         </p>
@@ -145,7 +145,7 @@ const InfantilFasePage = () => {
             : 'Branco = você está lendo'}
         </p>
 
-        {/* Pílula "voltar" — sempre que estiver visitando outro mecanismo */}
+        {/* Pílula "voltar", sempre que estiver visitando outro mecanismo */}
         {faseAtualValida > 0 && atual !== faseAtualValida && (
           <div className="flex justify-center mb-3 vf-rise">
             <button
@@ -158,10 +158,10 @@ const InfantilFasePage = () => {
           </div>
         )}
 
-        {/* Turma ainda em planejamento — diz explicitamente (sem "você está aqui" fantasma) */}
+        {/* Turma ainda em planejamento: diz explicitamente (sem "você está aqui" fantasma) */}
         {faseAtualValida === 0 && (
           <p className="text-[11px] text-center mb-3 vf-rise" style={{ color: 'rgba(255,255,255,0.55)' }}>
-            Sua turma ainda não começou a trilha — comece na aba Arboria.
+            Sua turma ainda não começou a trilha: comece na aba Arboria.
           </p>
         )}
 
@@ -175,7 +175,7 @@ const InfantilFasePage = () => {
           <h1 className="font-serif text-[27px] leading-tight text-center mt-4" style={{ color: '#FFFFFF' }}>
             {m.nome}
           </h1>
-          {/* Assinatura de COR do mecanismo — grossa e abaixo do nome (pedido do
+          {/* Assinatura de COR do mecanismo: grossa e abaixo do nome (pedido do
               Fundador: a professora precisa VER a cor daquele mecanismo) */}
           <div
             className="vf-draw mx-auto mt-3 mb-6 rounded-full"
@@ -206,7 +206,7 @@ const InfantilFasePage = () => {
           </p>
         </section>
 
-        {/* UMA ATIVIDADE, OITO CAMINHOS — a peça que produz o "aha" (simulação r2),
+        {/* UMA ATIVIDADE, OITO CAMINHOS: a peça que produz o "aha" (simulação r2),
             PROMOVIDA pra logo depois de "O mecanismo": entender é comparar. */}
         <section className="mb-5 vf-rise" style={{ animationDelay: '300ms' }}>
           <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-1" style={{ color: m.corAcento }}>
@@ -249,7 +249,7 @@ const InfantilFasePage = () => {
           </div>
           {/* Anti-veredito: a caixa de blocos não é teste de uma tentativa */}
           <p className="text-[11.5px] italic mt-2.5 text-center" style={{ color: 'rgba(255,255,255,0.6)' }}>
-            Uma torre não diz nada — dez torres começam a dizer.
+            Uma torre não diz nada: dez torres começam a dizer.
           </p>
         </section>
 
@@ -290,7 +290,7 @@ const InfantilFasePage = () => {
           </p>
         </section>
 
-        {/* A seção nova — com a cor do mecanismo */}
+        {/* A seção nova: com a cor do mecanismo */}
         <div
           className="rounded-2xl p-4 mb-5 vf-rise"
           style={{
@@ -306,12 +306,12 @@ const InfantilFasePage = () => {
             {m.lente}
           </p>
           {/* Anti-"estilos de aprendizagem" (simulação r2: ~24/100 saíam com o
-              modelo de canal único — "com ela agora só faço atividade de movimento") */}
+              modelo de canal único: "com ela agora só faço atividade de movimento") */}
           <p
             className="text-[12.5px] font-semibold mt-2.5 pt-2.5"
             style={{ color: '#FFFFFF', borderTop: '1px solid rgba(255,255,255,0.2)' }}
           >
-            Ela usa as oito portas — esta é a que abre mais fácil. Nunca ofereça só uma.
+            Ela usa as oito portas: esta é a que abre mais fácil. Nunca ofereça só uma.
           </p>
         </div>
 
@@ -321,7 +321,7 @@ const InfantilFasePage = () => {
           </h2>
           {/* Antídoto NO TOPO da lista (a simulação mostrou: no fim, só protege quem lê tudo) */}
           <p className="text-[12.5px] italic mb-2.5" style={{ color: 'rgba(255,255,255,0.75)' }}>
-            Isto não é lista pra marcar criança — registre a cena; a leitura vem depois.
+            Isto não é lista pra marcar criança: registre a cena; a leitura vem depois.
           </p>
           <ul className="space-y-1.5">
             {m.observar.map((x, i) => (
@@ -333,7 +333,7 @@ const InfantilFasePage = () => {
           </ul>
         </section>
 
-        {/* Cuidado — pena, nunca alerta */}
+        {/* Cuidado: pena, nunca alerta */}
         <div
           className="rounded-2xl p-4 flex gap-3 mb-5 vf-rise"
           style={{
@@ -363,7 +363,7 @@ const InfantilFasePage = () => {
             Atividades desta fase · em breve
           </p>
           <p className="text-xs leading-relaxed mt-0.5" style={{ color: 'rgba(255,255,255,0.65)' }}>
-            Aqui vão morar as atividades prontas para usar na sala — uma a uma, com tudo que
+            Aqui vão morar as atividades prontas para usar na sala: uma a uma, com tudo que
             você precisa.
           </p>
         </div>

@@ -6,10 +6,10 @@ export interface AlunoRajada {
   nome: string;
   avatarUrl?: string;
   registradoHoje: boolean;       // já ganhou um momento HOJE, por qualquer educadora (selo afirmativo)
-  registradoHojePorMim: boolean; // ganhou um momento hoje POR QUEM ESTÁ LOGADA — é o que o
+  registradoHojePorMim: boolean; // ganhou um momento hoje POR QUEM ESTÁ LOGADA; é o que o
                                  // fechamento "Você enxergou N" conta (honestidade do rito)
   momentosNaFase: number;        // observações da criança NA FASE ATUAL (contexto de continuidade;
-                                 // só é EXIBIDO dentro do editor aberto e quando > 0 — nunca na lista)
+                                 // só é EXIBIDO dentro do editor aberto e quando > 0, nunca na lista)
 }
 
 /**
@@ -20,7 +20,7 @@ export interface AlunoRajada {
  * NUNCA expõe "quem falta": quem não tem registro é só o estado natural da lista.
  *
  * "Hoje" = desde a meia-noite local do aparelho (o professor está em Natal/RN).
- * NÃO carrega o texto das observações — a rajada é superfície de ESCRITA;
+ * NÃO carrega o texto das observações: a rajada é superfície de ESCRITA;
  * o histórico da criança vive no thread/Diário.
  *
  * Observações excluídas (soft-delete) ficam fora de tudo.

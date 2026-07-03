@@ -1,5 +1,5 @@
 /* =========================================================
-   "Card chanfrado" — linguagem visual padrão (Arboria)
+   "Card chanfrado": linguagem visual padrão (Arboria)
    Cards de fundo escuro #0A0E1A + cantos chanfrados (augmented-ui)
    + borda na cor da casa do aluno (via vars). Fonte = Inter (do app).
    ========================================================= */
@@ -65,7 +65,7 @@
   background: var(--sf-card-bg);
 }
 
-/* botão de ação (FAZER) — chanfrado + borda na cor da casa */
+/* botão de ação (FAZER): chanfrado + borda na cor da casa */
 .sf-exec {
   font-weight: 500;
   color: var(--sf-accent);

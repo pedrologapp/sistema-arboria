@@ -108,7 +108,7 @@ const FasesPage = () => {
     <div className="p-4 space-y-5 pb-24">
       <div>
         <h1 className="text-xl font-semibold text-white">Fases</h1>
-        <p className="text-xs text-white/30 mt-0.5">Fundamental 2 — Configuracao das 8 fases</p>
+        <p className="text-xs text-white/30 mt-0.5">Fundamental 2. Configuracao das 8 fases</p>
       </div>
 
       {isLoading ? (
@@ -140,7 +140,7 @@ const FasesPage = () => {
                   <div className="p-3 space-y-3">
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: int?.cor_hex || '#666' }} />
-                      <span className="text-sm font-medium text-white">Fase {fase.numero_fase} — {int?.nome || '?'}</span>
+                      <span className="text-sm font-medium text-white">Fase {fase.numero_fase}: {int?.nome || '?'}</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>

@@ -79,7 +79,7 @@ const CirculoPage = () => {
         <h1 className="text-xl font-semibold text-white">Observar</h1>
         {faseAtual?.inteligencia && (
           <p className="text-xs text-white/30 mt-0.5">
-            Fase {faseAtual.numero_fase} — {faseAtual.inteligencia.nome}
+            Fase {faseAtual.numero_fase}: {faseAtual.inteligencia.nome}
           </p>
         )}
       </div>
@@ -94,7 +94,7 @@ const CirculoPage = () => {
         <div className="flex items-center gap-2 mb-3 px-1">
           <div className="w-1 h-3.5 rounded-full bg-violet-500" />
           <p className="text-[10px] font-semibold text-violet-400/80 uppercase tracking-widest">
-            Observação Semanal — Semana {semanaAtual}
+            Observação Semanal. Semana {semanaAtual}
           </p>
         </div>
 

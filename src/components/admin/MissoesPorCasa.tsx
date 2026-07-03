@@ -481,14 +481,14 @@ const MissoesPorCasa = ({ faseId, institutionId, semana, serie, dataInicio, data
         <button onClick={onVoltar} className="flex items-center gap-2 text-white/60 hover:text-white transition-colors mb-3">
           <ArrowLeft className="w-4 h-4" /><span className="text-sm">Voltar</span>
         </button>
-        <h3 className="text-white text-lg font-medium">Missões por Casa — {serie}° Ano</h3>
+        <h3 className="text-white text-lg font-medium">Missões por Casa: {serie}° Ano</h3>
         <p className="text-white/40 text-sm">Semana {semana} {periodoSemana.inicio && `· ${formatarData(periodoSemana.inicio)} - ${periodoSemana.fim && formatarData(periodoSemana.fim)}`}</p>
       </div>
 
       {/* Conteúdo do professor */}
       <div className="bg-white/5 rounded-xl p-4 space-y-2">
         <div className="flex items-center gap-2">
-          <p className="text-[10px] text-white/30 uppercase tracking-wider flex-1">Conteúdo do professor — {serie}° Ano</p>
+          <p className="text-[10px] text-white/30 uppercase tracking-wider flex-1">Conteúdo do professor: {serie}° Ano</p>
           {conteudoProfessor && <Check className="w-4 h-4 text-green-500" />}
         </div>
         {conteudoProfessor ? (
@@ -514,7 +514,7 @@ const MissoesPorCasa = ({ faseId, institutionId, semana, serie, dataInicio, data
       <div className="bg-white/5 rounded-xl p-4 space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <p className="text-[10px] text-white/30 uppercase tracking-wider">Habilidades — {serie}° Ano</p>
+            <p className="text-[10px] text-white/30 uppercase tracking-wider">Habilidades: {serie}° Ano</p>
             {habsDaSerie.length > 0 && <Check className="w-3.5 h-3.5 text-green-500" />}
           </div>
           <button onClick={abrirHabModal} className="text-[10px] text-violet-400 hover:text-violet-300">
@@ -535,7 +535,7 @@ const MissoesPorCasa = ({ faseId, institutionId, semana, serie, dataInicio, data
       {/* Missão Geral */}
       <div className="bg-white/5 rounded-xl p-4 space-y-2">
         <div className="flex items-center gap-2">
-          <p className="text-[10px] text-white/30 uppercase tracking-wider flex-1">Missão Geral — {serie}° Ano</p>
+          <p className="text-[10px] text-white/30 uppercase tracking-wider flex-1">Missão Geral: {serie}° Ano</p>
           {missaoGeral && <Check className="w-4 h-4 text-green-500" />}
         </div>
         {missaoGeral ? (
@@ -666,7 +666,7 @@ const MissoesPorCasa = ({ faseId, institutionId, semana, serie, dataInicio, data
                     <label className="text-white/60 text-sm mb-1.5 block">Por que essa fase importa para você</label>
                     <p className="text-white/25 text-[10px] mb-1.5">Texto que conecta a casa do aluno com a fase atual</p>
                     <textarea value={porqueImporta} onChange={(e) => setPorqueImporta(e.target.value)}
-                      placeholder="Você é da Casa Linguística — palavras são seu elemento natural..."
+                      placeholder="Você é da Casa Linguística: palavras são seu elemento natural..."
                       rows={3} className="w-full p-3 bg-white/5 border border-violet-500/10 rounded-xl text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 resize-none" />
                   </div>
 
@@ -814,7 +814,7 @@ const MissoesPorCasa = ({ faseId, institutionId, semana, serie, dataInicio, data
         </div>
       )}
 
-      {/* Modal de Preview — como o aluno vê */}
+      {/* Modal de Preview, como o aluno vê */}
       {showPreview && (() => {
         const previewCor = casaAtual?.cor_hex || '#22C55E';
         return (
@@ -822,7 +822,7 @@ const MissoesPorCasa = ({ faseId, institutionId, semana, serie, dataInicio, data
           <div className="w-full max-w-md max-h-[85vh] overflow-y-auto">
             {/* Header preview */}
             <div className="flex items-center justify-between mb-4">
-              <p className="text-white/50 text-sm">Preview — Visão do aluno</p>
+              <p className="text-white/50 text-sm">Preview. Visão do aluno</p>
               <button onClick={() => setShowPreview(false)} className="p-2 text-white/40 hover:text-white bg-white/10 rounded-lg">
                 <X className="w-4 h-4" />
               </button>
@@ -924,7 +924,7 @@ const MissoesPorCasa = ({ faseId, institutionId, semana, serie, dataInicio, data
           <div className="w-full max-w-lg bg-[#1E1E3A] border border-violet-500/10 rounded-2xl max-h-[75vh] overflow-hidden flex flex-col shadow-2xl">
             <div className="flex items-center justify-between p-4 border-b border-violet-500/10 shrink-0">
               <div>
-                <p className="text-white font-medium">Habilidades — {serie}° Ano</p>
+                <p className="text-white font-medium">Habilidades: {serie}° Ano</p>
                 <p className="text-xs text-white/30">Semana {semana} · {habSelecionadas.size} selecionadas</p>
               </div>
               <button onClick={() => setShowHabModal(false)} className="p-1 text-white/30 hover:text-white"><X className="w-5 h-5" /></button>

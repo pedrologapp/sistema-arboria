@@ -68,9 +68,9 @@ const STATE_INDEX: Record<string, number> = {
 
 const DIM_DESCRIPTIONS: Record<string, string> = {
   Cognitiva: 'Mecanismo cognitivo que opera quando a criança precisa processar informação complexa ou nova.',
-  Autorregulatória: 'Capacidade de regular a própria ação — pausar, ajustar ou sustentar conforme a situação pede.',
-  Social: 'Dimensão relacional — como a criança se coordena, comunica e colabora com outros.',
-  Emocional: 'Acesso e manejo do próprio estado emocional — perceber, nomear, regular.',
+  Autorregulatória: 'Capacidade de regular a própria ação; pausar, ajustar ou sustentar conforme a situação pede.',
+  Social: 'Dimensão relacional, como a criança se coordena, comunica e colabora com outros.',
+  Emocional: 'Acesso e manejo do próprio estado emocional; perceber, nomear, regular.',
 };
 
 const FALLBACK_DATA: Record<string, Record<string, string>> = {
@@ -385,7 +385,7 @@ function MiniNode({ state }: { state: string }) {
 
 function TreeLegendPanel({ open, onClose, onToggle }: { open: boolean; onClose: () => void; onToggle: () => void }) {
   const items = [
-    { k: 'nao_observado', label: 'Não Observado', desc: 'Fora do horizonte — sem registro.' },
+    { k: 'nao_observado', label: 'Não Observado', desc: 'Fora do horizonte, sem registro.' },
     { k: 'exposicao', label: 'Exposição', desc: 'Esteve no contexto.' },
     { k: 'contato', label: 'Contato', desc: 'Engajou ativamente.' },
     { k: 'desenvolvimento', label: 'Desenvolvimento', desc: 'Uso intencional, recorrente.' },

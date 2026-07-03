@@ -42,7 +42,7 @@ export const MensagemFixada = ({ mensagem, casaColor }: MensagemFixadaProps) => 
       </p>
       
       <div className="flex items-center gap-1.5 text-white/50 text-xs">
-        <span>—</span>
+        <span>: </span>
         <span>{nomeAutor}</span>
         {cargoLabel && (
           <span>{cargoLabel}</span>

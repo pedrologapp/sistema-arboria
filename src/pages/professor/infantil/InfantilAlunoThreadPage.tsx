@@ -31,16 +31,16 @@ const fmtDia = (isoDate: string) => {
   }
 };
 
-// No celular não existe Shift+Enter — Enter precisa quebrar linha, não enviar.
+// No celular não existe Shift+Enter. Enter precisa quebrar linha, não enviar.
 const isTouch =
   typeof window !== 'undefined' &&
   ('ontouchstart' in window || (navigator.maxTouchPoints ?? 0) > 0);
 
-// Motivos da exclusão (auditoria — parecer Riscos 01/07). Presets, não texto livre.
+// Motivos da exclusão (auditoria: parecer Riscos 01/07). Presets, não texto livre.
 const MOTIVOS_EXCLUSAO = ['Criança errada', 'Erro de digitação', 'Foto errada', 'Outro'] as const;
 
 /**
- * Modal da "borracha" — remover um registro do diário (soft-delete auditado).
+ * Modal da "borracha": remover um registro do diário (soft-delete auditado).
  * Corrigir = remover + reescrever. O registro some da UI mas permanece
  * auditável no banco; a foto sai do bucket imediatamente (RPC).
  */
@@ -140,7 +140,7 @@ const ExcluirModal = ({
 };
 
 /**
- * Thread de observações de um aluno — estilo conversa (WhatsApp).
+ * Thread de observações de um aluno: estilo conversa (WhatsApp).
  * O "rio" do Infantil: cada observação é uma mensagem; agrupadas por fase.
  * Campo livre embaixo = registro avulso (a qualquer hora). Inc.2.
  */
@@ -167,7 +167,7 @@ const InfantilAlunoThreadPage = () => {
   const fimRef = useRef<HTMLDivElement>(null);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Aviso da foto ANTES do seletor abrir (uma vez só) — a simulação pegou fotos
+  // Aviso da foto ANTES do seletor abrir (uma vez só): a simulação pegou fotos
   // DA CRIANÇA sendo anexadas porque o aviso só aparecia depois, em letra miúda.
   const abrirSeletorFoto = () => {
     let visto = false;
@@ -221,13 +221,13 @@ const InfantilAlunoThreadPage = () => {
   }, [thread?.observacoes.length]);
 
   // O avulso NÃO exige fase ativa: antes da fase 1 (adaptação) e depois da 8,
-  // o registro segue vivo — grava com fase_id null ("não havia fase de exploração").
+  // o registro segue vivo: grava com fase_id null ("não havia fase de exploração").
   const podeRegistrar = !!user?.id && !!thread?.turmaId;
 
   const registrar = useMutation({
     mutationFn: async ({ textoObs, file }: { textoObs: string; file: File | null }) => {
       if (!alunoId || !user?.id || !thread?.turmaId) {
-        throw new Error('Sem turma — não dá pra registrar agora.');
+        throw new Error('Sem turma, não dá pra registrar agora.');
       }
 
       // Se há foto, sobe primeiro no bucket privado 'observacoes'.
@@ -236,7 +236,7 @@ const InfantilAlunoThreadPage = () => {
       if (file) {
         const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
         // crypto.randomUUID só existe em contexto seguro (https/localhost);
-        // no celular via IP da rede (http) ele é undefined — usar fallback.
+        // no celular via IP da rede (http) ele é undefined: usar fallback.
         const rid =
           typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
             ? crypto.randomUUID()
@@ -304,7 +304,7 @@ const InfantilAlunoThreadPage = () => {
     },
   });
 
-  // Borracha: soft-delete auditado via RPC (nunca DELETE físico — o rio é preservado)
+  // Borracha: soft-delete auditado via RPC (nunca DELETE físico; o rio é preservado)
   const excluir = useMutation({
     mutationFn: async ({ obsId, motivo }: { obsId: string; motivo: string }) => {
       const { error } = await (supabase.rpc as any)('excluir_observacao', {
@@ -393,7 +393,7 @@ const InfantilAlunoThreadPage = () => {
         </div>
       </div>
 
-      {/* Thread (o layout já dá pt-14/px-4/pb-24 — aqui só limpa o sub-header do aluno) */}
+      {/* Thread (o layout já dá pt-14/px-4/pb-24: aqui só limpa o sub-header do aluno) */}
       <div className="pt-16">
         {isLoading ? (
           <div className="space-y-3">
@@ -414,7 +414,7 @@ const InfantilAlunoThreadPage = () => {
           <div className="space-y-4">
             {grupos.map((grupo, gi) => (
               <div key={gi} className="space-y-2">
-                {/* Separador de fase — pílula central estilo "balão de data" */}
+                {/* Separador de fase: pílula central estilo "balão de data" */}
                 <div className="flex items-center gap-2 my-3">
                   <div className="flex-1 h-px" style={{ backgroundColor: t.border }} />
                   <span
@@ -427,7 +427,7 @@ const InfantilAlunoThreadPage = () => {
                 </div>
 
                 {grupo.itens.map((obs, oi) => {
-                  // Separador de dia dentro da fase — uma fase dura semanas;
+                  // Separador de dia dentro da fase: uma fase dura semanas;
                   // sem isso, escanear o rio fica difícil.
                   const diaAnterior = oi > 0 ? grupo.itens[oi - 1].data : null;
                   const mudouDia = obs.data !== diaAnterior && oi > 0;
@@ -478,7 +478,7 @@ const InfantilAlunoThreadPage = () => {
                           />
                         )}
                         <div className="flex items-center justify-between mt-1.5 gap-2">
-                          {/* Borracha — só no registro PRÓPRIO já salvo (não no otimista) */}
+                          {/* Borracha, só no registro PRÓPRIO já salvo (não no otimista) */}
                           {obs.professorId === user?.id && !obs.id.startsWith('temp-') ? (
                             <button
                               onClick={() => setExcluirObs(obs)}
@@ -511,7 +511,7 @@ const InfantilAlunoThreadPage = () => {
         className="fixed bottom-0 left-0 right-0 z-30 pb-safe glass-light"
         style={{ borderTop: `1px solid ${t.border}` }}
       >
-        {/* Input de arquivo escondido — sem `capture`: câmera OU galeria (pedido do Fundador 02/07) */}
+        {/* Input de arquivo escondido, sem `capture`: câmera OU galeria (pedido do Fundador 02/07) */}
         <input
           ref={fileRef}
           type="file"
@@ -619,7 +619,7 @@ const InfantilAlunoThreadPage = () => {
         />
       )}
 
-      {/* Aviso da foto — ANTES do seletor, uma vez só */}
+      {/* Aviso da foto, ANTES do seletor, uma vez só */}
       {avisoFotoOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
@@ -640,7 +640,7 @@ const InfantilAlunoThreadPage = () => {
                 Fotografe o trabalho, não a criança.
               </h2>
               <p className="text-sm leading-relaxed" style={{ color: t.textMuted }}>
-                A torre, o desenho, a coleção — o que as mãos dela fizeram. O rosto dela não
+                A torre, o desenho, a coleção: o que as mãos dela fizeram. O rosto dela não
                 entra no diário.
               </p>
               <button

@@ -136,7 +136,7 @@ const AdminDmViewPage = () => {
 
       {/* Footer read-only */}
       <div className="p-3 border-t border-violet-500/10 text-center">
-        <p className="text-[10px] text-white/20">Visualizacao admin — somente leitura</p>
+        <p className="text-[10px] text-white/20">Visualizacao admin: somente leitura</p>
       </div>
     </div>
   );

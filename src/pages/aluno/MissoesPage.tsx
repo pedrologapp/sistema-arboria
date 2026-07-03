@@ -65,7 +65,7 @@ interface Quest {
   brasaoUrl?: string | null; // brasão da fase (mostra a casa/fase, ex: Interpessoal)
   emoji?: string | null;
   casaNome?: string | null;
-  prazo?: string | null; // ISO date — exibe "até dd/MM" ao lado dos pontos
+  prazo?: string | null; // ISO date; exibe "até dd/MM" ao lado dos pontos
 }
 
 interface Concluida {
@@ -143,7 +143,7 @@ const MissoesPage = () => {
         .order('id');
       if (intError) throw intError;
 
-      // Inteligência Interpessoal (fase dos capítulos como a Grande Assembleia) — pro brasão
+      // Inteligência Interpessoal (fase dos capítulos como a Grande Assembleia): pro brasão
       const interpessoal = (inteligencias || []).find(i => i.codigo === 'interpessoal') || null;
 
       // ---------- Fases (a jornada) ----------
@@ -268,13 +268,13 @@ const MissoesPage = () => {
       // ---------- Missões do Capítulo (por cargo, por delegação, ou geral) ----------
       const questsCapArr: Quest[] = [];
       try {
-        // Papéis fixos (Mesa / Mediador / Observatório) — em capitulo_alocacoes
+        // Papéis fixos (Mesa / Mediador / Observatório): em capitulo_alocacoes
         const { data: alocacoes } = await supabase
           .from('capitulo_alocacoes')
           .select('capitulo_id, turma_id, papel_id, papel:capitulo_papeis(nome)')
           .eq('aluno_id', profile.id);
 
-        // Membros de delegação — em tabela separada
+        // Membros de delegação: em tabela separada
         const { data: membros } = await supabase
           .from('capitulo_delegacao_membros')
           .select('capitulo_id, turma_id, delegacao_codigo')

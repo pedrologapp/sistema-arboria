@@ -28,14 +28,14 @@ interface MembroComCargo {
 }
 
 const descricoesPadrao: Record<string, string> = {
-  'linguistica': 'A gente pensa em palavras. Antes de fazer qualquer coisa, já estamos montando frases na cabeça. Contar histórias, convencer, explicar — isso é natural pra quem é da Linguística. Onde outros ficam em silêncio, a gente cria significado.',
+  'linguistica': 'A gente pensa em palavras. Antes de fazer qualquer coisa, já estamos montando frases na cabeça. Contar histórias, convencer, explicar: isso é natural pra quem é da Linguística. Onde outros ficam em silêncio, a gente cria significado.',
   'logico-matematica': 'A gente enxerga padrões onde os outros veem bagunça. Conexões, lógica e soluções aparecem na nossa cabeça antes mesmo de procurar. Pensar com estratégia e resolver problemas é o que nos move.',
   'espacial': 'A gente vê coisas que ainda não existem. Formas, espaços e possibilidades ganham vida na nossa mente antes de existirem no mundo real. Enquanto outros pensam em palavras, a gente pensa em imagens.',
-  'musical': 'A gente sente o mundo pelo som. Ritmo, melodia, harmonia — tudo isso chega pra gente de um jeito que os outros não percebem. Não é só ouvir música: é pensar e sentir através dela.',
-  'corporal-cinestesica': 'A gente pensa em movimento. Nosso corpo não só executa — ele descobre, cria e resolve. Enquanto outros ficam planejando, a gente já está em ação, aprendendo fazendo.',
-  'naturalista': 'A gente lê o mundo como um sistema vivo. Classificar, organizar, perceber o que conecta as coisas — isso é natural pra quem é da Naturalista. Onde outros veem desordem, a gente encontra padrões.',
-  'interpessoal': 'A gente entende as pessoas antes mesmo delas falarem. Perceber o que alguém está sentindo, o clima de um grupo, quem precisa de ajuda — isso é natural pra quem é da Interpessoal. Conectar e liderar é o nosso jeito.',
-  'intrapessoal': 'A gente se conhece de verdade. Saber o que está sentindo, por que está sentindo e usar isso pra tomar decisões melhores — isso é natural pra quem é da Intrapessoal. A gente sabe quem é, e isso muda tudo.',
+  'musical': 'A gente sente o mundo pelo som. Ritmo, melodia, harmonia, tudo isso chega pra gente de um jeito que os outros não percebem. Não é só ouvir música: é pensar e sentir através dela.',
+  'corporal-cinestesica': 'A gente pensa em movimento. Nosso corpo não só executa: ele descobre, cria e resolve. Enquanto outros ficam planejando, a gente já está em ação, aprendendo fazendo.',
+  'naturalista': 'A gente lê o mundo como um sistema vivo. Classificar, organizar, perceber o que conecta as coisas: isso é natural pra quem é da Naturalista. Onde outros veem desordem, a gente encontra padrões.',
+  'interpessoal': 'A gente entende as pessoas antes mesmo delas falarem. Perceber o que alguém está sentindo, o clima de um grupo, quem precisa de ajuda: isso é natural pra quem é da Interpessoal. Conectar e liderar é o nosso jeito.',
+  'intrapessoal': 'A gente se conhece de verdade. Saber o que está sentindo, por que está sentindo e usar isso pra tomar decisões melhores: isso é natural pra quem é da Intrapessoal. A gente sabe quem é, e isso muda tudo.',
 };
 
 const cargoLabels: Record<string, string> = {

@@ -215,7 +215,7 @@ const PerfilAlunoPage = () => {
         <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">Arvore de Talentos</h3>
         <div className="p-5 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
           <TreePine className="w-7 h-7 text-white/15 mx-auto mb-1.5" />
-          <p className="text-white/25 text-xs">Em breve — habilidades desenvolvidas</p>
+          <p className="text-white/25 text-xs">Em breve: habilidades desenvolvidas</p>
         </div>
       </div>
 
@@ -224,7 +224,7 @@ const PerfilAlunoPage = () => {
         <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest mb-3">Conquistas</h3>
         <div className="p-5 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
           <Award className="w-7 h-7 text-white/15 mx-auto mb-1.5" />
-          <p className="text-white/25 text-xs">Em breve — badges desbloqueados</p>
+          <p className="text-white/25 text-xs">Em breve: badges desbloqueados</p>
         </div>
       </div>
     </div>

@@ -694,8 +694,7 @@ const NovaMissaoPage = () => {
                       <p className="text-white/40 text-sm mb-2">
                         Disponíveis ({alunosNaoSelecionados.length})
                         {form.tipo_missao === 'individual' && form.inteligencia_cross && (
-                          <span className="ml-1">
-                            — {inteligencias?.find(i => i.id === form.inteligencia_cross)?.emoji}
+                          <span className="ml-1">: {inteligencias?.find(i => i.id === form.inteligencia_cross)?.emoji}
                           </span>
                         )}
                       </p>

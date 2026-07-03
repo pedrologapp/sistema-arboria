@@ -14,7 +14,7 @@ import { AdminLayout } from "@/components/AdminLayout";
 import StudentLayout from "@/layouts/StudentLayout";
 import ProfessorLayout from "@/layouts/ProfessorLayout";
 
-// Páginas essenciais (eager — sempre carregam)
+// Páginas essenciais (eager, sempre carregam)
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -299,13 +299,13 @@ const App = () => (
               </ProtectedRoute>
             } />
 
-            {/* Professor Routes — shell ÚNICO: layout + contexto persistem entre abas
+            {/* Professor Routes: shell ÚNICO: layout + contexto persistem entre abas
                 (antes, cada rota remontava o ProfessorProvider = refetch de tudo +
                 tela de loading a cada clique) */}
             <Route element={<ProfessorShell />}>
             <Route path="/professor" element={<ProfessorDashboardWrapper />} />
             <Route path="/professor/mapa" element={<MapaDesenvolvimentoPage />} />
-            {/* Aba "Fase" do Infantil (estudo/apoio) — reforma 26/06 */}
+            {/* Aba "Fase" do Infantil (estudo/apoio): reforma 26/06 */}
             <Route path="/professor/fase" element={<FasePageWrapper />} />
             <Route path="/professor/missoes" element={<ProfessorMissoesPage />} />
             <Route path="/professor/missoes/nova" element={<NovaMissaoPage />} />

@@ -312,7 +312,7 @@ const MonitorPage = () => {
           .order('created_at', { ascending: false }).limit(5);
         (entregas || []).forEach(e => {
           items.push({
-            texto: `${(e.aluno as any)?.full_name || 'Aluno'} — ${e.status === 'aprovada' ? 'aprovada' : 'entregou'}: "${(e.missao as any)?.titulo || ''}"`,
+            texto: `${(e.aluno as any)?.full_name || 'Aluno'}; ${e.status === 'aprovada' ? 'aprovada' : 'entregou'}: "${(e.missao as any)?.titulo || ''}"`,
             tempo: e.created_at, cor: e.status === 'aprovada' ? 'text-emerald-400' : 'text-amber-400',
           });
         });
@@ -332,7 +332,7 @@ const MonitorPage = () => {
           .eq('fase_id', faseId).eq('status', 'enviada').order('enviada_em', { ascending: false }).limit(10);
         (obs || []).forEach(o => {
           items.push({
-            texto: `${(o.professor as any)?.full_name || 'Professor'} — S${o.semana} ${o.serie}º ${o.turma}`,
+            texto: `${(o.professor as any)?.full_name || 'Professor'}. S${o.semana} ${o.serie}º ${o.turma}`,
             tempo: o.enviada_em || '', cor: 'text-violet-400',
           });
         });
@@ -344,7 +344,7 @@ const MonitorPage = () => {
             .in('missao_id', missoesFase.map(m => m.id)).order('created_at', { ascending: false }).limit(5);
           (entregas || []).forEach(e => {
             items.push({
-              texto: `${(e.aluno as any)?.full_name || 'Aluno'} — ${e.status === 'aprovada' ? 'aprovada' : 'entregou'}: "${(e.missao as any)?.titulo || ''}"`,
+              texto: `${(e.aluno as any)?.full_name || 'Aluno'}; ${e.status === 'aprovada' ? 'aprovada' : 'entregou'}: "${(e.missao as any)?.titulo || ''}"`,
               tempo: e.created_at, cor: e.status === 'aprovada' ? 'text-emerald-400' : 'text-amber-400',
             });
           });
@@ -374,7 +374,7 @@ const MonitorPage = () => {
     refetchInterval: 60000,
   });
 
-  // Logins de hoje — alunos
+  // Logins de hoje: alunos
   const { data: todosAlunos = [] } = useQuery({
     queryKey: ['monitor-alunos-login', institutionId],
     queryFn: async () => {
@@ -610,7 +610,7 @@ const MonitorPage = () => {
             onClick={() => setShowFaseSelect(!showFaseSelect)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-500/20 text-violet-300 border border-violet-500/30"
           >
-            Fase {faseAtual?.numero_fase || '-'} — {faseNome}
+            Fase {faseAtual?.numero_fase || '-'}: {faseNome}
             {ehFaseAtiva && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ml-1" />}
             <ChevronDown className="w-3 h-3" />
           </button>
@@ -628,7 +628,7 @@ const MonitorPage = () => {
                     )}
                   >
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: int?.cor_hex || '#666' }} />
-                    <span className="text-white/70">Fase {f.numero_fase} — {int?.nome || '?'}</span>
+                    <span className="text-white/70">Fase {f.numero_fase}: {int?.nome || '?'}</span>
                     {f.ativo && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ml-auto" />}
                   </button>
                 );
@@ -998,7 +998,7 @@ const MonitorPage = () => {
                               {entregaInfo ? (
                                 <>
                                   <p className="text-emerald-400/70 mt-0.5">{(entregaInfo as any).missao?.titulo || 'Missão'}</p>
-                                  <p className="text-white/40 mt-0.5">{(entregaInfo as any).status} — {formatDateTimeBrasil((entregaInfo as any).created_at)}</p>
+                                  <p className="text-white/40 mt-0.5">{(entregaInfo as any).status}: {formatDateTimeBrasil((entregaInfo as any).created_at)}</p>
                                 </>
                               ) : visualizou ? (
                                 <p className="text-orange-400/70 mt-0.5">Visualizou a missão</p>

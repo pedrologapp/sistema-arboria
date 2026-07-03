@@ -3,7 +3,7 @@ import { useProfessor } from '@/contexts/ProfessorContext';
 import InfantilFasePage from './infantil/InfantilFasePage';
 
 /**
- * Rota /professor/fase — hoje só existe na navegação do Infantil.
+ * Rota /professor/fase, hoje só existe na navegação do Infantil.
  * Para outros segmentos, redireciona para a home (defensivo).
  */
 const FasePageWrapper = () => {

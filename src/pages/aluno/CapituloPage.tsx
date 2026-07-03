@@ -295,7 +295,7 @@ const CapituloPage = () => {
     );
   }
 
-  // Acento dos cards = cor da casa (Hero NÃO usa — mantém estilo original)
+  // Acento dos cards = cor da casa (Hero NÃO usa: mantém estilo original)
   const accentColor = casaColor || '#a78bfa';
   const accentRgb = hexToRgb(accentColor) || '167, 139, 250';
   const scifiVars = { '--sf-accent': accentColor, '--sf-accent-rgb': accentRgb } as CSSProperties;
@@ -575,11 +575,11 @@ const Elenco = ({
       >
         <BookOpen className="w-3.5 h-3.5 text-amber-200/80 mt-0.5 flex-shrink-0" />
         <p className="text-[12px] text-white/75 leading-relaxed">
-          <span className="text-amber-200/90 font-semibold">Toque em qualquer função</span> para abrir o guia completo — o que você faz, como fazer e exemplos de fala.
+          <span className="text-amber-200/90 font-semibold">Toque em qualquer função</span> para abrir o guia completo: o que você faz, como fazer e exemplos de fala.
         </p>
       </div>
 
-      {/* TIME 2 — MESA */}
+      {/* TIME 2. MESA */}
       <SubHeader>Mesa Diretora</SubHeader>
       <GradeRetabulo>
         {time2Mesa.map(p => (
@@ -587,7 +587,7 @@ const Elenco = ({
         ))}
       </GradeRetabulo>
 
-      {/* TIME 2 — MEDIADORES */}
+      {/* TIME 2. MEDIADORES */}
       {time2Med.length > 0 && (
         <>
           <SubHeader>Mediadores</SubHeader>
@@ -597,7 +597,7 @@ const Elenco = ({
         </>
       )}
 
-      {/* TIME 2 — OBSERVATÓRIO */}
+      {/* TIME 2. OBSERVATÓRIO */}
       {time2Obs.length > 0 && (
         <>
           <SubHeader>Observatório</SubHeader>
@@ -607,7 +607,7 @@ const Elenco = ({
         </>
       )}
 
-      {/* TIME 1 — DELEGAÇÕES */}
+      {/* TIME 1. DELEGAÇÕES */}
       {delegacoes.length > 0 && (
         <>
           <SubHeader>Delegações</SubHeader>
@@ -929,7 +929,7 @@ const GuiaConteudo = ({ papel, delegacoes }: { papel: Papel; delegacoes: Delegac
       </DrawerHeader>
 
       <div className="px-6 pb-10 pt-5 overflow-y-auto space-y-6">
-        {/* Seção 01 — Seu papel */}
+        {/* Seção 01. Seu papel */}
         {papel.roteiro_papel && (
           <div>
             <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-2">Seção 01 · Seu papel</div>
@@ -939,7 +939,7 @@ const GuiaConteudo = ({ papel, delegacoes }: { papel: Papel; delegacoes: Delegac
           </div>
         )}
 
-        {/* Seção 02 — Como fazer */}
+        {/* Seção 02, Como fazer */}
         {papel.roteiro_como_fazer && papel.roteiro_como_fazer.length > 0 && (
           <div>
             <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-3">Seção 02 · Como fazer</div>
@@ -961,7 +961,7 @@ const GuiaConteudo = ({ papel, delegacoes }: { papel: Papel; delegacoes: Delegac
           </div>
         )}
 
-        {/* Seção 03 — Exemplos de fala */}
+        {/* Seção 03. Exemplos de fala */}
         {papel.roteiro_exemplos && papel.roteiro_exemplos.length > 0 && (
           <div>
             <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-3">Seção 03 · Exemplos de fala</div>
@@ -976,7 +976,7 @@ const GuiaConteudo = ({ papel, delegacoes }: { papel: Papel; delegacoes: Delegac
           </div>
         )}
 
-        {/* Seção 04 — Roteiro de falas, momento a momento */}
+        {/* Seção 04. Roteiro de falas, momento a momento */}
         {papel.roteiro_falas_cronologico && papel.roteiro_falas_cronologico.length > 0 && (
           <div>
             <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-3 flex items-center gap-1.5">

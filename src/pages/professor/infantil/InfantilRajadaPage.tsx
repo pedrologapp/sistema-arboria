@@ -22,7 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 
-/** Modal de fechamento — celebra o que o professor VIU, nunca o que faltou.
+/** Modal de fechamento: celebra o que o professor VIU, nunca o que faltou.
  *  Backdrop/Esc = só fecha o modal (fica na aula); o botão é quem SAI. */
 const ConcluirModal = ({
   registrados,
@@ -61,7 +61,7 @@ const ConcluirModal = ({
         style={{ backgroundColor: t.surface, boxShadow: t.shadowLg }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* A aula fecha na cor em que abriu — moldura do momento */}
+        {/* A aula fecha na cor em que abriu: moldura do momento */}
         <div style={{ height: 3, backgroundColor: corFio ?? t.accent }} />
         <div className="p-5 space-y-4">
           <p className="text-[11px] uppercase tracking-wide font-semibold" style={{ color: t.accentText }}>
@@ -73,10 +73,10 @@ const ConcluirModal = ({
           <h2 className="font-serif text-[19px] leading-snug" style={{ color: t.text }}>
             {registrados > 0
               ? `Você enxergou ${registrados} ${registrados === 1 ? 'criança' : 'crianças'} hoje.`
-              : 'Aula conduzida. Hoje você observou sem escrever — também faz parte.'}
+              : 'Aula conduzida. Hoje você observou sem escrever, também faz parte.'}
           </h2>
           <p className="text-sm leading-relaxed italic" style={{ color: t.textMuted }}>
-            O que você viu agora vive no Diário de cada uma. O resto da turma segue com você — não some, só não pediu palavra hoje.
+            O que você viu agora vive no Diário de cada uma. O resto da turma segue com você, não some, só não pediu palavra hoje.
           </p>
           <button
             onClick={onSair}
@@ -93,7 +93,7 @@ const ConcluirModal = ({
 };
 
 /**
- * Modal de texto pendente — substitui o auto-save SILENCIOSO ao trocar de
+ * Modal de texto pendente: substitui o auto-save SILENCIOSO ao trocar de
  * criança/sair. Nada entra no diário de uma criança sem a professora ver
  * (o erro mais provável é exatamente texto na criança errada).
  */
@@ -170,17 +170,17 @@ type Pendencia =
   | { tipo: 'finalizar' };
 
 /**
- * REGISTRO EM RAJADA ("Iniciar aula") — Infantil.
+ * REGISTRO EM RAJADA ("Iniciar aula"). Infantil.
  *
  * A aula do dia no topo (o mecanismo + o que observar), a turma em lista, e o
  * professor toca em quem se destacou pra escrever ali mesmo. Uma observação por
  * criança, texto livre, grava em `observacoes` e vai pro histórico dela (thread).
  *
- * A FASE vem da TURMA SELECIONADA (useFaseTurma) — nunca do contexto global,
+ * A FASE vem da TURMA SELECIONADA (useFaseTurma), nunca do contexto global,
  * que só enxerga a primeira turma (professora com 2 turmas gravaria na fase errada).
  *
  * LEI DO MODELO: nunca empurra a preencher a turma toda. Quem não é tocado é o
- * estado natural — sem contador de restantes, sem "sem registro", sem cobrança.
+ * estado natural, sem contador de restantes, sem "sem registro", sem cobrança.
  */
 const InfantilRajadaPage = () => {
   const navigate = useNavigate();
@@ -232,7 +232,7 @@ const InfantilRajadaPage = () => {
   };
 
   const turmaId = turmaSel ?? turmasVinculadas?.[0]?.id ?? null;
-  // Fase da TURMA selecionada (não do contexto — cada turma tem sua trilha)
+  // Fase da TURMA selecionada (não do contexto: cada turma tem sua trilha)
   const { data: faseTurma, isLoading: faseLoading } = useFaseTurma(turmaId, profile?.institution_id);
   const fase = faseTurma?.fase ?? null;
   const ordem = faseTurma?.ordem ?? 0;
@@ -240,7 +240,7 @@ const InfantilRajadaPage = () => {
   const rajadaKey = ['rajada-turma', turmaId, fase?.id ?? null, user?.id ?? null];
 
   // O FIO DE COR: a cor oficial do mecanismo da fase costura o chrome da aula
-  // (4 pontos fixos) — e nunca pousa numa criança. Regra: cor da fase = AULA;
+  // (4 pontos fixos), e nunca pousa numa criança. Regra: cor da fase = AULA;
   // índigo = CADERNO (Guardar, busca, modais); verde = REGISTRO FEITO (selo).
   const fio = ordem >= 1 && ordem <= 8 ? SANTUARIO_INFANTIL[ordem] : null;
   const fioTransition = { transition: 'background-color 600ms ease, border-color 600ms ease, color 600ms ease' };
@@ -288,21 +288,20 @@ const InfantilRajadaPage = () => {
   }, [alunos, busca]);
 
   // Contagem do fechamento: crianças únicas registradas hoje POR QUEM ESTÁ LOGADA
-  // (a simulação pegou o número inflando com registros da auxiliar/outros turnos —
-  // "Você enxergou N" tem que ser honesto). Sobrevive a refresh.
+  // (a simulação pegou o número inflando com registros da auxiliar/outros turnos: // "Você enxergou N" tem que ser honesto). Sobrevive a refresh.
   const registradosCount = useMemo(
     () => (alunos ?? []).filter((a) => a.registradoHojePorMim).length,
     [alunos]
   );
 
   // Contexto (o que observar + convite) recolhe sozinho após o primeiro registro
-  // do dia — a lista sobe pra perto do polegar. A professora pode reabrir.
+  // do dia: a lista sobe pra perto do polegar. A professora pode reabrir.
   const contextoRecolhido = contextoRecolhidoManual ?? registradosCount > 0;
 
   const registrar = useMutation({
     mutationFn: async ({ alunoId, textoObs, file }: { alunoId: string; textoObs: string; file: File | null }) => {
       if (!podeRegistrar || !fase?.id) {
-        throw new Error('Sem fase ativa ou turma — não dá pra registrar agora.');
+        throw new Error('Sem fase ativa ou turma, não dá pra registrar agora.');
       }
       // Se há foto, sobe primeiro no bucket privado 'observacoes' ({aluno_id}/{uuid}.{ext})
       let anexoPath: string | null = null;
@@ -328,7 +327,7 @@ const InfantilRajadaPage = () => {
       } as any);
       if (error) throw error;
     },
-    // O selo acende NA HORA (otimista) — o gesto mais repetido do dia não pode ser mudo.
+    // O selo acende NA HORA (otimista): o gesto mais repetido do dia não pode ser mudo.
     onMutate: async ({ alunoId }) => {
       await queryClient.cancelQueries({ queryKey: rajadaKey });
       const prev = queryClient.getQueryData<AlunoRajada[]>(rajadaKey);
@@ -397,7 +396,7 @@ const InfantilRajadaPage = () => {
       return;
     }
     if (temPendencia) {
-      // NUNCA salva em silêncio na criança anterior — pergunta antes.
+      // NUNCA salva em silêncio na criança anterior: pergunta antes.
       setPendencia({ tipo: 'trocar', alvoId: alunoId });
       return;
     }
@@ -439,7 +438,7 @@ const InfantilRajadaPage = () => {
       registrar.mutate(vars);
       prosseguir();
     } else {
-      // Sair/diário/finalizar: SÓ prossegue depois do guardar CONFIRMAR — a
+      // Sair/diário/finalizar: SÓ prossegue depois do guardar CONFIRMAR; a
       // simulação pegou perda silenciosa quando a rede caía após navegar.
       registrar.mutate(vars, { onSuccess: prosseguir });
     }
@@ -465,7 +464,7 @@ const InfantilRajadaPage = () => {
     [alunos, activeId]
   );
 
-  // Editor de observação (texto + foto) — reusado na lista e nos círculos.
+  // Editor de observação (texto + foto): reusado na lista e nos círculos.
   const renderEditor = (aluno: AlunoRajada) => (
     <div className="px-3 pb-3" id="rajada-editor-ativo">
       {previewUrl && (
@@ -495,8 +494,8 @@ const InfantilRajadaPage = () => {
           ['--tw-ring-color' as string]: t.accent,
         }}
       />
-      {/* Fio de continuidade — SÓ dentro do editor aberto e SÓ quando > 0
-          (zero não aparece: silêncio não é marcado — lei do modelo) */}
+      {/* Fio de continuidade, SÓ dentro do editor aberto e SÓ quando > 0
+          (zero não aparece: silêncio não é marcado; lei do modelo) */}
       {aluno.momentosNaFase > 0 && (
         <button
           onClick={() => {
@@ -538,7 +537,7 @@ const InfantilRajadaPage = () => {
 
   return (
     <div>
-      {/* Respiro de abertura — "a luz acende" (aprovado no mockup Fio de Cor) */}
+      {/* Respiro de abertura: "a luz acende" (aprovado no mockup Fio de Cor) */}
       {respiro && fio && (
         <button
           onClick={pularRespiro}
@@ -572,7 +571,7 @@ const InfantilRajadaPage = () => {
         </button>
       )}
 
-      {/* Sub-header (sob o header da instituição) — FIO 1: a linha da fase */}
+      {/* Sub-header (sob o header da instituição). FIO 1: a linha da fase */}
       <div
         className="fixed top-14 left-0 right-0 z-30 glass-light"
         style={{ borderBottom: `1px solid ${t.border}` }}
@@ -612,11 +611,11 @@ const InfantilRajadaPage = () => {
         </div>
       </div>
 
-      {/* Conteúdo (o layout já dá pt-14/px-4/pb-24 — aqui só limpa o sub-header) */}
+      {/* Conteúdo (o layout já dá pt-14/px-4/pb-24: aqui só limpa o sub-header) */}
       <div className="pt-16 space-y-4">
-        {/* Seletor de turma — SEMPRE visível (fora do ramo da fase: sem ele aqui,
+        {/* Seletor de turma, SEMPRE visível (fora do ramo da fase: sem ele aqui,
             trocar pra uma turma sem trilha prendia a professora na tela vazia).
-            Em GRADE e na cor do "Iniciar aula" — fica óbvio qual turma está ativa. */}
+            Em GRADE e na cor do "Iniciar aula": fica óbvio qual turma está ativa. */}
         {turmasVinculadas && turmasVinculadas.length > 1 && (
           <div className="grid grid-cols-2 gap-2">
             {turmasVinculadas.map((tv) => {
@@ -664,9 +663,9 @@ const InfantilRajadaPage = () => {
             <p className="text-sm max-w-xs mx-auto" style={{ color: t.textMuted }}>
               {ordem > 8
                 ? `As 8 explorações do ano foram concluídas com ${turmaLabel ? `a turma ${turmaLabel}` : 'esta turma'}. A história de cada criança continua viva no Diário.`
-                : `${turmaLabel ? `A turma ${turmaLabel}` : 'Esta turma'} ainda não começou a trilha — as crianças aparecem aqui assim que a primeira exploração começar.`}
+                : `${turmaLabel ? `A turma ${turmaLabel}` : 'Esta turma'} ainda não começou a trilha; as crianças aparecem aqui assim que a primeira exploração começar.`}
             </p>
-            {/* Botão de ação (a nav está escondida dentro da aula — a simulação
+            {/* Botão de ação (a nav está escondida dentro da aula: a simulação
                 pegou professoras procurando uma "aba" que não existe aqui) */}
             {ordem <= 8 && (
               <button
@@ -680,7 +679,7 @@ const InfantilRajadaPage = () => {
           </div>
         ) : (
           <>
-            {/* Faixa de status — FIO 2: o pulso da aula bate na cor da fase */}
+            {/* Faixa de status. FIO 2: o pulso da aula bate na cor da fase */}
             <div
               className="w-full rounded-xl px-3.5 py-2.5 flex items-center gap-2.5"
               style={{
@@ -709,7 +708,7 @@ const InfantilRajadaPage = () => {
               </p>
             </div>
 
-            {/* Contexto da aula — recolhe após o primeiro registro (a lista sobe) */}
+            {/* Contexto da aula: recolhe após o primeiro registro (a lista sobe) */}
             {contextoRecolhido ? (
               <button
                 onClick={() => setContextoRecolhidoManual(false)}
@@ -729,9 +728,9 @@ const InfantilRajadaPage = () => {
               </button>
             ) : (
               <>
-                {/* Detalhe da atividade — especificações da atividade desta aula
+                {/* Detalhe da atividade: especificações da atividade desta aula
                     (nome, materiais, objetivo, como conduzir, o que observar).
-                    Alimentado pelo banco de atividades — por ora, moldura fantasma. */}
+                    Alimentado pelo banco de atividades: por ora, moldura fantasma. */}
                 <section
                   className="rounded-2xl p-4"
                   style={{
@@ -758,13 +757,13 @@ const InfantilRajadaPage = () => {
                     </button>
                   </div>
                   <p className="text-sm leading-relaxed" style={{ color: t.textFaint }}>
-                    Nome, materiais, objetivo, como conduzir e o que observar — as
+                    Nome, materiais, objetivo, como conduzir e o que observar: as
                     especificações da atividade desta aula aparecem aqui quando o banco de
                     atividades chegar.
                   </p>
                 </section>
 
-                {/* Convite — FIO 4: a única pele colorida da aula (fala EM NOME do mecanismo) */}
+                {/* Convite. FIO 4: a única pele colorida da aula (fala EM NOME do mecanismo) */}
                 <div
                   className="rounded-2xl p-3.5"
                   style={{
@@ -778,7 +777,7 @@ const InfantilRajadaPage = () => {
                   </p>
                   <p className="text-xs mt-0.5" style={{ color: fio?.corDia ?? t.accentText, opacity: 0.85 }}>
                     Se você percebeu outros mecanismos também, pode comentar. Toque no nome para
-                    escrever — ou dite pelo microfone do teclado.
+                    escrever, ou dite pelo microfone do teclado.
                   </p>
                 </div>
               </>
@@ -843,7 +842,7 @@ const InfantilRajadaPage = () => {
                 {busca ? 'Nenhuma criança com esse nome.' : 'Não há crianças nesta turma.'}
               </p>
             ) : viewMode === 'lista' ? (
-              /* VISÃO EM LISTA — um abaixo do outro, escrita inline */
+              /* VISÃO EM LISTA: um abaixo do outro, escrita inline */
               <div className="space-y-2">
                 {alunosFiltrados.map((aluno) => {
                   const aberto = activeId === aluno.id;
@@ -885,7 +884,7 @@ const InfantilRajadaPage = () => {
                 })}
               </div>
             ) : (
-              /* VISÃO EM CÍRCULOS — foto + nome e sobrenome; o editor abre acima da grade */
+              /* VISÃO EM CÍRCULOS: foto + nome e sobrenome; o editor abre acima da grade */
               <div className="space-y-3">
                 {activeAluno && (
                   <div

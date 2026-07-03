@@ -51,7 +51,7 @@ const AdminCanalChatPage = () => {
     ? '#eab308'
     : (canal?.casa as any)?.cor_hex || '#6366f1';
 
-  // Buscar mensagens — no conselho, incluir casa_id info do autor
+  // Buscar mensagens: no conselho, incluir casa_id info do autor
   const { data: mensagens, isLoading: loadingMensagens } = useQuery({
     queryKey: ['admin-mensagens-canal', canalId],
     queryFn: async () => {

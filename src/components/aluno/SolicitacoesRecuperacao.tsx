@@ -221,7 +221,7 @@ const ModalAtender = ({
               </div>
             ) : candidatos.length === 0 ? (
               <div className="text-sm text-white/60 py-4">
-                Nenhum aluno encontrado nessa turma+casa. Pode ser que o cadastro esteja diferente — confira com a coordenação.
+                Nenhum aluno encontrado nessa turma+casa. Pode ser que o cadastro esteja diferente: confira com a coordenação.
               </div>
             ) : (
               <div className="space-y-1 max-h-[300px] overflow-y-auto -mx-1 px-1">

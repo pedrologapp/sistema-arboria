@@ -720,7 +720,7 @@ const TabMissoes = ({ faseId, institutionId, dataInicio, dataFim }: TabMissoesPr
             <div className="p-4 border-b border-violet-500/10 shrink-0">
               <div className="flex items-center justify-between">
                 <h3 className="text-white font-semibold">
-                  {missaoEditando ? 'Editar Missão' : 'Nova Missão'} — Semana {semanaAtual}
+                  {missaoEditando ? 'Editar Missão' : 'Nova Missão'}. Semana {semanaAtual}
                 </h3>
                 <button onClick={fecharModal} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
                   <X className="w-5 h-5 text-white/60" />

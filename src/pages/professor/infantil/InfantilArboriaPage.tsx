@@ -28,7 +28,7 @@ const TRILHA = [
 
 type View = 'hoje' | 'ano';
 
-// Atividades FICTÍCIAS — só para visualizar o conceito de "fluxo" da fase.
+// Atividades FICTÍCIAS, só para visualizar o conceito de "fluxo" da fase.
 // No futuro vêm do banco de atividades (aba Fase).
 const ATIVIDADES_EXEMPLO: { nome: string; estado: 'feita' | 'atual' | 'proxima' }[] = [
   { nome: 'A mesa de tesouros', estado: 'feita' },
@@ -62,7 +62,7 @@ const Regua = ({ atual, onClick }: { atual: number; onClick: () => void }) => (
   </button>
 );
 
-/** Sub-aba "Hoje" — o cockpit do agora. Aqui o professor CONDUZ. */
+/** Sub-aba "Hoje": o cockpit do agora. Aqui o professor CONDUZ. */
 const CockpitHoje = ({
   faseAtual,
   atualOrdem,
@@ -74,7 +74,7 @@ const CockpitHoje = ({
   irParaAno: () => void;
   onIniciarAula: () => void;
 }) => {
-  // ANO COMPLETO — a fase 8 foi finalizada. O maior momento do ano da turma
+  // ANO COMPLETO: a fase 8 foi finalizada. O maior momento do ano da turma
   // NUNCA pode regredir pra "seu ano ainda não começou".
   if (atualOrdem > TOTAL_FASES) {
     return (
@@ -94,7 +94,7 @@ const CockpitHoje = ({
           </h1>
           <p className="text-sm mt-2 max-w-xs mx-auto italic leading-relaxed" style={{ color: t.textMuted }}>
             A turma atravessou os 8 mecanismos com você. O que você enxergou este ano vive no
-            Diário de cada criança — e segue com elas.
+            Diário de cada criança, e segue com elas.
           </p>
         </div>
         <button
@@ -156,7 +156,7 @@ const CockpitHoje = ({
         </p>
       </div>
 
-      {/* HERÓI — Iniciar aula */}
+      {/* HERÓI. Iniciar aula */}
       <div>
         <button
           onClick={onIniciarAula}
@@ -178,7 +178,7 @@ const CockpitHoje = ({
         </button>
       </div>
 
-      {/* O caminho desta fase — o plano (atividades em sequência) da fase atual */}
+      {/* O caminho desta fase: o plano (atividades em sequência) da fase atual */}
       <section
         className="rounded-2xl p-4"
         style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
@@ -190,11 +190,11 @@ const CockpitHoje = ({
           </h2>
         </div>
         <p className="text-sm mb-3 font-medium" style={{ color: t.textMuted }}>
-          Estas atividades são só ILUSTRAÇÃO — não prepare nenhuma delas. As suas atividades
+          Estas atividades são só ILUSTRAÇÃO, não prepare nenhuma delas. As suas atividades
           reais chegam com o banco de atividades.
         </p>
 
-        {/* Fluxo de atividades — FANTASMA (a simulação pegou ~18% preparando a
+        {/* Fluxo de atividades. FANTASMA (a simulação pegou ~18% preparando a
             atividade fictícia: nomes plausíveis demais → selo por item) */}
         <div aria-hidden="true">
           {ATIVIDADES_EXEMPLO.map((a, i) => {
@@ -236,9 +236,9 @@ const CockpitHoje = ({
         </div>
       </section>
 
-      {/* Detalhe da atividade — as especificações da atividade ATUAL (nome,
+      {/* Detalhe da atividade: as especificações da atividade ATUAL (nome,
           materiais, objetivo, como conduzir, o que observar). Alimentado pelo
-          banco de atividades que o Fundador vai criar — por ora, moldura fantasma. */}
+          banco de atividades que o Fundador vai criar: por ora, moldura fantasma. */}
       <section
         className="rounded-2xl p-4"
         style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
@@ -250,7 +250,7 @@ const CockpitHoje = ({
           </h2>
         </div>
         <p className="text-sm leading-relaxed" style={{ color: t.textFaint }}>
-          Nome, materiais, objetivo, como conduzir e o que observar — as especificações da
+          Nome, materiais, objetivo, como conduzir e o que observar: as especificações da
           atividade desta aula aparecem aqui quando o banco de atividades chegar.
         </p>
       </section>
@@ -258,7 +258,7 @@ const CockpitHoje = ({
   );
 };
 
-/** Sub-aba "O ano" — a trilha das 8 explorações. Aqui o professor VÊ o caminho. */
+/** Sub-aba "O ano": a trilha das 8 explorações. Aqui o professor VÊ o caminho. */
 const TrilhaAno = ({
   atualOrdem,
   irParaHoje,
@@ -280,7 +280,7 @@ const TrilhaAno = ({
         </h1>
         <p className="text-sm mt-0.5" style={{ color: t.textMuted }}>
           {atualOrdem > TOTAL_FASES
-            ? 'Ano completo — as 8 explorações concluídas.'
+            ? 'Ano completo: as 8 explorações concluídas.'
             : atualOrdem > 0
               ? 'Você está aqui.'
               : 'Sua trilha começa na primeira exploração.'}
@@ -396,12 +396,12 @@ const TrilhaAno = ({
 };
 
 /**
- * Modal de FINALIZAR fase — a virada, na pele do Infantil (substitui o window.confirm).
+ * Modal de FINALIZAR fase: a virada, na pele do Infantil (substitui o window.confirm).
  * Tom editorial/sóbrio. O objeto é sempre a TURMA, nunca a criança.
  *
  * `pendentes`: quantos "momentos previstos" da fase ainda não aconteceram.
  *  - null  → sinal ainda não existe (hoje). NÃO mostra bloco de pendência
- *            (contar em cima de atividade fictícia seria dado falso — Riscos/Produto).
+ *            (contar em cima de atividade fictícia seria dado falso. Riscos/Produto).
  *  - >0    → informa, NUNCA bloqueia. Finalizar continua sempre disponível
  *            (veto de Riscos ao hard gate, aceito pelo Fundador 01/07).
  */
@@ -442,7 +442,7 @@ const FinalizarModal = ({
         style={{ backgroundColor: t.surface, boxShadow: t.shadowLg }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Assinatura da virada — sem gráfico de árvore */}
+        {/* Assinatura da virada, sem gráfico de árvore */}
         <div style={{ height: 3, backgroundColor: t.accent }} />
 
         <div className="p-5 space-y-4">
@@ -455,7 +455,7 @@ const FinalizarModal = ({
             </h2>
           </div>
 
-          {/* Pendências — só quando há sinal REAL (>0). Nunca em vermelho/falta. */}
+          {/* Pendências, só quando há sinal REAL (>0). Nunca em vermelho/falta. */}
           {temPendencia && (
             <div
               className="rounded-xl p-3 flex gap-2.5"
@@ -467,7 +467,7 @@ const FinalizarModal = ({
                   Ainda há {pendentes} {pendentes === 1 ? 'momento previsto' : 'momentos previstos'} nesta fase.
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: t.textMuted }}>
-                  Você decide o ritmo da turma — a trilha acompanha, não cobra.
+                  Você decide o ritmo da turma: a trilha acompanha, não cobra.
                 </p>
               </div>
             </div>
@@ -503,8 +503,8 @@ const FinalizarModal = ({
 };
 
 /**
- * Aba ARBORIA (Infantil) — a PRÁTICA do dia, em duas faces:
- * "Hoje" (cockpit — você conduz) e "O ano" (a trilha — você vê o caminho).
+ * Aba ARBORIA (Infantil): a PRÁTICA do dia, em duas faces:
+ * "Hoje" (cockpit: você conduz) e "O ano" (a trilha; você vê o caminho).
  */
 const InfantilArboriaPage = () => {
   const navigate = useNavigate();
@@ -513,7 +513,7 @@ const InfantilArboriaPage = () => {
   const [view, setView] = useState<View>('hoje');
   const [acaoLoading, setAcaoLoading] = useState(false);
   const [confirmarOpen, setConfirmarOpen] = useState(false);
-  // Seleção sobrevive a remontagens (sessionStorage) — sem isso, o refresh do
+  // Seleção sobrevive a remontagens (sessionStorage), sem isso, o refresh do
   // contexto devolvia a professora pra 1ª turma no meio do trabalho.
   const [turmaSel, setTurmaSelState] = useState<string | null>(getTurmaPreferida());
   const setTurmaSel = (id: string) => {
@@ -522,7 +522,7 @@ const InfantilArboriaPage = () => {
   };
   const [virada, setVirada] = useState<ViradaDados | null>(null);
 
-  // A fase é DA TURMA selecionada (cada turma tem sua trilha) — nunca do contexto
+  // A fase é DA TURMA selecionada (cada turma tem sua trilha), nunca do contexto
   // global, que só enxerga a primeira turma vinculada.
   const turmaValida = turmaSel && turmasVinculadas?.some((tv) => tv.id === turmaSel);
   const turmaId = (turmaValida ? turmaSel : null) ?? turmasVinculadas?.[0]?.id ?? null;
@@ -558,7 +558,7 @@ const InfantilArboriaPage = () => {
       toast.error(error.message || 'Não foi possível atualizar a fase.');
       return false;
     }
-    // SÓ o hook da trilha — refreshData aqui recarregava o contexto inteiro e
+    // SÓ o hook da trilha: refreshData aqui recarregava o contexto inteiro e
     // (via layout) desmontava a página, resetando a turma selecionada.
     await queryClient.invalidateQueries({ queryKey: ['fase-turma', turmaId] });
     return true;
@@ -570,7 +570,7 @@ const InfantilArboriaPage = () => {
 
   const onFinalizar = () => setConfirmarOpen(true);
 
-  // Contagens do FECHAMENTO (Tempo 1 da Virada) — dados da fase que fecha.
+  // Contagens do FECHAMENTO (Tempo 1 da Virada): dados da fase que fecha.
   // Falha aqui NUNCA bloqueia o rito: degrada pro layout sem números.
   const carregarDadosVirada = async (
     faseFechada: FaseDaTurma,
@@ -619,7 +619,7 @@ const InfantilArboriaPage = () => {
       base.multiAutores = new Set(obs.map((o: any) => o.professor_id)).size > 1;
       base.dataInicio = evRes?.data?.ocorrido_em ?? null;
 
-      // Fase 8: o Tempo 2 vira o encerramento do ano — contagem anual da turma
+      // Fase 8: o Tempo 2 vira o encerramento do ano; contagem anual da turma
       if (ordemFechada >= 8) {
         const inicioAno = new Date(new Date().getFullYear(), 0, 1).toISOString();
         const { count } = await supabase
@@ -631,7 +631,7 @@ const InfantilArboriaPage = () => {
         base.momentosAno = count ?? null;
       }
     } catch {
-      /* segue com base degradada — o rito acontece mesmo sem números */
+      /* segue com base degradada: o rito acontece mesmo sem números */
     }
     return base;
   };
@@ -646,7 +646,7 @@ const InfantilArboriaPage = () => {
     if (error) {
       setAcaoLoading(false);
       toast.error(error.message || 'Não foi possível atualizar a fase.');
-      return; // modal fica aberto — permite tentar de novo ou Voltar
+      return; // modal fica aberto: permite tentar de novo ou Voltar
     }
 
     const dados = await carregarDadosVirada(faseFechada, ordemFechada);
@@ -663,7 +663,7 @@ const InfantilArboriaPage = () => {
         {saudacao}, <span className="font-bold">{primeiroNome}</span>
       </p>
 
-      {/* Seletor de turma — cada turma tem sua própria trilha. Em GRADE, na cor
+      {/* Seletor de turma: cada turma tem sua própria trilha. Em GRADE, na cor
           do acento, e com RÓTULO-GUIA (professora comum: tudo falado diretamente). */}
       {turmasVinculadas && turmasVinculadas.length > 1 && (
         <p
@@ -696,7 +696,7 @@ const InfantilArboriaPage = () => {
         </div>
       )}
 
-      {/* Seletor de sub-abas — com rótulo-guia e explicação breve (professora comum) */}
+      {/* Seletor de sub-abas: com rótulo-guia e explicação breve (professora comum) */}
       <p
         className="text-[11px] uppercase tracking-wide font-semibold mb-1.5"
         style={{ color: t.accentText }}
@@ -710,10 +710,12 @@ const InfantilArboriaPage = () => {
             <button
               key={k}
               onClick={() => setView(k)}
-              className="flex-1 py-1.5 rounded-full text-sm font-medium transition-colors"
+              className="flex-1 py-1.5 rounded-full text-sm font-semibold transition-colors"
               style={
                 ativo
-                  ? { backgroundColor: t.surface, color: t.text, boxShadow: t.shadowSm }
+                  ? // Mesma cor do "Iniciar aula" (pedido do Fundador 03/07):
+                    // o selecionado fica inconfundível
+                    { backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowSm }
                   : { color: t.textMuted, backgroundColor: 'transparent' }
               }
             >

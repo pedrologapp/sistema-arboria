@@ -16,7 +16,7 @@ const StudentHeader = ({ notificationCount = 0 }: StudentHeaderProps) => {
       <div className="flex flex-col px-4 py-2 max-w-lg mx-auto">
         {/* Linha 1: Logo + Fase + Notificações */}
         <div className="flex items-center justify-between">
-          {/* Logo — "A que Brota" (marca oficial, decisão do Fundador 02/07) */}
+          {/* Logo. "A que Brota" (marca oficial, decisão do Fundador 02/07) */}
           <div className="flex items-center gap-2">
             <svg viewBox="0 0 100 100" className="w-5 h-5 text-white" aria-hidden="true">
               <path

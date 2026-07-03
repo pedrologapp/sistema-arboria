@@ -1,7 +1,7 @@
 // Glossário de termos do Arboria para adolescentes
 export const GLOSSARIO: Record<string, string> = {
   // Inteligências
-  'linguistica': 'Quem pensa e se expressa melhor com palavras — escrevendo, falando, lendo.',
+  'linguistica': 'Quem pensa e se expressa melhor com palavras; escrevendo, falando, lendo.',
   'logico_matematica': 'Quem raciocina com lógica, números e padrões. Resolve problemas de forma estratégica.',
   'espacial': 'Quem pensa em imagens, formas e espaços. Visualiza soluções antes de criá-las.',
   'musical': 'Quem percebe ritmo, melodia e sons de um jeito natural. Pensa através da música.',
@@ -13,7 +13,7 @@ export const GLOSSARIO: Record<string, string> = {
   // Termos do app
   'casa': 'Seu grupo no Arboria. Cada casa representa uma inteligência. Você pertence à casa que mais combina com o seu jeito de pensar.',
   'fase': 'Um período de 4 semanas focado em uma inteligência. São 8 fases por ano, uma para cada inteligência.',
-  'missao': 'Uma atividade para você fazer durante a fase. Pode ser um texto, uma foto, um projeto — depende da missão.',
+  'missao': 'Uma atividade para você fazer durante a fase. Pode ser um texto, uma foto, um projeto: depende da missão.',
   'cross_im': 'O cruzamento entre a sua casa e a fase atual. Mostra como sua inteligência se conecta com a que está sendo trabalhada.',
   'conquista': 'Prêmios que você desbloqueia ao acumular pontos e completar missões. Quanto mais você faz, mais conquistas ganha.',
 };

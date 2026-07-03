@@ -54,7 +54,7 @@ const PessoasPage = () => {
     },
   });
 
-  // Turmas da instituição — usadas no dropdown de "Novo aluno"
+  // Turmas da instituição: usadas no dropdown de "Novo aluno"
   const { data: turmas = [] } = useQuery({
     queryKey: ['admin-turmas', institutionId],
     queryFn: async () => {
@@ -676,7 +676,7 @@ const PessoasPage = () => {
             </button>
 
             <p className="text-[10px] text-white/30 text-center">
-              Anote ou envie pro aluno — depois ele troca a senha no primeiro acesso.
+              Anote ou envie pro aluno, depois ele troca a senha no primeiro acesso.
             </p>
           </div>
         </div>

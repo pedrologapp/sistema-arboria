@@ -439,7 +439,7 @@ const ConteudoInteligenciaAdminPage = () => {
           <div className="bg-[#252547] rounded-2xl max-w-md w-full overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-violet-500/10">
               <h3 className="text-white font-semibold">
-                Semana {semanaAtual} — {SERIES.find(s => s.value === serieSelecionada)?.label}
+                Semana {semanaAtual}: {SERIES.find(s => s.value === serieSelecionada)?.label}
               </h3>
               <button onClick={fecharModal} className="text-white/40 hover:text-white">
                 <X className="w-5 h-5" />

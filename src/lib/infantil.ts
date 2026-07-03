@@ -29,7 +29,7 @@ export const formatTurmaLabel = (serie?: string | number | null, letra?: string 
 
 const TURMA_KEY = 'infantil-turma-sel';
 
-/** Turma selecionada — sobrevive a remontagens (Arboria e Rajada compartilham). */
+/** Turma selecionada: sobrevive a remontagens (Arboria e Rajada compartilham). */
 export const getTurmaPreferida = (): string | null => {
   try {
     return sessionStorage.getItem(TURMA_KEY);
@@ -61,6 +61,6 @@ export const salvarViewModePreferido = (modo: 'lista' | 'circulos') => {
   try {
     localStorage.setItem(VIEW_KEY, modo);
   } catch {
-    /* sem localStorage (modo privado antigo) — segue só em memória */
+    /* sem localStorage (modo privado antigo): segue só em memória */
   }
 };

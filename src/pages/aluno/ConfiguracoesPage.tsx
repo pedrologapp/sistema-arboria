@@ -29,7 +29,7 @@ const ConfiguracoesPage = () => {
       .eq('id', profile.id);
     setSalvandoFrase(false);
     if (error) {
-      // Campo pode nao existir ainda — silenciar
+      // Campo pode nao existir ainda: silenciar
       console.log('Frase pessoal nao salva (campo pode nao existir):', error.message);
     } else {
       toast.success('Frase atualizada!');

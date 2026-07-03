@@ -5,7 +5,7 @@ import InfantilAlunoThreadPage from './infantil/InfantilAlunoThreadPage';
 
 /**
  * Wrapper que escolhe a página de perfil correta baseado no segmento
- * - Infantil: thread de observações estilo conversa — reforma 26/06
+ * - Infantil: thread de observações estilo conversa; reforma 26/06
  * - Fundamental 1: versão simplificada (sem casa/missões)
  * - Fundamental 2: versão completa (com casa/missões)
  */

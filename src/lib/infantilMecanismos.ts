@@ -1,5 +1,5 @@
 /**
- * Textos da ABERTURA de fase (Tempo 2 da Virada) — um por mecanismo, na ordem
+ * Textos da ABERTURA de fase (Tempo 2 da Virada): um por mecanismo, na ordem
  * da trilha (1-8, id == ordem em `inteligencias`).
  *
  * Visíveis SÓ a educadores. Voz do caderno do Infantil: frase-âncora em serif
@@ -16,9 +16,9 @@ export interface MecanismoInfantil {
 export const MECANISMOS_INFANTIL: Record<number, MecanismoInfantil> = {
   1: {
     nome: 'Linguística',
-    ancora: 'Há crianças que pensam falando — a palavra é o caminho delas.',
+    ancora: 'Há crianças que pensam falando; a palavra é o caminho delas.',
     mecanismo:
-      'Nesta fase, a turma explora o mundo pela palavra: contar, nomear, perguntar, inventar histórias. Não é sobre falar bonito — é sobre usar a língua como ferramenta de pensar.',
+      'Nesta fase, a turma explora o mundo pela palavra: contar, nomear, perguntar, inventar histórias. Não é sobre falar bonito: é sobre usar a língua como ferramenta de pensar.',
     reparar: [
       'A criança que narra o que faz enquanto faz',
       'A que pergunta o nome das coisas e guarda',
@@ -29,7 +29,7 @@ export const MECANISMOS_INFANTIL: Record<number, MecanismoInfantil> = {
     nome: 'Lógico-Matemática',
     ancora: 'Antes do número, vem a pergunta: por que isso acontece assim?',
     mecanismo:
-      'A turma explora o mundo por padrões, causas e ordens: o que vem antes, o que se repete, o que acontece se. Não é conta — é o gosto de organizar e testar.',
+      'A turma explora o mundo por padrões, causas e ordens: o que vem antes, o que se repete, o que acontece se. Não é conta: é o gosto de organizar e testar.',
     reparar: [
       'A criança que separa, empilha e classifica por conta própria',
       'A que percebe quando algo sai da sequência',
@@ -62,7 +62,7 @@ export const MECANISMOS_INFANTIL: Record<number, MecanismoInfantil> = {
     nome: 'Corporal-Cinestésica',
     ancora: 'Há pensamentos que só acontecem em movimento.',
     mecanismo:
-      'Exploração pelo movimento e pelo toque: o corpo como instrumento de entender — equilibrar, imitar, construir com as mãos.',
+      'Exploração pelo movimento e pelo toque: o corpo como instrumento de entender; equilibrar, imitar, construir com as mãos.',
     reparar: [
       'A criança que aprende um gesto vendo uma vez',
       'A que precisa tocar pra compreender',
@@ -71,7 +71,7 @@ export const MECANISMOS_INFANTIL: Record<number, MecanismoInfantil> = {
   },
   6: {
     nome: 'Naturalista',
-    ancora: 'Tem olhar que floresce longe da sala — no pátio, no bicho, na chuva.',
+    ancora: 'Tem olhar que floresce longe da sala; no pátio, no bicho, na chuva.',
     mecanismo:
       'A turma explora observando o vivo e o natural: coleções, bichos, plantas, mudanças do tempo. É o mecanismo de reparar diferenças finas no mundo.',
     reparar: [
@@ -98,7 +98,7 @@ export const MECANISMOS_INFANTIL: Record<number, MecanismoInfantil> = {
       'Exploração do mundo de dentro: a criança que se conhece, escolhe com clareza, sabe o que a acalma. É o mecanismo mais fácil de confundir com timidez.',
     reparar: [
       'A criança que sabe dizer o que quer e o que não quer',
-      'A que busca um canto pra se recompor — e volta',
+      'A que busca um canto pra se recompor, e volta',
       'A que tem opinião própria mesmo sem alarde',
     ],
   },

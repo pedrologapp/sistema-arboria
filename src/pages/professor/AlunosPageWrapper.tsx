@@ -5,7 +5,7 @@ import InfantilAlunosPage from './infantil/InfantilAlunosPage';
 
 /**
  * Wrapper que escolhe a página de alunos correta baseado no segmento
- * - Infantil: lista nova (pele clara) — reforma 26/06
+ * - Infantil: lista nova (pele clara); reforma 26/06
  * - Fundamental 1: versão simplificada (sem casa/mentor)
  * - Fundamental 2: versão completa (com casa/mentor)
  */

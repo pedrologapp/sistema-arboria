@@ -309,11 +309,11 @@ const ProfessorChatPage = () => {
           </p>
         </div>
         <div className="space-y-0.5">
-          {/* Mentoria — professor pode falar */}
+          {/* Mentoria: professor pode falar */}
           {canalMentoria && (
             <CanalRow canal={canalMentoria} hashColor="text-amber-400/50" />
           )}
-          {/* Canais de texto — somente leitura */}
+          {/* Canais de texto: somente leitura */}
           {canaisTexto.map(canal => (
             <CanalRow key={canal.id} canal={canal} hashColor="text-blue-400/50" readOnly />
           ))}

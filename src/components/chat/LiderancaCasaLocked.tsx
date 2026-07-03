@@ -36,7 +36,7 @@ export const LiderancaCasaLocked = ({ open, onOpenChange, casaColor = '#6366f1' 
             <span className="font-semibold" style={{ color: casaColor }}>Liderança da Casa</span>.
           </p>
           <p className="text-center text-white/50 text-xs italic">
-            Continue sua jornada — quem sabe um dia você estará aqui. ⚡
+            Continue sua jornada: quem sabe um dia você estará aqui. ⚡
           </p>
         </div>
       </DialogContent>
