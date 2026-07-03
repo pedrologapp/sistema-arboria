@@ -178,6 +178,26 @@ const CockpitHoje = ({
         </button>
       </div>
 
+      {/* Detalhe da atividade: as especificações da atividade ATUAL (nome,
+          materiais, objetivo, como conduzir, o que observar). Alimentado pelo
+          banco de atividades que o Fundador vai criar: por ora, moldura fantasma.
+          ANTES do caminho da fase (ordem pedida pelo Fundador em 03/07). */}
+      <section
+        className="rounded-2xl p-4"
+        style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <ClipboardList size={18} style={{ color: t.accent }} strokeWidth={1.75} />
+          <h2 className="text-sm font-semibold" style={{ color: t.text }}>
+            Detalhe da atividade
+          </h2>
+        </div>
+        <p className="text-sm leading-relaxed" style={{ color: t.textFaint }}>
+          Nome, materiais, objetivo, como conduzir e o que observar: as especificações da
+          atividade desta aula aparecem aqui quando o banco de atividades chegar.
+        </p>
+      </section>
+
       {/* O caminho desta fase: o plano (atividades em sequência) da fase atual */}
       <section
         className="rounded-2xl p-4"
@@ -236,24 +256,6 @@ const CockpitHoje = ({
         </div>
       </section>
 
-      {/* Detalhe da atividade: as especificações da atividade ATUAL (nome,
-          materiais, objetivo, como conduzir, o que observar). Alimentado pelo
-          banco de atividades que o Fundador vai criar: por ora, moldura fantasma. */}
-      <section
-        className="rounded-2xl p-4"
-        style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
-      >
-        <div className="flex items-center gap-2 mb-2">
-          <ClipboardList size={18} style={{ color: t.accent }} strokeWidth={1.75} />
-          <h2 className="text-sm font-semibold" style={{ color: t.text }}>
-            Detalhe da atividade
-          </h2>
-        </div>
-        <p className="text-sm leading-relaxed" style={{ color: t.textFaint }}>
-          Nome, materiais, objetivo, como conduzir e o que observar: as especificações da
-          atividade desta aula aparecem aqui quando o banco de atividades chegar.
-        </p>
-      </section>
     </div>
   );
 };
