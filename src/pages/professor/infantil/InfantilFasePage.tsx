@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Feather, Library, ChevronLeft } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useFaseTurma } from '@/hooks/useFaseTurma';
@@ -20,6 +21,7 @@ const TOTAL = 8;
  * os outros 7 mecanismos a qualquer momento: a aba vive o ano inteiro.
  */
 const InfantilFasePage = () => {
+  const navigate = useNavigate();
   const { profile, turmasVinculadas } = useProfessor();
 
   // Fase atual da TURMA preferida (mesma seleção da aba Arboria/Rajada)
@@ -105,6 +107,33 @@ const InfantilFasePage = () => {
       />
 
       <div className="relative z-10 pt-4 pb-6" key={atual} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        {/* Entrada da FORMAÇÃO ARBORIA: no topo, visível em todas as inteligências
+            (pedido do Fundador 03/07; leva à lista com checklist) */}
+        <div className="flex justify-end mb-2 vf-rise">
+          <button
+            onClick={() => navigate('/professor/formacao')}
+            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-semibold active:scale-95"
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.12)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              color: '#FFFFFF',
+            }}
+          >
+            <svg viewBox="0 0 100 100" style={{ width: 12, height: 12 }} aria-hidden="true">
+              <path
+                d="M30 79 L50 27 L70 79"
+                stroke="#FFFFFF"
+                strokeWidth="10"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+              <path d="M50 27 C50 16 58 9 68 8 C69 19 61 26 50 27 Z" fill="#FFFFFF" />
+            </svg>
+            Treinamentos
+          </button>
+        </div>
+
         {/* Seletor dos 8: com CORPO DE BOTÃO e a cor de cada mecanismo
             (a simulação mostrou: círculos transparentes liam como decoração) */}
         <div className="flex gap-1.5 justify-center flex-wrap mb-2 vf-rise">
