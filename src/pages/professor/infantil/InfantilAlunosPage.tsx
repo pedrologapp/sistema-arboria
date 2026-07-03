@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Search, NotebookPen, List, LayoutGrid } from 'lucide-react';
+import { Users, Search, NotebookPen, List, LayoutGrid, ChevronDown, ChevronUp } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useAlunosTurmasComStatus } from '@/hooks/useAlunosTurmasComStatus';
 import {
@@ -42,6 +42,7 @@ const InfantilAlunosPage = () => {
     }
   };
   const [busca, setBusca] = useState('');
+  const [exemplosAbertos, setExemplosAbertos] = useState(false);
   // Preferência compartilhada com a Rajada (quem escolhe círculos lá, encontra círculos aqui)
   const [viewMode, setViewModeState] = useState<'lista' | 'circulos'>(getViewModePreferido());
   const setViewMode = (modo: 'lista' | 'circulos') => {
@@ -84,6 +85,64 @@ const InfantilAlunosPage = () => {
           <p className="text-sm font-semibold" style={{ color: t.accentText }}>
             Quem você vai enxergar hoje?
           </p>
+
+          {/* EXPANSÍVEL: como registrar bem (ideia do Fundador 03/07) — a maior
+              alavanca de qualidade do dado: ensinar "chegou assim" vs "foi bem". */}
+          <button
+            onClick={() => setExemplosAbertos((v) => !v)}
+            className="flex items-center gap-1 text-xs font-medium mt-1.5"
+            style={{ color: t.accentText }}
+            aria-expanded={exemplosAbertos}
+          >
+            Como registrar bem?{' '}
+            {exemplosAbertos ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          </button>
+
+          {exemplosAbertos && (
+            <div className="mt-2.5 pt-2.5 space-y-2.5" style={{ borderTop: `1px solid ${t.accentBorder}` }}>
+              <p className="text-xs leading-relaxed font-medium" style={{ color: t.accentText }}>
+                Registre o caminho, não o resultado: o que ela fez primeiro, por onde entrou,
+                o que fez diante do obstáculo.
+              </p>
+
+              <div className="rounded-xl p-2.5 space-y-0.5" style={{ backgroundColor: 'rgba(255,255,255,0.6)' }}>
+                <p className="text-xs" style={{ color: t.textFaint }}>
+                  <span className="font-semibold">✗</span> "Participou bem da atividade."
+                </p>
+                <p className="text-xs leading-relaxed" style={{ color: t.text }}>
+                  <span className="font-semibold" style={{ color: t.presenteText }}>✓</span>{' '}
+                  "Separou as tampinhas por cor antes de colar — só começou quando a coleção
+                  ficou em ordem."
+                </p>
+              </div>
+
+              <div className="rounded-xl p-2.5 space-y-0.5" style={{ backgroundColor: 'rgba(255,255,255,0.6)' }}>
+                <p className="text-xs" style={{ color: t.textFaint }}>
+                  <span className="font-semibold">✗</span> "Fez o desenho direitinho."
+                </p>
+                <p className="text-xs leading-relaxed" style={{ color: t.text }}>
+                  <span className="font-semibold" style={{ color: t.presenteText }}>✓</span>{' '}
+                  "Narrou o desenho enquanto desenhava: 'agora o sol, agora a chuva'. A
+                  história veio antes do traço."
+                </p>
+              </div>
+
+              <div className="rounded-xl p-2.5 space-y-0.5" style={{ backgroundColor: 'rgba(255,255,255,0.6)' }}>
+                <p className="text-xs" style={{ color: t.textFaint }}>
+                  <span className="font-semibold">✗</span> "Não quis fazer a pintura."
+                </p>
+                <p className="text-xs leading-relaxed" style={{ color: t.text }}>
+                  <span className="font-semibold" style={{ color: t.presenteText }}>✓</span>{' '}
+                  "Recusou a pintura, mas passou o tempo todo olhando as cores dos colegas —
+                  entrou pela observação, não pelo pincel."
+                </p>
+              </div>
+
+              <p className="text-xs italic leading-relaxed" style={{ color: t.accentText }}>
+                Você não precisa concluir nada — descreva a cena; a leitura vem depois.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
