@@ -704,7 +704,7 @@ const InfantilRajadaPage = () => {
             <Skeleton className="h-10 w-full rounded-xl" />
             <Skeleton className="h-24 w-full rounded-2xl" />
           </div>
-        ) : !exploração ? (
+        ) : !fase ? (
           <div className="pt-10 text-center space-y-3">
             <div
               className="w-14 h-14 rounded-full flex items-center justify-center mx-auto"

@@ -109,7 +109,13 @@ const InfantilFasePage = () => {
       <div className="relative z-10 pt-4 pb-6" key={atual} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {/* Entrada da FORMAÇÃO ARBORIA: no topo, visível em todas as inteligências
             (pedido do Fundador 03/07; leva à lista com checklist) */}
-        <div className="flex justify-end mb-2 vf-rise">
+        <div className="flex items-center justify-between mb-2 vf-rise">
+          <p
+            className="text-[11px] uppercase font-semibold"
+            style={{ color: 'rgba(255,255,255,0.6)', letterSpacing: '0.24em' }}
+          >
+            Inteligências
+          </p>
           <button
             onClick={() => navigate('/professor/formacao')}
             className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-semibold active:scale-95"
