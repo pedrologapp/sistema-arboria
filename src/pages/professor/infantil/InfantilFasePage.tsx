@@ -125,7 +125,7 @@ const InfantilFasePage = () => {
                     ? '0 0 0 3px rgba(255,255,255,0.35)'
                     : '0 2px 6px rgba(0,0,0,0.25)',
                 }}
-                aria-label={`${SANTUARIO_INFANTIL[n].nome}${ehFaseAtual ? ' (fase atual da turma)' : ''}`}
+                aria-label={`${SANTUARIO_INFANTIL[n].nome}${ehFaseAtual ? ' (exploração atual da turma)' : ''}`}
                 aria-pressed={ehLido}
               >
                 {n}
@@ -136,12 +136,12 @@ const InfantilFasePage = () => {
 
         {/* Dica de toque: 12 palavras que dobram a descoberta dos 8 */}
         <p className="text-[11px] text-center mb-1 vf-rise" style={{ color: 'rgba(255,255,255,0.65)' }}>
-          Toque num número para conhecer outro mecanismo
+          Toque num número para conhecer outra inteligência
         </p>
         {/* Legenda dos dois destaques (simulação r2: "meu é o branco ou o que brilha?") */}
         <p className="text-[10px] text-center mb-3 vf-rise" style={{ color: 'rgba(255,255,255,0.5)' }}>
           {faseAtualValida > 0
-            ? 'Branco = você está lendo · Anel = a fase da sua turma'
+            ? 'Branco = você está lendo · Anel = a que sua turma explora agora'
             : 'Branco = você está lendo'}
         </p>
 
@@ -153,7 +153,7 @@ const InfantilFasePage = () => {
               className="flex items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-semibold"
               style={{ backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', border: '1px solid rgba(255,255,255,0.25)' }}
             >
-              <ChevronLeft size={13} /> Voltar à fase atual ({SANTUARIO_INFANTIL[faseAtualValida].nome})
+              <ChevronLeft size={13} /> Voltar à exploração atual ({SANTUARIO_INFANTIL[faseAtualValida].nome})
             </button>
           </div>
         )}
@@ -199,7 +199,7 @@ const InfantilFasePage = () => {
 
         <section className="mb-5 vf-rise" style={{ animationDelay: '240ms' }}>
           <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
-            O mecanismo
+            A inteligência
           </h2>
           <p className="text-sm leading-relaxed texto-justificado" style={{ color: 'rgba(255,255,255,0.92)' }}>
             {m.mecanismo}
@@ -255,7 +255,7 @@ const InfantilFasePage = () => {
 
         <section className="mb-5 vf-rise" style={{ animationDelay: '320ms' }}>
           <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
-            O que NÃO é sinal deste mecanismo
+            O que NÃO é sinal desta inteligência
           </h2>
           <ul className="space-y-1.5">
             {m.naoDefine.map((x, i) => (
@@ -360,7 +360,7 @@ const InfantilFasePage = () => {
         >
           <Library size={16} strokeWidth={1.5} className="mx-auto mb-1.5" style={{ color: 'rgba(255,255,255,0.7)' }} />
           <p className="text-[13px] font-semibold" style={{ color: 'rgba(255,255,255,0.9)' }}>
-            Atividades desta fase · em breve
+            Atividades desta exploração · em breve
           </p>
           <p className="text-xs leading-relaxed mt-0.5" style={{ color: 'rgba(255,255,255,0.65)' }}>
             Aqui vão morar as atividades prontas para usar na sala: uma a uma, com tudo que

@@ -93,7 +93,7 @@ const CockpitHoje = ({
             As 8 explorações do ano foram concluídas.
           </h1>
           <p className="text-sm mt-2 max-w-xs mx-auto italic leading-relaxed" style={{ color: t.textMuted }}>
-            A turma atravessou os 8 mecanismos com você. O que você enxergou este ano vive no
+            A turma atravessou as 8 inteligências com você. O que você enxergou este ano vive no
             Diário de cada criança, e segue com elas.
           </p>
         </div>
@@ -136,7 +136,7 @@ const CockpitHoje = ({
     );
   }
 
-  const mecanismo = faseAtual.inteligencia?.nome ?? `Fase ${faseAtual.numero_fase}`;
+  const mecanismo = faseAtual.inteligencia?.nome ?? `Exploração ${faseAtual.numero_fase}`;
   const hojeFmt = format(new Date(), "d 'de' MMM", { locale: ptBR });
 
   return (
@@ -144,15 +144,15 @@ const CockpitHoje = ({
       <Regua atual={atualOrdem} onClick={irParaAno} />
 
       <p className="text-[11px] uppercase tracking-wide" style={{ color: t.textFaint }}>
-        Hoje · {hojeFmt} · Fase {atualOrdem || faseAtual.numero_fase} de {TOTAL_FASES}
+        Hoje · {hojeFmt} · Exploração {atualOrdem || faseAtual.numero_fase} de {TOTAL_FASES}
       </p>
 
       <div className="-mt-3">
         <h1 className="text-2xl font-bold" style={{ color: t.text }}>
-          Fase {mecanismo}
+          Exploração {mecanismo}
         </h1>
         <p className="text-sm mt-1 leading-relaxed" style={{ color: t.textMuted }}>
-          Hoje você conduz a exploração do mecanismo {mecanismo}.
+          Hoje você conduz a exploração da inteligência {mecanismo}.
         </p>
       </div>
 
@@ -207,7 +207,7 @@ const CockpitHoje = ({
         <div className="flex items-center gap-2 mb-1">
           <Route size={18} style={{ color: t.accent }} strokeWidth={1.75} />
           <h2 className="text-sm font-semibold" style={{ color: t.text }}>
-            O caminho desta fase
+            O caminho desta exploração
           </h2>
         </div>
         <p className="text-sm mb-3 font-medium" style={{ color: t.textMuted }}>
@@ -339,7 +339,7 @@ const TrilhaAno = ({
                     Em andamento
                   </p>
                   <h3 className="text-base font-bold mt-0.5" style={{ color: t.text }}>
-                    Fase {nome}
+                    Exploração {nome}
                   </h3>
                   <p className="text-sm mt-1" style={{ color: t.textMuted }}>
                     Você está conduzindo esta exploração.
@@ -358,7 +358,7 @@ const TrilhaAno = ({
                       className="flex-1 rounded-xl py-2 text-sm font-medium flex items-center justify-center gap-1.5 disabled:opacity-50"
                       style={{ backgroundColor: t.surfaceSunken, color: t.textMuted }}
                     >
-                      <Flag size={14} /> Finalizar fase
+                      <Flag size={14} /> Encerrar exploração
                     </button>
                   </div>
                 </div>
@@ -438,7 +438,7 @@ const FinalizarModal = ({
       onClick={onFechar}
       role="dialog"
       aria-modal="true"
-      aria-label={`Finalizar a fase ${faseNome}`}
+      aria-label={`Finalizar a exploração ${faseNome}`}
     >
       <div
         className="w-full max-w-[360px] rounded-2xl overflow-hidden"
@@ -451,10 +451,10 @@ const FinalizarModal = ({
         <div className="p-5 space-y-4">
           <div className="space-y-1.5">
             <p className="text-[11px] uppercase tracking-wide font-semibold" style={{ color: t.accentText }}>
-              Virada de fase
+              Virada de exploração
             </p>
             <h2 className="text-lg font-bold leading-snug" style={{ color: t.text }}>
-              Finalizar a Fase {faseNome} para a turma?
+              Finalizar a Exploração {faseNome} para a turma?
             </h2>
           </div>
 
@@ -477,7 +477,7 @@ const FinalizarModal = ({
           )}
 
           <p className="text-sm leading-relaxed italic" style={{ color: t.textMuted }}>
-            Finalizar fecha esta exploração e abre a próxima. Antes de seguir, você vai ver o que esta fase deixou.
+            Finalizar fecha esta exploração e abre a próxima. Antes de seguir, você vai ver o que esta exploração deixou.
           </p>
 
           <div className="space-y-2 pt-1">
@@ -487,7 +487,7 @@ const FinalizarModal = ({
               className="w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-60"
               style={{ backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowMd }}
             >
-              {temPendencia ? 'Finalizar mesmo assim' : 'Finalizar fase'}
+              {temPendencia ? 'Finalizar mesmo assim' : 'Encerrar exploração'}
             </button>
             <button
               onClick={onFechar}
@@ -731,7 +731,7 @@ const InfantilArboriaPage = () => {
       {/* Explicação breve do que a visão atual mostra */}
       <p className="text-xs mt-2 px-1" style={{ color: t.textFaint }}>
         {view === 'hoje'
-          ? 'A prática de agora: a fase da turma e o registro da aula.'
+          ? 'A prática de agora: a exploração da turma e o registro da aula.'
           : 'O caminho do ano: as 8 explorações da turma, do começo ao fim.'}
       </p>
 
@@ -756,7 +756,7 @@ const InfantilArboriaPage = () => {
 
       {confirmarOpen && faseAtual && (
         <FinalizarModal
-          faseNome={faseAtual.inteligencia?.nome ?? `Fase ${faseAtual.numero_fase}`}
+          faseNome={faseAtual.inteligencia?.nome ?? `Exploração ${faseAtual.numero_fase}`}
           pendentes={null}
           loading={acaoLoading}
           onConfirmar={confirmarFinalizar}

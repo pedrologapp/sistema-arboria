@@ -310,8 +310,8 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
 /**
  * "UMA ATIVIDADE, OITO CAMINHOS": a peça didática comparativa (ideia do
  * Fundador, 02/07): a MESMA atividade de sempre vista pela porta de cada
- * mecanismo. É o multi-caminho ficando visível: a professora entende cada
- * mecanismo COMPARANDO, não decorando. O caminho é o que importa, não a torre.
+ * inteligência. É o multi-caminho ficando visível: a professora entende cada
+ * inteligência COMPARANDO, não decorando. O caminho é o que importa, não a torre.
  */
 export const ATIVIDADE_OITO_CAMINHOS = {
   titulo: 'Uma atividade, oito caminhos',

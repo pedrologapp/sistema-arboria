@@ -97,7 +97,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
               className="text-[11px] uppercase font-semibold text-center"
               style={{ color: 'rgba(255,255,255,0.75)', letterSpacing: '0.35em' }}
             >
-              Virada de fase
+              Virada de exploração
             </p>
             <div
               className="vf-draw mx-auto mt-3"
@@ -111,13 +111,13 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
               style={{ color: '#FFFFFF' }}
               tabIndex={-1}
             >
-              A Fase {dados.faseFechadaNome} se encerra.
+              A Exploração {dados.faseFechadaNome} se encerra.
             </h2>
           </Casc>
 
           <Casc i={2} className="mt-4">
             <p className="text-xs text-center leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>
-              Fase {dados.ordemFechada} de {TOTAL_FASES} · {dados.turmaLabel}
+              Exploração {dados.ordemFechada} de {TOTAL_FASES} · {dados.turmaLabel}
               {dados.dataInicio && (
                 <>
                   <br />
@@ -135,8 +135,8 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
                 style={{ color: 'rgba(255,255,255,0.85)' }}
               >
                 {contagemIndisponivel && !semRegistros
-                  ? 'O que você enxergou nesta fase vive no Diário de cada criança, e segue com a turma.'
-                  : 'Esta fase se encerra sem registros no diário, e o diário é só uma parte do olhar. O que você viveu com a turma não se perde. A próxima exploração abre uma página nova.'}
+                  ? 'O que você enxergou nesta exploração vive no Diário de cada criança, e segue com a turma.'
+                  : 'Esta exploração se encerra sem registros no diário, e o diário é só uma parte do olhar. O que você viveu com a turma não se perde. A próxima exploração abre uma página nova.'}
               </p>
             </Casc>
           ) : (
@@ -155,7 +155,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
                   {dados.criancasObservadas}
                 </p>
                 <p className="text-[13px] text-center mt-1.5" style={{ color: 'rgba(255,255,255,0.85)' }}>
-                  {dados.criancasObservadas === 1 ? 'criança aparece nesta fase' : 'crianças aparecem nesta fase'}
+                  {dados.criancasObservadas === 1 ? 'criança aparece nesta exploração' : 'crianças aparecem nesta exploração'}
                 </p>
               </Casc>
 
@@ -170,8 +170,8 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
                     <div>
                       <p className="text-sm font-semibold leading-snug" style={{ color: '#FFFFFF' }}>
                         {silencio === 1
-                          ? '1 criança atravessou a fase em silêncio no diário.'
-                          : `${silencio} crianças atravessaram a fase em silêncio no diário.`}
+                          ? '1 criança atravessou a exploração em silêncio no diário.'
+                          : `${silencio} crianças atravessaram a exploração em silêncio no diário.`}
                       </p>
                       <p className="text-[13px] leading-relaxed mt-1 texto-justificado" style={{ color: 'rgba(255,255,255,0.85)' }}>
                         Silêncio não é ausência: às vezes o canal ainda não abriu. Leve um olhar
@@ -255,7 +255,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
           </Casc>
 
           {anoCompleto ? (
-            /* --------- FASE 8 → ENCERRAMENTO DO ANO --------- */
+            /* --------- EXPLORAÇÃO 8 → ENCERRAMENTO DO ANO --------- */
             <>
               <Casc i={1}>
                 <p
@@ -294,7 +294,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
                   className="font-serif italic text-[15px] leading-relaxed text-center max-w-[260px] mx-auto"
                   style={{ color: t.textMuted }}
                 >
-                  A turma atravessou os 8 mecanismos com você. O que você enxergou vive no Diário
+                  A turma atravessou os 8 inteligências com você. O que você enxergou vive no Diário
                   de cada criança, e segue com elas.
                 </p>
               </Casc>
@@ -317,14 +317,14 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
                     className="text-[11px] uppercase font-semibold text-center"
                     style={{ color: t.accentText, letterSpacing: '0.35em' }}
                   >
-                    Fase {dados.ordemFechada + 1} de {TOTAL_FASES} · Abertura
+                    Exploração {dados.ordemFechada + 1} de {TOTAL_FASES} · Abertura
                   </p>
                   <div className="vf-draw mx-auto mt-3" style={{ width: 48, height: 2, backgroundColor: t.accentBorder, animationDelay: '400ms' }} />
                 </Casc>
 
                 <Casc i={2} className="mt-6">
                   <h2 className="font-serif text-[28px] leading-tight text-center" style={{ color: t.text }}>
-                    Fase {proxima.nome}
+                    Exploração {proxima.nome}
                   </h2>
                 </Casc>
 
@@ -342,7 +342,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
                     className="text-[11px] uppercase tracking-wide font-semibold mb-2"
                     style={{ color: t.accentText }}
                   >
-                    O mecanismo
+                    A inteligência
                   </h3>
                   <p className="text-sm leading-relaxed" style={{ color: t.text }}>
                     {proxima.mecanismo}
@@ -379,8 +379,8 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
                         Prepare o terreno
                       </p>
                       <p className="text-[13px] leading-relaxed mt-1 texto-justificado" style={{ color: t.textMuted }}>
-                        As atividades desta fase chegam com o banco de atividades. Por enquanto,
-                        comece pelo olhar: repare onde esse mecanismo aparece na sua sala; o
+                        As atividades desta exploração chegam com o banco de atividades. Por enquanto,
+                        comece pelo olhar: repare onde essa inteligência aparece na sua sala; o
                         diário faz o resto.
                       </p>
                     </div>
@@ -393,7 +393,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
                     className="w-full rounded-2xl py-3.5 text-[15px] font-semibold active:scale-[0.99] transition-transform"
                     style={{ backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowMd }}
                   >
-                    Começar a Fase {proxima.nome}
+                    Começar a Exploração {proxima.nome}
                   </button>
                 </Casc>
               </>

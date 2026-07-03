@@ -436,7 +436,7 @@ const InfantilAlunoThreadPage = () => {
                     className="rounded-full px-3 py-1 text-[11px] font-medium"
                     style={{ backgroundColor: t.accentSoft, color: t.accentText }}
                   >
-                    {grupo.faseNome === 'Registro avulso' ? grupo.faseNome : `Fase ${grupo.faseNome}`}
+                    {grupo.faseNome === 'Registro avulso' ? grupo.faseNome : `Exploração ${grupo.faseNome}`}
                   </span>
                   <div className="flex-1 h-px" style={{ backgroundColor: t.border }} />
                 </div>

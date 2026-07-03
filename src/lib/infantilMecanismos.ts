@@ -3,7 +3,7 @@
  * da trilha (1-8, id == ordem em `inteligencias`).
  *
  * Visíveis SÓ a educadores. Voz do caderno do Infantil: frase-âncora em serif
- * itálico + "O mecanismo" + "Onde reparar" (3 cenas do COMO, nunca traços).
+ * itálico + "A inteligência" + "Onde reparar" (3 cenas do COMO, nunca traços).
  * Aprovados pelo Fundador em 02/07/2026 junto com o design da Virada de Fase.
  */
 export interface MecanismoInfantil {
@@ -18,7 +18,7 @@ export const MECANISMOS_INFANTIL: Record<number, MecanismoInfantil> = {
     nome: 'Linguística',
     ancora: 'Há crianças que pensam falando; a palavra é o caminho delas.',
     mecanismo:
-      'Nesta fase, a turma explora o mundo pela palavra: contar, nomear, perguntar, inventar histórias. Não é sobre falar bonito: é sobre usar a língua como ferramenta de pensar.',
+      'Nesta exploração, a turma explora o mundo pela palavra: contar, nomear, perguntar, inventar histórias. Não é sobre falar bonito: é sobre usar a língua como ferramenta de pensar.',
     reparar: [
       'A criança que narra o que faz enquanto faz',
       'A que pergunta o nome das coisas e guarda',
@@ -40,7 +40,7 @@ export const MECANISMOS_INFANTIL: Record<number, MecanismoInfantil> = {
     nome: 'Espacial',
     ancora: 'Tem criança que entende com os olhos antes de entender com palavras.',
     mecanismo:
-      'Nesta fase, a exploração é por imagens, formas e lugares: montar, desenhar, mapear, imaginar as coisas de outro ângulo.',
+      'Nesta exploração, a exploração é por imagens, formas e lugares: montar, desenhar, mapear, imaginar as coisas de outro ângulo.',
     reparar: [
       'A criança que resolve o encaixe girando a peça na cabeça',
       'A que desenha pra explicar o que viveu',
@@ -73,7 +73,7 @@ export const MECANISMOS_INFANTIL: Record<number, MecanismoInfantil> = {
     nome: 'Naturalista',
     ancora: 'Tem olhar que floresce longe da sala; no pátio, no bicho, na chuva.',
     mecanismo:
-      'A turma explora observando o vivo e o natural: coleções, bichos, plantas, mudanças do tempo. É o mecanismo de reparar diferenças finas no mundo.',
+      'A turma explora observando o vivo e o natural: coleções, bichos, plantas, mudanças do tempo. É a inteligência de reparar diferenças finas no mundo.',
     reparar: [
       'A criança que para tudo pra acompanhar uma formiga',
       'A que coleciona e separa por tipo',
@@ -84,7 +84,7 @@ export const MECANISMOS_INFANTIL: Record<number, MecanismoInfantil> = {
     nome: 'Interpessoal',
     ancora: 'Algumas crianças leem pessoas como outras leem figuras.',
     mecanismo:
-      'Nesta fase, a exploração é pelo encontro: perceber o humor do colega, mediar, cuidar, organizar a brincadeira dos outros.',
+      'Nesta exploração, a exploração é pelo encontro: perceber o humor do colega, mediar, cuidar, organizar a brincadeira dos outros.',
     reparar: [
       'A criança que percebe quando o colega ficou de fora',
       'A que negocia os papéis da brincadeira',
@@ -95,7 +95,7 @@ export const MECANISMOS_INFANTIL: Record<number, MecanismoInfantil> = {
     nome: 'Intrapessoal',
     ancora: 'A mais silenciosa das inteligências pede o mais paciente dos olhares.',
     mecanismo:
-      'Exploração do mundo de dentro: a criança que se conhece, escolhe com clareza, sabe o que a acalma. É o mecanismo mais fácil de confundir com timidez.',
+      'Exploração do mundo de dentro: a criança que se conhece, escolhe com clareza, sabe o que a acalma. É a inteligência mais fácil de confundir com timidez.',
     reparar: [
       'A criança que sabe dizer o que quer e o que não quer',
       'A que busca um canto pra se recompor, e volta',

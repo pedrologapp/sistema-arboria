@@ -34,7 +34,7 @@ const InfantilBottomNav = ({ dark = false }: { dark?: boolean }) => {
     {
       id: 'fase',
       icon: <BookOpen size={22} strokeWidth={1.75} />,
-      label: 'Fase',
+      label: 'Inteligências',
       path: '/professor/fase',
       match: (p) => p.startsWith('/professor/fase'),
     },

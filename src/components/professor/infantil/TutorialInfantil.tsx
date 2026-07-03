@@ -19,7 +19,7 @@ const MiniArboria = () => (
       <span className="flex-1 rounded-lg py-1.5 text-center text-[10px] font-semibold" style={{ backgroundColor: t.accent, color: '#FFF' }}>Grupo IV · A</span>
       <span className="flex-1 rounded-lg py-1.5 text-center text-[10px] font-semibold" style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, color: t.textMuted }}>Grupo IV · B</span>
     </div>
-    <p className="text-[9px] uppercase tracking-wide font-bold mt-2 mb-1" style={{ color: t.textFaint }}>Fase 1 de 8 · Linguística</p>
+    <p className="text-[9px] uppercase tracking-wide font-bold mt-2 mb-1" style={{ color: t.textFaint }}>Exploração 1 de 8 · Linguística</p>
     <div className="rounded-xl p-2.5 flex items-center gap-2" style={{ backgroundColor: t.accent, color: '#FFF' }}>
       <span className="w-6 h-6 rounded-full flex items-center justify-center text-[9px]" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>▶</span>
       <span>
@@ -66,7 +66,7 @@ const MiniAula = () => (
     <div style={{ height: 3, backgroundColor: '#047857' }} />
     <div className="p-3 space-y-1.5">
       <p className="text-[9px]" style={{ color: t.textFaint }}>
-        ● Aula em andamento · <b style={{ color: '#065F46' }}>Fase Lógico-Matemática</b>
+        ● Aula em andamento · <b style={{ color: '#065F46' }}>Exploração Lógico-Matemática</b>
       </p>
       {[
         { ini: 'AL', nome: 'Alice Fontes', selo: true },
@@ -118,7 +118,7 @@ const MiniDiario = () => (
       <span className="text-[8px]" style={{ color: t.textFaint }}>· 12 momentos</span>
     </div>
     <div className="text-center mb-1.5">
-      <span className="text-[7.5px] rounded-full px-2 py-0.5" style={{ backgroundColor: t.accentSoft, color: t.accentText }}>Fase Linguística</span>
+      <span className="text-[7.5px] rounded-full px-2 py-0.5" style={{ backgroundColor: t.accentSoft, color: t.accentText }}>Exploração Linguística</span>
     </div>
     {[
       'Narrou a brincadeira inteira enquanto montava: "agora ele sobe, agora cai"...',
@@ -153,32 +153,32 @@ const PAGINAS: Pagina[] = [
     ),
   },
   {
-    titulo: 'Arboria; o seu dia começa aqui.',
+    titulo: 'Arboria: o seu dia começa aqui.',
     fundo: t.bg,
     ilus: <MiniArboria />,
     corpo: (
       <>
-        É o painel da prática: <b>escolha a turma</b>, veja em qual fase ela está e toque em{' '}
+        É o painel da prática: <b>escolha a turma</b>, veja em qual exploração ela está e toque em{' '}
         <b>Iniciar aula</b> quando for registrar. Cada turma tem a própria trilha.
       </>
     ),
   },
   {
-    titulo: '"O ano"; a trilha das 8 explorações.',
+    titulo: '"O ano": a trilha das 8 explorações.',
     fundo: t.bg,
     ilus: <MiniTrilha />,
     corpo: (
       <>
-        A turma atravessa <b>8 fases no ano</b>, uma por mecanismo. Você começa e finaliza cada
-        fase quando sentir que é hora, e a virada é um momento bonito, pode confiar.
+        A turma atravessa <b>8 explorações no ano</b>, uma por inteligência. Você começa e finaliza cada
+        exploração quando sentir que é hora, e a virada é um momento bonito, pode confiar.
         <span className="block mt-2.5 italic text-[13px]" style={{ color: t.accentText }}>
-          A fase é da TURMA, nunca da criança.
+          A exploração é da TURMA, nunca da criança.
         </span>
       </>
     ),
   },
   {
-    titulo: 'A aula; toque no nome, escreva, pronto.',
+    titulo: 'A aula: toque no nome, escreva, pronto.',
     fundo: t.bg,
     ilus: <MiniAula />,
     corpo: (
@@ -193,12 +193,12 @@ const PAGINAS: Pagina[] = [
     ),
   },
   {
-    titulo: 'Fase; o lugar de estudar o mecanismo.',
+    titulo: 'Inteligências: o lugar de estudar cada uma.',
     fundo: t.accentDeep,
     ilus: <MiniSantuario />,
     corpo: (
       <>
-        A aba escura é o seu <b>santuário de estudo</b>: o que é o mecanismo da fase, como ele
+        A aba escura é o seu <b>santuário de estudo</b>: o que é a inteligência da exploração, como ela
         aparece na sala, o que NÃO é sinal. Toque nos números pra conhecer os 8: a qualquer
         momento do ano.
         <span className="block mt-2.5 italic text-[13px]" style={{ color: t.accentText }}>
@@ -208,13 +208,13 @@ const PAGINAS: Pagina[] = [
     ),
   },
   {
-    titulo: 'Diário; a história de cada criança.',
+    titulo: 'Diário: a história de cada criança.',
     fundo: t.bg,
     ilus: <MiniDiario />,
     corpo: (
       <>
         Cada criança tem um <b>diário estilo conversa</b>: tudo que você (e sua colega de sala)
-        já escreveram, fase a fase. Registre a qualquer hora, não precisa estar em aula. Errou?{' '}
+        já escreveram, exploração a fase. Registre a qualquer hora, não precisa estar em aula. Errou?{' '}
         <b>Segure o balão</b> pra corrigir.
       </>
     ),
@@ -232,7 +232,7 @@ const PAGINAS: Pagina[] = [
     ),
     corpo: (
       <>
-        <b>1.</b> A fase é da turma, nunca da criança.
+        <b>1.</b> A exploração é da turma, nunca da criança.
         <br />
         <b>2.</b> Registre o caminho, não o resultado: "chegou assim", não "foi bem".
         <br />

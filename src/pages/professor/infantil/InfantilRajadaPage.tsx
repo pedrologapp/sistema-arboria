@@ -67,7 +67,7 @@ const ConcluirModal = ({
           <p className="text-[11px] uppercase tracking-wide font-semibold" style={{ color: t.accentText }}>
             A aula de hoje
             {mecanismo && (
-              <span style={{ color: corDia ?? t.accentText }}> · Fase {mecanismo}</span>
+              <span style={{ color: corDia ?? t.accentText }}> · Exploração {mecanismo}</span>
             )}
           </p>
           <h2 className="font-serif text-[19px] leading-snug" style={{ color: t.text }}>
@@ -334,7 +334,7 @@ const InfantilRajadaPage = () => {
   const registrar = useMutation({
     mutationFn: async ({ alunoId, textoObs, file }: { alunoId: string; textoObs: string; file: File | null }) => {
       if (!podeRegistrar || !fase?.id) {
-        throw new Error('Sem fase ativa ou turma, não dá pra registrar agora.');
+        throw new Error('Sem exploração ativa ou turma, não dá pra registrar agora.');
       }
       // Se há foto, sobe primeiro no bucket privado 'observacoes' ({aluno_id}/{uuid}.{ext})
       let anexoPath: string | null = null;
@@ -558,7 +558,7 @@ const InfantilRajadaPage = () => {
           className="text-xs mt-1 underline-offset-2 hover:underline"
           style={{ color: t.textMuted }}
         >
-          {aluno.momentosNaFase} {aluno.momentosNaFase === 1 ? 'momento' : 'momentos'} nesta fase · ver no Diário
+          {aluno.momentosNaFase} {aluno.momentosNaFase === 1 ? 'momento' : 'momentos'} nesta exploração · ver no Diário
         </button>
       )}
       <div className="flex items-center justify-between mt-2">
@@ -608,7 +608,7 @@ const InfantilRajadaPage = () => {
             Aula{turmaLabel ? ` · ${turmaLabel}` : ''}
           </p>
           <h2 className="font-serif text-[27px] mt-3 vf-rise" style={{ color: t.text, animationDelay: '80ms' }}>
-            Fase {mecanismo}
+            Exploração {mecanismo}
           </h2>
           <div
             className="vf-draw rounded-full mt-3.5"
@@ -649,7 +649,7 @@ const InfantilRajadaPage = () => {
               Registro da turma
             </p>
             <p className="text-[11px] truncate" style={{ color: t.textFaint }}>
-              {mecanismo ? `Fase ${mecanismo}` : 'Sem fase ativa'}
+              {inteligência ? `Exploração ${mecanismo}` : 'Sem exploração ativa'}
               {turmaLabel ? ` · ${turmaLabel}` : ''}
             </p>
           </div>
@@ -704,7 +704,7 @@ const InfantilRajadaPage = () => {
             <Skeleton className="h-10 w-full rounded-xl" />
             <Skeleton className="h-24 w-full rounded-2xl" />
           </div>
-        ) : !fase ? (
+        ) : !exploração ? (
           <div className="pt-10 text-center space-y-3">
             <div
               className="w-14 h-14 rounded-full flex items-center justify-center mx-auto"
@@ -755,7 +755,7 @@ const InfantilRajadaPage = () => {
                 <span className="font-semibold">Aula em andamento</span>
                 <span className="font-semibold" style={{ color: fio?.corDia ?? t.textMuted, ...fioTransition }}>
                   {' '}
-                  · Fase {mecanismo}
+                  · Exploração {mecanismo}
                 </span>
               </p>
             </div>

@@ -68,7 +68,7 @@ const InfantilAlunosPage = () => {
           Diário
         </h1>
         <p className="text-sm mt-0.5" style={{ color: t.textFaint }}>
-          {faseAtual?.inteligencia?.nome ? `Fase ${faseAtual.inteligencia.nome} · ` : ''}
+          {faseAtual?.inteligencia?.nome ? `Exploração ${faseAtual.inteligencia.nome} · ` : ''}
           {alunos?.length || 0} crianças
         </p>
       </div>
