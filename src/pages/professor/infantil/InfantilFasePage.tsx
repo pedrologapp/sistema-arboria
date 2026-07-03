@@ -85,10 +85,15 @@ const InfantilFasePage = () => {
           >
             {kicker}
           </p>
-          <div className="vf-draw mx-auto mt-3" style={{ width: 48, height: 2, backgroundColor: m.corAcento, animationDelay: '250ms' }} />
-          <h1 className="font-serif text-[27px] leading-tight text-center mt-4 mb-5" style={{ color: '#FFFFFF' }}>
+          <h1 className="font-serif text-[27px] leading-tight text-center mt-4" style={{ color: '#FFFFFF' }}>
             {m.nome}
           </h1>
+          {/* Assinatura de COR do mecanismo — grossa e abaixo do nome (pedido do
+              Fundador: a professora precisa VER a cor daquele mecanismo) */}
+          <div
+            className="vf-draw mx-auto mt-3 mb-6 rounded-full"
+            style={{ width: 76, height: 6, backgroundColor: m.corAcento, animationDelay: '250ms' }}
+          />
         </div>
 
         {/* A Cena */}
