@@ -119,19 +119,38 @@ const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => 
         style={{ boxShadow: '0 1px 3px rgba(28,34,48,0.06)' }}
       >
         <div className="max-w-lg mx-auto h-14 px-4 flex items-center justify-between">
-          <div className="min-w-0">
-            <p
-              className="text-[11px] uppercase tracking-wide"
-              style={{ color: santuario ? 'rgba(255,255,255,0.6)' : t.textFaint }}
+          <div className="min-w-0 flex items-center gap-2.5">
+            {/* Marca "A que Brota" na altura das duas linhas (pedido do Fundador 03/07) */}
+            <svg
+              viewBox="0 0 100 100"
+              className="w-8 h-8 flex-shrink-0"
+              style={{ color: santuario ? '#FFFFFF' : t.accent }}
+              aria-hidden="true"
             >
-              Arboria
-            </p>
-            <p
-              className="text-sm font-semibold truncate"
-              style={{ color: santuario ? '#FFFFFF' : t.text }}
-            >
-              {institutionName || 'Educação Infantil'}
-            </p>
+              <path
+                d="M30 79 L50 27 L70 79"
+                stroke="currentColor"
+                strokeWidth="8.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+              <path d="M50 27 C50 16 58 9 68 8 C69 19 61 26 50 27 Z" fill="currentColor" />
+            </svg>
+            <div className="min-w-0">
+              <p
+                className="text-[11px] uppercase tracking-wide"
+                style={{ color: santuario ? 'rgba(255,255,255,0.6)' : t.textFaint }}
+              >
+                Arboria
+              </p>
+              <p
+                className="text-sm font-semibold truncate"
+                style={{ color: santuario ? '#FFFFFF' : t.text }}
+              >
+                {institutionName || 'Educação Infantil'}
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
