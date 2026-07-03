@@ -162,6 +162,28 @@ const PendenteModal = ({
   );
 };
 
+// A pergunta do editor RODA (por dia e por criança): a pergunta certa é o que
+// fabrica registro de processo; UMA pergunta fixa vira gabarito (simulação 1000)
+const PERGUNTAS_EDITOR = [
+  (n: string) => `Como ${n} entrou na atividade hoje?`,
+  (n: string) => `O que ${n} fez primeiro?`,
+  (n: string) => `O que ${n} fez quando algo deu errado ou travou?`,
+  (n: string) => `O que ${n} fez sem ninguém pedir?`,
+  (n: string) => `Por onde ${n} começou, e o que veio depois?`,
+];
+
+// Inícios de frase: dão a primeira metade pra quem está sem repertório.
+// NUNCA a frase inteira (senão vira resposta-modelo copiável).
+const INICIOS_FRASE = [
+  'Começou por',
+  'Só entrou quando',
+  'Diante do obstáculo,',
+  'Sem ninguém pedir,',
+  'Enquanto os outros',
+];
+
+const diaDeHoje = () => Math.floor(Date.now() / 86400000);
+
 type Pendencia =
   | { tipo: 'trocar'; alvoId: string }
   | { tipo: 'turma'; alvoTurmaId: string }
@@ -244,6 +266,17 @@ const InfantilRajadaPage = () => {
   // índigo = CADERNO (Guardar, busca, modais); verde = REGISTRO FEITO (selo).
   const fio = ordem >= 1 && ordem <= 8 ? SANTUARIO_INFANTIL[ordem] : null;
   const fioTransition = { transition: 'background-color 600ms ease, border-color 600ms ease, color 600ms ease' };
+
+  // 2 cenas concretas do santuário pro convite da aula, rotacionando por dia
+  // (a resposta à pergunta "observar o quê?" já estava escrita; agora aparece aqui)
+  const observarHoje = useMemo(() => {
+    const lista = fio?.observar ?? [];
+    if (lista.length === 0) return [];
+    const dia = diaDeHoje();
+    const a = dia % lista.length;
+    const b = (dia + 1) % lista.length;
+    return a === b ? [lista[a]] : [lista[a], lista[b]];
+  }, [fio]);
 
   // Respiro de abertura ("a luz acende", ~950ms): SÓ quando veio do botão
   // Iniciar aula, 1× por turma/dia, qualquer toque pula. Nunca em re-entrada.
@@ -480,11 +513,30 @@ const InfantilRajadaPage = () => {
           </button>
         </div>
       )}
+      {/* Chips de início de frase, só com o campo vazio (a primeira metade
+          da frase pra quem trava; some assim que ela escreve) */}
+      {!texto && (
+        <div className="flex gap-1.5 overflow-x-auto pb-1.5 -mx-1 px-1">
+          {INICIOS_FRASE.map((c) => (
+            <button
+              key={c}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setTexto(`${c} `)}
+              className="flex-shrink-0 px-2.5 py-1 rounded-full text-xs"
+              style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, color: t.textMuted }}
+            >
+              {c}…
+            </button>
+          ))}
+        </div>
+      )}
       <textarea
         autoFocus
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
-        placeholder={`Como ${aluno.nome.split(' ')[0]} entrou na atividade hoje?`}
+        placeholder={PERGUNTAS_EDITOR[(diaDeHoje() + aluno.nome.length) % PERGUNTAS_EDITOR.length](
+          aluno.nome.split(' ')[0]
+        )}
         rows={3}
         className="w-full rounded-xl p-3 text-sm resize-none focus:outline-none focus-visible:ring-2"
         style={{
@@ -757,13 +809,16 @@ const InfantilRajadaPage = () => {
                     </button>
                   </div>
                   <p className="text-sm leading-relaxed" style={{ color: t.textFaint }}>
-                    Nome, materiais, objetivo, como conduzir e o que observar: as
-                    especificações da atividade desta aula aparecem aqui quando o banco de
-                    atividades chegar.
+                    Use qualquer atividade sua: o Arboria registra o seu olhar sobre as
+                    crianças, não a atividade. Quando o banco de atividades chegar, as
+                    especificações da aula aparecem aqui.
                   </p>
                 </section>
 
-                {/* Convite. FIO 4: a única pele colorida da aula (fala EM NOME do mecanismo) */}
+                {/* Convite. FIO 4: a única pele colorida da aula. CONCRETO: em vez de
+                    perguntar "conseguiu observar o mecanismo X?" (jargão que a simulação
+                    provou que vira teste/ranking), mostra 2 cenas reais do santuário,
+                    rotacionando por dia. A inteligência do app, no momento da pergunta. */}
                 <div
                   className="rounded-2xl p-3.5"
                   style={{
@@ -772,12 +827,24 @@ const InfantilRajadaPage = () => {
                     ...fioTransition,
                   }}
                 >
-                  <p className="text-sm font-semibold" style={{ color: fio?.corDia ?? t.accentText, ...fioTransition }}>
-                    Conseguiu observar o mecanismo {mecanismo} em alguma criança?
+                  <p
+                    className="text-[10.5px] uppercase tracking-wide font-bold"
+                    style={{ color: fio?.corDia ?? t.accentText, ...fioTransition }}
+                  >
+                    Pra reparar hoje · {mecanismo}
                   </p>
-                  <p className="text-xs mt-0.5" style={{ color: fio?.corDia ?? t.accentText, opacity: 0.85 }}>
-                    Se você percebeu outros mecanismos também, pode comentar. Toque no nome para
-                    escrever, ou dite pelo microfone do teclado.
+                  {observarHoje.map((cena) => (
+                    <p
+                      key={cena}
+                      className="text-sm font-medium mt-1.5 leading-snug texto-justificado"
+                      style={{ color: fio?.corDia ?? t.accentText, ...fioTransition }}
+                    >
+                      {cena}
+                    </p>
+                  ))}
+                  <p className="text-xs mt-2" style={{ color: fio?.corDia ?? t.accentText, opacity: 0.85 }}>
+                    Viu algo assim, ou diferente? Toque no nome da criança e conte a cena.
+                    Pode ditar pelo microfone do teclado.
                   </p>
                 </div>
               </>

@@ -39,6 +39,21 @@ const isTouch =
 // Motivos da exclusão (auditoria: parecer Riscos 01/07). Presets, não texto livre.
 const MOTIVOS_EXCLUSAO = ['Criança errada', 'Erro de digitação', 'Foto errada', 'Outro'] as const;
 
+// Pergunta do composer RODA por dia (pergunta fixa vira gabarito; simulação 1000)
+const PERGUNTAS_COMPOSER = [
+  (n: string) => `O que ${n} te mostrou hoje?`,
+  (n: string) => `Como ${n} chegou no que fez hoje?`,
+  (n: string) => `O que ${n} fez primeiro hoje?`,
+  (n: string) => `O que ${n} fez sem ninguém pedir?`,
+];
+const INICIOS_FRASE = [
+  'Começou por',
+  'Só entrou quando',
+  'Diante do obstáculo,',
+  'Sem ninguém pedir,',
+] as const;
+const diaDeHoje = () => Math.floor(Date.now() / 86400000);
+
 /**
  * Modal da "borracha": remover um registro do diário (soft-delete auditado).
  * Corrigir = remover + reescrever. O registro some da UI mas permanece
@@ -550,6 +565,30 @@ const InfantilAlunoThreadPage = () => {
           </div>
         )}
 
+        {/* Audiência declarada: mata o recado pra família E o desabafo clínico
+            (a simulação pegou metade supondo que a família lê, metade supondo
+            sigilo absoluto; as duas suposições erram) */}
+        <p className="max-w-lg mx-auto px-3 pt-1.5 text-[10.5px] text-center" style={{ color: t.textFaint }}>
+          Só educadores veem este diário. A família não vê.
+        </p>
+
+        {/* Chips de início de frase, só com o campo vazio */}
+        {podeRegistrar && !texto && (
+          <div className="max-w-lg mx-auto px-3 pt-1.5 flex gap-1.5 overflow-x-auto">
+            {INICIOS_FRASE.map((c) => (
+              <button
+                key={c}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setTexto(`${c} `)}
+                className="flex-shrink-0 px-2.5 py-1 rounded-full text-xs"
+                style={{ backgroundColor: t.surfaceSunken, border: `1px solid ${t.border}`, color: t.textMuted }}
+              >
+                {c}…
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="max-w-lg mx-auto px-3 py-2.5 flex items-end gap-2">
           <button
             onClick={abrirSeletorFoto}
@@ -573,7 +612,11 @@ const InfantilAlunoThreadPage = () => {
               e.currentTarget.style.height = 'auto';
               e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 128)}px`;
             }}
-            placeholder={podeRegistrar ? `O que ${primeiroNome} te mostrou hoje?` : 'Sem turma ativa para registrar'}
+            placeholder={
+              podeRegistrar
+                ? PERGUNTAS_COMPOSER[diaDeHoje() % PERGUNTAS_COMPOSER.length](primeiroNome)
+                : 'Sem turma ativa para registrar'
+            }
             disabled={!podeRegistrar}
             rows={1}
             onKeyDown={(e) => {

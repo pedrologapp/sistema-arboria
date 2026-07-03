@@ -193,8 +193,9 @@ const CockpitHoje = ({
           </h2>
         </div>
         <p className="text-sm leading-relaxed" style={{ color: t.textFaint }}>
-          Nome, materiais, objetivo, como conduzir e o que observar: as especificações da
-          atividade desta aula aparecem aqui quando o banco de atividades chegar.
+          Use qualquer atividade sua: o Arboria registra o seu olhar sobre as crianças, não
+          a atividade. Quando o banco de atividades chegar, as especificações da aula
+          aparecem aqui.
         </p>
       </section>
 
