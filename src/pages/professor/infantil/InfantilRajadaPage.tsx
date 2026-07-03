@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useRajadaTurma, type AlunoRajada } from '@/hooks/useRajadaTurma';
 import { useFaseTurma } from '@/hooks/useFaseTurma';
+import { SANTUARIO_INFANTIL } from '@/lib/infantilSantuario';
 import {
   getIniciais,
   formatTurmaLabel,
@@ -25,10 +26,16 @@ import { infantilTheme as t } from '@/styles/infantilTheme';
  *  Backdrop/Esc = só fecha o modal (fica na aula); o botão é quem SAI. */
 const ConcluirModal = ({
   registrados,
+  mecanismo,
+  corFio,
+  corDia,
   onFechar,
   onSair,
 }: {
   registrados: number;
+  mecanismo?: string | null;
+  corFio?: string;
+  corDia?: string;
   onFechar: () => void;
   onSair: () => void;
 }) => {
@@ -54,12 +61,16 @@ const ConcluirModal = ({
         style={{ backgroundColor: t.surface, boxShadow: t.shadowLg }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ height: 3, backgroundColor: t.accent }} />
+        {/* A aula fecha na cor em que abriu — moldura do momento */}
+        <div style={{ height: 3, backgroundColor: corFio ?? t.accent }} />
         <div className="p-5 space-y-4">
           <p className="text-[11px] uppercase tracking-wide font-semibold" style={{ color: t.accentText }}>
             A aula de hoje
+            {mecanismo && (
+              <span style={{ color: corDia ?? t.accentText }}> · Fase {mecanismo}</span>
+            )}
           </p>
-          <h2 className="text-lg font-bold leading-snug" style={{ color: t.text }}>
+          <h2 className="font-serif text-[19px] leading-snug" style={{ color: t.text }}>
             {registrados > 0
               ? `Você enxergou ${registrados} ${registrados === 1 ? 'criança' : 'crianças'} hoje.`
               : 'Aula conduzida. Hoje você observou sem escrever — também faz parte.'}
@@ -227,6 +238,40 @@ const InfantilRajadaPage = () => {
   const ordem = faseTurma?.ordem ?? 0;
   const { data: alunos, isLoading } = useRajadaTurma(turmaId, fase?.id ?? null, user?.id ?? null);
   const rajadaKey = ['rajada-turma', turmaId, fase?.id ?? null, user?.id ?? null];
+
+  // O FIO DE COR: a cor oficial do mecanismo da fase costura o chrome da aula
+  // (4 pontos fixos) — e nunca pousa numa criança. Regra: cor da fase = AULA;
+  // índigo = CADERNO (Guardar, busca, modais); verde = REGISTRO FEITO (selo).
+  const fio = ordem >= 1 && ordem <= 8 ? SANTUARIO_INFANTIL[ordem] : null;
+  const fioTransition = { transition: 'background-color 600ms ease, border-color 600ms ease, color 600ms ease' };
+
+  // Respiro de abertura ("a luz acende", ~950ms): SÓ quando veio do botão
+  // Iniciar aula, 1× por turma/dia, qualquer toque pula. Nunca em re-entrada.
+  const [respiro, setRespiro] = useState(false);
+  const [respiroSaindo, setRespiroSaindo] = useState(false);
+  const veioDoBotao = !!(location.state as { turmaId?: string } | null)?.turmaId;
+  useEffect(() => {
+    if (!veioDoBotao || !fase || !turmaId) return;
+    const chave = `aula-respiro-${turmaId}-${new Date().toISOString().slice(0, 10)}`;
+    try {
+      if (sessionStorage.getItem(chave)) return;
+      sessionStorage.setItem(chave, 'ok');
+    } catch {
+      /* segue sem guarda */
+    }
+    setRespiro(true);
+    const t1 = setTimeout(() => setRespiroSaindo(true), 650);
+    const t2 = setTimeout(() => setRespiro(false), 950);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [veioDoBotao, fase?.id, turmaId]);
+  const pularRespiro = () => {
+    setRespiroSaindo(true);
+    setTimeout(() => setRespiro(false), 150);
+  };
 
   const mecanismo = fase?.inteligencia?.nome ?? null;
   const turmaLabel = useMemo(() => {
@@ -493,11 +538,52 @@ const InfantilRajadaPage = () => {
 
   return (
     <div>
-      {/* Sub-header (sob o header da instituição) */}
+      {/* Respiro de abertura — "a luz acende" (aprovado no mockup Fio de Cor) */}
+      {respiro && fio && (
+        <button
+          onClick={pularRespiro}
+          className="fixed inset-0 z-[70] flex flex-col items-center justify-center text-center px-8 cursor-default"
+          style={{
+            background: `radial-gradient(110% 70% at 50% -5%, ${fio.corLavagem} 0%, #FFFFFF 60%)`,
+            opacity: respiroSaindo ? 0 : 1,
+            transition: 'opacity 300ms ease',
+          }}
+          aria-label="Começar a aula"
+        >
+          <p
+            className="text-[11px] uppercase font-semibold vf-rise"
+            style={{ color: fio.corDia, letterSpacing: '0.3em' }}
+          >
+            Aula{turmaLabel ? ` · ${turmaLabel}` : ''}
+          </p>
+          <h2 className="font-serif text-[27px] mt-3 vf-rise" style={{ color: t.text, animationDelay: '80ms' }}>
+            Fase {mecanismo}
+          </h2>
+          <div
+            className="vf-draw rounded-full mt-3.5"
+            style={{ width: 76, height: 6, backgroundColor: fio.cor, animationDelay: '200ms' }}
+          />
+          <p
+            className="text-sm italic mt-3.5 max-w-[220px] vf-rise"
+            style={{ color: t.textMuted, animationDelay: '280ms' }}
+          >
+            Repare por onde cada criança entra.
+          </p>
+        </button>
+      )}
+
+      {/* Sub-header (sob o header da instituição) — FIO 1: a linha da fase */}
       <div
         className="fixed top-14 left-0 right-0 z-30 glass-light"
         style={{ borderBottom: `1px solid ${t.border}` }}
       >
+        {fio && (
+          <div
+            className="absolute top-0 left-0 right-0"
+            style={{ height: 3, backgroundColor: fio.cor, ...fioTransition }}
+            aria-hidden="true"
+          />
+        )}
         <div className="max-w-lg mx-auto h-14 px-2 flex items-center gap-2">
           <button
             onClick={onVoltar}
@@ -594,21 +680,32 @@ const InfantilRajadaPage = () => {
           </div>
         ) : (
           <>
-            {/* Faixa de status — fina, com pulso (não imita o botão do cockpit) */}
+            {/* Faixa de status — FIO 2: o pulso da aula bate na cor da fase */}
             <div
               className="w-full rounded-xl px-3.5 py-2.5 flex items-center gap-2.5"
-              style={{ backgroundColor: t.surface, border: `1px solid ${t.accentBorder}`, boxShadow: t.shadowSm }}
+              style={{
+                backgroundColor: t.surface,
+                border: `1px solid ${fio?.corBorda ?? t.accentBorder}`,
+                boxShadow: t.shadowSm,
+                ...fioTransition,
+              }}
             >
               <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
                 <span
                   className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60"
-                  style={{ backgroundColor: t.accent }}
+                  style={{ backgroundColor: fio?.cor ?? t.accent, ...fioTransition }}
                 />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ backgroundColor: t.accent }} />
+                <span
+                  className="relative inline-flex rounded-full h-2.5 w-2.5"
+                  style={{ backgroundColor: fio?.cor ?? t.accent, ...fioTransition }}
+                />
               </span>
               <p className="text-sm min-w-0 truncate" style={{ color: t.text }}>
                 <span className="font-semibold">Aula em andamento</span>
-                <span style={{ color: t.textMuted }}> · Fase {mecanismo}</span>
+                <span className="font-semibold" style={{ color: fio?.corDia ?? t.textMuted, ...fioTransition }}>
+                  {' '}
+                  · Fase {mecanismo}
+                </span>
               </p>
             </div>
 
@@ -617,10 +714,15 @@ const InfantilRajadaPage = () => {
               <button
                 onClick={() => setContextoRecolhidoManual(false)}
                 className="w-full rounded-xl px-3.5 py-2.5 flex items-center justify-between"
-                style={{ backgroundColor: t.surfaceAlt, border: `1px solid ${t.border}` }}
+                style={{
+                  backgroundColor: t.surfaceAlt,
+                  border: `1px solid ${t.border}`,
+                  borderLeft: `3px solid ${fio?.cor ?? t.accent}`,
+                  ...fioTransition,
+                }}
               >
                 <span className="flex items-center gap-2 text-sm" style={{ color: t.textMuted }}>
-                  <ClipboardList size={16} style={{ color: t.accent }} strokeWidth={1.75} />
+                  <ClipboardList size={16} style={{ color: fio?.corDia ?? t.accent }} strokeWidth={1.75} />
                   Detalhe da atividade
                 </span>
                 <ChevronDown size={16} style={{ color: t.textFaint }} />
@@ -632,11 +734,17 @@ const InfantilRajadaPage = () => {
                     Alimentado pelo banco de atividades — por ora, moldura fantasma. */}
                 <section
                   className="rounded-2xl p-4"
-                  style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
+                  style={{
+                    backgroundColor: t.surface,
+                    border: `1px solid ${t.border}`,
+                    borderLeft: `3px solid ${fio?.cor ?? t.accent}`,
+                    boxShadow: t.shadowSm,
+                    ...fioTransition,
+                  }}
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <ClipboardList size={18} style={{ color: t.accent }} strokeWidth={1.75} />
+                      <ClipboardList size={18} style={{ color: fio?.corDia ?? t.accent }} strokeWidth={1.75} />
                       <h2 className="text-sm font-semibold" style={{ color: t.text }}>
                         Detalhe da atividade
                       </h2>
@@ -656,15 +764,19 @@ const InfantilRajadaPage = () => {
                   </p>
                 </section>
 
-                {/* Convite — centrado no MECANISMO (não em "quem se destacou"), sem forçar */}
+                {/* Convite — FIO 4: a única pele colorida da aula (fala EM NOME do mecanismo) */}
                 <div
                   className="rounded-2xl p-3.5"
-                  style={{ backgroundColor: t.accentSoft, border: `1px solid ${t.accentBorder}` }}
+                  style={{
+                    backgroundColor: fio?.corLavagem ?? t.accentSoft,
+                    border: `1px solid ${fio?.corBorda ?? t.accentBorder}`,
+                    ...fioTransition,
+                  }}
                 >
-                  <p className="text-sm font-semibold" style={{ color: t.accentText }}>
+                  <p className="text-sm font-semibold" style={{ color: fio?.corDia ?? t.accentText, ...fioTransition }}>
                     Conseguiu observar o mecanismo {mecanismo} em alguma criança?
                   </p>
-                  <p className="text-xs mt-0.5" style={{ color: t.accentText }}>
+                  <p className="text-xs mt-0.5" style={{ color: fio?.corDia ?? t.accentText, opacity: 0.85 }}>
                     Se você percebeu outros mecanismos também, pode comentar. Toque no nome para
                     escrever — ou dite pelo microfone do teclado.
                   </p>
@@ -858,6 +970,9 @@ const InfantilRajadaPage = () => {
       {concluirOpen && (
         <ConcluirModal
           registrados={registradosCount}
+          mecanismo={mecanismo}
+          corFio={fio?.cor}
+          corDia={fio?.corDia}
           onFechar={() => setConcluirOpen(false)}
           onSair={() => {
             setConcluirOpen(false);

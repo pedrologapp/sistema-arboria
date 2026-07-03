@@ -15,6 +15,9 @@ export interface SantuarioMecanismo {
   cor: string;
   corAcento: string;
   corVeu: string;
+  corDia: string;      // a cor do mecanismo legível (AA) sobre a pele CLARA da aula
+  corLavagem: string;  // fundo lavado — pele do convite da aula (1 card por tela, nunca mais)
+  corBorda: string;    // borda tingida que acompanha a lavagem
   cena: string;
   mecanismo: string;
   naoDefine: string[];
@@ -31,6 +34,9 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
     cor: '#1E3A8A',
     corAcento: '#8393BF',
     corVeu: '#293695',
+    corDia: '#1E3A8A',
+    corLavagem: '#EDF0F9',
+    corBorda: '#C9D2E9',
     cena: 'Charles Dickens, antes de publicar qualquer livro, enchia cadernos com descrições das pessoas que via na rua. Não era exercício — era necessidade. Na sua sala, é a criança que narra a própria brincadeira em voz alta enquanto brinca: o boneco não anda — "e aí ele foi, e aí ele caiu, e aí a mamãe dele veio". Ninguém pediu história. Ela não consegue brincar de outro jeito.',
     mecanismo: 'É o mecanismo pelo qual a mente processa o mundo através da linguagem — o som, o ritmo, a estrutura e o significado das palavras. Não é falar muito. Não é falar cedo. É COMO a criança pensa: em palavras, em nomes, em histórias. Para ela, a palavra não carrega o pensamento — a palavra é o pensamento.',
     naoDefine: [
@@ -63,6 +69,9 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
     cor: '#047857',
     corAcento: '#75B5A3',
     corVeu: '#1B5879',
+    corDia: '#065F46',
+    corLavagem: '#E9F4F0',
+    corBorda: '#BFDDD2',
     cena: 'Uma criança de 3 anos derruba a colher do cadeirão. Você devolve. Ela derruba de novo — olhando para você, não para a colher. De novo. De novo. Não é birra: é um teste. Ela está verificando se o mundo responde sempre do mesmo jeito. Está fazendo ciência sem saber nomear o que faz.',
     mecanismo: 'É o mecanismo pelo qual a mente processa padrões, sequências e relações de causa e efeito. Não é sobre números. Não é sobre contar. É sobre COMO a criança encadeia o pensamento: "se isso, então aquilo". O mundo chega como um conjunto de regras esperando ser descobertas.',
     naoDefine: [
@@ -95,6 +104,9 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
     cor: '#7C3AED',
     corAcento: '#B793F5',
     corVeu: '#5D36CC',
+    corDia: '#6D28D9',
+    corLavagem: '#F3EEFC',
+    corBorda: '#DACBF5',
     cena: 'Os navegadores das Ilhas Caroline cruzam centenas de quilômetros de oceano sem instrumentos. Eles não veem as ilhas enquanto navegam: eles as imaginam — um mapa vivo, dentro da cabeça, atualizado a cada onda. Na sua sala, é a criança de 4 anos que atravessa a escola e sabe o caminho de volta sem hesitar. Ou que, antes de encaixar a peça, gira a peça na cabeça — e a mão já chega certa.',
     mecanismo: 'É o mecanismo pelo qual a mente processa o mundo em formas, posições e relações no espaço. Não é desenhar bem. É COMO a criança representa o mundo por dentro: em imagens que ela consegue girar, montar e desmontar mentalmente. Quando resolve um problema, ela vê a solução antes de conseguir dizê-la. E esse mecanismo não depende dos olhos — pode se construir inteiro pelo tato e pelo movimento.',
     naoDefine: [
@@ -126,6 +138,9 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
     cor: '#7F1D1D',
     corAcento: '#B98383',
     corVeu: '#5F2659',
+    corDia: '#7F1D1D',
+    corLavagem: '#F7EDED',
+    corBorda: '#E3C9C9',
     cena: 'Yehudi Menuhin foi levado escondido a um concerto aos três anos. O som do violino o afetou de um jeito que os pais não esperavam e não haviam provocado. Ele insistiu — não pediu, insistiu — em ter o próprio violino. A inteligência musical dele não esperou escola nem instrumento: estava operando antes. Só precisou do contexto certo para se revelar.',
     mecanismo: 'É o mecanismo pelo qual a mente processa o mundo através de padrões de som — ritmo, melodia, altura, repetição. Não é cantar afinado. Não é gostar de música. É COMO a criança organiza o que percebe: pelo padrão sonoro, antes de qualquer intenção. Bebês de poucos meses já distinguem ritmos antes de qualquer palavra.',
     naoDefine: [
@@ -157,6 +172,9 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
     cor: '#B8860B',
     corAcento: '#D8BD79',
     corVeu: '#7E5F4F',
+    corDia: '#7A5A06',
+    corLavagem: '#F8F2E4',
+    corBorda: '#E6D6AC',
     cena: 'Uma artesã experiente molda argila sem olhar para as mãos. As mãos sabem a pressão certa, a velocidade certa, o momento em que a argila cede. Se você perguntar como ela faz, ela dirá: "você sente". Não é resposta evasiva — é a descrição exata de onde mora o conhecimento. Na sua sala, é a criança que só entende a atividade quando as mãos dela começam a fazer.',
     mecanismo: 'É o mecanismo pelo qual a mente processa o mundo e resolve problemas através do corpo — movimento, toque, gesto. Não é ser agitada. É COMO a criança pensa: o corpo não executa o que a cabeça decidiu — o corpo pensa junto. A compreensão acontece no fazer, não antes dele.',
     naoDefine: [
@@ -188,6 +206,9 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
     cor: '#78350F',
     corAcento: '#B5907B',
     corVeu: '#5B3352',
+    corDia: '#78350F',
+    corLavagem: '#F5EFEA',
+    corBorda: '#E0CCBC',
     cena: 'Charles Darwin, quando menino, colecionava besouros. Não como passatempo — como necessidade: precisava encontrá-los, nomeá-los, separá-los. Décadas depois, essa mesma compulsão por distinções produziu a teoria da evolução. Na sua sala, é a criança de 4 anos que, diante de uma caixa de tampinhas, não brinca com uma por uma: separa. Por cor. Depois desmancha e refaz por tamanho. A atividade era livre. A classificação, não — foi inevitável.',
     mecanismo: 'É o mecanismo pelo qual a mente reconhece padrões e cria categorias — percebe o que é igual, o que é diferente e onde passa a fronteira entre um grupo e outro. Não é gostar de natureza. É COMO a criança processa a variedade do mundo: classificando. E opera sobre tampinhas, carrinhos, qualquer conjunto que admita ordem.',
     naoDefine: [
@@ -219,6 +240,9 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
     cor: '#0891B2',
     corAcento: '#77C3D5',
     corVeu: '#1D65AB',
+    corDia: '#0E7490',
+    corLavagem: '#E7F4F8',
+    corBorda: '#BCE0EA',
     cena: 'Anne Sullivan chegou para ensinar Helen Keller — cega, surda, fechada — quase sem treinamento formal. Em poucas semanas entendeu o que nenhum adulto ao redor tinha visto: Helen não precisava de disciplina. Precisava de conexão. Antes de ensinar uma letra, Sullivan leu o estado interno de uma criança sem linguagem, sem expressão visível. Essa leitura precisa de outra pessoa — esse é o mecanismo.',
     mecanismo: 'É o mecanismo pelo qual a mente processa o mundo interno das outras pessoas — humores, intenções, o clima entre elas. Não é ser simpática. Não é ter muitos amigos. É COMO a criança lê os outros: percebendo diferenças finas de estado que a maioria não registra, e ajustando o próprio comportamento a partir dessa leitura.',
     naoDefine: [
@@ -251,6 +275,9 @@ export const SANTUARIO_INFANTIL: Record<number, SantuarioMecanismo> = {
     cor: '#EA580C',
     corAcento: '#F4A379',
     corVeu: '#994650',
+    corDia: '#C2410C',
+    corLavagem: '#FDF0E8',
+    corBorda: '#F5CDB4',
     cena: 'Virginia Woolf, num ensaio, descreve momentos da infância com uma clareza que vai além da memória: ela não só lembra o que aconteceu — sabe dizer o que sentiu, por que sentiu, e como a sensação virou compreensão. Na sua sala, essa capacidade aparece pequena e inteira: a criança de 4 anos que, depois da birra, consegue dizer "eu fiquei bravo porque eu queria e não deu". Ela não sentiu mais que as outras. Sentiu com mais precisão.',
     mecanismo: 'É o mecanismo pelo qual a mente processa o próprio mundo interno — o que sente, por que sente, do que precisa. Não é timidez. É a capacidade de acessar o próprio estado, distinguir sentimentos que para os outros parecem iguais, e usar isso para agir. É a mais reservada das oito: quase nunca aparece sozinha — precisa de outra (a fala, o desenho, o corpo) para se mostrar.',
     naoDefine: [
