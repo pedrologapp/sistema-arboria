@@ -100,7 +100,7 @@ const AlunosPageWrapper = lazy(() => import("./pages/professor/AlunosPageWrapper
 const FasePageWrapper = lazy(() => import("./pages/professor/FasePageWrapper"));
 const PerfilAlunoPageWrapper = lazy(() => import("./pages/professor/PerfilAlunoPageWrapper"));
 const InfantilRajadaPage = lazy(() => import("./pages/professor/infantil/InfantilRajadaPage"));
-const ProfessorConfiguracoesPage = lazy(() => import("./pages/professor/ProfessorConfiguracoesPage"));
+const ProfessorConfiguracoesWrapper = lazy(() => import("./pages/professor/ProfessorConfiguracoesWrapper"));
 const MissoesSeriePage = lazy(() => import("./pages/professor/MissoesSeriePage"));
 const MissoesSemanaPage = lazy(() => import("./pages/professor/MissoesSemanaPage"));
 const MissoesListaPage = lazy(() => import("./pages/professor/MissoesListaPage"));
@@ -338,7 +338,7 @@ const App = () => (
             <Route path="/professor/alunos" element={<AlunosPageWrapper />} />
             <Route path="/professor/aula" element={<InfantilRajadaPage />} />
             <Route path="/professor/alunos/:id" element={<PerfilAlunoPageWrapper />} />
-            <Route path="/professor/configuracoes" element={<ProfessorConfiguracoesPage />} />
+            <Route path="/professor/configuracoes" element={<ProfessorConfiguracoesWrapper />} />
             <Route path="/professor/chat" element={<ProfessorChatPage />} />
             <Route path="/professor/chat/canal/:canalId" element={<ProfessorCanalViewPage />} />
             <Route path="/professor/chat/dm/:conversaId" element={<ProfessorDmPage />} />

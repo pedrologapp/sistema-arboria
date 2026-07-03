@@ -6,6 +6,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAppBadge } from '@/hooks/useAppBadge';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 import InfantilBottomNav from '@/components/professor/infantil/InfantilBottomNav';
+import TutorialInfantil, { abrirTutorialInfantil } from '@/components/professor/infantil/TutorialInfantil';
+import { HelpCircle } from 'lucide-react';
 
 // Ordem das abas (Arboria=0 · Fase=1 · Diário=2) — dita a DIREÇÃO do deslize
 const tabIndex = (path: string) => {
@@ -132,6 +134,16 @@ const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => 
             </p>
           </div>
 
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {/* Ajuda — abre o tutorial "Como usar o Arboria" (pedido do Fundador 03/07) */}
+            <button
+              onClick={abrirTutorialInfantil}
+              className="p-2 rounded-full transition-transform active:scale-95"
+              style={{ color: santuario ? 'rgba(255,255,255,0.75)' : t.textMuted }}
+              aria-label="Ajuda — como usar o Arboria"
+            >
+              <HelpCircle size={21} strokeWidth={1.75} />
+            </button>
           <button
             onClick={() => navigate('/professor/configuracoes')}
             className="flex-shrink-0 rounded-full transition-transform active:scale-95"
@@ -147,6 +159,7 @@ const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => 
               </AvatarFallback>
             </Avatar>
           </button>
+          </div>
         </div>
       </header>
 
@@ -156,6 +169,10 @@ const ProfessorLayoutInfantil = ({ children }: ProfessorLayoutInfantilProps) => 
       </main>
 
       <InfantilBottomNav dark={santuario} />
+
+      {/* Tutorial "caderninho de bolso" — abre sozinho na 1ª entrada; reabrível
+          pelo ícone Ajuda (acima) e por Configurações → Como usar o Arboria */}
+      <TutorialInfantil />
     </div>
   );
 };
