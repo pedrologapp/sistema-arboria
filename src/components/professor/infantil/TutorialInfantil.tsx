@@ -337,7 +337,7 @@ const TutorialInfantil = () => {
           </h2>
 
           {p.corpo && (
-            <p className="text-sm leading-relaxed" style={{ color: t.textMuted }}>
+            <p className="text-sm leading-relaxed texto-justificado" style={{ color: t.textMuted }}>
               {p.corpo}
             </p>
           )}

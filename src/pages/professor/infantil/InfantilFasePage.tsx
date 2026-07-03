@@ -192,7 +192,7 @@ const InfantilFasePage = () => {
             animationDelay: '160ms',
           }}
         >
-          <p className="font-serif italic text-[13.5px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.9)' }}>
+          <p className="font-serif italic text-[13.5px] leading-relaxed texto-justificado" style={{ color: 'rgba(255,255,255,0.9)' }}>
             {m.cena}
           </p>
         </div>
@@ -201,7 +201,7 @@ const InfantilFasePage = () => {
           <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
             O mecanismo
           </h2>
-          <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.92)' }}>
+          <p className="text-sm leading-relaxed texto-justificado" style={{ color: 'rgba(255,255,255,0.92)' }}>
             {m.mecanismo}
           </p>
         </section>
@@ -285,7 +285,7 @@ const InfantilFasePage = () => {
           <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
             Como a criança vê o mundo
           </h2>
-          <p className="font-serif italic text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.88)' }}>
+          <p className="font-serif italic text-sm leading-relaxed texto-justificado" style={{ color: 'rgba(255,255,255,0.88)' }}>
             {m.veMundo}
           </p>
         </section>
@@ -302,7 +302,7 @@ const InfantilFasePage = () => {
           <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: '#FFFFFF' }}>
             O que essa lente muda na sua aula
           </h2>
-          <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.95)' }}>
+          <p className="text-sm leading-relaxed texto-justificado" style={{ color: 'rgba(255,255,255,0.95)' }}>
             {m.lente}
           </p>
           {/* Anti-"estilos de aprendizagem" (simulação r2: ~24/100 saíam com o
@@ -347,7 +347,7 @@ const InfantilFasePage = () => {
             <p className="text-[13px] font-semibold mb-1" style={{ color: '#FFFFFF' }}>
               Cuidado
             </p>
-            <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.85)' }}>
+            <p className="text-[13px] leading-relaxed texto-justificado" style={{ color: 'rgba(255,255,255,0.85)' }}>
               {m.cuidado}
             </p>
           </div>

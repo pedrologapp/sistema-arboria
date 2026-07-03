@@ -173,7 +173,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
                           ? '1 criança atravessou a fase em silêncio no diário.'
                           : `${silencio} crianças atravessaram a fase em silêncio no diário.`}
                       </p>
-                      <p className="text-[13px] leading-relaxed mt-1" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                      <p className="text-[13px] leading-relaxed mt-1 texto-justificado" style={{ color: 'rgba(255,255,255,0.85)' }}>
                         Silêncio não é ausência: às vezes o canal ainda não abriu. Leve um olhar
                         especial para elas na próxima exploração.
                       </p>
@@ -378,7 +378,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
                       <p className="text-sm font-semibold" style={{ color: t.text }}>
                         Prepare o terreno
                       </p>
-                      <p className="text-[13px] leading-relaxed mt-1" style={{ color: t.textMuted }}>
+                      <p className="text-[13px] leading-relaxed mt-1 texto-justificado" style={{ color: t.textMuted }}>
                         As atividades desta fase chegam com o banco de atividades. Por enquanto,
                         comece pelo olhar: repare onde esse mecanismo aparece na sua sala; o
                         diário faz o resto.

@@ -259,3 +259,11 @@ select option:checked {
     backdrop-filter: blur(18px) saturate(1.4);
   }
 }
+
+/* Texto de leitura justificado (pedido do Fundador): com hifenizacao pt-BR
+   para a justificacao nao abrir "rios" de espaco em coluna estreita */
+.texto-justificado {
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
