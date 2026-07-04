@@ -18,6 +18,23 @@ const INTELIGENCIAS = [
 
 const TODAS = 'Todas as séries';
 
+// Do Maternal ao 9º ano (nomes idênticos aos das turmas no banco)
+const SERIES_ESCOLA = [
+  'Maternal 2',
+  'Maternal 3',
+  'Grupo IV',
+  'Grupo V',
+  '1º Ano',
+  '2º Ano',
+  '3º Ano',
+  '4º Ano',
+  '5º Ano',
+  '6º Ano',
+  '7º Ano',
+  '8º Ano',
+  '9º Ano',
+];
+
 interface Atividade {
   id: string;
   institution_id: string;
@@ -50,17 +67,18 @@ const VAZIA = {
 };
 
 /**
- * BANCO DE ATIVIDADES (Painel Arboria): o dono cadastra a atividade de cada
- * exploração; as professoras consomem no cockpit e na aula.
- * Navegação VERTICAL: inteligência abre por série (pedido do Fundador 04/07);
- * o + escolhe inteligência e série no próprio formulário.
+ * BANCO DE ATIVIDADES (Painel Arboria): navegação em COLUNAS EM CASCATA
+ * (pedido do Fundador 04/07): coluna 1 = inteligências, coluna 2 = séries
+ * (Maternal ao 9º ano), coluna 3 = as atividades daquele cruzamento.
+ * O + cadastra escolhendo inteligência e série no próprio formulário.
  */
 const ArboriaAtividadesPage = () => {
   const [instituicoes, setInstituicoes] = useState<Instituicao[]>([]);
   const [instSel, setInstSel] = useState<string | null>(null);
-  const [series, setSeries] = useState<string[]>([]);
   const [atividades, setAtividades] = useState<Atividade[] | null>(null);
-  const [intelAberta, setIntelAberta] = useState<number | null>(null);
+
+  const [intelSel, setIntelSel] = useState(1);
+  const [serieSel, setSerieSel] = useState<string>(TODAS);
 
   const [editando, setEditando] = useState<Atividade | 'nova' | null>(null);
   const [form, setForm] = useState(VAZIA);
@@ -82,22 +100,6 @@ const ArboriaAtividadesPage = () => {
     })();
   }, []);
 
-  // Séries reais da instituição (pro seletor de faixa do formulário)
-  useEffect(() => {
-    if (!instSel) return;
-    (async () => {
-      const { data } = await supabase
-        .from('turmas')
-        .select('serie')
-        .eq('institution_id', instSel);
-      const unicas = Array.from(
-        new Set(((data as { serie: string | null }[]) ?? []).map((x) => x.serie).filter(Boolean))
-      ) as string[];
-      unicas.sort();
-      setSeries(unicas);
-    })();
-  }, [instSel]);
-
   const carregar = async () => {
     if (!instSel) return;
     setAtividades(null);
@@ -118,33 +120,38 @@ const ArboriaAtividadesPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instSel]);
 
-  // Agrupamento: inteligência → faixa → atividades (na ordem)
-  const porInteligencia = useMemo(() => {
-    const mapa = new Map<number, Map<string, Atividade[]>>();
-    for (const i of INTELIGENCIAS) mapa.set(i.id, new Map());
-    for (const a of atividades ?? []) {
-      const chaveFaixa = a.faixa ?? TODAS;
-      const porFaixa = mapa.get(a.inteligencia_id)!;
-      if (!porFaixa.has(chaveFaixa)) porFaixa.set(chaveFaixa, []);
-      porFaixa.get(chaveFaixa)!.push(a);
-    }
-    // "Todas as séries" primeiro, depois séries em ordem alfabética
-    for (const [, porFaixa] of mapa) {
-      const ordenado = new Map(
-        [...porFaixa.entries()].sort(([a], [b]) =>
-          a === TODAS ? -1 : b === TODAS ? 1 : a.localeCompare(b)
-        )
-      );
-      porFaixa.clear();
-      for (const [k, v] of ordenado) porFaixa.set(k, v);
-    }
-    return mapa;
+  const chaveFaixa = (a: Atividade) => a.faixa ?? TODAS;
+
+  const contagemIntel = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const a of atividades ?? []) m.set(a.inteligencia_id, (m.get(a.inteligencia_id) ?? 0) + 1);
+    return m;
   }, [atividades]);
 
-  const abrirNova = () => {
+  const contagemSerie = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const a of atividades ?? []) {
+      if (a.inteligencia_id !== intelSel) continue;
+      m.set(chaveFaixa(a), (m.get(chaveFaixa(a)) ?? 0) + 1);
+    }
+    return m;
+  }, [atividades, intelSel]);
+
+  const listaAtual = useMemo(
+    () =>
+      (atividades ?? [])
+        .filter((a) => a.inteligencia_id === intelSel && chaveFaixa(a) === serieSel)
+        .sort((a, b) => a.ordem - b.ordem),
+    [atividades, intelSel, serieSel]
+  );
+
+  const intel = INTELIGENCIAS.find((i) => i.id === intelSel)!;
+  const intelForm = INTELIGENCIAS.find((i) => i.id === formIntel)!;
+
+  const abrirNova = (preIntel?: number, preFaixa?: string) => {
     setForm(VAZIA);
-    setFormIntel(intelAberta ?? 1);
-    setFormFaixa(TODAS);
+    setFormIntel(preIntel ?? intelSel);
+    setFormFaixa(preFaixa ?? serieSel);
     setPdf(null);
     setEditando('nova');
   };
@@ -175,11 +182,10 @@ const ArboriaAtividadesPage = () => {
         pdfUrl = supabase.storage.from('atividades').getPublicUrl(path).data.publicUrl;
       }
 
-      const faixaValor = formFaixa === TODAS ? null : formFaixa;
       const payload = {
         nome: form.nome.trim(),
         inteligencia_id: formIntel,
-        faixa: faixaValor,
+        faixa: formFaixa === TODAS ? null : formFaixa,
         objetivo: form.objetivo.trim() || null,
         materiais: form.materiais.trim() || null,
         como_conduzir: form.como_conduzir.trim() || null,
@@ -188,7 +194,9 @@ const ArboriaAtividadesPage = () => {
       };
 
       if (editando === 'nova') {
-        const grupo = porInteligencia.get(formIntel)?.get(formFaixa) ?? [];
+        const grupo = (atividades ?? []).filter(
+          (a) => a.inteligencia_id === formIntel && chaveFaixa(a) === formFaixa
+        );
         const { error } = await fromAny('atividades').insert({
           ...payload,
           institution_id: instSel,
@@ -196,7 +204,8 @@ const ArboriaAtividadesPage = () => {
         } as never);
         if (error) throw error;
         toast.success('Atividade cadastrada.');
-        setIntelAberta(formIntel);
+        setIntelSel(formIntel);
+        setSerieSel(formFaixa);
       } else if (editando) {
         const { error } = await fromAny('atividades')
           .update({ ...payload, updated_at: new Date().toISOString() } as never)
@@ -213,11 +222,9 @@ const ArboriaAtividadesPage = () => {
     }
   };
 
-  // Reordena DENTRO do grupo (mesma inteligência e mesma série)
   const mover = async (a: Atividade, direcao: -1 | 1) => {
-    const grupo = porInteligencia.get(a.inteligencia_id)?.get(a.faixa ?? TODAS) ?? [];
-    const idx = grupo.findIndex((x) => x.id === a.id);
-    const vizinho = grupo[idx + direcao];
+    const idx = listaAtual.findIndex((x) => x.id === a.id);
+    const vizinho = listaAtual[idx + direcao];
     if (!vizinho) return;
     await Promise.all([
       fromAny('atividades').update({ ordem: vizinho.ordem } as never).eq('id', a.id),
@@ -247,7 +254,11 @@ const ArboriaAtividadesPage = () => {
     []
   );
 
-  const intelForm = INTELIGENCIAS.find((i) => i.id === formIntel)!;
+  const colunaCss = {
+    backgroundColor: t.surface,
+    border: `1px solid ${t.border}`,
+    boxShadow: t.shadowSm,
+  };
 
   return (
     <div>
@@ -256,7 +267,7 @@ const ArboriaAtividadesPage = () => {
           Banco de atividades
         </h1>
         <button
-          onClick={abrirNova}
+          onClick={() => abrirNova()}
           className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold flex-shrink-0"
           style={{ backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowSm }}
         >
@@ -264,7 +275,7 @@ const ArboriaAtividadesPage = () => {
         </button>
       </div>
       <p className="text-sm mb-4" style={{ color: t.textMuted }}>
-        Toque numa inteligência para ver o caminho dela, por série.
+        Inteligência, depois a série, depois o caminho de atividades.
       </p>
 
       {instituicoes.length > 1 && (
@@ -283,161 +294,184 @@ const ArboriaAtividadesPage = () => {
       )}
 
       {atividades === null ? (
-        <div className="space-y-2">
-          {INTELIGENCIAS.slice(0, 4).map((i) => (
-            <Skeleton key={i.id} className="h-14 w-full rounded-2xl" />
-          ))}
+        <div className="flex gap-3">
+          <Skeleton className="h-72 w-52 rounded-2xl" />
+          <Skeleton className="h-72 w-44 rounded-2xl" />
+          <Skeleton className="h-72 flex-1 rounded-2xl" />
         </div>
       ) : (
-        <div className="space-y-2">
-          {INTELIGENCIAS.map((intel) => {
-            const porFaixa = porInteligencia.get(intel.id)!;
-            const total = [...porFaixa.values()].reduce((s, arr) => s + arr.length, 0);
-            const aberta = intelAberta === intel.id;
-
-            return (
-              <div
-                key={intel.id}
-                className="rounded-2xl overflow-hidden"
-                style={{
-                  backgroundColor: t.surface,
-                  border: `1px solid ${aberta ? intel.cor : t.border}`,
-                  borderLeft: `3px solid ${intel.cor}`,
-                  boxShadow: t.shadowSm,
-                }}
-              >
-                {/* Cabeçalho da inteligência (vertical, clicável) */}
+        /* AS TRÊS COLUNAS EM CASCATA */
+        <div className="flex gap-3 overflow-x-auto pb-2 items-start">
+          {/* Coluna 1: inteligências */}
+          <div className="w-52 flex-shrink-0 rounded-2xl overflow-hidden" style={colunaCss}>
+            {INTELIGENCIAS.map((i) => {
+              const ativa = i.id === intelSel;
+              const total = contagemIntel.get(i.id) ?? 0;
+              return (
                 <button
-                  onClick={() => setIntelAberta(aberta ? null : intel.id)}
-                  className="w-full flex items-center gap-3 p-3.5 text-left"
+                  key={i.id}
+                  onClick={() => {
+                    setIntelSel(i.id);
+                    setSerieSel(TODAS);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors"
+                  style={{
+                    backgroundColor: ativa ? `${i.cor}12` : 'transparent',
+                    borderLeft: `3px solid ${ativa ? i.cor : 'transparent'}`,
+                    borderBottom: `1px solid ${t.surfaceAlt}`,
+                  }}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: i.cor }} />
+                  <span
+                    className="flex-1 text-[13px] truncate"
+                    style={{ color: ativa ? t.text : t.textMuted, fontWeight: ativa ? 700 : 500 }}
+                  >
+                    {i.nome}
+                  </span>
+                  {total > 0 && (
+                    <span className="text-[10.5px] font-semibold" style={{ color: t.textFaint }}>
+                      {total}
+                    </span>
+                  )}
+                  {ativa && <ChevronRight size={14} style={{ color: i.cor }} />}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Coluna 2: séries (Maternal ao 9º ano) */}
+          <div className="w-44 flex-shrink-0 rounded-2xl overflow-hidden" style={colunaCss}>
+            {[TODAS, ...SERIES_ESCOLA].map((s) => {
+              const ativa = s === serieSel;
+              const total = contagemSerie.get(s) ?? 0;
+              return (
+                <button
+                  key={s}
+                  onClick={() => setSerieSel(s)}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left transition-colors"
+                  style={{
+                    backgroundColor: ativa ? `${intel.cor}12` : 'transparent',
+                    borderLeft: `3px solid ${ativa ? intel.cor : 'transparent'}`,
+                    borderBottom: `1px solid ${t.surfaceAlt}`,
+                  }}
                 >
                   <span
-                    className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: intel.cor }}
-                  />
-                  <span className="flex-1 text-sm font-semibold" style={{ color: t.text }}>
-                    {intel.nome}
-                  </span>
-                  <span className="text-xs" style={{ color: t.textFaint }}>
-                    {total === 0 ? 'vazia' : `${total} ${total === 1 ? 'atividade' : 'atividades'}`}
-                  </span>
-                  <ChevronRight
-                    size={16}
+                    className="flex-1 text-[12.5px] truncate"
                     style={{
-                      color: t.textFaint,
-                      transform: aberta ? 'rotate(90deg)' : 'none',
-                      transition: 'transform 200ms',
+                      color: ativa ? t.text : total > 0 ? t.textMuted : t.textFaint,
+                      fontWeight: ativa ? 700 : 500,
+                      fontStyle: s === TODAS ? 'italic' : 'normal',
                     }}
-                  />
+                  >
+                    {s}
+                  </span>
+                  {total > 0 && (
+                    <span
+                      className="text-[10px] font-bold rounded-full px-1.5 py-0.5"
+                      style={{ backgroundColor: `${intel.cor}18`, color: intel.cor }}
+                    >
+                      {total}
+                    </span>
+                  )}
+                  {ativa && <ChevronRight size={13} style={{ color: intel.cor }} />}
                 </button>
+              );
+            })}
+          </div>
 
-                {/* Conteúdo aberto: grupos por série */}
-                {aberta && (
-                  <div className="px-3.5 pb-3.5 space-y-3">
-                    {total === 0 ? (
-                      <div
-                        className="rounded-xl p-5 text-center"
-                        style={{ border: `1px dashed ${t.silencio}` }}
-                      >
-                        <p className="text-sm" style={{ color: t.textMuted }}>
-                          Nenhuma atividade na Exploração {intel.nome} ainda.
-                        </p>
-                        <button
-                          onClick={() => {
-                            setFormIntel(intel.id);
-                            setForm(VAZIA);
-                            setFormFaixa(TODAS);
-                            setPdf(null);
-                            setEditando('nova');
-                          }}
-                          className="mt-2.5 rounded-full px-4 py-2 text-xs font-semibold"
-                          style={{ backgroundColor: intel.cor, color: '#FFFFFF' }}
-                        >
-                          Cadastrar a primeira
-                        </button>
-                      </div>
-                    ) : (
-                      [...porFaixa.entries()].map(([faixa, lista]) => (
-                        <div key={faixa}>
-                          <p
-                            className="text-[10.5px] uppercase tracking-wide font-bold mb-1.5"
-                            style={{ color: t.textFaint }}
-                          >
-                            {faixa}
-                          </p>
-                          <div className="space-y-1.5">
-                            {lista.map((a, idx) => (
-                              <div
-                                key={a.id}
-                                className="rounded-xl p-2.5 flex items-center gap-2.5"
-                                style={{
-                                  backgroundColor: t.surfaceAlt,
-                                  border: `1px solid ${t.border}`,
-                                  opacity: a.ativo ? 1 : 0.55,
-                                }}
-                              >
-                                <span
-                                  className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0"
-                                  style={{ backgroundColor: `${intel.cor}18`, color: intel.cor }}
-                                >
-                                  {idx + 1}
-                                </span>
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-medium truncate" style={{ color: t.text }}>
-                                    {a.nome}
-                                    {!a.ativo && (
-                                      <span
-                                        className="ml-2 text-[10px] uppercase font-bold"
-                                        style={{ color: t.textFaint }}
-                                      >
-                                        inativa
-                                      </span>
-                                    )}
-                                  </p>
-                                  <p className="text-[11px] truncate" style={{ color: t.textFaint }}>
-                                    {a.objetivo || 'Sem objetivo cadastrado'}
-                                    {a.pdf_url ? ' · PDF' : ''}
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-0 flex-shrink-0">
-                                  <button
-                                    onClick={() => mover(a, -1)}
-                                    disabled={idx === 0}
-                                    className="p-1.5 disabled:opacity-25"
-                                    style={{ color: t.textFaint }}
-                                    aria-label="Subir"
-                                  >
-                                    <ChevronUp size={15} />
-                                  </button>
-                                  <button
-                                    onClick={() => mover(a, 1)}
-                                    disabled={idx === lista.length - 1}
-                                    className="p-1.5 disabled:opacity-25"
-                                    style={{ color: t.textFaint }}
-                                    aria-label="Descer"
-                                  >
-                                    <ChevronDown size={15} />
-                                  </button>
-                                  <button
-                                    onClick={() => abrirEdicao(a)}
-                                    className="p-2"
-                                    style={{ color: t.accent }}
-                                    aria-label="Editar"
-                                  >
-                                    <PenLine size={15} />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
+          {/* Coluna 3: as atividades do cruzamento */}
+          <div className="flex-1 min-w-[300px] rounded-2xl p-3.5" style={colunaCss}>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <p className="text-[11px] uppercase tracking-wide font-bold truncate" style={{ color: intel.cor }}>
+                {intel.nome} · {serieSel}
+              </p>
+              <button
+                onClick={() => abrirNova(intelSel, serieSel)}
+                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold flex-shrink-0"
+                style={{ backgroundColor: `${intel.cor}14`, color: intel.cor }}
+              >
+                <Plus size={12} /> aqui
+              </button>
+            </div>
+
+            {listaAtual.length === 0 ? (
+              <div className="rounded-xl p-6 text-center" style={{ border: `1px dashed ${t.silencio}` }}>
+                <p className="text-sm" style={{ color: t.textMuted }}>
+                  Nenhuma atividade em {intel.nome} · {serieSel}.
+                </p>
+                <button
+                  onClick={() => abrirNova(intelSel, serieSel)}
+                  className="mt-2.5 rounded-full px-4 py-2 text-xs font-semibold"
+                  style={{ backgroundColor: intel.cor, color: '#FFFFFF' }}
+                >
+                  Cadastrar a primeira
+                </button>
               </div>
-            );
-          })}
+            ) : (
+              <div className="space-y-1.5">
+                {listaAtual.map((a, idx) => (
+                  <div
+                    key={a.id}
+                    className="rounded-xl p-2.5 flex items-center gap-2.5"
+                    style={{
+                      backgroundColor: t.surfaceAlt,
+                      border: `1px solid ${t.border}`,
+                      opacity: a.ativo ? 1 : 0.55,
+                    }}
+                  >
+                    <span
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0"
+                      style={{ backgroundColor: `${intel.cor}18`, color: intel.cor }}
+                    >
+                      {idx + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate" style={{ color: t.text }}>
+                        {a.nome}
+                        {!a.ativo && (
+                          <span className="ml-2 text-[10px] uppercase font-bold" style={{ color: t.textFaint }}>
+                            inativa
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-[11px] truncate" style={{ color: t.textFaint }}>
+                        {a.objetivo || 'Sem objetivo cadastrado'}
+                        {a.pdf_url ? ' · PDF' : ''}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-0 flex-shrink-0">
+                      <button
+                        onClick={() => mover(a, -1)}
+                        disabled={idx === 0}
+                        className="p-1.5 disabled:opacity-25"
+                        style={{ color: t.textFaint }}
+                        aria-label="Subir"
+                      >
+                        <ChevronUp size={15} />
+                      </button>
+                      <button
+                        onClick={() => mover(a, 1)}
+                        disabled={idx === listaAtual.length - 1}
+                        className="p-1.5 disabled:opacity-25"
+                        style={{ color: t.textFaint }}
+                        aria-label="Descer"
+                      >
+                        <ChevronDown size={15} />
+                      </button>
+                      <button
+                        onClick={() => abrirEdicao(a)}
+                        className="p-2"
+                        style={{ color: t.accent }}
+                        aria-label="Editar"
+                      >
+                        <PenLine size={15} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -470,7 +504,6 @@ const ArboriaAtividadesPage = () => {
               </div>
 
               <div className="space-y-3">
-                {/* Inteligência e série: escolhidas AQUI (pedido do Fundador) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold mb-1" style={{ color: t.textMuted }}>
@@ -508,7 +541,7 @@ const ArboriaAtividadesPage = () => {
                       }}
                     >
                       <option value={TODAS}>{TODAS}</option>
-                      {series.map((s) => (
+                      {SERIES_ESCOLA.map((s) => (
                         <option key={s} value={s}>
                           {s}
                         </option>
