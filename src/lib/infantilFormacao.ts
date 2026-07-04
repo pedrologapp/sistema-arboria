@@ -31,12 +31,29 @@ export interface SituacaoFormacao {
   alternativas: AlternativaFormacao[];
 }
 
+/** Item de lista dentro de uma lição (com bolinha de cor opcional). */
+export interface ItemLicao {
+  cor?: string;
+  titulo?: string;
+  texto: string;
+}
+
+/** Página de INSTRUÇÃO que vem antes da prática (pedido do Fundador 04/07:
+ *  "primeiro você instrui e depois você realiza o teste ao final"). */
+export interface LicaoFormacao {
+  titulo: string;
+  paragrafos: string[];
+  destaque?: string; // frase-síntese em serif, quando houver
+  itens?: ItemLicao[];
+}
+
 export interface TreinamentoFormacao {
   id: number;
   titulo: string;
   subtitulo: string;
   capa: string;
   disponivel: boolean;
+  licoes: LicaoFormacao[];
   situacoes: SituacaoFormacao[];
 }
 
@@ -48,8 +65,38 @@ export const TREINAMENTOS: TreinamentoFormacao[] = [
     id: 1,
     titulo: 'A arte de observar',
     subtitulo: 'Escrever o que se vê · 5 situações · uns 4 min',
-    capa: 'Uma boa observação descreve o que a criança fez, não o que ela é. Nas próximas cenas, você escolhe o que escreveria no diário. Cada resposta vem comentada, para mostrar por que uma frase guarda mais do que outra.',
+    capa: 'Antes da prática, duas lições curtas sobre o que faz uma observação valer. Depois, cinco cenas reais de sala para você escolher o que escreveria no diário.',
     disponivel: true,
+    licoes: [
+      {
+        titulo: 'O princípio',
+        paragrafos: [
+          'O diário do Arboria não guarda opiniões sobre a criança. Ele guarda cenas: o que ela fez, por onde começou, o que fez diante do obstáculo. A opinião envelhece e gruda; a cena continua contando a verdade anos depois.',
+          'Compare as duas frases: "o Theo brincou bem de massinha" e "o Theo apertou cada pedaço devagar, olhando a marca do dedo". A primeira serve para qualquer criança em qualquer dia. A segunda só serve para o Theo, naquele dia, e é por isso que ela vale.',
+        ],
+        destaque: 'Descreva o que a criança fez. Não escreva o que ela é.',
+      },
+      {
+        titulo: 'As três armadilhas',
+        paragrafos: [
+          'Três tipos de frase parecem registro e não são. Aprenda a reconhecê-las na sua própria mão:',
+        ],
+        itens: [
+          {
+            titulo: 'O resultado',
+            texto: '"Fez tudo certinho", "terminou primeiro". Conta como a atividade acabou e nada de como a criança chegou lá. O caminho era o dado.',
+          },
+          {
+            titulo: 'A etiqueta',
+            texto: '"É concentrado", "é esperta", "é preguiçoso". Julga em vez de descrever, e a palavra acompanha a criança. Até o elogio rotula.',
+          },
+          {
+            titulo: 'A receita',
+            texto: '"Precisa participar mais", "já está pronto para...". O diário não prescreve nem prevê. Ele testemunha; as decisões nascem em outra mesa.',
+          },
+        ],
+      },
+    ],
     situacoes: [
       {
         inteligencia: 'Corporal-Cinestésica',
@@ -189,8 +236,62 @@ export const TREINAMENTOS: TreinamentoFormacao[] = [
     id: 2,
     titulo: 'As oito inteligências na sala',
     subtitulo: 'Reconhecer cada uma em cena · 8 situações · uns 6 min',
-    capa: 'Cada inteligência tem um jeito de aparecer na sala, e algumas se parecem entre si à primeira vista. Nas próximas cenas, você escolhe qual inteligência está em jogo. Os erros mais comuns estão entre as opções de propósito: é neles que se aprende.',
+    capa: 'Três lições curtas apresentam as oito inteligências e os pares que mais se confundem. Depois, oito cenas reais para você identificar qual inteligência está em jogo. A aba Inteligências aprofunda cada uma quando você quiser.',
     disponivel: true,
+    licoes: [
+      {
+        titulo: 'As oito, em uma linha cada',
+        paragrafos: [
+          'Toda criança tem as oito. O que varia é qual abre mais fácil: por onde o mundo entra primeiro. Em uma linha cada:',
+        ],
+        itens: [
+          { cor: '#1E3A8A', titulo: 'Linguística', texto: 'A palavra é a matéria: nomear, narrar, guardar o texto exato.' },
+          { cor: '#047857', titulo: 'Lógico-Matemática', texto: 'Compara, classifica, procura a regra: igual, diferente, por quê.' },
+          { cor: '#7C3AED', titulo: 'Espacial', texto: 'Pensa em imagens: a forma, a posição, o conjunto visto de longe.' },
+          { cor: '#7F1D1D', titulo: 'Musical', texto: 'O ouvido comanda: ritmo, melodia, o som que continua por dentro.' },
+          { cor: '#B8860B', titulo: 'Corporal-Cinestésica', texto: 'Compreende fazendo: a mão e o corpo são o caminho do pensamento.' },
+          { cor: '#78350F', titulo: 'Naturalista', texto: 'O vivo atrai, as diferenças finas saltam: coleciona, compara, repara.' },
+          { cor: '#0891B2', titulo: 'Interpessoal', texto: 'Lê os outros: percebe o humor, media, organiza o encontro.' },
+          { cor: '#EA580C', titulo: 'Intrapessoal', texto: 'Conhece o próprio estado: escolhe as condições, sabe o que a acalma.' },
+        ],
+      },
+      {
+        titulo: 'Os pares que se confundem',
+        paragrafos: [
+          'Na sala, algumas inteligências se parecem à primeira vista. São nesses pares que o olhar mais erra:',
+        ],
+        itens: [
+          {
+            titulo: 'Espacial e Corporal-Cinestésica',
+            texto: 'As duas usam as mãos. Pergunte quem comanda: o olho que planeja o conjunto, ou a mão que precisa tocar para compreender?',
+          },
+          {
+            titulo: 'Linguística e Interpessoal',
+            texto: 'Falar muito não é ler pessoas. A criança mais calada da roda pode ser a que melhor percebe o colega.',
+          },
+          {
+            titulo: 'Musical e Lógico-Matemática',
+            texto: 'As duas amam padrões. O juiz desempata: se o que confere o padrão é o ouvido, é Musical; se é a regra (igual, maior, menor), é Lógica.',
+          },
+          {
+            titulo: 'Intrapessoal e "timidez"',
+            texto: 'Escolher a própria companhia não é fugir da dos outros. Repare se a criança volta para compartilhar quando está pronta.',
+          },
+          {
+            titulo: 'Corporal-Cinestésica e o freio da idade',
+            texto: 'Na Corporal, o movimento ORGANIZA a criança: ela pensa melhor se movendo. Quando o movimento só atropela, não é inteligência nenhuma ainda: é a idade freando devagar, como freia em toda criança.',
+          },
+        ],
+      },
+      {
+        titulo: 'Como decidir na dúvida',
+        paragrafos: [
+          'Diante de uma cena, faça uma pergunta só: quem está comandando? O olho, a mão, o ouvido, a palavra, a regra, o vivo, o outro ou o mundo de dentro?',
+          'E quando a dúvida ficar, não decida: descreva a cena no diário do jeito que ela aconteceu. Identificar a inteligência é trabalho que a cena permite fazer depois, com calma. A cena bem escrita nunca é desperdiçada.',
+        ],
+        destaque: 'Na dúvida, pergunte quem comanda a cena. Na dúvida maior, só descreva.',
+      },
+    ],
     situacoes: [
       {
         pergunta: 'Qual inteligência está em cena?',
@@ -395,8 +496,38 @@ export const TREINAMENTOS: TreinamentoFormacao[] = [
     id: 3,
     titulo: 'Observar sem rotular',
     subtitulo: 'A etiqueta, o teste e o diagnóstico · 5 situações',
-    capa: 'Três desvios estragam um diário: a etiqueta (que julga), o teste (que destrói a cena para arrancar uma resposta) e o diagnóstico (que não pertence à escola). Nas próximas situações, você escolhe o caminho que protege a criança e o dado.',
+    capa: 'Duas lições sobre os desvios que estragam um diário e sobre o destino certo de cada preocupação. Depois, cinco situações para praticar o caminho que protege a criança e o dado.',
     disponivel: true,
+    licoes: [
+      {
+        titulo: 'Os três desvios',
+        paragrafos: [
+          'Um diário de observação pode ser estragado de três jeitos diferentes, e os três costumam vir com boa intenção:',
+        ],
+        itens: [
+          {
+            titulo: 'A etiqueta',
+            texto: '"É a artista da turma", "é o mais maduro". Julga em vez de descrever. A elogiosa é a mais traiçoeira: cobra da criança o mesmo papel amanhã.',
+          },
+          {
+            titulo: 'O teste',
+            texto: 'Interromper a brincadeira para "conferir se ela sabe". Destrói a cena que existia para arrancar uma resposta que não diz quase nada. Observar é esperar a cena acontecer.',
+          },
+          {
+            titulo: 'O diagnóstico',
+            texto: '"Acho que tem...". Hipótese clínica não pertence ao diário nem à conversa de portão. Gravada, ela segue a criança para sempre.',
+          },
+        ],
+      },
+      {
+        titulo: 'Cada coisa na sua via',
+        paragrafos: [
+          'A preocupação legítima existe, e ela tem destino certo: a coordenação, numa conversa, nunca numa frase de diário. O que entra no diário é a cena literal, com data: é ela que ajudará qualquer profissional no futuro, se for preciso.',
+          'E duas réguas nunca entram: a comparação ("melhor que o irmão") e a média ("está na média da turma"). O diário observa esta criança, hoje, inteira e sozinha.',
+        ],
+        destaque: 'No diário, a cena. Na coordenação, a preocupação. Na criança, nenhuma etiqueta.',
+      },
+    ],
     situacoes: [
       {
         inteligencia: 'Espacial',
@@ -535,8 +666,34 @@ export const TREINAMENTOS: TreinamentoFormacao[] = [
     id: 4,
     titulo: 'Uma atividade, muitos caminhos',
     subtitulo: 'A exploração não é conteúdo · 5 situações',
-    capa: 'A atividade que você propõe espera um caminho, mas admite todos. O dado do Arboria mora no caminho que a criança escolhe: antes do primeiro movimento e diante do obstáculo. Nas próximas cenas, você decide o que fazer quando a criança sai do roteiro.',
+    capa: 'Duas lições sobre a diferença entre propor uma atividade e ditar um caminho. Depois, cinco cenas para você decidir o que fazer quando a criança sai do roteiro (e ela vai sair).',
     disponivel: true,
+    licoes: [
+      {
+        titulo: 'A atividade é um convite',
+        paragrafos: [
+          'A atividade que você planeja espera um caminho: a massinha espera bichinhos, a roda espera canto. Mas a criança responde pela porta DELA, e é exatamente essa resposta que o Arboria coleciona. Quando o Theo faz cobrinhas e as mede em vez de fazer bichinhos, a atividade não falhou: ela funcionou como convite, e ele respondeu.',
+          'Corrigir a criança de volta pro roteiro apaga o dado mais valioso do dia. Se a saída dela estiver atrapalhando a turma, claro, intervenha: a sala é sua. Mas registre a saída antes: era ela que contava a história.',
+        ],
+        destaque: 'A atividade espera um caminho, mas admite todos. O dado é o caminho escolhido.',
+      },
+      {
+        titulo: 'Os dois momentos de ouro',
+        paragrafos: [
+          'Dois momentos rendem mais que a atividade inteira:',
+        ],
+        itens: [
+          {
+            titulo: 'Antes da instrução acabar',
+            texto: 'Para onde cada criança gravita quando ninguém ainda dirigiu? A escolha feita antes da regra é a mais limpa do dia, porque ninguém a induziu.',
+          },
+          {
+            titulo: 'Diante do obstáculo',
+            texto: 'A peça que não encaixa, a torre que cai. É no impasse que cada criança mais mostra como pensa: uma insiste, outra investiga, outra chama alguém. Três respostas, três registros.',
+          },
+        ],
+      },
+    ],
     situacoes: [
       {
         inteligencia: 'Lógico-Matemática',
@@ -676,8 +833,38 @@ export const TREINAMENTOS: TreinamentoFormacao[] = [
     id: 5,
     titulo: 'A criança que ainda não apareceu',
     subtitulo: 'Silêncio não é ausência · 5 situações',
-    capa: 'Toda turma tem a criança de quem não se escreveu nada este mês. Este treinamento é sobre ela: o que o silêncio do diário significa, o que ele não significa, e o que fazer com ele. Regra de ouro: o que não apareceu não está ausente.',
+    capa: 'Duas lições sobre a criança de quem não se escreveu nada este mês: o que o silêncio significa, o que ele não significa, e o que fazer com ele. Depois, cinco situações para praticar.',
     disponivel: true,
+    licoes: [
+      {
+        titulo: 'O que o silêncio significa',
+        paragrafos: [
+          'Quando uma criança passa um mês sem registro, o diário não está dizendo nada sobre ela: está dizendo algo sobre o alcance do seu olhar, que é humano e não cobre vinte crianças por igual. Ela viveu o mês inteiro; o que faltou foi testemunha.',
+          'E quando uma inteligência nunca aparece numa criança, desconfie da porta antes de desconfiar dela: a roda de música grande e barulhenta pode ser a porta errada para o menino que encontraria o som num canto quieto, com um instrumento e sem plateia.',
+        ],
+        destaque: 'O que não apareceu não está ausente. Pode ser só a porta errada.',
+      },
+      {
+        titulo: 'O que fazer com ele',
+        paragrafos: [
+          'O silêncio do diário pede três gestos simples:',
+        ],
+        itens: [
+          {
+            titulo: 'A criança da semana',
+            texto: 'Descobriu uma criança sem registro no mês? Ela vira sua observada deliberada da próxima semana, em atividades variadas: portas diferentes.',
+          },
+          {
+            titulo: 'A lacuna declarada',
+            texto: '"Hoje não consegui observar a Maitê, a sala não deixou." Essa frase protege a criança: quem ler depois saberá que ninguém olhou, em vez de concluir que não havia nada.',
+          },
+          {
+            titulo: 'Nunca preencher com veredito',
+            texto: '"Quieta, sem novidades" transforma a SUA lacuna num traço DELA. E cena requentada de memória com data de hoje é dado falso. O diário aguenta o vazio; não aguenta o inventado.',
+          },
+        ],
+      },
+    ],
     situacoes: [
       {
         pergunta: 'Fim do mês: nada sobre a Maitê no diário. O que fazer?',
@@ -811,8 +998,40 @@ export const TREINAMENTOS: TreinamentoFormacao[] = [
     id: 6,
     titulo: 'A conversa com a família',
     subtitulo: 'Responder com cenas, não com veredictos · 5 situações',
-    capa: 'A família guarda para sempre a palavra que a escola usa. Este treinamento é sobre o portão: as perguntas que os pais fazem todo dia e o jeito de responder com cenas, sem selar futuro nem confirmar rótulo. Aqui, o que você diz vale tanto quanto o que você escreve.',
+    capa: 'Duas lições sobre a conversa de portão: o jeito de responder com cenas e o que nunca deve sair da boca da escola. Depois, cinco perguntas reais de famílias para você praticar a resposta.',
     disponivel: true,
+    licoes: [
+      {
+        titulo: 'A regra do portão',
+        paragrafos: [
+          'A família pergunta com rótulo porque é a língua que ela conhece: "ele é hiperativo?", "ela é artista?". Você não precisa aceitar nem recusar o rótulo; existe uma terceira saída, e ela é sempre a mesma: devolver uma cena. "Hoje ele passou a massinha inteira apertando devagar, olhando a marca do dedo."',
+          'A cena real do próprio filho é mais interessante que qualquer etiqueta, e a família sai do portão com uma imagem em vez de uma palavra pendurada na criança. Confirmar o rótulo o carimba; negar mantém a conversa no eixo errado. A cena troca de eixo.',
+        ],
+        destaque: 'A família guarda para sempre a palavra que a escola usa. Entregue cenas, não palavras que grudam.',
+      },
+      {
+        titulo: 'O que não sai no portão',
+        paragrafos: ['Quatro coisas nunca saem pela sua voz, por mais confiança que exista:'],
+        itens: [
+          {
+            titulo: 'O rótulo',
+            texto: 'Nem para confirmar ("um pouquinho, né") nem para negar ("imagina!"). As duas respostas mantêm a criança presa à etiqueta.',
+          },
+          {
+            titulo: 'O prognóstico',
+            texto: '"Vai ser artista", "está pronto pro Grupo IV". Selar futuro é doce na hora e pesado depois.',
+          },
+          {
+            titulo: 'A comparação',
+            texto: 'Com o primo, com o irmão, com a média. Não discuta a régua dos outros; substitua-a por uma cena rica do próprio filho.',
+          },
+          {
+            titulo: 'O parecer clínico',
+            texto: 'Pedido de laudo, suspeita, "o que você acha que ele tem": tudo isso vai pra coordenação, com acolhimento e via clara. A contribuição da escola são as cenas datadas do diário.',
+          },
+        ],
+      },
+    ],
     situacoes: [
       {
         pergunta: 'O que você responde?',

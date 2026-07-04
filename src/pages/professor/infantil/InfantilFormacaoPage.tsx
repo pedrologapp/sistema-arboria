@@ -27,6 +27,7 @@ const MarcaA = ({ size = 48, cor = t.accent }: { size?: number; cor?: string }) 
 type Etapa =
   | { tela: 'lista' }
   | { tela: 'capa'; tr: TreinamentoFormacao }
+  | { tela: 'licao'; tr: TreinamentoFormacao; idx: number }
   | { tela: 'situacao'; tr: TreinamentoFormacao; idx: number }
   | { tela: 'conquista'; tr: TreinamentoFormacao };
 
@@ -206,7 +207,11 @@ const InfantilFormacaoPage = () => {
 
         <div className="mt-auto pt-6">
           <button
-            onClick={() => abrirSituacao(tr, 0)}
+            onClick={() =>
+              tr.licoes.length > 0
+                ? setEtapa({ tela: 'licao', tr, idx: 0 })
+                : abrirSituacao(tr, 0)
+            }
             className="w-full rounded-xl py-3.5 text-sm font-semibold"
             style={{ backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowMd }}
           >
@@ -215,6 +220,101 @@ const InfantilFormacaoPage = () => {
           <p className="text-center text-[11px] mt-2.5" style={{ color: t.textFaint }}>
             Isto não é uma avaliação. Não há nota nem tempo.
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  /* ============ LIÇÃO (a instrução vem antes da prática) ============ */
+  if (etapa.tela === 'licao') {
+    const { tr, idx } = etapa;
+    const licao = tr.licoes[idx];
+    const ultima = idx === tr.licoes.length - 1;
+
+    return (
+      <div className="pt-4 pb-8 flex flex-col min-h-[70vh]">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-[11px] uppercase tracking-wide font-semibold" style={{ color: t.accentText }}>
+            Lição {idx + 1} de {tr.licoes.length}
+          </p>
+          <button
+            onClick={() => setEtapa({ tela: 'lista' })}
+            className="flex items-center gap-1 text-sm p-2 -m-2"
+            style={{ color: t.textFaint }}
+          >
+            Sair <X size={14} />
+          </button>
+        </div>
+
+        <h1 className="font-serif text-[22px] leading-snug mb-3" style={{ color: t.text }}>
+          {licao.titulo}
+        </h1>
+
+        {licao.paragrafos.map((p, i) => (
+          <p
+            key={i}
+            className="text-sm leading-relaxed texto-justificado mb-3"
+            style={{ color: t.textMuted }}
+          >
+            {p}
+          </p>
+        ))}
+
+        {licao.itens && (
+          <div className="space-y-2 mb-3">
+            {licao.itens.map((item, i) => (
+              <div
+                key={i}
+                className="rounded-xl p-3"
+                style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
+              >
+                {item.titulo && (
+                  <p className="flex items-center gap-1.5 text-[12.5px] font-bold mb-0.5" style={{ color: item.cor ?? t.text }}>
+                    {item.cor && (
+                      <span
+                        className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: item.cor }}
+                      />
+                    )}
+                    {item.titulo}
+                  </p>
+                )}
+                <p className="text-[13px] leading-relaxed" style={{ color: t.textMuted }}>
+                  {item.texto}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {licao.destaque && (
+          <p
+            className="font-serif italic text-[15.5px] leading-relaxed text-center px-4 py-3 rounded-2xl"
+            style={{ color: t.accentText, backgroundColor: t.accentSoft }}
+          >
+            {licao.destaque}
+          </p>
+        )}
+
+        <div className="mt-auto pt-5 flex items-center gap-2">
+          <button
+            onClick={() =>
+              idx === 0 ? setEtapa({ tela: 'capa', tr }) : setEtapa({ tela: 'licao', tr, idx: idx - 1 })
+            }
+            className="flex items-center gap-0.5 text-sm py-3 px-3"
+            style={{ color: t.textFaint }}
+          >
+            <ChevronLeft size={15} /> Voltar
+          </button>
+          <button
+            onClick={() =>
+              ultima ? abrirSituacao(tr, 0) : setEtapa({ tela: 'licao', tr, idx: idx + 1 })
+            }
+            className="flex-1 rounded-xl py-3.5 text-sm font-semibold"
+            style={{ backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowMd }}
+          >
+            {ultima ? 'Agora, praticar' : 'Avançar'}
+          </button>
         </div>
       </div>
     );
