@@ -649,7 +649,7 @@ const InfantilRajadaPage = () => {
               Registro da turma
             </p>
             <p className="text-[11px] truncate" style={{ color: t.textFaint }}>
-              {inteligência ? `Exploração ${mecanismo}` : 'Sem exploração ativa'}
+              {fase ? `Exploração ${mecanismo}` : 'Sem exploração ativa'}
               {turmaLabel ? ` · ${turmaLabel}` : ''}
             </p>
           </div>
