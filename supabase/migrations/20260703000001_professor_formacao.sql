@@ -24,17 +24,12 @@ CREATE POLICY prof_formacao_select_own ON public.professor_formacao
   FOR SELECT TO authenticated
   USING (professor_id = auth.uid());
 
--- Coordenação/admin da mesma instituição acompanham conclusões
-DROP POLICY IF EXISTS prof_formacao_select_coord ON public.professor_formacao;
-CREATE POLICY prof_formacao_select_coord ON public.professor_formacao
+-- Admin acompanha conclusões (via user_roles/has_role, o mecanismo real de
+-- papéis do banco). Quando o papel de COORDENADOR nascer no sistema, estender
+-- esta policy junto com a tela do coordenador.
+DROP POLICY IF EXISTS prof_formacao_select_admin ON public.professor_formacao;
+CREATE POLICY prof_formacao_select_admin ON public.professor_formacao
   FOR SELECT TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.id = auth.uid()
-        AND p.role IN ('coordenador', 'admin')
-        AND p.institution_id = professor_formacao.institution_id
-    )
-  );
+  USING (public.has_role(auth.uid(), 'admin'));
 
 -- Sem UPDATE/DELETE: conclusão é fato histórico (refazer não duplica pela UNIQUE)
