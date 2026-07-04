@@ -50,6 +50,8 @@ export interface LicaoFormacao {
 export interface TreinamentoFormacao {
   id: number;
   titulo: string;
+  /** Nível, quando o treinamento faz parte de uma trilha (Básico/Intermediário/Avançado) */
+  nivel?: string;
   subtitulo: string;
   capa: string;
   disponivel: boolean;
@@ -235,6 +237,7 @@ export const TREINAMENTOS: TreinamentoFormacao[] = [
   {
     id: 2,
     titulo: 'As oito inteligências na sala',
+    nivel: 'Básico',
     subtitulo: 'Reconhecer cada uma em cena · 8 situações · uns 6 min',
     capa: 'Três lições curtas apresentam as oito inteligências e os pares que mais se confundem. Depois, oito cenas reais para você identificar qual inteligência está em jogo. A aba Inteligências aprofunda cada uma quando você quiser.',
     disponivel: true,
@@ -482,6 +485,374 @@ export const TREINAMENTOS: TreinamentoFormacao[] = [
             correta: false,
             feedback:
               'Pode até haver busca de atenção, mas isso já seria interpretação em cima de interpretação. A cena mostra só um corpo de quatro anos mais rápido que o próprio freio. O resto é o tempo que dirá.',
+          },
+        ],
+      },
+    ],
+  },
+
+  /* ================================================================
+   * T2b. AS OITO INTELIGÊNCIAS · INTERMEDIÁRIO (as versões disfarçadas:
+   * material "o que não define" e "pode enganar" do santuário)
+   * ================================================================ */
+  {
+    id: 7,
+    titulo: 'As oito inteligências na sala',
+    nivel: 'Intermediário',
+    subtitulo: 'As versões disfarçadas · 6 situações',
+    capa: 'No nível básico, as inteligências apareceram com a roupa de sempre. Aqui elas vêm disfarçadas: a Linguística que quase não fala, a Naturalista sem natureza por perto, a Corporal que se atrapalha com a tesoura. Duas lições sobre os disfarces, depois seis cenas para desmontá-los.',
+    disponivel: true,
+    licoes: [
+      {
+        titulo: 'A inteligência não é a habilidade visível',
+        paragrafos: [
+          'O erro mais fino do olhar é confundir a inteligência com a habilidade que costuma acompanhá-la. São coisas diferentes: a habilidade se treina e aparece na superfície; a inteligência é o jeito de processar, e opera por baixo, até quando a habilidade falha.',
+        ],
+        itens: [
+          {
+            titulo: 'Pronúncia não é narrativa',
+            texto: 'A criança pode trocar sons, falar "errado", e construir histórias com estrutura impecável. A pronúncia é habilidade treinável; a narrativa é a inteligência Linguística operando.',
+          },
+          {
+            titulo: 'Tesoura não é corpo',
+            texto: 'Pode se atrapalhar com o recorte e só compreender as coisas quando toca e manipula. Motricidade fina é habilidade; conhecer pelo corpo é a inteligência.',
+          },
+          {
+            titulo: 'Desenho bonito não é Espacial',
+            texto: 'O traço se treina. A inteligência Espacial aparece em outro lugar: em saber onde cada coisa fica, ver a solução antes de conseguir explicá-la, lembrar pelo lugar.',
+          },
+        ],
+      },
+      {
+        titulo: 'Onde cada uma se esconde',
+        paragrafos: ['Os disfarces mais comuns da sala, para você reconhecer de longe:'],
+        itens: [
+          {
+            cor: '#1E3A8A',
+            titulo: 'A Linguística calada',
+            texto: 'Quase não fala na roda, e em casa reconta a sua aula inteira, com as suas palavras exatas. A inteligência opera por dentro, sem plateia.',
+          },
+          {
+            cor: '#78350F',
+            titulo: 'A Naturalista de apartamento',
+            texto: 'Nunca viu uma horta, e a inteligência aparece inteira na fileira de carrinhos organizados por tipo: o que ela busca é a diferença fina, com o material que houver.',
+          },
+          {
+            cor: '#0891B2',
+            titulo: 'A Interpessoal sem a parte ética',
+            texto: 'Consegue o que quer porque leu como cada adulto reage. É a inteligência sem a ética, que ainda está em construção. Inteligência não é virtude: é canal.',
+          },
+          {
+            cor: '#EA580C',
+            titulo: 'A Intrapessoal que "demora"',
+            texto: 'Há um instante entre a pergunta e a resposta dela: é o tempo de consultar o próprio estado. Parece lentidão; é etapa.',
+          },
+        ],
+      },
+    ],
+    situacoes: [
+      {
+        pergunta: 'Qual inteligência está em cena?',
+        cena: 'O Nico troca o R pelo L e quase não se entende o que diz. Mas a história que ele contou hoje tinha começo, vilão, reviravolta e um final que ele guardou em segredo até a última frase.',
+        alternativas: [
+          {
+            texto: 'Nenhuma clara: ele ainda tem dificuldade de fala.',
+            correta: false,
+            feedback:
+              'A dificuldade é de pronúncia, que é habilidade treinável e passageira. Por baixo dela, uma história com arquitetura completa e até suspense administrado. Não deixe a superfície esconder a estrutura.',
+          },
+          {
+            texto: 'Linguística: a arquitetura da história é dele, a pronúncia é só a superfície.',
+            correta: true,
+            feedback:
+              'É isso. Vilão, reviravolta, segredo guardado até a última frase: isso é domínio de narrativa, o coração da Linguística. A fonoaudiologia cuida da superfície; o diário registra a arquitetura.',
+          },
+          {
+            texto: 'Intrapessoal: ele guardou um segredo até o final.',
+            correta: false,
+            feedback:
+              'O segredo dele era um recurso DE NARRADOR: guardar o final para o efeito da história. O material da cena é a história, não o mundo interno. Repare a serviço de quê o gesto está.',
+          },
+        ],
+      },
+      {
+        pergunta: 'Qual inteligência está em cena?',
+        cena: 'A Valentina nunca viu uma horta: mora em apartamento e não liga para o parquinho. Hoje passou a manhã separando os carrinhos da caixa: os de porta que abre, os de roda grande, os que "são da mesma família".',
+        alternativas: [
+          {
+            texto: 'Lógico-Matemática: ela está classificando os carrinhos.',
+            correta: false,
+            feedback:
+              'Perto, mas repare no critério dela: "da mesma família". A Lógica classifica por regra abstrata (tamanho, cor, número); a Valentina agrupa por parentesco de tipo, como quem organiza espécies. É outra assinatura.',
+          },
+          {
+            texto: 'Naturalista: ela busca diferenças finas e agrupa por tipo, com o material que tem.',
+            correta: true,
+            feedback:
+              'É isso, e é o disfarce clássico: a Naturalista não precisa de natureza, precisa de VARIEDADE onde caçar diferenças finas. Carrinhos servem. "Da mesma família" entregou o jogo.',
+          },
+          {
+            texto: 'Nenhuma: sem contato com a natureza, a Naturalista não tem como aparecer.',
+            correta: false,
+            feedback:
+              'Essa é exatamente a conclusão que este nível existe para desmontar. A inteligência é o jeito de processar, não o cenário. Sem bicho e sem planta, ela opera nos carrinhos, nas figurinhas, nas folhas do quintal do vizinho.',
+          },
+        ],
+      },
+      {
+        pergunta: 'Qual inteligência está em cena?',
+        cena: 'O Breno é o que mais derruba tinta e o que pior recorta da turma. Mas hoje, na atividade nova, ele não ouviu a explicação: pegou o material e ficou virando nas mãos, e dois minutos depois estava fazendo, certo, o que você nem tinha terminado de explicar.',
+        alternativas: [
+          {
+            texto: 'Corporal-Cinestésica: ele compreendeu pelo manuseio antes da explicação acabar.',
+            correta: true,
+            feedback:
+              'É isso. O recorte torto e a tinta derramada são motricidade fina, habilidade em treino. A inteligência apareceu no outro detalhe: as mãos dele ENTENDERAM o material antes das suas palavras. Conhecer pelo fazer é o coração da Corporal.',
+          },
+          {
+            texto: 'Nenhuma: ele é desastrado com as mãos, não pode ser a Corporal.',
+            correta: false,
+            feedback:
+              'O disfarce perfeito. Ser habilidoso com as mãos e conhecer PELAS mãos são coisas diferentes: uma é destreza, a outra é canal de compreensão. O Breno derrama tinta E pensa com as mãos. As duas coisas são verdade.',
+          },
+          {
+            texto: 'Lógico-Matemática: ele deduziu a atividade sozinho.',
+            correta: false,
+            feedback:
+              'A dedução existiu, mas repare no instrumento: não foi olhando nem perguntando, foi VIRANDO NAS MÃOS. Quando o caminho da compreensão é o manuseio, o canal é o corpo.',
+          },
+        ],
+      },
+      {
+        pergunta: 'O que essa cena mostra?',
+        cena: 'A Antonella, de cinco anos, convence qualquer adulto: sabe a hora de pedir pra auxiliar (depois do lanche), o tom que funciona com você (o quase-choro) e nunca tenta com a coordenadora ("ela não deixa nada").',
+        alternativas: [
+          {
+            texto: 'Um problema de comportamento que precisa de limite, não de registro.',
+            correta: false,
+            feedback:
+              'O limite talvez precise existir, mas jogar a cena fora seria desperdiçar o dado: ela mapeou três adultos com precisão. Registre a leitura fina; o limite é outra conversa, que não passa pelo diário.',
+          },
+          {
+            texto: 'Interpessoal em estado puro: ela leu cada adulto com precisão. A ética vem com os anos; o canal já está aí.',
+            correta: true,
+            feedback:
+              'É isso, e é uma das lições mais adultas deste treinamento: inteligência não é virtude. A Antonella tem uma leitura de pessoas rara para a idade, hoje a serviço dos próprios interesses. O canal é o dado; o uso que ela faz dele é construção dos próximos anos.',
+          },
+          {
+            texto: 'Linguística: ela usa bem as palavras para convencer.',
+            correta: false,
+            feedback:
+              'As palavras são a ferramenta visível; o motor é o mapa que ela fez de cada adulto (quando, com quem, em que tom). Convencer é leitura de pessoas aplicada. O canal comandante é o Interpessoal.',
+          },
+        ],
+      },
+      {
+        pergunta: 'Qual inteligência está em cena?',
+        cena: 'Você pergunta à Aurora se ela quer trocar de dupla. Ela fica em silêncio um tempão, você quase repete a pergunta, e então ela responde: "quero, mas só depois que a gente terminar a torre, senão a Lia fica triste".',
+        alternativas: [
+          {
+            texto: 'Lentidão de processamento: vale registrar a demora pra responder.',
+            correta: false,
+            feedback:
+              'Olhe o que a demora PRODUZIU: uma resposta com decisão própria, condição e cuidado com a colega. Isso não é lentidão, é consulta interna. Registrar "demora pra responder" seria registrar o disfarce e perder a inteligência.',
+          },
+          {
+            texto: 'Intrapessoal: o silêncio era ela consultando o próprio estado antes de decidir.',
+            correta: true,
+            feedback:
+              'É isso. O instante entre a pergunta e a resposta é a assinatura da Intrapessoal: ela acessa o que sente e o que quer ANTES de agir. A resposta veio inteira: decisão, condição e empatia já processadas.',
+          },
+          {
+            texto: 'Interpessoal: ela se preocupou com a tristeza da Lia.',
+            correta: false,
+            feedback:
+              'A empatia está na cena, mas repare na ordem: primeiro o mergulho para dentro (o silêncio longo), depois a decisão que INCLUI a colega. Quando a consulta interna comanda e o outro entra no resultado, quem dirigiu foi a Intrapessoal.',
+          },
+        ],
+      },
+      {
+        pergunta: 'Qual inteligência está em cena?',
+        cena: 'O desenho da Helena é um emaranhado que ninguém entende. Mas quando a sala foi reorganizada, ela olhou uma vez e disse: "o cantinho da leitura tá mais perto da porta agora, e a mesa da tinta foi pro lugar dos blocos".',
+        alternativas: [
+          {
+            texto: 'Nenhuma clara: o desenho dela ainda é muito imaturo.',
+            correta: false,
+            feedback:
+              'O desenho é o traço, e traço é habilidade em treino. A inteligência Espacial estava na outra metade da cena: o mapa da sala inteiro na cabeça, atualizado num olhar. Não deixe o papel esconder o mapa.',
+          },
+          {
+            texto: 'Espacial: o mapa mental da sala é preciso, mesmo com o traço ainda verde.',
+            correta: true,
+            feedback:
+              'É isso. Ela guarda posições e relações de espaço com precisão de planta baixa. O desenho bonito virá ou não virá; a inteligência já está operando. São coisas independentes.',
+          },
+          {
+            texto: 'Linguística: ela descreveu a mudança com clareza.',
+            correta: false,
+            feedback:
+              'As palavras transportaram a informação, mas a informação era um MAPA: posições, distâncias, o que trocou de lugar com o quê. Pergunte o que a mente precisou fazer antes da frase: aqui, enxergar o espaço.',
+          },
+        ],
+      },
+    ],
+  },
+
+  /* ================================================================
+   * T2c. AS OITO INTELIGÊNCIAS · AVANÇADO (duas inteligências na mesma
+   * cena: qual comanda? + o sinal sem plateia + o limite do olhar)
+   * ================================================================ */
+  {
+    id: 8,
+    titulo: 'As oito inteligências na sala',
+    nivel: 'Avançado',
+    subtitulo: 'Qual comanda a cena? · 5 situações difíceis',
+    capa: 'Nas cenas reais, as inteligências quase nunca aparecem sozinhas: uma constrói enquanto a outra narra, uma organiza enquanto a outra lê os colegas. Este nível treina a pergunta mais difícil do olhar: qual delas comanda? Três lições, depois cinco cenas sem resposta fácil.',
+    disponivel: true,
+    licoes: [
+      {
+        titulo: 'Quando duas operam juntas',
+        paragrafos: [
+          'A menina constrói uma casinha (Espacial?) narrando cada cômodo (Linguística?). O menino organiza a brincadeira (Lógica?) distribuindo papéis entre colegas (Interpessoal?). Nas cenas boas, sempre há mais de uma inteligência trabalhando, porque a criança é inteira.',
+          'O teste para achar a comandante: tire uma inteligência da cena, mentalmente, e veja se a cena desmonta. Se a Clara parasse de narrar mas seguisse construindo, a brincadeira sobreviveria? E se ela parasse de construir, a história continuaria? A que não pode faltar é a que comanda.',
+        ],
+        destaque: 'Tire cada uma da cena mentalmente. A que faz a cena desmontar é a que comanda.',
+      },
+      {
+        titulo: 'O sinal sem plateia',
+        paragrafos: [
+          'O sinal mais confiável de uma inteligência é o que a criança faz quando acha que ninguém vê e quando ninguém pediu: a musiquinha cantarolada no descanso, a fileira arrumada sem atividade nenhuma, o desenho refeito três vezes por conta própria.',
+          'Com plateia, a criança também responde ao olhar dos outros; sem plateia, sobra só o ímã. Guarde essas cenas com carinho especial no diário: elas valem por dez.',
+        ],
+        destaque: 'O que ela faz sem plateia e sem pedido é o sinal mais puro que existe.',
+      },
+      {
+        titulo: 'O limite do olhar',
+        paragrafos: [
+          'O observador avançado sabe uma coisa que o iniciante não sabe: às vezes a resposta certa é "ainda não dá para saber". Criança nova na escola, semana atípica, cena ambígua: classificar no escuro é chutar com autoridade, e o chute gravado vira verdade de papel.',
+          'Nessas horas, a frase descritiva é a resposta avançada: ela guarda tudo e não carimba nada. O padrão vai se formar sozinho, cena após cena, e um dia a leitura será óbvia. Pressa é o único erro sem conserto.',
+        ],
+        destaque: 'Saber dizer "ainda não sei" é o grau mais alto da observação.',
+      },
+    ],
+    situacoes: [
+      {
+        pergunta: 'Qual inteligência comanda a cena?',
+        cena: 'A Clara construiu uma casinha de blocos narrando cada cômodo: "aqui dorme a vovó, aqui é a cozinha". Quando a torre caiu, ela não refez: seguiu contando, "aí veio a tempestade e quebrou a casa, e a vovó foi morar na casa da praia".',
+        alternativas: [
+          {
+            texto: 'Espacial: ela passou a cena inteira construindo com blocos.',
+            correta: false,
+            feedback:
+              'Aplique o teste: quando a construção CAIU, o que sobreviveu? A história, que absorveu a queda e seguiu ("veio a tempestade"). Se a Espacial comandasse, ela teria refeito a torre. A construção era cenário da narrativa.',
+          },
+          {
+            texto: 'Linguística: a história comandava; a queda da torre virou capítulo em vez de fim.',
+            correta: true,
+            feedback:
+              'É isso, e a prova está no acidente: a torre caiu e a narrativa nem tropeçou, transformou a queda em tempestade. Quando o imprevisto é absorvido POR uma inteligência, ela é a comandante. Cena de duas; comando de uma.',
+          },
+          {
+            texto: 'Intrapessoal: ela lidou bem com a frustração da queda.',
+            correta: false,
+            feedback:
+              'Ela nem chegou a se frustrar, e isso é a pista: a queda não foi um golpe a superar, foi material narrativo imediato. Não houve gestão de emoção; houve enredo com fome de acontecimento.',
+          },
+        ],
+      },
+      {
+        pergunta: 'Qual inteligência comanda a cena?',
+        cena: 'No restaurante de faz de conta, o Pietro distribui os papéis: quem cozinha, quem serve, quem é cliente. Mas repare: ele sempre reserva pra si o papel mais isolado, e passa o resto do tempo alinhando os "cardápios" em pilhas iguais e refazendo a fila dos pratos.',
+        alternativas: [
+          {
+            texto: 'Interpessoal: ele lidera a brincadeira e organiza os colegas.',
+            correta: false,
+            feedback:
+              'Parece liderança, mas aplique o teste: tire os COLEGAS da cena e o Pietro continua feliz alinhando cardápios; tire as PILHAS e a fila, e a brincadeira dele acaba. As pessoas eram peças do sistema; o sistema era o ímã.',
+          },
+          {
+            texto: 'Lógico-Matemática: os colegas eram peças de um sistema; o ímã dele são as pilhas, as filas, a ordem.',
+            correta: true,
+            feedback:
+              'É isso. A distribuição de papéis era montagem de engrenagem, não leitura de gente, e a prova é dupla: ele se reserva o papel MAIS ISOLADO e gasta o tempo na arrumação. Organizar pessoas e ler pessoas podem ser inteligências diferentes.',
+          },
+          {
+            texto: 'Espacial: ele arruma pilhas e filas no espaço.',
+            correta: false,
+            feedback:
+              'A arrumação dele tem critério de igualdade e sequência (pilhas IGUAIS, fila refeita), que é regra, não composição visual. O Espacial compõe uma imagem; o Lógico impõe uma ordem. O critério desempata.',
+          },
+        ],
+      },
+      {
+        pergunta: 'O que essa cena vale, e por quê?',
+        cena: 'Hora do descanso, luz apagada. Achando que ninguém via, a Bela cantarolou baixinho, na ordem exata do dia, as musiquinhas da escola: a da chegada, a do lanche, a da saída. Errou uma nota, parou, e recomeçou a frase do zero.',
+        alternativas: [
+          {
+            texto: 'Pouco: era hora de descansar, e a cena nem era de atividade.',
+            correta: false,
+            feedback:
+              'É o contrário: fora da atividade, sem plateia e sem pedido, sobrou só o ímã dela. O que a criança faz quando ninguém vê é o sinal mais puro que o diário pode receber. Essa cena vale a semana.',
+          },
+          {
+            texto: 'Muito: sem plateia e sem pedido, o som guardado do dia inteiro veio à tona, e com autocorreção. Musical, em estado puro.',
+            correta: true,
+            feedback:
+              'É isso, nos três detalhes: a ORDEM exata (o dia inteiro arquivado em som), o SEM PLATEIA (nenhuma função social, só o ímã) e a AUTOCORREÇÃO (errou a nota, recomeçou: existe um padrão interno exigente). Registre com data e capricho.',
+          },
+          {
+            texto: 'Muito: ela memorizou a sequência do dia. Lógico-Matemática.',
+            correta: false,
+            feedback:
+              'A sequência existe, mas o juiz da cena era o OUVIDO: ela parou por causa de uma nota errada, não de uma ordem errada. Quem corrige nota é o padrão musical interno. A sequência era do dia; a exigência era do som.',
+          },
+        ],
+      },
+      {
+        pergunta: 'Qual inteligência comanda a cena?',
+        cena: 'Na briga de ontem, o Otto não mediou nem se meteu: ficou olhando de longe. Hoje, no desenho livre, desenhou a briga, com os dois colegas e um sol chorando, e perguntou: "por que o Théo ficou tão bravo se foi sem querer?"',
+        alternativas: [
+          {
+            texto: 'Espacial: ele processou o conflito desenhando.',
+            correta: false,
+            feedback:
+              'O desenho foi o VEÍCULO, não o motor. Aplique o teste: tire o desenho e a pergunta sobre o Théo continua viva (ele podia tê-la feito na roda). Tire o INTERESSE PELO COLEGA e não sobra cena nenhuma. O canal era gráfico; o assunto era gente.',
+          },
+          {
+            texto: 'Interpessoal: um dia depois, ele ainda processava o estado do colega, e escolheu um canal pra elaborar a pergunta.',
+            correta: true,
+            feedback:
+              'É isso, e note a sofisticação: a leitura do outro ("bravo", "sem querer") atravessou a noite, escolheu um canal de elaboração (o desenho) e voltou como pergunta genuína sobre o mundo interno do Théo. Interpessoal comandando, Espacial servindo. As duas merecem registro; uma comanda.',
+          },
+          {
+            texto: 'Intrapessoal: ele estava elaborando os próprios sentimentos sobre a briga.',
+            correta: false,
+            feedback:
+              'Olhe o objeto da pergunta: não é "por que EU fiquei mal", é "por que o THÉO ficou bravo". O mundo interno investigado é o do outro. Intrapessoal e Interpessoal se distinguem exatamente aí: pela direção da lupa.',
+          },
+        ],
+      },
+      {
+        pergunta: 'O que o diário deve dizer sobre a Mel?',
+        cena: 'A Mel chegou há três semanas. Brinca de tudo um pouco: um dia os blocos, outro a casinha, outro atrás da Duda. Nenhum padrão se repetiu ainda. Você quer muito escrever alguma coisa sobre ela.',
+        alternativas: [
+          {
+            texto: 'Escolher a inteligência da cena mais marcante até agora e registrá-la, pra não deixar a Mel sem leitura.',
+            correta: false,
+            feedback:
+              'Três semanas de criança recém-chegada é adaptação, não padrão: ela ainda está descobrindo o território, e talvez imitando os colegas pra pertencer. A leitura forçada de hoje viraria a verdade de papel de amanhã. O diário aguenta esperar.',
+          },
+          {
+            texto: 'Descrever as cenas como são ("esta semana: blocos na segunda, casinha na quarta, seguiu a Duda na sexta") e deixar o padrão se formar sozinho.',
+            correta: true,
+            feedback:
+              'É isso, e é a resposta mais avançada deste treinamento inteiro: saber dizer "ainda não sei". As suas frases descritivas já estão trabalhando: daqui a dois meses, lidas em sequência, elas mesmas vão desenhar o padrão. Pressa é o único erro que o diário não conserta.',
+          },
+          {
+            texto: 'Registrar que a Mel é "versátil, se adapta a tudo".',
+            correta: false,
+            feedback:
+              '"Versátil" parece elogio e é carimbo no escuro: três semanas não sustentam nem essa leitura. E o rótulo positivo tem o mesmo defeito do negativo: fecha a pergunta que devia ficar aberta.',
           },
         ],
       },

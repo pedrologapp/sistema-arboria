@@ -145,8 +145,16 @@ const InfantilFormacaoPage = () => {
                   {feito ? <Check size={14} strokeWidth={3} /> : tr.id}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold" style={{ color: t.text }}>
-                    {tr.titulo}
+                  <span className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: t.text }}>
+                    <span className="truncate">{tr.titulo}</span>
+                    {tr.nivel && (
+                      <span
+                        className="flex-shrink-0 text-[9px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded-full"
+                        style={{ backgroundColor: t.accentSoft, color: t.accentText }}
+                      >
+                        {tr.nivel}
+                      </span>
+                    )}
                   </span>
                   <span
                     className="block text-xs mt-0.5"
@@ -197,9 +205,21 @@ const InfantilFormacaoPage = () => {
         </div>
 
         <h1 className="font-serif text-[23px] leading-snug mb-3" style={{ color: t.text }}>
-          Treinamento {tr.id}
-          <br />
-          {tr.titulo}
+          {tr.nivel ? (
+            <>
+              {tr.titulo}
+              <br />
+              <span className="text-[17px]" style={{ color: t.accentText }}>
+                Nível {tr.nivel}
+              </span>
+            </>
+          ) : (
+            <>
+              Treinamento {tr.id}
+              <br />
+              {tr.titulo}
+            </>
+          )}
         </h1>
         <p className="text-sm leading-relaxed texto-justificado" style={{ color: t.textMuted }}>
           {tr.capa}
@@ -439,7 +459,9 @@ const InfantilFormacaoPage = () => {
 
   /* ============ CONQUISTA ============ */
   const { tr } = etapa;
-  const proximo = TREINAMENTOS.find((x) => x.id > tr.id);
+  // Próximo pela ORDEM DA TRILHA (o array), não pelo id: os níveis do T2
+  // usam ids próprios no banco mas vêm em sequência na lista
+  const proximo = TREINAMENTOS[TREINAMENTOS.indexOf(tr) + 1];
   return (
     <div
       className="pt-4 pb-8 flex flex-col items-center text-center min-h-[78vh] -mx-4 px-6"
@@ -476,8 +498,17 @@ const InfantilFormacaoPage = () => {
         className="font-serif text-[24px] leading-snug mt-1 vf-rise"
         style={{ color: t.text, animationDelay: '80ms' }}
       >
-        Você completou o<br />
-        Treinamento {tr.id}
+        {tr.nivel ? (
+          <>
+            Você completou o<br />
+            nível {tr.nivel}
+          </>
+        ) : (
+          <>
+            Você completou o<br />
+            Treinamento {tr.id}
+          </>
+        )}
       </h1>
       <p
         className="font-serif italic text-[17px] mt-1.5 vf-rise"
