@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { Plus, PenLine, FileText, X, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, PenLine, FileText, X, Loader2, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,6 +15,8 @@ const INTELIGENCIAS = [
   { id: 7, nome: 'Interpessoal', cor: '#0891B2' },
   { id: 8, nome: 'Intrapessoal', cor: '#EA580C' },
 ];
+
+const TODAS = 'Todas as séries';
 
 interface Atividade {
   id: string;
@@ -41,7 +43,6 @@ const fromAny = (tb: string) =>
 
 const VAZIA = {
   nome: '',
-  faixa: '',
   objetivo: '',
   materiais: '',
   como_conduzir: '',
@@ -51,20 +52,23 @@ const VAZIA = {
 /**
  * BANCO DE ATIVIDADES (Painel Arboria): o dono cadastra a atividade de cada
  * exploração; as professoras consomem no cockpit e na aula.
+ * Navegação VERTICAL: inteligência abre por série (pedido do Fundador 04/07);
+ * o + escolhe inteligência e série no próprio formulário.
  */
 const ArboriaAtividadesPage = () => {
   const [instituicoes, setInstituicoes] = useState<Instituicao[]>([]);
   const [instSel, setInstSel] = useState<string | null>(null);
-  const [intelSel, setIntelSel] = useState(1);
+  const [series, setSeries] = useState<string[]>([]);
   const [atividades, setAtividades] = useState<Atividade[] | null>(null);
+  const [intelAberta, setIntelAberta] = useState<number | null>(null);
 
   const [editando, setEditando] = useState<Atividade | 'nova' | null>(null);
   const [form, setForm] = useState(VAZIA);
+  const [formIntel, setFormIntel] = useState(1);
+  const [formFaixa, setFormFaixa] = useState<string>(TODAS);
   const [pdf, setPdf] = useState<File | null>(null);
   const [salvando, setSalvando] = useState(false);
   const pdfRef = useRef<HTMLInputElement>(null);
-
-  const intel = INTELIGENCIAS.find((i) => i.id === intelSel)!;
 
   useEffect(() => {
     (async () => {
@@ -78,13 +82,28 @@ const ArboriaAtividadesPage = () => {
     })();
   }, []);
 
+  // Séries reais da instituição (pro seletor de faixa do formulário)
+  useEffect(() => {
+    if (!instSel) return;
+    (async () => {
+      const { data } = await supabase
+        .from('turmas')
+        .select('serie')
+        .eq('institution_id', instSel);
+      const unicas = Array.from(
+        new Set(((data as { serie: string | null }[]) ?? []).map((x) => x.serie).filter(Boolean))
+      ) as string[];
+      unicas.sort();
+      setSeries(unicas);
+    })();
+  }, [instSel]);
+
   const carregar = async () => {
     if (!instSel) return;
     setAtividades(null);
     const { data, error } = await fromAny('atividades')
       .select('*')
       .eq('institution_id', instSel)
-      .eq('inteligencia_id', intelSel)
       .order('ordem');
     if (error) {
       toast.error(error.message);
@@ -97,10 +116,35 @@ const ArboriaAtividadesPage = () => {
   useEffect(() => {
     carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [instSel, intelSel]);
+  }, [instSel]);
+
+  // Agrupamento: inteligência → faixa → atividades (na ordem)
+  const porInteligencia = useMemo(() => {
+    const mapa = new Map<number, Map<string, Atividade[]>>();
+    for (const i of INTELIGENCIAS) mapa.set(i.id, new Map());
+    for (const a of atividades ?? []) {
+      const chaveFaixa = a.faixa ?? TODAS;
+      const porFaixa = mapa.get(a.inteligencia_id)!;
+      if (!porFaixa.has(chaveFaixa)) porFaixa.set(chaveFaixa, []);
+      porFaixa.get(chaveFaixa)!.push(a);
+    }
+    // "Todas as séries" primeiro, depois séries em ordem alfabética
+    for (const [, porFaixa] of mapa) {
+      const ordenado = new Map(
+        [...porFaixa.entries()].sort(([a], [b]) =>
+          a === TODAS ? -1 : b === TODAS ? 1 : a.localeCompare(b)
+        )
+      );
+      porFaixa.clear();
+      for (const [k, v] of ordenado) porFaixa.set(k, v);
+    }
+    return mapa;
+  }, [atividades]);
 
   const abrirNova = () => {
     setForm(VAZIA);
+    setFormIntel(intelAberta ?? 1);
+    setFormFaixa(TODAS);
     setPdf(null);
     setEditando('nova');
   };
@@ -108,12 +152,13 @@ const ArboriaAtividadesPage = () => {
   const abrirEdicao = (a: Atividade) => {
     setForm({
       nome: a.nome,
-      faixa: a.faixa ?? '',
       objetivo: a.objetivo ?? '',
       materiais: a.materiais ?? '',
       como_conduzir: a.como_conduzir ?? '',
       o_que_observar: a.o_que_observar ?? '',
     });
+    setFormIntel(a.inteligencia_id);
+    setFormFaixa(a.faixa ?? TODAS);
     setPdf(null);
     setEditando(a);
   };
@@ -124,15 +169,17 @@ const ArboriaAtividadesPage = () => {
     try {
       let pdfUrl: string | null = editando !== 'nova' && editando ? editando.pdf_url : null;
       if (pdf) {
-        const path = `${instSel}/${intelSel}/${Date.now()}-${pdf.name.replace(/[^\w.\-]/g, '_')}`;
+        const path = `${instSel}/${formIntel}/${Date.now()}-${pdf.name.replace(/[^\w.\-]/g, '_')}`;
         const { error: upErr } = await supabase.storage.from('atividades').upload(path, pdf);
         if (upErr) throw upErr;
         pdfUrl = supabase.storage.from('atividades').getPublicUrl(path).data.publicUrl;
       }
 
+      const faixaValor = formFaixa === TODAS ? null : formFaixa;
       const payload = {
         nome: form.nome.trim(),
-        faixa: form.faixa.trim() || null,
+        inteligencia_id: formIntel,
+        faixa: faixaValor,
         objetivo: form.objetivo.trim() || null,
         materiais: form.materiais.trim() || null,
         como_conduzir: form.como_conduzir.trim() || null,
@@ -141,15 +188,15 @@ const ArboriaAtividadesPage = () => {
       };
 
       if (editando === 'nova') {
-        const proximaOrdem = (atividades?.length ?? 0) + 1;
+        const grupo = porInteligencia.get(formIntel)?.get(formFaixa) ?? [];
         const { error } = await fromAny('atividades').insert({
           ...payload,
           institution_id: instSel,
-          inteligencia_id: intelSel,
-          ordem: proximaOrdem,
+          ordem: grupo.length + 1,
         } as never);
         if (error) throw error;
         toast.success('Atividade cadastrada.');
+        setIntelAberta(formIntel);
       } else if (editando) {
         const { error } = await fromAny('atividades')
           .update({ ...payload, updated_at: new Date().toISOString() } as never)
@@ -166,10 +213,11 @@ const ArboriaAtividadesPage = () => {
     }
   };
 
+  // Reordena DENTRO do grupo (mesma inteligência e mesma série)
   const mover = async (a: Atividade, direcao: -1 | 1) => {
-    if (!atividades) return;
-    const idx = atividades.findIndex((x) => x.id === a.id);
-    const vizinho = atividades[idx + direcao];
+    const grupo = porInteligencia.get(a.inteligencia_id)?.get(a.faixa ?? TODAS) ?? [];
+    const idx = grupo.findIndex((x) => x.id === a.id);
+    const vizinho = grupo[idx + direcao];
     if (!vizinho) return;
     await Promise.all([
       fromAny('atividades').update({ ordem: vizinho.ordem } as never).eq('id', a.id),
@@ -186,7 +234,6 @@ const ArboriaAtividadesPage = () => {
   const campos: { chave: keyof typeof VAZIA; label: string; multi?: boolean; dica?: string }[] = useMemo(
     () => [
       { chave: 'nome', label: 'Nome da atividade' },
-      { chave: 'faixa', label: 'Faixa (opcional)', dica: 'Ex.: Maternal II, Grupo IV. Vazio = todas.' },
       { chave: 'objetivo', label: 'Objetivo', multi: true },
       { chave: 'materiais', label: 'Materiais', multi: true },
       { chave: 'como_conduzir', label: 'Como conduzir', multi: true },
@@ -199,6 +246,8 @@ const ArboriaAtividadesPage = () => {
     ],
     []
   );
+
+  const intelForm = INTELIGENCIAS.find((i) => i.id === formIntel)!;
 
   return (
     <div>
@@ -215,7 +264,7 @@ const ArboriaAtividadesPage = () => {
         </button>
       </div>
       <p className="text-sm mb-4" style={{ color: t.textMuted }}>
-        O caminho de cada exploração, na ordem em que as turmas vão percorrer.
+        Toque numa inteligência para ver o caminho dela, por série.
       </p>
 
       {instituicoes.length > 1 && (
@@ -233,101 +282,162 @@ const ArboriaAtividadesPage = () => {
         </select>
       )}
 
-      {/* Seletor das 8 */}
-      <div className="flex gap-1.5 overflow-x-auto pb-2 mb-4">
-        {INTELIGENCIAS.map((i) => {
-          const ativa = i.id === intelSel;
-          return (
-            <button
-              key={i.id}
-              onClick={() => setIntelSel(i.id)}
-              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold flex-shrink-0 transition-all"
-              style={
-                ativa
-                  ? { backgroundColor: i.cor, color: '#FFFFFF', boxShadow: t.shadowSm }
-                  : { backgroundColor: t.surface, color: t.textMuted, border: `1px solid ${t.border}` }
-              }
-            >
-              <span
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: ativa ? '#FFFFFF' : i.cor }}
-              />
-              {i.nome}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Lista */}
       {atividades === null ? (
         <div className="space-y-2">
-          <Skeleton className="h-16 w-full rounded-2xl" />
-          <Skeleton className="h-16 w-full rounded-2xl" />
-        </div>
-      ) : atividades.length === 0 ? (
-        <div
-          className="rounded-2xl p-8 text-center"
-          style={{ backgroundColor: t.surface, border: `1px dashed ${t.silencio}` }}
-        >
-          <p className="text-sm" style={{ color: t.textMuted }}>
-            Nenhuma atividade na Exploração {intel.nome} ainda.
-          </p>
-          <button
-            onClick={abrirNova}
-            className="mt-3 rounded-full px-4 py-2 text-xs font-semibold"
-            style={{ backgroundColor: t.accent, color: '#FFFFFF' }}
-          >
-            Cadastrar a primeira
-          </button>
+          {INTELIGENCIAS.slice(0, 4).map((i) => (
+            <Skeleton key={i.id} className="h-14 w-full rounded-2xl" />
+          ))}
         </div>
       ) : (
         <div className="space-y-2">
-          {atividades.map((a, idx) => (
-            <div
-              key={a.id}
-              className="rounded-2xl p-3.5 flex items-center gap-3"
-              style={{
-                backgroundColor: t.surface,
-                border: `1px solid ${t.border}`,
-                borderLeft: `3px solid ${intel.cor}`,
-                boxShadow: t.shadowSm,
-                opacity: a.ativo ? 1 : 0.55,
-              }}
-            >
-              <span
-                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                style={{ backgroundColor: `${intel.cor}18`, color: intel.cor }}
+          {INTELIGENCIAS.map((intel) => {
+            const porFaixa = porInteligencia.get(intel.id)!;
+            const total = [...porFaixa.values()].reduce((s, arr) => s + arr.length, 0);
+            const aberta = intelAberta === intel.id;
+
+            return (
+              <div
+                key={intel.id}
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  backgroundColor: t.surface,
+                  border: `1px solid ${aberta ? intel.cor : t.border}`,
+                  borderLeft: `3px solid ${intel.cor}`,
+                  boxShadow: t.shadowSm,
+                }}
               >
-                {idx + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold truncate" style={{ color: t.text }}>
-                  {a.nome}
-                  {!a.ativo && (
-                    <span className="ml-2 text-[10px] uppercase font-bold" style={{ color: t.textFaint }}>
-                      inativa
-                    </span>
-                  )}
-                </p>
-                <p className="text-xs truncate" style={{ color: t.textFaint }}>
-                  {a.faixa ? `${a.faixa} · ` : ''}
-                  {a.objetivo || 'Sem objetivo cadastrado'}
-                  {a.pdf_url ? ' · PDF anexado' : ''}
-                </p>
+                {/* Cabeçalho da inteligência (vertical, clicável) */}
+                <button
+                  onClick={() => setIntelAberta(aberta ? null : intel.id)}
+                  className="w-full flex items-center gap-3 p-3.5 text-left"
+                >
+                  <span
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: intel.cor }}
+                  />
+                  <span className="flex-1 text-sm font-semibold" style={{ color: t.text }}>
+                    {intel.nome}
+                  </span>
+                  <span className="text-xs" style={{ color: t.textFaint }}>
+                    {total === 0 ? 'vazia' : `${total} ${total === 1 ? 'atividade' : 'atividades'}`}
+                  </span>
+                  <ChevronRight
+                    size={16}
+                    style={{
+                      color: t.textFaint,
+                      transform: aberta ? 'rotate(90deg)' : 'none',
+                      transition: 'transform 200ms',
+                    }}
+                  />
+                </button>
+
+                {/* Conteúdo aberto: grupos por série */}
+                {aberta && (
+                  <div className="px-3.5 pb-3.5 space-y-3">
+                    {total === 0 ? (
+                      <div
+                        className="rounded-xl p-5 text-center"
+                        style={{ border: `1px dashed ${t.silencio}` }}
+                      >
+                        <p className="text-sm" style={{ color: t.textMuted }}>
+                          Nenhuma atividade na Exploração {intel.nome} ainda.
+                        </p>
+                        <button
+                          onClick={() => {
+                            setFormIntel(intel.id);
+                            setForm(VAZIA);
+                            setFormFaixa(TODAS);
+                            setPdf(null);
+                            setEditando('nova');
+                          }}
+                          className="mt-2.5 rounded-full px-4 py-2 text-xs font-semibold"
+                          style={{ backgroundColor: intel.cor, color: '#FFFFFF' }}
+                        >
+                          Cadastrar a primeira
+                        </button>
+                      </div>
+                    ) : (
+                      [...porFaixa.entries()].map(([faixa, lista]) => (
+                        <div key={faixa}>
+                          <p
+                            className="text-[10.5px] uppercase tracking-wide font-bold mb-1.5"
+                            style={{ color: t.textFaint }}
+                          >
+                            {faixa}
+                          </p>
+                          <div className="space-y-1.5">
+                            {lista.map((a, idx) => (
+                              <div
+                                key={a.id}
+                                className="rounded-xl p-2.5 flex items-center gap-2.5"
+                                style={{
+                                  backgroundColor: t.surfaceAlt,
+                                  border: `1px solid ${t.border}`,
+                                  opacity: a.ativo ? 1 : 0.55,
+                                }}
+                              >
+                                <span
+                                  className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0"
+                                  style={{ backgroundColor: `${intel.cor}18`, color: intel.cor }}
+                                >
+                                  {idx + 1}
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium truncate" style={{ color: t.text }}>
+                                    {a.nome}
+                                    {!a.ativo && (
+                                      <span
+                                        className="ml-2 text-[10px] uppercase font-bold"
+                                        style={{ color: t.textFaint }}
+                                      >
+                                        inativa
+                                      </span>
+                                    )}
+                                  </p>
+                                  <p className="text-[11px] truncate" style={{ color: t.textFaint }}>
+                                    {a.objetivo || 'Sem objetivo cadastrado'}
+                                    {a.pdf_url ? ' · PDF' : ''}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-0 flex-shrink-0">
+                                  <button
+                                    onClick={() => mover(a, -1)}
+                                    disabled={idx === 0}
+                                    className="p-1.5 disabled:opacity-25"
+                                    style={{ color: t.textFaint }}
+                                    aria-label="Subir"
+                                  >
+                                    <ChevronUp size={15} />
+                                  </button>
+                                  <button
+                                    onClick={() => mover(a, 1)}
+                                    disabled={idx === lista.length - 1}
+                                    className="p-1.5 disabled:opacity-25"
+                                    style={{ color: t.textFaint }}
+                                    aria-label="Descer"
+                                  >
+                                    <ChevronDown size={15} />
+                                  </button>
+                                  <button
+                                    onClick={() => abrirEdicao(a)}
+                                    className="p-2"
+                                    style={{ color: t.accent }}
+                                    aria-label="Editar"
+                                  >
+                                    <PenLine size={15} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-0.5 flex-shrink-0">
-                <button onClick={() => mover(a, -1)} disabled={idx === 0} className="p-1.5 disabled:opacity-25" style={{ color: t.textFaint }} aria-label="Subir">
-                  <ChevronUp size={16} />
-                </button>
-                <button onClick={() => mover(a, 1)} disabled={idx === atividades.length - 1} className="p-1.5 disabled:opacity-25" style={{ color: t.textFaint }} aria-label="Descer">
-                  <ChevronDown size={16} />
-                </button>
-                <button onClick={() => abrirEdicao(a)} className="p-2" style={{ color: t.accent }} aria-label="Editar">
-                  <PenLine size={16} />
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -343,23 +453,70 @@ const ArboriaAtividadesPage = () => {
             style={{ backgroundColor: t.surface, boxShadow: t.shadowLg }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ height: 3, backgroundColor: intel.cor }} />
+            <div style={{ height: 3, backgroundColor: intelForm.cor, transition: 'background-color 300ms' }} />
             <div className="p-5">
               <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-[10.5px] uppercase tracking-wide font-bold" style={{ color: intel.cor }}>
-                    Exploração {intel.nome}
-                  </p>
-                  <h2 className="text-lg font-bold" style={{ color: t.text }}>
-                    {editando === 'nova' ? 'Nova atividade' : 'Editar atividade'}
-                  </h2>
-                </div>
-                <button onClick={() => setEditando(null)} className="p-2 -m-2" style={{ color: t.textFaint }} aria-label="Fechar">
+                <h2 className="text-lg font-bold" style={{ color: t.text }}>
+                  {editando === 'nova' ? 'Nova atividade' : 'Editar atividade'}
+                </h2>
+                <button
+                  onClick={() => setEditando(null)}
+                  className="p-2 -m-2"
+                  style={{ color: t.textFaint }}
+                  aria-label="Fechar"
+                >
                   <X size={18} />
                 </button>
               </div>
 
               <div className="space-y-3">
+                {/* Inteligência e série: escolhidas AQUI (pedido do Fundador) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1" style={{ color: t.textMuted }}>
+                      Inteligência
+                    </label>
+                    <select
+                      value={formIntel}
+                      onChange={(e) => setFormIntel(Number(e.target.value))}
+                      className="w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none"
+                      style={{
+                        backgroundColor: t.surfaceSunken,
+                        border: `1px solid ${intelForm.cor}`,
+                        color: t.text,
+                      }}
+                    >
+                      {INTELIGENCIAS.map((i) => (
+                        <option key={i.id} value={i.id}>
+                          {i.nome}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1" style={{ color: t.textMuted }}>
+                      Série (faixa)
+                    </label>
+                    <select
+                      value={formFaixa}
+                      onChange={(e) => setFormFaixa(e.target.value)}
+                      className="w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none"
+                      style={{
+                        backgroundColor: t.surfaceSunken,
+                        border: `1px solid ${t.border}`,
+                        color: t.text,
+                      }}
+                    >
+                      <option value={TODAS}>{TODAS}</option>
+                      {series.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
                 {campos.map((c) => (
                   <div key={c.chave}>
                     <label className="block text-xs font-semibold mb-1" style={{ color: t.textMuted }}>
@@ -399,7 +556,6 @@ const ArboriaAtividadesPage = () => {
                   </div>
                 ))}
 
-                {/* PDF */}
                 <div>
                   <label className="block text-xs font-semibold mb-1" style={{ color: t.textMuted }}>
                     PDF da atividade (opcional)
