@@ -102,6 +102,9 @@ const PerfilAlunoPageWrapper = lazy(() => import("./pages/professor/PerfilAlunoP
 const InfantilRajadaPage = lazy(() => import("./pages/professor/infantil/InfantilRajadaPage"));
 const ProfessorConfiguracoesWrapper = lazy(() => import("./pages/professor/ProfessorConfiguracoesWrapper"));
 const InfantilFormacaoPage = lazy(() => import("./pages/professor/infantil/InfantilFormacaoPage"));
+const ArboriaAdminLayout = lazy(() => import("./layouts/ArboriaAdminLayout"));
+const ArboriaVisaoPage = lazy(() => import("./pages/arboria/ArboriaVisaoPage"));
+const ArboriaAtividadesPage = lazy(() => import("./pages/arboria/ArboriaAtividadesPage"));
 const MissoesSeriePage = lazy(() => import("./pages/professor/MissoesSeriePage"));
 const MissoesSemanaPage = lazy(() => import("./pages/professor/MissoesSemanaPage"));
 const MissoesListaPage = lazy(() => import("./pages/professor/MissoesListaPage"));
@@ -159,6 +162,23 @@ const App = () => (
             } />
             
             {/* Admin Routes with Layout */}
+            {/* PAINEL ARBORIA: o painel do DONO da plataforma (super_admin).
+                Separado do /admin, que é o painel da escola (coordenação). */}
+            <Route path="/arboria" element={
+              <ProtectedRoute requireSuperAdmin>
+                <ArboriaAdminLayout>
+                  <ArboriaVisaoPage />
+                </ArboriaAdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/arboria/atividades" element={
+              <ProtectedRoute requireSuperAdmin>
+                <ArboriaAdminLayout>
+                  <ArboriaAtividadesPage />
+                </ArboriaAdminLayout>
+              </ProtectedRoute>
+            } />
+
             <Route path="/admin" element={<Navigate to="/admin/monitor" replace />} />
             <Route path="/admin/monitor" element={
               <ProtectedRoute requireAdmin>

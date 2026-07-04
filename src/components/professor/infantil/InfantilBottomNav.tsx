@@ -49,8 +49,13 @@ const InfantilBottomNav = ({ dark = false }: { dark?: boolean }) => {
 
   return (
     <nav
-      className={`fixed bottom-0 left-0 right-0 z-50 pb-safe ${dark ? 'glass-dark' : 'glass-light'}`}
-      style={{ boxShadow: '0 -1px 3px rgba(28,34,48,0.06)' }}
+      className={`fixed bottom-0 left-0 right-0 z-50 ${dark ? 'glass-dark' : 'glass-light'}`}
+      style={{
+        boxShadow: '0 -1px 3px rgba(28,34,48,0.06)',
+        // Respiro extra além do safe-area: a barra de gestos do celular
+        // engolia os botões (pedido do Fundador 04/07)
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+      }}
     >
       <div className="max-w-lg mx-auto flex items-stretch justify-around">
         {navItems.map((item) => {
@@ -67,7 +72,7 @@ const InfantilBottomNav = ({ dark = false }: { dark?: boolean }) => {
             <button
               key={item.id}
               onClick={() => navigate(item.path)}
-              className="relative flex flex-1 flex-col items-center justify-center gap-1 py-2.5 min-h-[56px] transition-colors"
+              className="relative flex flex-1 flex-col items-center justify-center gap-1 pt-2.5 pb-1.5 min-h-[62px] transition-colors"
               style={{ color }}
               aria-current={isActive ? 'page' : undefined}
             >

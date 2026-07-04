@@ -6,6 +6,8 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
+  /** Dono da plataforma (papel super_admin): acessa o Painel Arboria (/arboria) */
+  isSuperAdmin: boolean;
   isLoading: boolean;
   adminCheckComplete: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -31,6 +33,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [adminCheckComplete, setAdminCheckComplete] = useState(false);
 
@@ -47,6 +50,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       return !!roleData;
     } catch (error) {
       console.error('Error checking admin role:', error);
+      return false;
+    }
+  };
+
+  const checkSuperAdminRole = async (userId: string) => {
+    try {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'super_admin' as never)
+        .maybeSingle();
+      return !!roleData;
+    } catch {
+      // Antes da migration do papel existir, a consulta falha: sem drama
       return false;
     }
   };
@@ -68,14 +86,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // Defer admin check with setTimeout to avoid deadlock
           setTimeout(async () => {
             if (!isMounted) return;
-            const result = await checkAdminRole(session.user.id);
+            const [result, superResult] = await Promise.all([
+              checkAdminRole(session.user.id),
+              checkSuperAdminRole(session.user.id),
+            ]);
             if (isMounted) {
               setIsAdmin(result);
+              setIsSuperAdmin(superResult);
               setAdminCheckComplete(true);
             }
           }, 0);
         } else if (event === 'SIGNED_OUT') {
           setIsAdmin(false);
+          setIsSuperAdmin(false);
           setAdminCheckComplete(true);
         }
       }
@@ -89,9 +112,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        const isAdminResult = await checkAdminRole(session.user.id);
+        const [isAdminResult, isSuperResult] = await Promise.all([
+          checkAdminRole(session.user.id),
+          checkSuperAdminRole(session.user.id),
+        ]);
         if (isMounted) {
           setIsAdmin(isAdminResult);
+          setIsSuperAdmin(isSuperResult);
           setAdminCheckComplete(true);
           setIsLoading(false);
         }
@@ -156,6 +183,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setSession(null);
     setUser(null);
     setIsAdmin(false);
+    setIsSuperAdmin(false);
     setAdminCheckComplete(true);
   };
 
@@ -163,6 +191,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     user,
     session,
     isAdmin,
+    isSuperAdmin,
     isLoading,
     adminCheckComplete,
     signIn,
