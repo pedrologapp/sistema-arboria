@@ -246,23 +246,27 @@ const InfantilFormacaoPage = () => {
           className="rounded-2xl p-4 mb-3"
           style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
         >
-          <p
-            className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold mb-2"
-            style={{ color: s.cor }}
-          >
-            <span
-              className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
-              style={{ backgroundColor: s.cor }}
-            />
-            Inteligência em cena: {s.inteligencia}
-          </p>
+          {/* Selo só quando a inteligência é declarada (no T2, identificá-la
+              É o exercício: mostrar o selo entregaria a resposta) */}
+          {s.inteligencia && s.cor && (
+            <p
+              className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold mb-2"
+              style={{ color: s.cor }}
+            >
+              <span
+                className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
+                style={{ backgroundColor: s.cor }}
+              />
+              Inteligência em cena: {s.inteligencia}
+            </p>
+          )}
           <p className="font-serif italic text-[15px] leading-relaxed" style={{ color: t.text }}>
             {s.cena}
           </p>
         </div>
 
         <p className="text-xs font-semibold mb-2.5" style={{ color: t.textMuted }}>
-          O que você registraria no diário?
+          {s.pergunta ?? 'O que você registraria no diário?'}
         </p>
 
         <div className="space-y-2">
