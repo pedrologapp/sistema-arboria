@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
-  const { user, isAdmin, signIn, isLoading: authLoading, adminCheckComplete } = useAuth();
+  const { user, isAdmin, isSuperAdmin, signIn, isLoading: authLoading, adminCheckComplete } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -35,6 +35,12 @@ const Login = () => {
       if (!authLoading && user && adminCheckComplete) {
         setIsRedirecting(true);
         
+        // Dono da plataforma: Painel Arboria
+        if (isSuperAdmin) {
+          navigate('/arboria');
+          return;
+        }
+
         if (isAdmin) {
           navigate('/admin/monitor');
           return;
@@ -59,7 +65,7 @@ const Login = () => {
     };
     
     checkRoleAndRedirect();
-  }, [user, isAdmin, authLoading, adminCheckComplete, navigate]);
+  }, [user, isAdmin, isSuperAdmin, authLoading, adminCheckComplete, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
