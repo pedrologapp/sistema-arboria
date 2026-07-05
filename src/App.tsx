@@ -179,6 +179,13 @@ const App = () => (
                 </ArboriaAdminLayout>
               </ProtectedRoute>
             } />
+            <Route path="/arboria/logins-professores" element={
+              <ProtectedRoute requireSuperAdmin>
+                <ArboriaAdminLayout>
+                  <AdminLoginsProfessoresPage />
+                </ArboriaAdminLayout>
+              </ProtectedRoute>
+            } />
 
             <Route path="/admin" element={<Navigate to="/admin/monitor" replace />} />
             <Route path="/admin/monitor" element={

@@ -57,7 +57,7 @@ const gerarSenha = (): string => {
 };
 
 const AdminLoginsProfessoresPage = () => {
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
 
   // Modais
@@ -94,18 +94,24 @@ const AdminLoginsProfessoresPage = () => {
   });
 
   const { data: turmas = [] } = useQuery({
-    queryKey: ['admin-logins-turmas', institutionId],
+    queryKey: ['admin-logins-turmas', institutionId, isSuperAdmin],
     queryFn: async () => {
-      if (!institutionId) return [];
-      const { data } = await supabase
+      // Admin de escola: so as turmas da propria instituicao.
+      // Dono (super_admin, sem institution_id): todas as turmas (escola unica hoje;
+      // quando existir multi-escola, entra um seletor de escola antes).
+      let query = supabase
         .from('turmas')
         .select('id, nome, serie, turma_letra, segmento')
-        .eq('institution_id', institutionId)
         .order('serie')
         .order('turma_letra');
+      if (institutionId) {
+        query = query.eq('institution_id', institutionId);
+      }
+      const { data } = await query;
       return (data || []) as TurmaOption[];
     },
-    enabled: !!institutionId,
+    // Roda quando ja sabemos a instituicao OU quando e o dono sem instituicao.
+    enabled: !!institutionId || isSuperAdmin,
   });
 
   const { data: logins = [], isLoading: loadingLogins } = useQuery({
@@ -336,7 +342,9 @@ const AdminLoginsProfessoresPage = () => {
   );
 
   return (
-    <div className="p-4 space-y-4 pb-24">
+    // Fundo escuro proprio: no /admin fica escuro-sobre-escuro (sem costura),
+    // e no painel /arboria (tema claro) garante legibilidade dos cards escuros.
+    <div className="p-4 space-y-4 pb-24 bg-[#1A1A2E] text-white rounded-2xl min-h-[70vh]">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-white">Logins de Professores</h1>
