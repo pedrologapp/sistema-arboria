@@ -1,12 +1,12 @@
 import { useProfessor } from '@/contexts/ProfessorContext';
 import AlunosPage from './AlunosPage';
-import AlunosPageSimplificado from './AlunosPageSimplificado';
 import InfantilAlunosPage from './infantil/InfantilAlunosPage';
+import F1AlunosPage from './f1/F1AlunosPage';
 
 /**
  * Wrapper que escolhe a página de alunos correta baseado no segmento
  * - Infantil: lista nova (pele clara); reforma 26/06
- * - Fundamental 1: versão simplificada (sem casa/mentor)
+ * - Fundamental 1: aba Diário da Academia (cópia do Infantil com a língua do F1)
  * - Fundamental 2: versão completa (com casa/mentor)
  */
 const AlunosPageWrapper = () => {
@@ -16,9 +16,8 @@ const AlunosPageWrapper = () => {
     return <InfantilAlunosPage />;
   }
 
-  // Fundamental 1 segue na versão simplificada
   if (segmento === 'fundamental1') {
-    return <AlunosPageSimplificado />;
+    return <F1AlunosPage />;
   }
 
   // Fundamental 2 usa versão completa

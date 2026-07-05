@@ -2,7 +2,6 @@ import { ReactNode, Suspense } from 'react';
 import { ProfessorProvider, useProfessor } from '@/contexts/ProfessorContext';
 import ProfessorHeader from '@/components/professor/ProfessorHeader';
 import ProfessorBottomNav from '@/components/professor/ProfessorBottomNav';
-import ProfessorLayoutSimplificado from '@/layouts/ProfessorLayoutSimplificado';
 import ProfessorLayoutInfantil from '@/layouts/ProfessorLayoutInfantil';
 import { useAppBadge } from '@/hooks/useAppBadge';
 
@@ -71,9 +70,14 @@ const ProfessorLayoutContent = ({ children }: ProfessorLayoutProps) => {
     return <ProfessorLayoutInfantil>{children}</ProfessorLayoutInfantil>;
   }
 
-  // Fundamental 1 segue no layout simplificado (ainda não reformado)
+  // Fundamental 1: mesmo shell do Infantil (3 abas Arboria/Inteligências/Diário),
+  // sem o tutorial do Infantil (o texto é específico daquele segmento)
   if (segmento === 'fundamental1') {
-    return <ProfessorLayoutSimplificado>{children}</ProfessorLayoutSimplificado>;
+    return (
+      <ProfessorLayoutInfantil tituloFallback="Fundamental 1" comTutorial={false}>
+        {children}
+      </ProfessorLayoutInfantil>
+    );
   }
 
   // Fundamental 2 usa layout completo (com casa/mentor)

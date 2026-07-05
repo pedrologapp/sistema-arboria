@@ -99,7 +99,7 @@ const CirculoRelatoPage = lazy(() => import("./pages/professor/circulo/CirculoRe
 const AlunosPageWrapper = lazy(() => import("./pages/professor/AlunosPageWrapper"));
 const FasePageWrapper = lazy(() => import("./pages/professor/FasePageWrapper"));
 const PerfilAlunoPageWrapper = lazy(() => import("./pages/professor/PerfilAlunoPageWrapper"));
-const InfantilRajadaPage = lazy(() => import("./pages/professor/infantil/InfantilRajadaPage"));
+const RajadaPageWrapper = lazy(() => import("./pages/professor/RajadaPageWrapper"));
 const ProfessorConfiguracoesWrapper = lazy(() => import("./pages/professor/ProfessorConfiguracoesWrapper"));
 const InfantilFormacaoPage = lazy(() => import("./pages/professor/infantil/InfantilFormacaoPage"));
 const ArboriaAdminLayout = lazy(() => import("./layouts/ArboriaAdminLayout"));
@@ -357,7 +357,7 @@ const App = () => (
             <Route path="/professor/circulo/pessoal" element={<CirculoPessoalPage />} />
             <Route path="/professor/circulo/relato" element={<CirculoRelatoPage />} />
             <Route path="/professor/alunos" element={<AlunosPageWrapper />} />
-            <Route path="/professor/aula" element={<InfantilRajadaPage />} />
+            <Route path="/professor/aula" element={<RajadaPageWrapper />} />
             <Route path="/professor/alunos/:id" element={<PerfilAlunoPageWrapper />} />
             <Route path="/professor/configuracoes" element={<ProfessorConfiguracoesWrapper />} />
             <Route path="/professor/formacao" element={<InfantilFormacaoPage />} />

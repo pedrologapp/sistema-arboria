@@ -31,9 +31,13 @@ export interface FaseTurmaResult {
  * trilha (a turma A pode estar na fase 3 e a B na 1). Toda tela do Infantil
  * que registra ou move trilha deve usar ESTE hook com a turma selecionada: * senão a observação nasce presa à fase errada no rio longitudinal.
  */
-export const useFaseTurma = (turmaId?: string | null, institutionId?: string | null) => {
+export const useFaseTurma = (
+  turmaId?: string | null,
+  institutionId?: string | null,
+  segmento: string = 'infantil'
+) => {
   return useQuery({
-    queryKey: ['fase-turma', turmaId],
+    queryKey: ['fase-turma', turmaId, segmento],
     enabled: !!turmaId && !!institutionId,
     queryFn: async (): Promise<FaseTurmaResult> => {
       const anoLetivo = new Date().getFullYear();
@@ -62,7 +66,7 @@ export const useFaseTurma = (turmaId?: string | null, institutionId?: string | n
            )`
         )
         .eq('institution_id', institutionId!)
-        .eq('segmento', 'infantil')
+        .eq('segmento', segmento)
         .eq('ano_letivo', anoLetivo)
         .eq('inteligencia_id', ordem)
         .maybeSingle();
