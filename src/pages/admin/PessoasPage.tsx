@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, ChevronDown, ChevronUp, ChevronRight, Plus, RefreshCw, Users, Shield, X, UserPlus, Copy, Check } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, ChevronRight, Plus, RefreshCw, Users, Shield, X, UserPlus, Copy, Check, KeyRound } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -471,10 +471,16 @@ const PessoasPage = () => {
       {/* TAB: PROFESSORES */}
       {tab === 'professores' && (
         <div className="space-y-3">
-          <button onClick={() => setShowAddProfessor(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-violet-500/15 text-violet-300 border border-violet-500/25 hover:bg-violet-500/25 transition-colors">
-            <Plus className="w-3 h-3" /> Novo professor
-          </button>
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={() => setShowAddProfessor(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-violet-500/15 text-violet-300 border border-violet-500/25 hover:bg-violet-500/25 transition-colors">
+              <Plus className="w-3 h-3" /> Novo professor
+            </button>
+            <button onClick={() => navigate('/admin/logins-professores')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-blue-500/15 text-blue-300 border border-blue-500/25 hover:bg-blue-500/25 transition-colors">
+              <KeyRound className="w-3 h-3" /> Logins de professores
+            </button>
+          </div>
 
           {loadingProfs ? (
             <div className="space-y-2">{[1,2].map(i => <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse" />)}</div>

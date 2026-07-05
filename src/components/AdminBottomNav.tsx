@@ -19,7 +19,7 @@ const AdminBottomNav = () => {
     const p = location.pathname;
     if (p.startsWith('/admin/monitor')) return 0;
     if (p.startsWith('/admin/fases')) return 1;
-    if (p.startsWith('/admin/pessoas') || p.startsWith('/admin/casas')) return 2;
+    if (p.startsWith('/admin/pessoas') || p.startsWith('/admin/casas') || p.startsWith('/admin/logins-professores')) return 2;
     if (p.startsWith('/admin/arboria')) return 3;
     if (p.startsWith('/admin/dados') || p.startsWith('/admin/relatorios')) return 4;
     if (p.startsWith('/admin/config') || p.startsWith('/admin/atividades')) return 5;

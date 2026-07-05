@@ -60,6 +60,7 @@ const AtividadesPage = lazy(() => import("./pages/admin/AtividadesPage"));
 const DadosPage = lazy(() => import("./pages/admin/DadosPage"));
 const ArboriaPage = lazy(() => import("./pages/admin/ArboriaPage"));
 const RegistroVivoPage = lazy(() => import("./pages/admin/RegistroVivoPage"));
+const AdminLoginsProfessoresPage = lazy(() => import("./pages/admin/AdminLoginsProfessoresPage"));
 
 // Aluno pages (lazy)
 const HomePage = lazy(() => import("./pages/aluno/HomePage"));
@@ -247,6 +248,13 @@ const App = () => (
               <ProtectedRoute requireAdmin>
                 <AdminLayout>
                   <DadosPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/logins-professores" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <AdminLoginsProfessoresPage />
                 </AdminLayout>
               </ProtectedRoute>
             } />

@@ -1,4 +1,4 @@
-import { Settings, Lock, Bell, Palette, LogOut, FileText } from 'lucide-react';
+import { Settings, Lock, Bell, Palette, LogOut, FileText, KeyRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -45,6 +45,27 @@ const ConfigPage = () => {
             <div className="flex-1">
               <span className="text-white font-medium block">Alterar Senha</span>
               <span className="text-white/40 text-sm">Atualize sua senha de acesso</span>
+            </div>
+            <span className="text-white/30 group-hover:text-white/60 transition-colors">→</span>
+          </button>
+        </div>
+
+        {/* Acessos */}
+        <div className="space-y-3">
+          <h2 className="text-xs font-medium text-white/40 uppercase tracking-wider">
+            Acessos
+          </h2>
+
+          <button
+            onClick={() => navigate('/admin/logins-professores')}
+            className="w-full flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-violet-500/10 hover:bg-white/10 transition-all text-left group"
+          >
+            <div className="p-3 rounded-lg bg-violet-500/20 text-violet-400">
+              <KeyRound className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <span className="text-white font-medium block">Logins de Professores</span>
+              <span className="text-white/40 text-sm">Criar, ajustar turmas, resetar senha e desativar</span>
             </div>
             <span className="text-white/30 group-hover:text-white/60 transition-colors">→</span>
           </button>
