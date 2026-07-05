@@ -112,6 +112,79 @@ Deno.serve(async (req) => {
       return null;
     };
 
+    // ============ LISTAR INSTITUICOES ============
+    // O dono (super_admin) escolhe a instituicao antes de gerar logins.
+    // Admin de escola so ve a propria.
+    if (acao === 'listar_instituicoes') {
+      let query = supabaseAdmin.from('institutions').select('id, name').order('name');
+      if (callerInstitutionId) {
+        query = query.eq('id', callerInstitutionId);
+      }
+      const { data, error } = await query;
+      if (error) return jsonResponse({ error: error.message }, 500);
+      return jsonResponse({ instituicoes: data || [] });
+    }
+
+    // ============ LISTAR TURMAS (pro seletor) ============
+    // Via service role: contorna a RLS de turmas (que exige institution do usuario),
+    // permitindo o dono (super_admin, sem institution) enxergar as turmas da escola.
+    // Aceita institutionId opcional (a escola escolhida pelo dono no passo 1).
+    if (acao === 'listar_turmas') {
+      const { institutionId: instFiltro } = body as { institutionId?: string };
+      const alvoInst = callerInstitutionId ?? instFiltro ?? null;
+      let query = supabaseAdmin
+        .from('turmas')
+        .select('id, nome, serie, turma_letra, segmento')
+        .order('serie')
+        .order('turma_letra');
+      if (alvoInst) {
+        query = query.eq('institution_id', alvoInst);
+      }
+      const { data, error } = await query;
+      if (error) return jsonResponse({ error: error.message }, 500);
+      return jsonResponse({ turmas: data || [] });
+    }
+
+    // ============ CRIAR TURMA ============
+    // Acrescentar uma turma nova (ex.: serie que ganhou uma turma D).
+    if (acao === 'criar_turma') {
+      const { institutionId: instTurma, serie, turma_letra, segmento } = body as {
+        institutionId?: string; serie?: string; turma_letra?: string; segmento?: string;
+      };
+      const alvoInst = callerInstitutionId ?? instTurma ?? null;
+      if (!alvoInst) return jsonResponse({ error: 'Escolha a instituicao da turma' }, 400);
+      if (!serie?.trim() || !turma_letra?.trim()) {
+        return jsonResponse({ error: 'Informe a serie e a letra da turma' }, 400);
+      }
+      const serieLimpa = serie.trim();
+      const letraLimpa = turma_letra.trim().toUpperCase();
+      // Ja existe essa turma?
+      const { data: existente } = await supabaseAdmin
+        .from('turmas')
+        .select('id')
+        .eq('institution_id', alvoInst)
+        .eq('serie', serieLimpa)
+        .eq('turma_letra', letraLimpa)
+        .maybeSingle();
+      if (existente) return jsonResponse({ error: 'Essa turma ja existe' }, 400);
+
+      const { data: nova, error } = await supabaseAdmin
+        .from('turmas')
+        .insert({
+          institution_id: alvoInst,
+          nome: `${serieLimpa} ${letraLimpa}`,
+          serie: serieLimpa,
+          turma_letra: letraLimpa,
+          segmento: segmento || null,
+          ano_letivo: new Date().getFullYear(),
+          ativo: true,
+        })
+        .select('id, nome, serie, turma_letra, segmento')
+        .single();
+      if (error) return jsonResponse({ error: error.message }, 500);
+      return jsonResponse({ turma: nova });
+    }
+
     // ============ LISTAR ============
     if (acao === 'listar') {
       // Usuarios com role professor

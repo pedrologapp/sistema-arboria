@@ -1,12 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { KeyRound, Plus, X, Copy, Check, RefreshCw, Ban, Pencil, Dices } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { infantilTheme as t } from '@/styles/infantilTheme';
 import { toast } from 'sonner';
 
 const DOMINIO_EMAIL = '.amadeus@arboria.com';
+
+// Cores semânticas (só nos estados; o acento do app é o índigo do infantilTheme).
+const OK = { text: '#177A50', bg: '#E9F6F0', border: '#C7E9D8' };
+const DANGER = { text: '#B4231F', bg: '#FBEAEA', border: '#F2CFCE' };
+const AMBER = { text: '#8A5A12', bg: '#FBF3E6', border: '#EAD9B8' };
 
 interface TurmaOption {
   id: string;
@@ -37,32 +42,32 @@ const SEGMENTOS: { id: string; label: string }[] = [
 const normalizarPrefixo = (texto: string): string =>
   texto
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '');
 
-const nomeTurma = (t: TurmaOption): string => t.nome || `${t.serie} ${t.turma_letra}`;
+const nomeTurma = (t2: TurmaOption): string => t2.nome || `${t2.serie} ${t2.turma_letra}`;
 
-const sugerirPrefixo = (t: TurmaOption): string => normalizarPrefixo(`${t.serie}${t.turma_letra}`);
+const sugerirPrefixo = (t2: TurmaOption): string => normalizarPrefixo(`${t2.serie}${t2.turma_letra}`);
 
 // Email de um GRUPO de turmas: 1 turma -> serie+letra (5anoc); varias da mesma
 // serie -> serie + letras juntas (1anoab); series diferentes -> concatena tudo.
 const prefixoDeGrupo = (grupoTurmas: TurmaOption[]): string => {
   if (grupoTurmas.length === 0) return '';
-  const series = [...new Set(grupoTurmas.map((t) => t.serie))];
+  const series = [...new Set(grupoTurmas.map((tt) => tt.serie))];
   if (series.length === 1) {
-    const letras = grupoTurmas.map((t) => t.turma_letra).sort().join('');
+    const letras = grupoTurmas.map((tt) => tt.turma_letra).sort().join('');
     return normalizarPrefixo(`${series[0]}${letras}`);
   }
-  return normalizarPrefixo(grupoTurmas.map((t) => `${t.serie}${t.turma_letra}`).join(''));
+  return normalizarPrefixo(grupoTurmas.map((tt) => `${tt.serie}${tt.turma_letra}`).join(''));
 };
 
 // Nome de exibicao de um grupo: "Professor(a) 1º Ano A e B" / "Professor(a) 5º Ano C".
 const nomeDeGrupo = (grupoTurmas: TurmaOption[]): string => {
   if (grupoTurmas.length === 0) return 'Professor(a)';
-  const series = [...new Set(grupoTurmas.map((t) => t.serie))];
+  const series = [...new Set(grupoTurmas.map((tt) => tt.serie))];
   if (series.length === 1) {
-    const letras = grupoTurmas.map((t) => t.turma_letra).sort();
+    const letras = grupoTurmas.map((tt) => tt.turma_letra).sort();
     const juntas =
       letras.length === 1
         ? letras[0]
@@ -71,6 +76,55 @@ const nomeDeGrupo = (grupoTurmas: TurmaOption[]): string => {
   }
   return `Professor(a) ${grupoTurmas.map(nomeTurma).join(' e ')}`;
 };
+
+const gerarSenha = (): string => {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  let sufixo = '';
+  const rnd = new Uint32Array(6);
+  crypto.getRandomValues(rnd);
+  for (let i = 0; i < 6; i++) sufixo += chars[rnd[i] % chars.length];
+  return `arboria${sufixo}`;
+};
+
+// Chama a edge function e SEMPRE extrai a mensagem real de erro (o
+// functions.invoke devolve "non-2xx status code" generico; a mensagem util
+// esta no corpo da resposta).
+async function invocar(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const { data, error } = await supabase.functions.invoke('admin-logins-professor', { body });
+  if (error) {
+    let msg = error.message;
+    const ctx = (error as { context?: { json?: () => Promise<unknown> } }).context;
+    if (ctx?.json) {
+      try {
+        const b = (await ctx.json()) as { error?: string };
+        if (b?.error) msg = b.error;
+      } catch {
+        /* mantem a mensagem generica */
+      }
+    }
+    throw new Error(msg);
+  }
+  const d = (data || {}) as { error?: string };
+  if (d.error) throw new Error(d.error);
+  return d as Record<string, unknown>;
+}
+
+// Segmento provavel a partir do texto da serie (pra acrescentar turma nova).
+const segmentoDaSerie = (serie: string): string | null => {
+  const s = serie
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase();
+  if (/mater|grupo|infantil|jardim|bercar|pre/.test(s)) return 'infantil';
+  if (/[1-5]\s*(o|a|º|ª)?\s*ano/.test(s) || /^[1-5]\b/.test(s.trim())) return 'fundamental1';
+  if (/[6-9]\s*(o|a|º|ª)?\s*ano/.test(s) || /^[6-9]\b/.test(s.trim())) return 'fundamental2';
+  return null;
+};
+
+interface Instituicao {
+  id: string;
+  name: string;
+}
 
 interface GrupoLogin {
   id: string;
@@ -86,19 +140,24 @@ interface ResultadoGeracao {
   erro?: string;
 }
 
-// Senha provisoria: 'arboria' + 6 caracteres aleatorios, sem simbolos ambiguos
-// (0/o, 1/l/i) pra facilitar a leitura na apostila impressa.
-const gerarSenha = (): string => {
-  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
-  let sufixo = '';
-  const rnd = new Uint32Array(6);
-  crypto.getRandomValues(rnd);
-  for (let i = 0; i < 6; i++) sufixo += chars[rnd[i] % chars.length];
-  return `arboria${sufixo}`;
+// Estilos reaproveitados (tema claro do app)
+const inputStyle: React.CSSProperties = {
+  backgroundColor: t.surfaceSunken,
+  border: `1px solid ${t.border}`,
+  color: t.text,
+};
+const cardStyle: React.CSSProperties = {
+  backgroundColor: t.surface,
+  border: `1px solid ${t.border}`,
+  boxShadow: t.shadowSm,
+};
+const modalStyle: React.CSSProperties = {
+  backgroundColor: t.surface,
+  border: `1px solid ${t.border}`,
+  boxShadow: t.shadowMd,
 };
 
 const AdminLoginsProfessoresPage = () => {
-  const { user, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
 
   // Modais
@@ -124,75 +183,78 @@ const AdminLoginsProfessoresPage = () => {
 
   // Gerador de logins por serie (fluxo em lote, sem digitar)
   const [showGerador, setShowGerador] = useState(false);
+  const [geradorEtapa, setGeradorEtapa] = useState<'instituicao' | 'turmas'>('instituicao');
   const [selInline, setSelInline] = useState<string[]>([]);
   const [grupos, setGrupos] = useState<GrupoLogin[]>([]);
   const [resultados, setResultados] = useState<ResultadoGeracao[] | null>(null);
 
+  // Instituicao ativa (o dono escolhe qual escola antes de gerar)
+  const [institucaoSel, setInstitucaoSel] = useState<string | null>(null);
+
+  // Acrescentar turma nova
+  const [showNovaTurma, setShowNovaTurma] = useState(false);
+  const [novaSerie, setNovaSerie] = useState('');
+  const [novaLetra, setNovaLetra] = useState('');
+
   const [processando, setProcessando] = useState(false);
   const [copiado, setCopiado] = useState<string | null>(null);
 
-  const { data: institutionId } = useQuery({
-    queryKey: ['admin-institution', user?.id],
+  const { data: instituicoes = [] } = useQuery({
+    queryKey: ['admin-logins-instituicoes'],
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('institution_id').eq('id', user!.id).single();
-      return data?.institution_id;
+      const d = await invocar({ acao: 'listar_instituicoes' });
+      return (d.instituicoes || []) as Instituicao[];
     },
-    enabled: !!user?.id,
   });
 
+  // Turmas vêm pela edge function (service role): a RLS de `turmas` exige a
+  // instituição do usuário, e o dono (super_admin) não tem uma, então uma
+  // consulta direta voltaria vazia. Escopo pela instituição escolhida.
   const { data: turmas = [] } = useQuery({
-    queryKey: ['admin-logins-turmas', institutionId, isSuperAdmin],
+    queryKey: ['admin-logins-turmas', institucaoSel],
     queryFn: async () => {
-      // Admin de escola: so as turmas da propria instituicao.
-      // Dono (super_admin, sem institution_id): todas as turmas (escola unica hoje;
-      // quando existir multi-escola, entra um seletor de escola antes).
-      let query = supabase
-        .from('turmas')
-        .select('id, nome, serie, turma_letra, segmento')
-        .order('serie')
-        .order('turma_letra');
-      if (institutionId) {
-        query = query.eq('institution_id', institutionId);
-      }
-      const { data } = await query;
-      return (data || []) as TurmaOption[];
+      const d = await invocar({ acao: 'listar_turmas', institutionId: institucaoSel ?? undefined });
+      return (d.turmas || []) as TurmaOption[];
     },
-    // Roda quando ja sabemos a instituicao OU quando e o dono sem instituicao.
-    enabled: !!institutionId || isSuperAdmin,
+    enabled: !!institucaoSel,
   });
+
+  // Instituição única (Amadeus hoje): já seleciona sozinha, pra criar/ajustar
+  // funcionarem sem forçar o passo. O gerador ainda mostra a escolha.
+  useEffect(() => {
+    if (!institucaoSel && instituicoes.length === 1) {
+      setInstitucaoSel(instituicoes[0].id);
+    }
+  }, [instituicoes, institucaoSel]);
 
   const { data: logins = [], isLoading: loadingLogins } = useQuery({
     queryKey: ['admin-logins-professores'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('admin-logins-professor', {
-        body: { acao: 'listar' },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return (data?.logins || []) as LoginProfessor[];
+      const d = await invocar({ acao: 'listar' });
+      return (d.logins || []) as LoginProfessor[];
     },
   });
 
   const turmasPorSegmento = useMemo(() => {
-    const grupos: Record<string, TurmaOption[]> = {};
-    turmas.forEach((t) => {
-      const seg = t.segmento || 'outros';
-      if (!grupos[seg]) grupos[seg] = [];
-      grupos[seg].push(t);
+    const gruposSeg: Record<string, TurmaOption[]> = {};
+    turmas.forEach((tt) => {
+      const seg = tt.segmento || 'outros';
+      if (!gruposSeg[seg]) gruposSeg[seg] = [];
+      gruposSeg[seg].push(tt);
     });
-    return grupos;
+    return gruposSeg;
   }, [turmas]);
 
-  const turmaMap = useMemo(() => new Map(turmas.map((t) => [t.id, t])), [turmas]);
+  const turmaMap = useMemo(() => new Map(turmas.map((tt) => [tt.id, tt])), [turmas]);
 
   // Turmas agrupadas por serie (pro gerador: "vejo todas as series")
   const seriesOrdenadas = useMemo(() => {
-    const grupos: Record<string, TurmaOption[]> = {};
-    turmas.forEach((t) => {
-      if (!grupos[t.serie]) grupos[t.serie] = [];
-      grupos[t.serie].push(t);
+    const gruposSerie: Record<string, TurmaOption[]> = {};
+    turmas.forEach((tt) => {
+      if (!gruposSerie[tt.serie]) gruposSerie[tt.serie] = [];
+      gruposSerie[tt.serie].push(tt);
     });
-    return Object.entries(grupos).map(([serie, ts]) => ({ serie, turmas: ts }));
+    return Object.entries(gruposSerie).map(([serie, ts]) => ({ serie, turmas: ts }));
   }, [turmas]);
 
   const copiarTexto = async (texto: string, chave: string) => {
@@ -245,7 +307,40 @@ const AdminLoginsProfessoresPage = () => {
     setSelInline([]);
     setGrupos([]);
     setResultados(null);
+    setShowNovaTurma(false);
+    // Com uma instituição só, já entra nas turmas; com várias, pede a escolha.
+    setGeradorEtapa(instituicoes.length > 1 ? 'instituicao' : 'turmas');
     setShowGerador(true);
+  };
+
+  const criarTurma = async () => {
+    if (!institucaoSel) {
+      toast.error('Escolha a instituicao primeiro');
+      return;
+    }
+    if (!novaSerie.trim() || !novaLetra.trim()) {
+      toast.error('Informe a serie e a letra');
+      return;
+    }
+    setProcessando(true);
+    try {
+      await invocar({
+        acao: 'criar_turma',
+        institutionId: institucaoSel,
+        serie: novaSerie.trim(),
+        turma_letra: novaLetra.trim(),
+        segmento: segmentoDaSerie(novaSerie),
+      });
+      await queryClient.invalidateQueries({ queryKey: ['admin-logins-turmas'] });
+      setNovaSerie('');
+      setNovaLetra('');
+      setShowNovaTurma(false);
+      toast.success('Turma acrescentada');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao acrescentar turma');
+    } finally {
+      setProcessando(false);
+    }
   };
 
   const toggleInline = (turmaId: string) => {
@@ -255,10 +350,7 @@ const AdminLoginsProfessoresPage = () => {
   };
 
   // Turmas ja colocadas em algum grupo (nao podem entrar em dois logins)
-  const turmasEmGrupos = useMemo(
-    () => new Set(grupos.flatMap((g) => g.turmaIds)),
-    [grupos]
-  );
+  const turmasEmGrupos = useMemo(() => new Set(grupos.flatMap((g) => g.turmaIds)), [grupos]);
 
   // Junta as turmas selecionadas num UNICO login
   const adicionarGrupoJuntas = () => {
@@ -293,11 +385,7 @@ const AdminLoginsProfessoresPage = () => {
       const email = `${prefixoDeGrupo(turmasDoGrupo)}${DOMINIO_EMAIL}`;
       const nome = nomeDeGrupo(turmasDoGrupo);
       try {
-        const { data, error } = await supabase.functions.invoke('admin-logins-professor', {
-          body: { acao: 'criar', email, senha: g.senha, nomeExibicao: nome, turmaIds: g.turmaIds },
-        });
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
+        await invocar({ acao: 'criar', email, senha: g.senha, nomeExibicao: nome, turmaIds: g.turmaIds });
         saidas.push({ email, senha: g.senha, nome, ok: true });
       } catch (err: unknown) {
         saidas.push({ email, senha: g.senha, nome, ok: false, erro: err instanceof Error ? err.message : 'erro' });
@@ -332,11 +420,7 @@ const AdminLoginsProfessoresPage = () => {
     }
     setProcessando(true);
     try {
-      const { data, error } = await supabase.functions.invoke('admin-logins-professor', {
-        body: { acao: 'criar', email, senha, nomeExibicao: nomeExibicao.trim(), turmaIds: turmasSelecionadas },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      await invocar({ acao: 'criar', email, senha, nomeExibicao: nomeExibicao.trim(), turmaIds: turmasSelecionadas });
       setShowCriar(false);
       setCredenciais({ email, senha, nome: nomeExibicao.trim() });
       toast.success('Login criado');
@@ -356,11 +440,7 @@ const AdminLoginsProfessoresPage = () => {
     }
     setProcessando(true);
     try {
-      const { data, error } = await supabase.functions.invoke('admin-logins-professor', {
-        body: { acao: 'vincular', userId: loginParaTurmas.userId, turmaIds: turmasAjuste },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      await invocar({ acao: 'vincular', userId: loginParaTurmas.userId, turmaIds: turmasAjuste });
       setLoginParaTurmas(null);
       toast.success('Turmas atualizadas');
       invalidar();
@@ -379,11 +459,7 @@ const AdminLoginsProfessoresPage = () => {
     }
     setProcessando(true);
     try {
-      const { data, error } = await supabase.functions.invoke('admin-logins-professor', {
-        body: { acao: 'resetar_senha', userId: loginParaSenha.userId, senha: novaSenha },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      await invocar({ acao: 'resetar_senha', userId: loginParaSenha.userId, senha: novaSenha });
       const email = loginParaSenha.email;
       setLoginParaSenha(null);
       setCredenciais({ email, senha: novaSenha, nome: 'Senha resetada' });
@@ -399,11 +475,7 @@ const AdminLoginsProfessoresPage = () => {
     if (!loginParaDesativar) return;
     setProcessando(true);
     try {
-      const { data, error } = await supabase.functions.invoke('admin-logins-professor', {
-        body: { acao: 'desativar', userId: loginParaDesativar.userId },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      await invocar({ acao: 'desativar', userId: loginParaDesativar.userId });
       setLoginParaDesativar(null);
       toast.success('Login desativado');
       invalidar();
@@ -421,26 +493,28 @@ const AdminLoginsProfessoresPage = () => {
         if (lista.length === 0) return null;
         return (
           <div key={seg.id}>
-            <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1.5">{seg.label}</p>
+            <p className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: t.textFaint }}>
+              {seg.label}
+            </p>
             <div className="flex flex-wrap gap-1.5">
-              {lista.map((t) => {
-                const ativa = selecionadas.includes(t.id);
-                const ordem = selecionadas.indexOf(t.id);
+              {lista.map((tt) => {
+                const ativa = selecionadas.includes(tt.id);
+                const ordem = selecionadas.indexOf(tt.id);
                 return (
                   <button
-                    key={t.id}
+                    key={tt.id}
                     type="button"
-                    onClick={() => onToggle(t.id)}
-                    className={cn(
-                      'px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-colors',
+                    onClick={() => onToggle(tt.id)}
+                    className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-colors"
+                    style={
                       ativa
-                        ? 'bg-violet-500/25 border-violet-500/40 text-violet-200'
-                        : 'bg-white/[0.04] border-white/10 text-white/40 hover:bg-white/[0.08]'
-                    )}
+                        ? { backgroundColor: t.accent, borderColor: t.accent, color: '#FFFFFF' }
+                        : { backgroundColor: t.surfaceSunken, borderColor: t.border, color: t.textMuted }
+                    }
                   >
-                    {nomeTurma(t)}
+                    {nomeTurma(tt)}
                     {ativa && ordem === 0 && selecionadas.length > 1 && (
-                      <span className="ml-1 text-[9px] text-violet-300/70">1a</span>
+                      <span className="ml-1 text-[9px] opacity-80">1a</span>
                     )}
                   </button>
                 );
@@ -449,7 +523,11 @@ const AdminLoginsProfessoresPage = () => {
           </div>
         );
       })}
-      {turmas.length === 0 && <p className="text-xs text-white/30">Nenhuma turma cadastrada</p>}
+      {turmas.length === 0 && (
+        <p className="text-xs" style={{ color: t.textFaint }}>
+          Nenhuma turma cadastrada
+        </p>
+      )}
     </div>
   );
 
@@ -459,13 +537,15 @@ const AdminLoginsProfessoresPage = () => {
         value={valor}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Minimo 8 caracteres"
-        className="flex-1 bg-white/[0.06] border border-violet-500/10 rounded-lg px-3 py-2 text-sm text-white font-mono placeholder:text-white/20 outline-none"
+        className="flex-1 rounded-lg px-3 py-2 text-sm font-mono outline-none"
+        style={inputStyle}
       />
       <button
         type="button"
         onClick={() => onChange(gerarSenha())}
         title="Gerar senha"
-        className="px-2.5 rounded-lg bg-white/[0.06] border border-violet-500/10 text-white/50 hover:text-white transition-colors"
+        className="px-2.5 rounded-lg border transition-colors"
+        style={{ backgroundColor: t.surfaceSunken, borderColor: t.border, color: t.textMuted }}
       >
         <Dices className="w-4 h-4" />
       </button>
@@ -473,39 +553,46 @@ const AdminLoginsProfessoresPage = () => {
         type="button"
         onClick={() => copiarTexto(valor, 'senha-form')}
         title="Copiar senha"
-        className="px-2.5 rounded-lg bg-white/[0.06] border border-violet-500/10 text-white/50 hover:text-white transition-colors"
+        className="px-2.5 rounded-lg border transition-colors"
+        style={{ backgroundColor: t.surfaceSunken, borderColor: t.border, color: t.textMuted }}
       >
-        {copiado === 'senha-form' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+        {copiado === 'senha-form' ? (
+          <Check className="w-4 h-4" style={{ color: OK.text }} />
+        ) : (
+          <Copy className="w-4 h-4" />
+        )}
       </button>
     </div>
   );
 
   return (
-    // Fundo escuro proprio: no /admin fica escuro-sobre-escuro (sem costura),
-    // e no painel /arboria (tema claro) garante legibilidade dos cards escuros.
-    <div className="p-4 space-y-4 pb-24 bg-[#1A1A2E] text-white rounded-2xl min-h-[70vh]">
+    <div className="space-y-4 pb-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-white">Logins de Professores</h1>
-          <p className="text-xs text-white/30 mt-0.5">
+          <h1 className="font-serif text-[22px]" style={{ color: t.text }}>
+            Logins de Professores
+          </h1>
+          <p className="text-xs mt-0.5" style={{ color: t.textFaint }}>
             {logins.length} {logins.length === 1 ? 'login' : 'logins'} · um login pode ter varias turmas
           </p>
         </div>
-        <div className="p-2.5 rounded-xl bg-violet-500/15">
-          <KeyRound className="w-5 h-5 text-violet-300" />
+        <div className="p-2.5 rounded-xl" style={{ backgroundColor: t.accentSoft }}>
+          <KeyRound className="w-5 h-5" style={{ color: t.accentText }} />
         </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <button
           onClick={abrirGerador}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-violet-500 text-white hover:bg-violet-400 transition-colors"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors"
+          style={{ backgroundColor: t.accent, color: '#FFFFFF' }}
         >
           <Dices className="w-3.5 h-3.5" /> Gerar logins por serie
         </button>
         <button
           onClick={abrirCriar}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-violet-500/15 text-violet-300 border border-violet-500/25 hover:bg-violet-500/25 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-colors"
+          style={{ backgroundColor: t.accentSoft, borderColor: t.accentBorder, color: t.accentText }}
         >
           <Plus className="w-3.5 h-3.5" /> Criar um login
         </button>
@@ -514,31 +601,40 @@ const AdminLoginsProfessoresPage = () => {
       {loadingLogins ? (
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 bg-white/5 rounded-xl animate-pulse" />
+            <div key={i} className="h-24 rounded-xl animate-pulse" style={{ backgroundColor: t.surfaceSunken }} />
           ))}
         </div>
       ) : logins.length === 0 ? (
-        <div className="p-6 rounded-xl bg-[#252547] border border-violet-500/10 text-center">
-          <p className="text-white/30 text-sm">Nenhum login de professor ainda</p>
-          <p className="text-white/20 text-xs mt-1">Crie o primeiro com o botao acima</p>
+        <div className="p-6 rounded-xl text-center" style={cardStyle}>
+          <p className="text-sm" style={{ color: t.textMuted }}>
+            Nenhum login de professor ainda
+          </p>
+          <p className="text-xs mt-1" style={{ color: t.textFaint }}>
+            Comece pelo botao "Gerar logins por serie"
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
           {logins.map((login) => (
             <div
               key={login.userId}
-              className={cn(
-                'p-3.5 rounded-xl bg-[#252547] border border-violet-500/10 space-y-2.5',
-                login.bloqueado && 'opacity-50'
-              )}
+              className={cn('p-3.5 rounded-xl space-y-2.5', login.bloqueado && 'opacity-60')}
+              style={cardStyle}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-sm text-white font-medium truncate">{login.nomeExibicao || 'Sem nome'}</p>
-                  <p className="text-[11px] text-white/40 font-mono truncate">{login.email}</p>
+                  <p className="text-sm font-medium truncate" style={{ color: t.text }}>
+                    {login.nomeExibicao || 'Sem nome'}
+                  </p>
+                  <p className="text-[11px] font-mono truncate" style={{ color: t.textFaint }}>
+                    {login.email}
+                  </p>
                 </div>
                 {login.bloqueado && (
-                  <span className="shrink-0 px-2 py-0.5 rounded-full text-[9px] font-medium bg-red-500/15 text-red-300 border border-red-500/25">
+                  <span
+                    className="shrink-0 px-2 py-0.5 rounded-full text-[9px] font-medium border"
+                    style={{ backgroundColor: DANGER.bg, color: DANGER.text, borderColor: DANGER.border }}
+                  >
                     Desativado
                   </span>
                 )}
@@ -546,14 +642,17 @@ const AdminLoginsProfessoresPage = () => {
 
               <div className="flex flex-wrap gap-1">
                 {login.turmas.length === 0 ? (
-                  <span className="text-[10px] text-amber-400/60">Sem turma vinculada</span>
+                  <span className="text-[10px]" style={{ color: AMBER.text }}>
+                    Sem turma vinculada
+                  </span>
                 ) : (
-                  login.turmas.map((t) => (
+                  login.turmas.map((tt) => (
                     <span
-                      key={t.id}
-                      className="px-2 py-0.5 rounded-full text-[10px] bg-violet-500/10 text-violet-300/80 border border-violet-500/20"
+                      key={tt.id}
+                      className="px-2 py-0.5 rounded-full text-[10px] border"
+                      style={{ backgroundColor: t.accentSoft, color: t.accentText, borderColor: t.accentBorder }}
                     >
-                      {nomeTurma(t)}
+                      {nomeTurma(tt)}
                     </span>
                   ))
                 )}
@@ -564,9 +663,10 @@ const AdminLoginsProfessoresPage = () => {
                   <button
                     onClick={() => {
                       setLoginParaTurmas(login);
-                      setTurmasAjuste(login.turmas.map((t) => t.id));
+                      setTurmasAjuste(login.turmas.map((tt) => tt.id));
                     }}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-blue-500/10 text-blue-300 border border-blue-500/20 hover:bg-blue-500/20 transition-colors"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-medium border transition-colors"
+                    style={{ backgroundColor: t.accentSoft, color: t.accentText, borderColor: t.accentBorder }}
                   >
                     <Pencil className="w-3 h-3" /> Ajustar turmas
                   </button>
@@ -575,13 +675,15 @@ const AdminLoginsProfessoresPage = () => {
                       setLoginParaSenha(login);
                       setNovaSenha(gerarSenha());
                     }}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20 hover:bg-amber-500/20 transition-colors"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-medium border transition-colors"
+                    style={{ backgroundColor: AMBER.bg, color: AMBER.text, borderColor: AMBER.border }}
                   >
                     <RefreshCw className="w-3 h-3" /> Resetar senha
                   </button>
                   <button
                     onClick={() => setLoginParaDesativar(login)}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-red-500/10 text-red-300 border border-red-500/20 hover:bg-red-500/20 transition-colors"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-medium border transition-colors"
+                    style={{ backgroundColor: DANGER.bg, color: DANGER.text, borderColor: DANGER.border }}
                   >
                     <Ban className="w-3 h-3" /> Desativar
                   </button>
@@ -594,26 +696,34 @@ const AdminLoginsProfessoresPage = () => {
 
       {/* Modal: Criar login */}
       {showCriar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[#1E1E3A] border border-violet-500/10 p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto" style={modalStyle}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white font-medium">Criar login de professor</p>
-                <p className="text-[10px] text-white/40 mt-0.5">O mesmo login pode atender mais de uma turma</p>
+                <p className="font-medium" style={{ color: t.text }}>
+                  Criar login de professor
+                </p>
+                <p className="text-[10px] mt-0.5" style={{ color: t.textFaint }}>
+                  O mesmo login pode atender mais de uma turma
+                </p>
               </div>
-              <button onClick={() => setShowCriar(false)} className="p-1 text-white/30 hover:text-white">
+              <button onClick={() => setShowCriar(false)} className="p-1" style={{ color: t.textFaint }}>
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="text-[10px] text-white/30 block mb-1.5">Turmas do login</label>
+                <label className="text-[10px] block mb-1.5" style={{ color: t.textFaint }}>
+                  Turmas do login
+                </label>
                 {renderSeletorTurmas(turmasSelecionadas, toggleTurmaCriar)}
               </div>
 
               <div>
-                <label className="text-[10px] text-white/30 block mb-1">Email de acesso</label>
+                <label className="text-[10px] block mb-1" style={{ color: t.textFaint }}>
+                  Email de acesso
+                </label>
                 <div className="flex items-center gap-1">
                   <input
                     value={prefixoEmail}
@@ -622,22 +732,29 @@ const AdminLoginsProfessoresPage = () => {
                       setPrefixoEditado(true);
                     }}
                     placeholder="5anoc"
-                    className="flex-1 min-w-0 bg-white/[0.06] border border-violet-500/10 rounded-lg px-3 py-2 text-sm text-white font-mono placeholder:text-white/20 outline-none"
+                    className="flex-1 min-w-0 rounded-lg px-3 py-2 text-sm font-mono outline-none"
+                    style={inputStyle}
                   />
-                  <span className="text-[11px] text-white/40 font-mono shrink-0">{DOMINIO_EMAIL}</span>
+                  <span className="text-[11px] font-mono shrink-0" style={{ color: t.textMuted }}>
+                    {DOMINIO_EMAIL}
+                  </span>
                 </div>
-                <p className="text-[9px] text-white/25 mt-1">
+                <p className="text-[9px] mt-1" style={{ color: t.textFaint }}>
                   Sugerido pela primeira turma. Com mais de uma turma, edite como preferir.
                 </p>
               </div>
 
               <div>
-                <label className="text-[10px] text-white/30 block mb-1">Senha provisoria</label>
+                <label className="text-[10px] block mb-1" style={{ color: t.textFaint }}>
+                  Senha provisoria
+                </label>
                 {renderCampoSenha(senha, setSenha)}
               </div>
 
               <div>
-                <label className="text-[10px] text-white/30 block mb-1">Nome de exibicao</label>
+                <label className="text-[10px] block mb-1" style={{ color: t.textFaint }}>
+                  Nome de exibicao
+                </label>
                 <input
                   value={nomeExibicao}
                   onChange={(e) => {
@@ -645,7 +762,8 @@ const AdminLoginsProfessoresPage = () => {
                     setNomeEditado(true);
                   }}
                   placeholder="Professor(a) 5o Ano C"
-                  className="w-full bg-white/[0.06] border border-violet-500/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none"
+                  className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+                  style={inputStyle}
                 />
               </div>
             </div>
@@ -653,7 +771,8 @@ const AdminLoginsProfessoresPage = () => {
             <button
               onClick={criarLogin}
               disabled={processando || turmasSelecionadas.length === 0 || !prefixoEmail || !nomeExibicao.trim() || senha.length < 8}
-              className="w-full py-2.5 rounded-xl bg-violet-600 text-white text-sm font-medium hover:bg-violet-500 transition-colors disabled:opacity-40"
+              className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-40"
+              style={{ backgroundColor: t.accent, color: '#FFFFFF' }}
             >
               {processando ? 'Criando...' : 'Criar login'}
             </button>
@@ -663,14 +782,18 @@ const AdminLoginsProfessoresPage = () => {
 
       {/* Modal: Ajustar turmas */}
       {loginParaTurmas && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[#1E1E3A] border border-violet-500/10 p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto" style={modalStyle}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white font-medium">Ajustar turmas</p>
-                <p className="text-[10px] text-white/40 mt-0.5 font-mono">{loginParaTurmas.email}</p>
+                <p className="font-medium" style={{ color: t.text }}>
+                  Ajustar turmas
+                </p>
+                <p className="text-[10px] mt-0.5 font-mono" style={{ color: t.textFaint }}>
+                  {loginParaTurmas.email}
+                </p>
               </div>
-              <button onClick={() => setLoginParaTurmas(null)} className="p-1 text-white/30 hover:text-white">
+              <button onClick={() => setLoginParaTurmas(null)} className="p-1" style={{ color: t.textFaint }}>
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -680,7 +803,8 @@ const AdminLoginsProfessoresPage = () => {
             <button
               onClick={salvarTurmas}
               disabled={processando || turmasAjuste.length === 0}
-              className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors disabled:opacity-40"
+              className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-40"
+              style={{ backgroundColor: t.accent, color: '#FFFFFF' }}
             >
               {processando ? 'Salvando...' : 'Salvar turmas'}
             </button>
@@ -690,27 +814,34 @@ const AdminLoginsProfessoresPage = () => {
 
       {/* Modal: Resetar senha */}
       {loginParaSenha && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[#1E1E3A] border border-amber-500/15 p-5 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={modalStyle}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white font-medium">Resetar senha</p>
-                <p className="text-[10px] text-white/40 mt-0.5 font-mono">{loginParaSenha.email}</p>
+                <p className="font-medium" style={{ color: t.text }}>
+                  Resetar senha
+                </p>
+                <p className="text-[10px] mt-0.5 font-mono" style={{ color: t.textFaint }}>
+                  {loginParaSenha.email}
+                </p>
               </div>
-              <button onClick={() => setLoginParaSenha(null)} className="p-1 text-white/30 hover:text-white">
+              <button onClick={() => setLoginParaSenha(null)} className="p-1" style={{ color: t.textFaint }}>
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div>
-              <label className="text-[10px] text-white/30 block mb-1">Nova senha</label>
+              <label className="text-[10px] block mb-1" style={{ color: t.textFaint }}>
+                Nova senha
+              </label>
               {renderCampoSenha(novaSenha, setNovaSenha)}
             </div>
 
             <button
               onClick={resetarSenha}
               disabled={processando || novaSenha.length < 8}
-              className="w-full py-2.5 rounded-xl bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 transition-colors disabled:opacity-40"
+              className="w-full py-2.5 rounded-xl text-white text-sm font-medium transition-colors disabled:opacity-40"
+              style={{ backgroundColor: AMBER.text }}
             >
               {processando ? 'Resetando...' : 'Resetar senha'}
             </button>
@@ -720,31 +851,35 @@ const AdminLoginsProfessoresPage = () => {
 
       {/* Modal: Confirmar desativacao */}
       {loginParaDesativar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[#1E1E3A] border border-red-500/15 p-5 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={modalStyle}>
             <div className="flex items-center justify-between">
-              <p className="text-white font-medium">Desativar login</p>
-              <button onClick={() => setLoginParaDesativar(null)} className="p-1 text-white/30 hover:text-white">
+              <p className="font-medium" style={{ color: t.text }}>
+                Desativar login
+              </p>
+              <button onClick={() => setLoginParaDesativar(null)} className="p-1" style={{ color: t.textFaint }}>
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-white/60 leading-relaxed">
-              O login <span className="font-mono text-white/80">{loginParaDesativar.email}</span> sera bloqueado e os
-              vinculos com as turmas serao desativados. O historico de observacoes e preservado.
+            <p className="text-xs leading-relaxed" style={{ color: t.textMuted }}>
+              O login <span className="font-mono" style={{ color: t.text }}>{loginParaDesativar.email}</span> sera
+              bloqueado e os vinculos com as turmas serao desativados. O historico de observacoes e preservado.
             </p>
 
             <div className="flex gap-2">
               <button
                 onClick={() => setLoginParaDesativar(null)}
-                className="flex-1 py-2.5 rounded-xl bg-white/[0.06] text-white/60 text-sm font-medium hover:bg-white/[0.1] transition-colors"
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                style={{ backgroundColor: t.surfaceSunken, color: t.textMuted }}
               >
                 Cancelar
               </button>
               <button
                 onClick={desativarLogin}
                 disabled={processando}
-                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition-colors disabled:opacity-40"
+                className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-colors disabled:opacity-40"
+                style={{ backgroundColor: DANGER.text }}
               >
                 {processando ? 'Desativando...' : 'Desativar'}
               </button>
@@ -755,45 +890,51 @@ const AdminLoginsProfessoresPage = () => {
 
       {/* Modal: Credenciais criadas */}
       {credenciais && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[#1E1E3A] border border-emerald-500/20 p-5 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={{ ...modalStyle, borderColor: OK.border }}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white font-medium">Credenciais prontas</p>
-                <p className="text-[10px] text-white/50 mt-0.5">{credenciais.nome}</p>
+                <p className="font-medium" style={{ color: t.text }}>
+                  Credenciais prontas
+                </p>
+                <p className="text-[10px] mt-0.5" style={{ color: t.textMuted }}>
+                  {credenciais.nome}
+                </p>
               </div>
-              <button onClick={() => setCredenciais(null)} className="p-1 text-white/30 hover:text-white">
+              <button onClick={() => setCredenciais(null)} className="p-1" style={{ color: t.textFaint }}>
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="space-y-2">
-              <div className="rounded-lg bg-white/[0.04] border border-emerald-500/10 px-3 py-2">
+              <div className="rounded-lg px-3 py-2" style={{ backgroundColor: OK.bg, border: `1px solid ${OK.border}` }}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] text-white/40">Email</p>
-                    <p className="text-sm text-white font-mono truncate">{credenciais.email}</p>
+                    <p className="text-[10px]" style={{ color: t.textMuted }}>
+                      Email
+                    </p>
+                    <p className="text-sm font-mono truncate" style={{ color: t.text }}>
+                      {credenciais.email}
+                    </p>
                   </div>
-                  <button
-                    onClick={() => copiarTexto(credenciais.email, 'cred-email')}
-                    className="p-1.5 text-white/40 hover:text-white"
-                  >
-                    {copiado === 'cred-email' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  <button onClick={() => copiarTexto(credenciais.email, 'cred-email')} className="p-1.5" style={{ color: t.textMuted }}>
+                    {copiado === 'cred-email' ? <Check className="w-4 h-4" style={{ color: OK.text }} /> : <Copy className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
-              <div className="rounded-lg bg-white/[0.04] border border-emerald-500/10 px-3 py-2">
+              <div className="rounded-lg px-3 py-2" style={{ backgroundColor: OK.bg, border: `1px solid ${OK.border}` }}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] text-white/40">Senha</p>
-                    <p className="text-sm text-white font-mono truncate">{credenciais.senha}</p>
+                    <p className="text-[10px]" style={{ color: t.textMuted }}>
+                      Senha
+                    </p>
+                    <p className="text-sm font-mono truncate" style={{ color: t.text }}>
+                      {credenciais.senha}
+                    </p>
                   </div>
-                  <button
-                    onClick={() => copiarTexto(credenciais.senha, 'cred-senha')}
-                    className="p-1.5 text-white/40 hover:text-white"
-                  >
-                    {copiado === 'cred-senha' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  <button onClick={() => copiarTexto(credenciais.senha, 'cred-senha')} className="p-1.5" style={{ color: t.textMuted }}>
+                    {copiado === 'cred-senha' ? <Check className="w-4 h-4" style={{ color: OK.text }} /> : <Copy className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
@@ -801,12 +942,13 @@ const AdminLoginsProfessoresPage = () => {
 
             <button
               onClick={() => copiarTexto(`Email: ${credenciais.email}\nSenha: ${credenciais.senha}`, 'cred-tudo')}
-              className="w-full py-2 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 text-xs font-medium hover:bg-emerald-500/25 transition-colors"
+              className="w-full py-2 rounded-lg text-xs font-medium border transition-colors"
+              style={{ backgroundColor: OK.bg, color: OK.text, borderColor: OK.border }}
             >
               {copiado === 'cred-tudo' ? 'Copiado' : 'Copiar email e senha'}
             </button>
 
-            <p className="text-[10px] text-amber-400/70 text-center">
+            <p className="text-[10px] text-center" style={{ color: AMBER.text }}>
               Anote agora: a senha nao podera ser vista de novo depois de fechar.
             </p>
           </div>
@@ -815,22 +957,25 @@ const AdminLoginsProfessoresPage = () => {
 
       {/* Modal: Gerador de logins por serie */}
       {showGerador && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl bg-[#1E1E3A] border border-violet-500/15 p-5 space-y-4 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl p-5 space-y-4 max-h-[92vh] overflow-y-auto" style={modalStyle}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white font-medium">Gerar logins por serie</p>
-                <p className="text-[10px] text-white/40 mt-0.5">Centro Educacional Amadeus</p>
+                <p className="font-medium" style={{ color: t.text }}>
+                  Gerar logins por serie
+                </p>
+                <p className="text-[10px] mt-0.5" style={{ color: t.textFaint }}>
+                  {instituicoes.find((i) => i.id === institucaoSel)?.name || 'Escolha a instituicao'}
+                </p>
               </div>
-              <button onClick={() => setShowGerador(false)} className="p-1 text-white/30 hover:text-white">
+              <button onClick={() => setShowGerador(false)} className="p-1" style={{ color: t.textFaint }}>
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Passo 1: os resultados (quando ja gerou) */}
             {resultados ? (
               <div className="space-y-3">
-                <p className="text-xs text-white/60">
+                <p className="text-xs" style={{ color: t.textMuted }}>
                   {resultados.filter((r) => r.ok).length} de {resultados.length} login(s) gerado(s). Anote agora:
                   as senhas nao aparecem de novo.
                 </p>
@@ -838,69 +983,151 @@ const AdminLoginsProfessoresPage = () => {
                   {resultados.map((r, i) => (
                     <div
                       key={i}
-                      className={cn(
-                        'rounded-lg px-3 py-2 border',
+                      className="rounded-lg px-3 py-2 border"
+                      style={
                         r.ok
-                          ? 'bg-white/[0.04] border-emerald-500/15'
-                          : 'bg-red-500/10 border-red-500/25'
-                      )}
+                          ? { backgroundColor: OK.bg, borderColor: OK.border }
+                          : { backgroundColor: DANGER.bg, borderColor: DANGER.border }
+                      }
                     >
-                      <p className="text-[11px] text-white/50">{r.nome}</p>
+                      <p className="text-[11px]" style={{ color: t.textMuted }}>
+                        {r.nome}
+                      </p>
                       {r.ok ? (
                         <>
-                          <p className="text-sm text-white font-mono truncate">{r.email}</p>
-                          <p className="text-xs text-violet-300 font-mono">senha: {r.senha}</p>
+                          <p className="text-sm font-mono truncate" style={{ color: t.text }}>
+                            {r.email}
+                          </p>
+                          <p className="text-xs font-mono" style={{ color: t.accentText }}>
+                            senha: {r.senha}
+                          </p>
                         </>
                       ) : (
-                        <p className="text-xs text-red-300 mt-0.5">Falhou: {r.erro}</p>
+                        <p className="text-xs mt-0.5" style={{ color: DANGER.text }}>
+                          Falhou: {r.erro}
+                        </p>
                       )}
                     </div>
                   ))}
                 </div>
                 <button
                   onClick={copiarTodosResultados}
-                  className="w-full py-2 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 text-xs font-medium hover:bg-emerald-500/25 transition-colors"
+                  className="w-full py-2 rounded-lg text-xs font-medium border transition-colors"
+                  style={{ backgroundColor: OK.bg, color: OK.text, borderColor: OK.border }}
                 >
                   {copiado === 'todos' ? 'Copiado' : 'Copiar todos (nome, email, senha)'}
                 </button>
                 <button
                   onClick={() => setShowGerador(false)}
-                  className="w-full py-2.5 rounded-xl bg-white/[0.06] text-white/60 text-sm font-medium hover:bg-white/[0.1] transition-colors"
+                  className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors"
+                  style={{ backgroundColor: t.surfaceSunken, color: t.textMuted }}
                 >
                   Fechar
                 </button>
               </div>
+            ) : geradorEtapa === 'instituicao' ? (
+              <div className="space-y-3">
+                <p className="text-[11px]" style={{ color: t.textFaint }}>
+                  Escolha a instituicao para gerar os logins.
+                </p>
+                <div className="space-y-2">
+                  {instituicoes.map((inst) => (
+                    <button
+                      key={inst.id}
+                      onClick={() => {
+                        setInstitucaoSel(inst.id);
+                        setGeradorEtapa('turmas');
+                      }}
+                      className="w-full text-left px-4 py-3 rounded-xl border transition-colors"
+                      style={
+                        institucaoSel === inst.id
+                          ? { backgroundColor: t.accentSoft, borderColor: t.accentBorder, color: t.accentText }
+                          : { backgroundColor: t.surface, borderColor: t.border, color: t.text }
+                      }
+                    >
+                      <span className="text-sm font-medium">{inst.name}</span>
+                    </button>
+                  ))}
+                  {instituicoes.length === 0 && (
+                    <p className="text-xs" style={{ color: t.textFaint }}>
+                      Nenhuma instituicao encontrada
+                    </p>
+                  )}
+                </div>
+              </div>
             ) : (
               <>
-                {/* Passo 1: escolher turmas por serie */}
-                <div>
-                  <p className="text-[11px] text-white/40 mb-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px]" style={{ color: t.textFaint }}>
                     Toque nas turmas, depois escolha se viram um login juntas ou separadas.
                   </p>
+                  <button
+                    onClick={() => setShowNovaTurma((v) => !v)}
+                    className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium border transition-colors"
+                    style={{ backgroundColor: t.accentSoft, color: t.accentText, borderColor: t.accentBorder }}
+                  >
+                    <Plus className="w-3 h-3" /> Nova turma
+                  </button>
+                </div>
+
+                {showNovaTurma && (
+                  <div className="rounded-xl p-3 space-y-2" style={{ backgroundColor: t.surfaceSunken, border: `1px solid ${t.border}` }}>
+                    <div className="flex gap-2">
+                      <input
+                        value={novaSerie}
+                        onChange={(e) => setNovaSerie(e.target.value)}
+                        placeholder="Serie (ex.: 5º Ano)"
+                        className="flex-1 min-w-0 rounded-lg px-3 py-2 text-sm outline-none"
+                        style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, color: t.text }}
+                      />
+                      <input
+                        value={novaLetra}
+                        onChange={(e) => setNovaLetra(e.target.value.toUpperCase().slice(0, 2))}
+                        placeholder="Letra"
+                        className="w-16 rounded-lg px-3 py-2 text-sm outline-none text-center"
+                        style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, color: t.text }}
+                      />
+                    </div>
+                    <button
+                      onClick={criarTurma}
+                      disabled={processando || !novaSerie.trim() || !novaLetra.trim()}
+                      className="w-full py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-40"
+                      style={{ backgroundColor: t.accent, color: '#FFFFFF' }}
+                    >
+                      {processando ? 'Acrescentando...' : 'Acrescentar turma'}
+                    </button>
+                  </div>
+                )}
+
                   <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
                     {seriesOrdenadas.map(({ serie, turmas: ts }) => (
                       <div key={serie}>
-                        <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1.5">{serie}</p>
+                        <p className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: t.textFaint }}>
+                          {serie}
+                        </p>
                         <div className="flex flex-wrap gap-1.5">
-                          {ts.map((t) => {
-                            const jaUsada = turmasEmGrupos.has(t.id);
-                            const ativa = selInline.includes(t.id);
+                          {ts.map((tt) => {
+                            const jaUsada = turmasEmGrupos.has(tt.id);
+                            const ativa = selInline.includes(tt.id);
                             return (
                               <button
-                                key={t.id}
+                                key={tt.id}
                                 type="button"
                                 disabled={jaUsada}
-                                onClick={() => toggleInline(t.id)}
+                                onClick={() => toggleInline(tt.id)}
                                 className={cn(
                                   'px-2.5 py-1 rounded-lg text-xs border transition-colors',
-                                  jaUsada
-                                    ? 'bg-white/[0.03] border-white/5 text-white/25 line-through cursor-not-allowed'
-                                    : ativa
-                                    ? 'bg-violet-500 border-violet-500 text-white'
-                                    : 'bg-white/[0.06] border-violet-500/10 text-white/70 hover:border-violet-500/30'
+                                  jaUsada && 'line-through cursor-not-allowed'
                                 )}
+                                style={
+                                  jaUsada
+                                    ? { backgroundColor: t.surfaceSunken, borderColor: t.border, color: t.textFaint }
+                                    : ativa
+                                    ? { backgroundColor: t.accent, borderColor: t.accent, color: '#FFFFFF' }
+                                    : { backgroundColor: t.surfaceSunken, borderColor: t.border, color: t.textMuted }
+                                }
                               >
-                                {t.turma_letra}
+                                {tt.turma_letra}
                               </button>
                             );
                           })}
@@ -908,59 +1135,58 @@ const AdminLoginsProfessoresPage = () => {
                       </div>
                     ))}
                     {seriesOrdenadas.length === 0 && (
-                      <p className="text-xs text-white/30">Nenhuma turma cadastrada</p>
+                      <p className="text-xs" style={{ color: t.textFaint }}>
+                        Nenhuma turma cadastrada
+                      </p>
                     )}
                   </div>
-                </div>
 
-                {/* Acoes de agrupamento */}
                 {selInline.length > 0 && (
                   <div className="flex gap-2">
                     <button
                       onClick={adicionarGrupoJuntas}
-                      className="flex-1 py-2 rounded-lg bg-violet-500/20 text-violet-200 border border-violet-500/30 text-xs font-medium hover:bg-violet-500/30 transition-colors"
+                      className="flex-1 py-2 rounded-lg text-xs font-medium border transition-colors"
+                      style={{ backgroundColor: t.accentSoft, color: t.accentText, borderColor: t.accentBorder }}
                     >
                       Juntar num login ({selInline.length})
                     </button>
                     <button
                       onClick={adicionarGruposSeparados}
-                      className="flex-1 py-2 rounded-lg bg-white/[0.06] text-white/70 border border-violet-500/10 text-xs font-medium hover:bg-white/[0.12] transition-colors"
+                      className="flex-1 py-2 rounded-lg text-xs font-medium border transition-colors"
+                      style={{ backgroundColor: t.surfaceSunken, color: t.textMuted, borderColor: t.border }}
                     >
                       Um login pra cada
                     </button>
                   </div>
                 )}
 
-                {/* Passo 2: os logins que serao gerados */}
                 {grupos.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-[10px] text-white/40 uppercase tracking-wider">
+                    <p className="text-[10px] uppercase tracking-wider" style={{ color: t.textFaint }}>
                       {grupos.length} login(s) a gerar
                     </p>
                     {grupos.map((g) => {
                       const ts = g.turmaIds.map((id) => turmaMap.get(id)).filter(Boolean) as TurmaOption[];
                       const email = `${prefixoDeGrupo(ts)}${DOMINIO_EMAIL}`;
                       return (
-                        <div key={g.id} className="rounded-lg bg-white/[0.04] border border-violet-500/10 px-3 py-2">
+                        <div key={g.id} className="rounded-lg px-3 py-2" style={{ backgroundColor: t.surfaceSunken, border: `1px solid ${t.border}` }}>
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
-                              <p className="text-[11px] text-white/50 truncate">{nomeDeGrupo(ts)}</p>
-                              <p className="text-sm text-white font-mono truncate">{email}</p>
-                              <p className="text-xs text-violet-300 font-mono">senha: {g.senha}</p>
+                              <p className="text-[11px] truncate" style={{ color: t.textMuted }}>
+                                {nomeDeGrupo(ts)}
+                              </p>
+                              <p className="text-sm font-mono truncate" style={{ color: t.text }}>
+                                {email}
+                              </p>
+                              <p className="text-xs font-mono" style={{ color: t.accentText }}>
+                                senha: {g.senha}
+                              </p>
                             </div>
                             <div className="flex gap-1 shrink-0">
-                              <button
-                                onClick={() => regenerarSenhaGrupo(g.id)}
-                                title="Nova senha"
-                                className="p-1.5 text-white/40 hover:text-white"
-                              >
+                              <button onClick={() => regenerarSenhaGrupo(g.id)} title="Nova senha" className="p-1.5" style={{ color: t.textMuted }}>
                                 <Dices className="w-3.5 h-3.5" />
                               </button>
-                              <button
-                                onClick={() => removerGrupo(g.id)}
-                                title="Remover"
-                                className="p-1.5 text-white/40 hover:text-red-300"
-                              >
+                              <button onClick={() => removerGrupo(g.id)} title="Remover" className="p-1.5" style={{ color: DANGER.text }}>
                                 <X className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -974,7 +1200,8 @@ const AdminLoginsProfessoresPage = () => {
                 <button
                   onClick={gerarTodos}
                   disabled={processando || grupos.length === 0}
-                  className="w-full py-2.5 rounded-xl bg-violet-500 text-white text-sm font-semibold hover:bg-violet-400 transition-colors disabled:opacity-40"
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-40"
+                  style={{ backgroundColor: t.accent, color: '#FFFFFF' }}
                 >
                   {processando
                     ? 'Gerando...'
