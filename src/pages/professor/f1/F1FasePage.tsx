@@ -5,7 +5,6 @@ import { useProfessor } from '@/contexts/ProfessorContext';
 import { useFaseTurma } from '@/hooks/useFaseTurma';
 import { getTurmaPreferida } from '@/lib/infantil';
 import { SANTUARIO_INFANTIL, ATIVIDADE_OITO_CAMINHOS } from '@/lib/infantilSantuario';
-import { ACADEMIA_F1, nomeAcademia } from '@/lib/f1';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 
 const TOTAL = 8;
@@ -210,10 +209,6 @@ const F1FasePage = () => {
           <h1 className="font-serif text-[27px] leading-tight text-center mt-4" style={{ color: '#FFFFFF' }}>
             {m.nome}
           </h1>
-          {/* A ponte com a Academia: como este mecanismo se chama na sala do F1 */}
-          <p className="text-[12px] text-center mt-1.5" style={{ color: 'rgba(255,255,255,0.7)' }}>
-            Na {nomeAcademia(serieSel)}: {ACADEMIA_F1[atual]}
-          </p>
           {/* Assinatura de COR do mecanismo: grossa e abaixo do nome */}
           <div
             className="vf-draw mx-auto mt-3 mb-6 rounded-full"

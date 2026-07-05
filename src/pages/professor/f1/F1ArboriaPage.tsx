@@ -350,9 +350,6 @@ const TrilhaAno = ({
                   <h3 className="text-base font-bold mt-0.5" style={{ color: t.text }}>
                     {ACADEMIA_F1[n]}
                   </h3>
-                  <p className="text-[11px] uppercase tracking-wide mt-0.5" style={{ color: t.textFaint }}>
-                    {nome}
-                  </p>
                   <p className="text-sm mt-1" style={{ color: t.textMuted }}>
                     Você está conduzindo este módulo.
                   </p>
@@ -382,9 +379,6 @@ const TrilhaAno = ({
                       style={{ color: concluida ? t.textFaint : t.text }}
                     >
                       {ACADEMIA_F1[n]}
-                    </span>
-                    <span className="block text-[10.5px]" style={{ color: t.textFaint }}>
-                      {nome}
                     </span>
                   </span>
                   {concluida ? (

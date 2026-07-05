@@ -7,33 +7,26 @@
  * apresentada com um nome de ação (o "módulo").
  */
 
-/** Nome de ação de cada inteligência (id 1..8, mesma ordem da tabela inteligencias). */
+/**
+ * Rótulo de cada módulo da trilha (id 1..8, mesma ordem da tabela inteligencias).
+ * Decisão do Fundador (05/07): a trilha se chama "Os 8 superpoderes/talentos",
+ * mas cada módulo é lido pelo nome REAL da inteligência. Sem nomes fictícios:
+ * nome inventado vira rótulo, e rótulo é o que o Arboria não faz.
+ */
 export const ACADEMIA_F1: Record<number, string> = {
-  1: 'A Palavra na Medida',
-  2: 'O Detetive de Padrões',
-  3: 'O Mapa da Mente',
-  4: 'O Ouvido de Radar',
-  5: 'A Oficina das Mãos',
-  6: 'O Olhar de Lupa',
-  7: 'O Radar de Gente',
-  8: 'A Bússola de Dentro',
+  1: 'Inteligência Linguística',
+  2: 'Inteligência Lógico-Matemática',
+  3: 'Inteligência Espacial',
+  4: 'Inteligência Musical',
+  5: 'Inteligência Corporal-Cinestésica',
+  6: 'Inteligência Naturalista',
+  7: 'Inteligência Interpessoal',
+  8: 'Inteligência Intrapessoal',
 };
 
-/** Nome de ação a partir do NOME técnico da inteligência (como vem do banco). */
-export const ACADEMIA_POR_NOME: Record<string, string> = {
-  'Linguística': ACADEMIA_F1[1],
-  'Lógico-Matemática': ACADEMIA_F1[2],
-  'Espacial': ACADEMIA_F1[3],
-  'Musical': ACADEMIA_F1[4],
-  'Corporal-Cinestésica': ACADEMIA_F1[5],
-  'Naturalista': ACADEMIA_F1[6],
-  'Interpessoal': ACADEMIA_F1[7],
-  'Intrapessoal': ACADEMIA_F1[8],
-};
-
-/** Rótulo de módulo pra exibição: nome de ação quando conhecido, senão o técnico. */
+/** Rótulo de módulo a partir do nome técnico vindo do banco ("Linguística" -> "Inteligência Linguística"). */
 export const nomeModulo = (nomeInteligencia: string) =>
-  ACADEMIA_POR_NOME[nomeInteligencia] ?? nomeInteligencia;
+  nomeInteligencia.startsWith('Inteligência') ? nomeInteligencia : `Inteligência ${nomeInteligencia}`;
 
 /** 1º-3º ano ("1º Ano".."3º Ano") = faixa 1. */
 export const ehFaixa1 = (serie?: string | null) => /^[1-3]/.test((serie ?? '').trim());
