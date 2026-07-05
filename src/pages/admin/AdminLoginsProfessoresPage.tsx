@@ -45,6 +45,47 @@ const nomeTurma = (t: TurmaOption): string => t.nome || `${t.serie} ${t.turma_le
 
 const sugerirPrefixo = (t: TurmaOption): string => normalizarPrefixo(`${t.serie}${t.turma_letra}`);
 
+// Email de um GRUPO de turmas: 1 turma -> serie+letra (5anoc); varias da mesma
+// serie -> serie + letras juntas (1anoab); series diferentes -> concatena tudo.
+const prefixoDeGrupo = (grupoTurmas: TurmaOption[]): string => {
+  if (grupoTurmas.length === 0) return '';
+  const series = [...new Set(grupoTurmas.map((t) => t.serie))];
+  if (series.length === 1) {
+    const letras = grupoTurmas.map((t) => t.turma_letra).sort().join('');
+    return normalizarPrefixo(`${series[0]}${letras}`);
+  }
+  return normalizarPrefixo(grupoTurmas.map((t) => `${t.serie}${t.turma_letra}`).join(''));
+};
+
+// Nome de exibicao de um grupo: "Professor(a) 1º Ano A e B" / "Professor(a) 5º Ano C".
+const nomeDeGrupo = (grupoTurmas: TurmaOption[]): string => {
+  if (grupoTurmas.length === 0) return 'Professor(a)';
+  const series = [...new Set(grupoTurmas.map((t) => t.serie))];
+  if (series.length === 1) {
+    const letras = grupoTurmas.map((t) => t.turma_letra).sort();
+    const juntas =
+      letras.length === 1
+        ? letras[0]
+        : `${letras.slice(0, -1).join(', ')} e ${letras[letras.length - 1]}`;
+    return `Professor(a) ${series[0]} ${juntas}`;
+  }
+  return `Professor(a) ${grupoTurmas.map(nomeTurma).join(' e ')}`;
+};
+
+interface GrupoLogin {
+  id: string;
+  turmaIds: string[];
+  senha: string;
+}
+
+interface ResultadoGeracao {
+  email: string;
+  senha: string;
+  nome: string;
+  ok: boolean;
+  erro?: string;
+}
+
 // Senha provisoria: 'arboria' + 6 caracteres aleatorios, sem simbolos ambiguos
 // (0/o, 1/l/i) pra facilitar a leitura na apostila impressa.
 const gerarSenha = (): string => {
@@ -80,6 +121,12 @@ const AdminLoginsProfessoresPage = () => {
 
   // Form: resetar senha
   const [novaSenha, setNovaSenha] = useState('');
+
+  // Gerador de logins por serie (fluxo em lote, sem digitar)
+  const [showGerador, setShowGerador] = useState(false);
+  const [selInline, setSelInline] = useState<string[]>([]);
+  const [grupos, setGrupos] = useState<GrupoLogin[]>([]);
+  const [resultados, setResultados] = useState<ResultadoGeracao[] | null>(null);
 
   const [processando, setProcessando] = useState(false);
   const [copiado, setCopiado] = useState<string | null>(null);
@@ -138,6 +185,16 @@ const AdminLoginsProfessoresPage = () => {
 
   const turmaMap = useMemo(() => new Map(turmas.map((t) => [t.id, t])), [turmas]);
 
+  // Turmas agrupadas por serie (pro gerador: "vejo todas as series")
+  const seriesOrdenadas = useMemo(() => {
+    const grupos: Record<string, TurmaOption[]> = {};
+    turmas.forEach((t) => {
+      if (!grupos[t.serie]) grupos[t.serie] = [];
+      grupos[t.serie].push(t);
+    });
+    return Object.entries(grupos).map(([serie, ts]) => ({ serie, turmas: ts }));
+  }, [turmas]);
+
   const copiarTexto = async (texto: string, chave: string) => {
     try {
       await navigator.clipboard.writeText(texto);
@@ -180,6 +237,88 @@ const AdminLoginsProfessoresPage = () => {
   };
 
   const invalidar = () => queryClient.invalidateQueries({ queryKey: ['admin-logins-professores'] });
+
+  // ===== Gerador de logins por serie =====
+  const idGrupo = () => `g-${crypto.getRandomValues(new Uint32Array(1))[0].toString(36)}`;
+
+  const abrirGerador = () => {
+    setSelInline([]);
+    setGrupos([]);
+    setResultados(null);
+    setShowGerador(true);
+  };
+
+  const toggleInline = (turmaId: string) => {
+    setSelInline((prev) =>
+      prev.includes(turmaId) ? prev.filter((id) => id !== turmaId) : [...prev, turmaId]
+    );
+  };
+
+  // Turmas ja colocadas em algum grupo (nao podem entrar em dois logins)
+  const turmasEmGrupos = useMemo(
+    () => new Set(grupos.flatMap((g) => g.turmaIds)),
+    [grupos]
+  );
+
+  // Junta as turmas selecionadas num UNICO login
+  const adicionarGrupoJuntas = () => {
+    const novas = selInline.filter((id) => !turmasEmGrupos.has(id));
+    if (novas.length === 0) return;
+    setGrupos((prev) => [...prev, { id: idGrupo(), turmaIds: novas, senha: gerarSenha() }]);
+    setSelInline([]);
+  };
+
+  // Cria um login SEPARADO para cada turma selecionada
+  const adicionarGruposSeparados = () => {
+    const novas = selInline.filter((id) => !turmasEmGrupos.has(id));
+    if (novas.length === 0) return;
+    setGrupos((prev) => [
+      ...prev,
+      ...novas.map((id) => ({ id: idGrupo(), turmaIds: [id], senha: gerarSenha() })),
+    ]);
+    setSelInline([]);
+  };
+
+  const removerGrupo = (gid: string) => setGrupos((prev) => prev.filter((g) => g.id !== gid));
+
+  const regenerarSenhaGrupo = (gid: string) =>
+    setGrupos((prev) => prev.map((g) => (g.id === gid ? { ...g, senha: gerarSenha() } : g)));
+
+  const gerarTodos = async () => {
+    if (grupos.length === 0) return;
+    setProcessando(true);
+    const saidas: ResultadoGeracao[] = [];
+    for (const g of grupos) {
+      const turmasDoGrupo = g.turmaIds.map((id) => turmaMap.get(id)).filter(Boolean) as TurmaOption[];
+      const email = `${prefixoDeGrupo(turmasDoGrupo)}${DOMINIO_EMAIL}`;
+      const nome = nomeDeGrupo(turmasDoGrupo);
+      try {
+        const { data, error } = await supabase.functions.invoke('admin-logins-professor', {
+          body: { acao: 'criar', email, senha: g.senha, nomeExibicao: nome, turmaIds: g.turmaIds },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        saidas.push({ email, senha: g.senha, nome, ok: true });
+      } catch (err: unknown) {
+        saidas.push({ email, senha: g.senha, nome, ok: false, erro: err instanceof Error ? err.message : 'erro' });
+      }
+    }
+    setResultados(saidas);
+    setProcessando(false);
+    invalidar();
+    const okCount = saidas.filter((s) => s.ok).length;
+    if (okCount === saidas.length) toast.success(`${okCount} login(s) gerado(s)`);
+    else toast.warning(`${okCount} de ${saidas.length} gerados; veja os erros`);
+  };
+
+  const copiarTodosResultados = () => {
+    if (!resultados) return;
+    const texto = resultados
+      .filter((r) => r.ok)
+      .map((r) => `${r.nome}\n${r.email}\n${r.senha}`)
+      .join('\n\n');
+    copiarTexto(texto, 'todos');
+  };
 
   const criarLogin = async () => {
     const email = `${prefixoEmail}${DOMINIO_EMAIL}`;
@@ -357,12 +496,20 @@ const AdminLoginsProfessoresPage = () => {
         </div>
       </div>
 
-      <button
-        onClick={abrirCriar}
-        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-violet-500/15 text-violet-300 border border-violet-500/25 hover:bg-violet-500/25 transition-colors"
-      >
-        <Plus className="w-3.5 h-3.5" /> Criar login
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={abrirGerador}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-violet-500 text-white hover:bg-violet-400 transition-colors"
+        >
+          <Dices className="w-3.5 h-3.5" /> Gerar logins por serie
+        </button>
+        <button
+          onClick={abrirCriar}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-violet-500/15 text-violet-300 border border-violet-500/25 hover:bg-violet-500/25 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" /> Criar um login
+        </button>
+      </div>
 
       {loadingLogins ? (
         <div className="space-y-2">
@@ -662,6 +809,181 @@ const AdminLoginsProfessoresPage = () => {
             <p className="text-[10px] text-amber-400/70 text-center">
               Anote agora: a senha nao podera ser vista de novo depois de fechar.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Gerador de logins por serie */}
+      {showGerador && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl bg-[#1E1E3A] border border-violet-500/15 p-5 space-y-4 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-white font-medium">Gerar logins por serie</p>
+                <p className="text-[10px] text-white/40 mt-0.5">Centro Educacional Amadeus</p>
+              </div>
+              <button onClick={() => setShowGerador(false)} className="p-1 text-white/30 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Passo 1: os resultados (quando ja gerou) */}
+            {resultados ? (
+              <div className="space-y-3">
+                <p className="text-xs text-white/60">
+                  {resultados.filter((r) => r.ok).length} de {resultados.length} login(s) gerado(s). Anote agora:
+                  as senhas nao aparecem de novo.
+                </p>
+                <div className="space-y-2">
+                  {resultados.map((r, i) => (
+                    <div
+                      key={i}
+                      className={cn(
+                        'rounded-lg px-3 py-2 border',
+                        r.ok
+                          ? 'bg-white/[0.04] border-emerald-500/15'
+                          : 'bg-red-500/10 border-red-500/25'
+                      )}
+                    >
+                      <p className="text-[11px] text-white/50">{r.nome}</p>
+                      {r.ok ? (
+                        <>
+                          <p className="text-sm text-white font-mono truncate">{r.email}</p>
+                          <p className="text-xs text-violet-300 font-mono">senha: {r.senha}</p>
+                        </>
+                      ) : (
+                        <p className="text-xs text-red-300 mt-0.5">Falhou: {r.erro}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={copiarTodosResultados}
+                  className="w-full py-2 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 text-xs font-medium hover:bg-emerald-500/25 transition-colors"
+                >
+                  {copiado === 'todos' ? 'Copiado' : 'Copiar todos (nome, email, senha)'}
+                </button>
+                <button
+                  onClick={() => setShowGerador(false)}
+                  className="w-full py-2.5 rounded-xl bg-white/[0.06] text-white/60 text-sm font-medium hover:bg-white/[0.1] transition-colors"
+                >
+                  Fechar
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Passo 1: escolher turmas por serie */}
+                <div>
+                  <p className="text-[11px] text-white/40 mb-2">
+                    Toque nas turmas, depois escolha se viram um login juntas ou separadas.
+                  </p>
+                  <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
+                    {seriesOrdenadas.map(({ serie, turmas: ts }) => (
+                      <div key={serie}>
+                        <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1.5">{serie}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {ts.map((t) => {
+                            const jaUsada = turmasEmGrupos.has(t.id);
+                            const ativa = selInline.includes(t.id);
+                            return (
+                              <button
+                                key={t.id}
+                                type="button"
+                                disabled={jaUsada}
+                                onClick={() => toggleInline(t.id)}
+                                className={cn(
+                                  'px-2.5 py-1 rounded-lg text-xs border transition-colors',
+                                  jaUsada
+                                    ? 'bg-white/[0.03] border-white/5 text-white/25 line-through cursor-not-allowed'
+                                    : ativa
+                                    ? 'bg-violet-500 border-violet-500 text-white'
+                                    : 'bg-white/[0.06] border-violet-500/10 text-white/70 hover:border-violet-500/30'
+                                )}
+                              >
+                                {t.turma_letra}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                    {seriesOrdenadas.length === 0 && (
+                      <p className="text-xs text-white/30">Nenhuma turma cadastrada</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Acoes de agrupamento */}
+                {selInline.length > 0 && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={adicionarGrupoJuntas}
+                      className="flex-1 py-2 rounded-lg bg-violet-500/20 text-violet-200 border border-violet-500/30 text-xs font-medium hover:bg-violet-500/30 transition-colors"
+                    >
+                      Juntar num login ({selInline.length})
+                    </button>
+                    <button
+                      onClick={adicionarGruposSeparados}
+                      className="flex-1 py-2 rounded-lg bg-white/[0.06] text-white/70 border border-violet-500/10 text-xs font-medium hover:bg-white/[0.12] transition-colors"
+                    >
+                      Um login pra cada
+                    </button>
+                  </div>
+                )}
+
+                {/* Passo 2: os logins que serao gerados */}
+                {grupos.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-white/40 uppercase tracking-wider">
+                      {grupos.length} login(s) a gerar
+                    </p>
+                    {grupos.map((g) => {
+                      const ts = g.turmaIds.map((id) => turmaMap.get(id)).filter(Boolean) as TurmaOption[];
+                      const email = `${prefixoDeGrupo(ts)}${DOMINIO_EMAIL}`;
+                      return (
+                        <div key={g.id} className="rounded-lg bg-white/[0.04] border border-violet-500/10 px-3 py-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[11px] text-white/50 truncate">{nomeDeGrupo(ts)}</p>
+                              <p className="text-sm text-white font-mono truncate">{email}</p>
+                              <p className="text-xs text-violet-300 font-mono">senha: {g.senha}</p>
+                            </div>
+                            <div className="flex gap-1 shrink-0">
+                              <button
+                                onClick={() => regenerarSenhaGrupo(g.id)}
+                                title="Nova senha"
+                                className="p-1.5 text-white/40 hover:text-white"
+                              >
+                                <Dices className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => removerGrupo(g.id)}
+                                title="Remover"
+                                className="p-1.5 text-white/40 hover:text-red-300"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <button
+                  onClick={gerarTodos}
+                  disabled={processando || grupos.length === 0}
+                  className="w-full py-2.5 rounded-xl bg-violet-500 text-white text-sm font-semibold hover:bg-violet-400 transition-colors disabled:opacity-40"
+                >
+                  {processando
+                    ? 'Gerando...'
+                    : grupos.length === 0
+                    ? 'Escolha as turmas acima'
+                    : `Gerar ${grupos.length} login(s)`}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
