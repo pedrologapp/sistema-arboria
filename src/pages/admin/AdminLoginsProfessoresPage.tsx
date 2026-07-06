@@ -191,6 +191,10 @@ const AdminLoginsProfessoresPage = () => {
   // Instituicao ativa (o dono escolhe qual escola antes de gerar)
   const [institucaoSel, setInstitucaoSel] = useState<string | null>(null);
 
+  // Navegacao em cascata (colunas): serie e turma em foco
+  const [serieSel, setSerieSel] = useState<string | null>(null);
+  const [turmaSel, setTurmaSel] = useState<string | null>(null);
+
   // Acrescentar turma nova
   const [showNovaTurma, setShowNovaTurma] = useState(false);
   const [novaSerie, setNovaSerie] = useState('');
@@ -257,6 +261,24 @@ const AdminLoginsProfessoresPage = () => {
     return Object.entries(gruposSerie).map(([serie, ts]) => ({ serie, turmas: ts }));
   }, [turmas]);
 
+  // ===== Dados das colunas em cascata =====
+  const seriesDaInst = useMemo(() => [...new Set(turmas.map((tt) => tt.serie))], [turmas]);
+  const turmasDaSerie = useMemo(
+    () => turmas.filter((tt) => tt.serie === serieSel),
+    [turmas, serieSel]
+  );
+  // Quantos logins ativos tocam cada turma (contador na coluna de turmas)
+  const loginsPorTurma = useMemo(() => {
+    const m = new Map<string, number>();
+    logins.forEach((l) => l.turmas.forEach((tt) => m.set(tt.id, (m.get(tt.id) ?? 0) + 1)));
+    return m;
+  }, [logins]);
+  const loginsDaTurma = useMemo(
+    () => (turmaSel ? logins.filter((l) => l.turmas.some((tt) => tt.id === turmaSel)) : []),
+    [logins, turmaSel]
+  );
+  const turmaFocada = turmaSel ? turmaMap.get(turmaSel) : null;
+
   const copiarTexto = async (texto: string, chave: string) => {
     try {
       await navigator.clipboard.writeText(texto);
@@ -273,6 +295,18 @@ const AdminLoginsProfessoresPage = () => {
     setPrefixoEditado(false);
     setSenha(gerarSenha());
     setNomeExibicao('');
+    setNomeEditado(false);
+    setShowCriar(true);
+  };
+
+  // Abre "criar login" ja com uma turma marcada (usado na coluna de turmas)
+  const abrirCriarComTurma = (turmaId: string) => {
+    const tt = turmaMap.get(turmaId);
+    setTurmasSelecionadas([turmaId]);
+    setPrefixoEmail(tt ? sugerirPrefixo(tt) : '');
+    setPrefixoEditado(false);
+    setSenha(gerarSenha());
+    setNomeExibicao(tt ? `Professor(a) ${nomeTurma(tt)}` : '');
     setNomeEditado(false);
     setShowCriar(true);
   };
@@ -565,134 +599,245 @@ const AdminLoginsProfessoresPage = () => {
     </div>
   );
 
-  return (
-    <div className="space-y-4 pb-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-serif text-[22px]" style={{ color: t.text }}>
-            Logins de Professores
-          </h1>
-          <p className="text-xs mt-0.5" style={{ color: t.textFaint }}>
-            {logins.length} {logins.length === 1 ? 'login' : 'logins'} · um login pode ter varias turmas
-          </p>
-        </div>
-        <div className="p-2.5 rounded-xl" style={{ backgroundColor: t.accentSoft }}>
-          <KeyRound className="w-5 h-5" style={{ color: t.accentText }} />
-        </div>
-      </div>
+  const colunaCss: React.CSSProperties = {
+    backgroundColor: t.surface,
+    border: `1px solid ${t.border}`,
+    boxShadow: t.shadowSm,
+  };
+  const linhaBase = 'w-full flex items-center gap-2 px-3 py-2.5 text-left transition-colors';
 
-      <div className="flex flex-wrap gap-2">
+  return (
+    <div className="pb-8">
+      <div className="flex items-center justify-between gap-3 mb-1">
+        <h1 className="font-serif text-[22px]" style={{ color: t.text }}>
+          Logins de Professores
+        </h1>
         <button
           onClick={abrirGerador}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors"
-          style={{ backgroundColor: t.accent, color: '#FFFFFF' }}
+          className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold flex-shrink-0"
+          style={{ backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowSm }}
         >
-          <Dices className="w-3.5 h-3.5" /> Gerar logins por serie
-        </button>
-        <button
-          onClick={abrirCriar}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-colors"
-          style={{ backgroundColor: t.accentSoft, borderColor: t.accentBorder, color: t.accentText }}
-        >
-          <Plus className="w-3.5 h-3.5" /> Criar um login
+          <Dices size={15} /> Gerar por serie
         </button>
       </div>
+      <p className="text-sm mb-4" style={{ color: t.textMuted }}>
+        A instituicao, depois a serie, depois a turma, depois os logins.
+      </p>
 
-      {loadingLogins ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 rounded-xl animate-pulse" style={{ backgroundColor: t.surfaceSunken }} />
-          ))}
-        </div>
-      ) : logins.length === 0 ? (
-        <div className="p-6 rounded-xl text-center" style={cardStyle}>
-          <p className="text-sm" style={{ color: t.textMuted }}>
-            Nenhum login de professor ainda
+      {/* AS QUATRO COLUNAS EM CASCATA */}
+      <div className="flex gap-3 overflow-x-auto pb-2 items-start">
+        {/* Coluna 1: instituicoes */}
+        <div className="w-48 flex-shrink-0 rounded-2xl overflow-hidden" style={colunaCss}>
+          <p className="px-3 py-2 text-[10px] uppercase tracking-wider font-semibold" style={{ color: t.textFaint }}>
+            Instituicao
           </p>
-          <p className="text-xs mt-1" style={{ color: t.textFaint }}>
-            Comece pelo botao "Gerar logins por serie"
-          </p>
+          {instituicoes.map((inst) => {
+            const ativa = inst.id === institucaoSel;
+            return (
+              <button
+                key={inst.id}
+                onClick={() => {
+                  setInstitucaoSel(inst.id);
+                  setSerieSel(null);
+                  setTurmaSel(null);
+                }}
+                className={linhaBase}
+                style={{
+                  backgroundColor: ativa ? t.accentSoft : 'transparent',
+                  borderLeft: `3px solid ${ativa ? t.accent : 'transparent'}`,
+                  borderBottom: `1px solid ${t.border}`,
+                }}
+              >
+                <span className="flex-1 text-[13px] truncate" style={{ color: ativa ? t.text : t.textMuted, fontWeight: ativa ? 700 : 500 }}>
+                  {inst.name}
+                </span>
+              </button>
+            );
+          })}
         </div>
-      ) : (
-        <div className="space-y-2">
-          {logins.map((login) => (
-            <div
-              key={login.userId}
-              className={cn('p-3.5 rounded-xl space-y-2.5', login.bloqueado && 'opacity-60')}
-              style={cardStyle}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: t.text }}>
-                    {login.nomeExibicao || 'Sem nome'}
-                  </p>
-                  <p className="text-[11px] font-mono truncate" style={{ color: t.textFaint }}>
-                    {login.email}
-                  </p>
-                </div>
-                {login.bloqueado && (
-                  <span
-                    className="shrink-0 px-2 py-0.5 rounded-full text-[9px] font-medium border"
-                    style={{ backgroundColor: DANGER.bg, color: DANGER.text, borderColor: DANGER.border }}
-                  >
-                    Desativado
-                  </span>
-                )}
-              </div>
 
-              <div className="flex flex-wrap gap-1">
-                {login.turmas.length === 0 ? (
-                  <span className="text-[10px]" style={{ color: AMBER.text }}>
-                    Sem turma vinculada
+        {/* Coluna 2: series */}
+        <div className="w-40 flex-shrink-0 rounded-2xl overflow-hidden" style={colunaCss}>
+          <p className="px-3 py-2 text-[10px] uppercase tracking-wider font-semibold" style={{ color: t.textFaint }}>
+            Serie
+          </p>
+          {!institucaoSel ? (
+            <p className="px-3 py-4 text-[11px]" style={{ color: t.textFaint }}>Escolha a instituicao</p>
+          ) : seriesDaInst.length === 0 ? (
+            <p className="px-3 py-4 text-[11px]" style={{ color: t.textFaint }}>Nenhuma serie</p>
+          ) : (
+            seriesDaInst.map((serie) => {
+              const ativa = serie === serieSel;
+              return (
+                <button
+                  key={serie}
+                  onClick={() => {
+                    setSerieSel(serie);
+                    setTurmaSel(null);
+                  }}
+                  className={linhaBase}
+                  style={{
+                    backgroundColor: ativa ? t.accentSoft : 'transparent',
+                    borderLeft: `3px solid ${ativa ? t.accent : 'transparent'}`,
+                    borderBottom: `1px solid ${t.border}`,
+                  }}
+                >
+                  <span className="flex-1 text-[13px] truncate" style={{ color: ativa ? t.text : t.textMuted, fontWeight: ativa ? 700 : 500 }}>
+                    {serie}
                   </span>
-                ) : (
-                  login.turmas.map((tt) => (
-                    <span
-                      key={tt.id}
-                      className="px-2 py-0.5 rounded-full text-[10px] border"
-                      style={{ backgroundColor: t.accentSoft, color: t.accentText, borderColor: t.accentBorder }}
-                    >
-                      {nomeTurma(tt)}
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {/* Coluna 3: turmas */}
+        <div className="w-40 flex-shrink-0 rounded-2xl overflow-hidden" style={colunaCss}>
+          <p className="px-3 py-2 text-[10px] uppercase tracking-wider font-semibold" style={{ color: t.textFaint }}>
+            Turma
+          </p>
+          {!serieSel ? (
+            <p className="px-3 py-4 text-[11px]" style={{ color: t.textFaint }}>Escolha a serie</p>
+          ) : (
+            turmasDaSerie.map((tt) => {
+              const ativa = tt.id === turmaSel;
+              const qtd = loginsPorTurma.get(tt.id) ?? 0;
+              return (
+                <button
+                  key={tt.id}
+                  onClick={() => setTurmaSel(tt.id)}
+                  className={linhaBase}
+                  style={{
+                    backgroundColor: ativa ? t.accentSoft : 'transparent',
+                    borderLeft: `3px solid ${ativa ? t.accent : 'transparent'}`,
+                    borderBottom: `1px solid ${t.border}`,
+                  }}
+                >
+                  <span className="flex-1 text-[13px] truncate" style={{ color: ativa ? t.text : t.textMuted, fontWeight: ativa ? 700 : 500 }}>
+                    Turma {tt.turma_letra}
+                  </span>
+                  {qtd > 0 && (
+                    <span className="text-[10px] font-semibold px-1.5 rounded-full" style={{ backgroundColor: OK.bg, color: OK.text }}>
+                      {qtd}
                     </span>
-                  ))
-                )}
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {/* Coluna 4: logins da turma */}
+        <div className="flex-1 min-w-[240px] rounded-2xl p-3" style={colunaCss}>
+          {loadingLogins ? (
+            <div className="space-y-2">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-16 rounded-xl animate-pulse" style={{ backgroundColor: t.surfaceSunken }} />
+              ))}
+            </div>
+          ) : !turmaFocada ? (
+            <div className="h-full flex items-center justify-center py-10 text-center">
+              <p className="text-[13px]" style={{ color: t.textFaint }}>
+                Escolha uma turma para ver e criar os logins dela.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold" style={{ color: t.text }}>
+                  {nomeTurma(turmaFocada)}
+                </p>
+                <button
+                  onClick={() => abrirCriarComTurma(turmaFocada.id)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold flex-shrink-0"
+                  style={{ backgroundColor: t.accent, color: '#FFFFFF' }}
+                >
+                  <Plus className="w-3.5 h-3.5" /> Novo login
+                </button>
               </div>
 
-              {!login.bloqueado && (
-                <div className="flex gap-1.5 flex-wrap">
-                  <button
-                    onClick={() => {
-                      setLoginParaTurmas(login);
-                      setTurmasAjuste(login.turmas.map((tt) => tt.id));
-                    }}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-medium border transition-colors"
-                    style={{ backgroundColor: t.accentSoft, color: t.accentText, borderColor: t.accentBorder }}
+              {loginsDaTurma.length === 0 ? (
+                <p className="text-[12px] py-4" style={{ color: t.textFaint }}>
+                  Nenhum login para esta turma ainda. Use "Novo login" aqui, ou "Gerar por serie" para varias de uma vez.
+                </p>
+              ) : (
+                loginsDaTurma.map((login) => (
+                  <div
+                    key={login.userId}
+                    className={cn('p-3 rounded-xl', login.bloqueado && 'opacity-60')}
+                    style={{ backgroundColor: t.surfaceSunken, border: `1px solid ${t.border}` }}
                   >
-                    <Pencil className="w-3 h-3" /> Ajustar turmas
-                  </button>
-                  <button
-                    onClick={() => {
-                      setLoginParaSenha(login);
-                      setNovaSenha(gerarSenha());
-                    }}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-medium border transition-colors"
-                    style={{ backgroundColor: AMBER.bg, color: AMBER.text, borderColor: AMBER.border }}
-                  >
-                    <RefreshCw className="w-3 h-3" /> Resetar senha
-                  </button>
-                  <button
-                    onClick={() => setLoginParaDesativar(login)}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-medium border transition-colors"
-                    style={{ backgroundColor: DANGER.bg, color: DANGER.text, borderColor: DANGER.border }}
-                  >
-                    <Ban className="w-3 h-3" /> Desativar
-                  </button>
-                </div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium truncate" style={{ color: t.text }}>
+                          {login.nomeExibicao || 'Sem nome'}
+                        </p>
+                        <p className="text-[11px] font-mono truncate" style={{ color: t.textFaint }}>
+                          {login.email}
+                        </p>
+                      </div>
+                      {login.bloqueado && (
+                        <span
+                          className="shrink-0 px-2 py-0.5 rounded-full text-[9px] font-medium border"
+                          style={{ backgroundColor: DANGER.bg, color: DANGER.text, borderColor: DANGER.border }}
+                        >
+                          Desativado
+                        </span>
+                      )}
+                    </div>
+
+                    {login.turmas.length > 1 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {login.turmas.map((tt) => (
+                          <span
+                            key={tt.id}
+                            className="px-2 py-0.5 rounded-full text-[10px] border"
+                            style={{ backgroundColor: t.surface, color: t.textMuted, borderColor: t.border }}
+                          >
+                            {nomeTurma(tt)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {!login.bloqueado && (
+                      <div className="flex gap-1.5 flex-wrap mt-2">
+                        <button
+                          onClick={() => {
+                            setLoginParaTurmas(login);
+                            setTurmasAjuste(login.turmas.map((tt) => tt.id));
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-medium border transition-colors"
+                          style={{ backgroundColor: t.accentSoft, color: t.accentText, borderColor: t.accentBorder }}
+                        >
+                          <Pencil className="w-3 h-3" /> Ajustar turmas
+                        </button>
+                        <button
+                          onClick={() => {
+                            setLoginParaSenha(login);
+                            setNovaSenha(gerarSenha());
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-medium border transition-colors"
+                          style={{ backgroundColor: AMBER.bg, color: AMBER.text, borderColor: AMBER.border }}
+                        >
+                          <RefreshCw className="w-3 h-3" /> Resetar senha
+                        </button>
+                        <button
+                          onClick={() => setLoginParaDesativar(login)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-medium border transition-colors"
+                          style={{ backgroundColor: DANGER.bg, color: DANGER.text, borderColor: DANGER.border }}
+                        >
+                          <Ban className="w-3 h-3" /> Desativar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))
               )}
             </div>
-          ))}
+          )}
         </div>
-      )}
+      </div>
 
       {/* Modal: Criar login */}
       {showCriar && (
