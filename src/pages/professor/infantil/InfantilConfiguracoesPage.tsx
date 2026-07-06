@@ -17,7 +17,9 @@ import { infantilTheme as t } from '@/styles/infantilTheme';
 const InfantilConfiguracoesPage = () => {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
-  const { profile, refreshData } = useProfessor();
+  const { profile, refreshData, segmento } = useProfessor();
+
+  const nomeSegmento = segmento === 'fundamental1' ? 'Fundamental 1' : 'Educação Infantil';
 
   const fullName =
     profile?.full_name || `${profile?.nome || ''} ${profile?.sobrenome || ''}`.trim() || 'Professora';
@@ -167,7 +169,7 @@ const InfantilConfiguracoesPage = () => {
           </button>
         )}
         <p className="text-xs" style={{ color: t.textFaint }}>
-          Professora · Educação Infantil
+          Professor(a) · {nomeSegmento}
         </p>
       </div>
 

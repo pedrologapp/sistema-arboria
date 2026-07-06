@@ -161,9 +161,22 @@ All colors MUST be HSL.
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
+
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Área segura do celular (barra de gestos / notch). Exige viewport-fit=cover
+     no index.html, senão env() volta 0. Antes disso, pb-safe era um no-op e o
+     campo de escrever e a barra grudavam na borda de baixo. */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
