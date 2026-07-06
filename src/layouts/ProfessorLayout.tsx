@@ -74,7 +74,7 @@ const ProfessorLayoutContent = ({ children }: ProfessorLayoutProps) => {
   // sem o tutorial do Infantil (o texto é específico daquele segmento)
   if (segmento === 'fundamental1') {
     return (
-      <ProfessorLayoutInfantil tituloFallback="Fundamental 1" comTutorial={false}>
+      <ProfessorLayoutInfantil tituloFallback="Fundamental 1">
         {children}
       </ProfessorLayoutInfantil>
     );

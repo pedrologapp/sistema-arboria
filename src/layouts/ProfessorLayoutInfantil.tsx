@@ -35,7 +35,7 @@ interface ProfessorLayoutInfantilProps {
   children: ReactNode;
   /** Fallback do nome no header quando a instituição não carrega. */
   tituloFallback?: string;
-  /** Tutorial "caderninho de bolso" (texto do Infantil). O F1 desliga até ter o seu. */
+  /** Mantido por compatibilidade; o tutorial agora existe pro Infantil E pro F1. */
   comTutorial?: boolean;
 }
 
@@ -54,11 +54,14 @@ const getIniciais = (nome?: string | null) => {
 const ProfessorLayoutInfantil = ({
   children,
   tituloFallback = 'Educação Infantil',
-  comTutorial = true,
 }: ProfessorLayoutInfantilProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile, institutionName } = useProfessor();
+  const { profile, institutionName, segmento, turmasVinculadas } = useProfessor();
+
+  // Qual tutorial: Infantil ou F1 (e, no F1, superpoderes 1º-3º vs talentos 4º-5º).
+  const varianteTutorial = segmento === 'fundamental1' ? 'f1' : 'infantil';
+  const faixa1Tutorial = (turmasVinculadas?.[0]?.serie ?? 1) <= 3;
 
   // Deslize direcional entre abas: pra frente = entra da direita; pra trás,
   // da esquerda. Navegação dentro da mesma aba (ex.: abrir um thread) = fade.
@@ -162,17 +165,15 @@ const ProfessorLayoutInfantil = ({
           </div>
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            {/* Ajuda: abre o tutorial "Como usar o Arboria" (pedido do Fundador 03/07) */}
-            {comTutorial && (
-              <button
-                onClick={abrirTutorialInfantil}
-                className="p-2 rounded-full transition-transform active:scale-95"
-                style={{ color: santuario ? 'rgba(255,255,255,0.75)' : t.textMuted }}
-                aria-label="Ajuda, como usar o Arboria"
-              >
-                <HelpCircle size={21} strokeWidth={1.75} />
-              </button>
-            )}
+            {/* Ajuda: abre o tutorial "Como usar o Arboria" (Infantil e F1) */}
+            <button
+              onClick={abrirTutorialInfantil}
+              className="p-2 rounded-full transition-transform active:scale-95"
+              style={{ color: santuario ? 'rgba(255,255,255,0.75)' : t.textMuted }}
+              aria-label="Ajuda, como usar o Arboria"
+            >
+              <HelpCircle size={21} strokeWidth={1.75} />
+            </button>
           <button
             onClick={() => navigate('/professor/configuracoes')}
             className="flex-shrink-0 rounded-full transition-transform active:scale-95"
@@ -200,8 +201,9 @@ const ProfessorLayoutInfantil = ({
       <InfantilBottomNav dark={santuario} />
 
       {/* Tutorial "caderninho de bolso": abre sozinho na 1ª entrada; reabrível
-          pelo ícone Ajuda (acima) e por Configurações → Como usar o Arboria */}
-      {comTutorial && <TutorialInfantil />}
+          pelo ícone Ajuda (acima) e por Configurações → Como usar o Arboria.
+          Adapta o texto ao segmento (Infantil ou F1) e à faixa. */}
+      <TutorialInfantil variante={varianteTutorial} faixa1={faixa1Tutorial} />
     </div>
   );
 };
