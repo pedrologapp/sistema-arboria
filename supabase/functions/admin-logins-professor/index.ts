@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
         .from('user_roles')
         .select('user_id')
         .eq('role', 'professor');
-      if (rolesError) return jsonResponse({ error: rolesError.message }, 500);
+      if (rolesError) return jsonResponse({ error: `roles: ${rolesError.message}` }, 500);
 
       const professorIds = (roles || []).map((r) => r.user_id);
       if (professorIds.length === 0) return jsonResponse({ logins: [] });
@@ -206,7 +206,7 @@ Deno.serve(async (req) => {
         profilesQuery = profilesQuery.eq('institution_id', callerInstitutionId);
       }
       const { data: profiles, error: profilesError } = await profilesQuery;
-      if (profilesError) return jsonResponse({ error: profilesError.message }, 500);
+      if (profilesError) return jsonResponse({ error: `profiles: ${profilesError.message}` }, 500);
 
       const idsDaInstituicao = (profiles || []).map((p) => p.id);
       if (idsDaInstituicao.length === 0) return jsonResponse({ logins: [] });
@@ -217,23 +217,24 @@ Deno.serve(async (req) => {
         .select('professor_id, turma_id, ativo, turmas(id, nome, serie, turma_letra, segmento)')
         .in('professor_id', idsDaInstituicao)
         .eq('ativo', true);
-      if (vinculosError) return jsonResponse({ error: vinculosError.message }, 500);
+      if (vinculosError) return jsonResponse({ error: `vinculos: ${vinculosError.message}` }, 500);
 
-      // Emails e status de bloqueio via Auth Admin (paginado)
+      // Emails e status de bloqueio: um getUserById por professor (so os que
+      // interessam, nao os ~300 usuarios). Evita o listUsys paginado que
+      // falhava com perPage alto.
       const emailMap = new Map<string, { email: string; bannedUntil: string | null }>();
-      let page = 1;
-      const perPage = 1000;
-      while (true) {
-        const { data: usersPage, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
-        if (listError) return jsonResponse({ error: listError.message }, 500);
-        for (const u of usersPage.users) {
-          emailMap.set(u.id, {
-            email: u.email ?? '',
-            bannedUntil: (u as { banned_until?: string }).banned_until ?? null,
-          });
-        }
-        if (usersPage.users.length < perPage) break;
-        page++;
+      const emailResults = await Promise.all(
+        idsDaInstituicao.map(async (id) => {
+          const { data: u } = await supabaseAdmin.auth.admin.getUserById(id);
+          return {
+            id,
+            email: u?.user?.email ?? '',
+            bannedUntil: (u?.user as { banned_until?: string } | undefined)?.banned_until ?? null,
+          };
+        })
+      );
+      for (const e of emailResults) {
+        emailMap.set(e.id, { email: e.email, bannedUntil: e.bannedUntil });
       }
 
       const agora = new Date();
