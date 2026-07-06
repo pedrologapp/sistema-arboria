@@ -4,7 +4,8 @@ import { Feather, Library, ChevronLeft } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useFaseTurma } from '@/hooks/useFaseTurma';
 import { getTurmaPreferida } from '@/lib/infantil';
-import { SANTUARIO_INFANTIL, ATIVIDADE_OITO_CAMINHOS } from '@/lib/infantilSantuario';
+import { SANTUARIO_INFANTIL } from '@/lib/infantilSantuario';
+import { ATIVIDADE_OITO_CAMINHOS_F1 as ATIVIDADE_OITO_CAMINHOS } from '@/lib/f1';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 
 const TOTAL = 8;

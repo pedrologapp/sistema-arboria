@@ -109,39 +109,40 @@ const F1AlunosPage = () => {
           {exemplosAbertos && (
             <div className="mt-2.5 pt-2.5 space-y-2.5" style={{ borderTop: `1px solid ${t.accentBorder}` }}>
               <p className="text-xs leading-relaxed font-medium" style={{ color: t.accentText }}>
-                Registre o caminho, não o resultado: o que ele fez primeiro, por onde entrou,
-                o que fez diante do obstáculo.
+                Registre o caminho, não o resultado: o que o aluno fez primeiro, por onde
+                entrou, como reagiu ao obstáculo, a fala dele.
               </p>
 
               <div className="rounded-xl p-2.5 space-y-0.5" style={{ backgroundColor: 'rgba(255,255,255,0.6)' }}>
                 <p className="text-xs" style={{ color: t.textFaint }}>
-                  <span className="font-semibold">✗</span> "Participou bem da atividade."
+                  <span className="font-semibold">✗</span> "Foi bem no trabalho em grupo."
                 </p>
                 <p className="text-xs leading-relaxed" style={{ color: t.text }}>
                   <span className="font-semibold" style={{ color: t.presenteText }}>✓</span>{' '}
-                  "Separou as tampinhas por cor antes de colar, só começou quando a coleção
-                  ficou em ordem."
+                  "Diante do problema da lousa, não somou de cara: desenhou a situação no canto
+                  do caderno, contou nos dedos pra conferir e só então armou a conta. Disse:
+                  'primeiro eu preciso ver o que tá acontecendo pra saber que conta é'."
                 </p>
               </div>
 
               <div className="rounded-xl p-2.5 space-y-0.5" style={{ backgroundColor: 'rgba(255,255,255,0.6)' }}>
                 <p className="text-xs" style={{ color: t.textFaint }}>
-                  <span className="font-semibold">✗</span> "Fez o desenho direitinho."
+                  <span className="font-semibold">✗</span> "Leu bem o texto."
                 </p>
                 <p className="text-xs leading-relaxed" style={{ color: t.text }}>
                   <span className="font-semibold" style={{ color: t.presenteText }}>✓</span>{' '}
-                  "Narrou o desenho enquanto desenhava: 'agora o sol, agora a chuva'. A
-                  história veio antes do traço."
+                  "No reconto da segunda, lembrou a fala exata da personagem, não só o que
+                  aconteceu. Guardou as palavras, não só o enredo."
                 </p>
               </div>
 
               <div className="rounded-xl p-2.5 space-y-0.5" style={{ backgroundColor: 'rgba(255,255,255,0.6)' }}>
                 <p className="text-xs" style={{ color: t.textFaint }}>
-                  <span className="font-semibold">✗</span> "Não quis fazer a pintura."
+                  <span className="font-semibold">✗</span> "Não quis apresentar."
                 </p>
                 <p className="text-xs leading-relaxed" style={{ color: t.text }}>
                   <span className="font-semibold" style={{ color: t.presenteText }}>✓</span>{' '}
-                  "Recusou a pintura, mas passou o tempo todo olhando as cores dos colegas: entrou pela observação, não pelo pincel."
+                  "Recusou apresentar, mas assistiu a dos colegas anotando o que faria diferente: entrou pela observação, não pelo palco."
                 </p>
               </div>
 
