@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Shield, ChevronDown, Paperclip, Settings2, Route, Clock } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Shield, ChevronDown, Paperclip, Settings2, Route, Clock, Flag } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { infantilTheme as t } from '@/styles/infantilTheme';
@@ -9,6 +10,7 @@ import { corDaCasa } from '@/config/f2Reforma';
 import { formatTurmaLabel } from '@/lib/infantil';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTurmasDaCasaAtiva, type TurmaDaCasaAtiva, type StatusTurmaCasa } from '@/hooks/useTurmasDaCasaAtiva';
+import F2ViradaExperience, { type F2ViradaDados } from '@/components/professor/f2/F2ViradaExperience';
 
 // Tabelas da reforma (capitulo_encontros/anexos/turma) e colunas novas podem
 // não estar nos tipos gerados; via `sb` (any) para o build não quebrar.
@@ -216,10 +218,12 @@ const CapaCapituloTurma = ({
   turma,
   casaMentorNome,
   onAdministrar,
+  onFinalizarFase,
 }: {
   turma: TurmaDaCasaAtiva;
   casaMentorNome: string | null;
   onAdministrar: () => void;
+  onFinalizarFase: () => void;
 }) => {
   const { profile, casaMentor } = useProfessor();
   const [aberto, setAberto] = useState<string | null>(null);
@@ -370,6 +374,18 @@ const CapaCapituloTurma = ({
         >
           <Settings2 size={16} /> Administrar capítulo
         </button>
+
+        {/* Passagem de bastão: ação DELIBERADA (confirmação leve antes da virada).
+            Só aparece aqui, onde a capa é da turma cuja vez é do mentor logado
+            (status 'vez' == mentor principal da Casa atual). A RPC revalida no
+            backend; a UI não oferece a quem não pode. */}
+        <button
+          onClick={onFinalizarFase}
+          className="w-full mt-2 rounded-xl py-2.5 text-sm font-medium flex items-center justify-center gap-1.5"
+          style={{ backgroundColor: t.surfaceSunken, color: t.textMuted }}
+        >
+          <Flag size={15} /> Finalizar fase e passar o bastão
+        </button>
       </div>
 
       {/* Jornada de etapas */}
@@ -444,11 +460,98 @@ const CartaoNaFila = ({ turma }: { turma: TurmaDaCasaAtiva }) => {
 };
 
 /**
+ * Confirmação DELIBERADA da virada (substitui um window.confirm acidental).
+ * Tom editorial/sóbrio, tema claro, acento na cor da Casa. O objeto é a TURMA.
+ * A experiência da virada é que vem depois: aqui só a intenção consciente.
+ */
+const FinalizarFaseModal = ({
+  turmaLabel,
+  casaNome,
+  casaId,
+  loading,
+  onConfirmar,
+  onFechar,
+}: {
+  turmaLabel: string;
+  casaNome: string;
+  casaId: number;
+  loading: boolean;
+  onConfirmar: () => void;
+  onFechar: () => void;
+}) => {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onFechar();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onFechar]);
+
+  const cor = corDaCasa(casaId);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
+      style={{ backgroundColor: 'rgba(28,34,48,0.30)' }}
+      onClick={onFechar}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Finalizar a fase da Casa ${casaNome} para o ${turmaLabel}`}
+    >
+      <div
+        className="w-full max-w-[360px] rounded-2xl overflow-hidden"
+        style={{ backgroundColor: t.surface, boxShadow: t.shadowLg }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ height: 3, backgroundColor: cor }} />
+
+        <div className="p-5 space-y-4">
+          <div className="space-y-1.5">
+            <p className="text-[11px] uppercase tracking-wide font-semibold" style={{ color: cor }}>
+              Virada entre mentores
+            </p>
+            <h2 className="text-lg font-bold leading-snug" style={{ color: t.text }}>
+              Encerrar o seu capítulo com o {turmaLabel}?
+            </h2>
+          </div>
+
+          <p className="text-sm leading-relaxed italic" style={{ color: t.textMuted }}>
+            Finalizar fecha a fase da sua Casa e passa o bastão para a próxima Casa da trilha, que
+            será avisada. Antes de seguir, você vai ver o que este capítulo deixou.
+          </p>
+
+          <div className="space-y-2 pt-1">
+            <button
+              onClick={onConfirmar}
+              disabled={loading}
+              className="w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-60"
+              style={{ backgroundColor: cor, color: '#FFFFFF', boxShadow: t.shadowMd }}
+            >
+              Encerrar e passar o bastão
+            </button>
+            <button
+              onClick={onFechar}
+              disabled={loading}
+              autoFocus
+              className="w-full rounded-xl py-3 text-sm font-medium disabled:opacity-60"
+              style={{ backgroundColor: 'transparent', color: t.textMuted }}
+            >
+              Voltar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
  * Aba ARBORIA (Fundamental 2, reforma). A grade das turmas do mentor e, para a
  * turma cuja vez é dele, a capa do capítulo com a jornada de etapas.
  */
 const F2ArboriaPage = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { isLoading, profile, casaMentor } = useProfessor();
   const { data: turmas, isLoading: turmasLoading } = useTurmasDaCasaAtiva(
     profile?.institution_id,
@@ -456,12 +559,181 @@ const F2ArboriaPage = () => {
   );
 
   const [turmaSel, setTurmaSel] = useState<string | null>(null);
+  const [confirmarOpen, setConfirmarOpen] = useState(false);
+  const [acaoLoading, setAcaoLoading] = useState(false);
+  const [virada, setVirada] = useState<F2ViradaDados | null>(null);
 
   const turmaAtiva = useMemo(() => {
     if (!turmas || turmas.length === 0) return null;
     const escolhida = turmaSel && turmas.find((x) => x.turma_id === turmaSel);
     return escolhida || turmas.find((x) => x.status === 'vez') || turmas[0];
   }, [turmas, turmaSel]);
+
+  /**
+   * Dados do FECHAMENTO (Tempo 1) e da PASSAGEM (Tempo 2) da virada, lidos DA
+   * turma que fecha (a `turmaAtiva` na hora de finalizar). Toda contagem é
+   * tolerante: falha aqui NUNCA bloqueia o rito, degrada sem número (como o
+   * Infantil). Chamado DEPOIS da RPC ter avançado a trilha; usa o snapshot
+   * pré-virada da posição.
+   */
+  const carregarDadosVirada = async (
+    turma: TurmaDaCasaAtiva,
+    casaId: number,
+    casaNome: string
+  ): Promise<F2ViradaDados> => {
+    const ano = new Date().getFullYear();
+    const instId = profile!.institution_id!;
+    const ordemFechada = turma.ordemAtual;
+    const turmaLabel = formatTurmaLabel(turma.serie, turma.turma_letra) || turma.nome;
+
+    const base: F2ViradaDados = {
+      turmaLabel,
+      casaFechaId: casaId,
+      casaFechaNome: casaNome,
+      ordemFechada,
+      totalFases: 8,
+      alunosObservados: null,
+      missoesEntregues: null,
+      anoCompleto: false,
+      proximaCasaId: null,
+      proximaCasaNome: null,
+      proximoMentorNome: null,
+    };
+
+    try {
+      // Total e ordem de fases da turma (subconjunto configurado; fallback ordinal).
+      let ordemRows: Array<{ posicao: number; inteligencia_id: number }> = [];
+      try {
+        const { data } = await sb
+          .from('turma_fase_ordem')
+          .select('posicao, inteligencia_id')
+          .eq('turma_id', turma.turma_id)
+          .eq('ano_letivo', ano)
+          .order('posicao');
+        if (Array.isArray(data)) ordemRows = data as typeof ordemRows;
+      } catch {
+        /* fallback ordinal */
+      }
+      const total = ordemRows.length ? Math.max(...ordemRows.map((r) => r.posicao)) : 8;
+      const intelDaPos = (pos: number) =>
+        ordemRows.find((r) => r.posicao === pos)?.inteligencia_id ?? pos;
+
+      base.totalFases = total;
+      const proxPos = ordemFechada + 1;
+      base.anoCompleto = proxPos > total;
+      base.proximaCasaId = base.anoCompleto ? null : intelDaPos(proxPos);
+
+      // Fase (Casa) que fechou: base das contagens.
+      const { data: faseFecha } = await sb
+        .from('fases')
+        .select('id')
+        .eq('institution_id', instId)
+        .eq('segmento', 'fundamental2')
+        .eq('ano_letivo', ano)
+        .eq('inteligencia_id', casaId)
+        .maybeSingle();
+
+      if (faseFecha?.id) {
+        // Alunos observados AO VIVO (distintos) nas observacoes da fase que fechou.
+        const obsRes = await supabase
+          .from('observacoes')
+          .select('aluno_id')
+          .eq('fase_id', faseFecha.id)
+          .eq('turma_id', turma.turma_id)
+          .is('excluida_em' as never, null);
+        base.alunosObservados = obsRes.error
+          ? null
+          : new Set((obsRes.data ?? []).map((o: any) => o.aluno_id)).size;
+
+        // Missões entregues pela turma nesta fase (some sem sinal confiável).
+        try {
+          const { data: missoes } = await sb.from('missoes').select('id').eq('fase_id', faseFecha.id);
+          const missaoIds = ((missoes as { id: string }[]) ?? []).map((m) => m.id);
+          if (missaoIds.length) {
+            const { data: alunosTurma } = await sb
+              .from('aluno_turma')
+              .select('aluno_id')
+              .eq('turma_id', turma.turma_id)
+              .eq('ativo', true);
+            const alunoIds = ((alunosTurma as { aluno_id: string }[]) ?? []).map((a) => a.aluno_id);
+            if (alunoIds.length) {
+              const { count } = await supabase
+                .from('entregas')
+                .select('id', { count: 'exact', head: true })
+                .in('missao_id', missaoIds)
+                .in('aluno_id', alunoIds);
+              base.missoesEntregues = count ?? null;
+            }
+          }
+        } catch {
+          /* missões degradam: a linha some */
+        }
+      }
+
+      // Próxima Casa: nome + mentor principal já notificado (ou null = sem mentor).
+      if (base.proximaCasaId != null) {
+        const { data: intel } = await sb
+          .from('inteligencias')
+          .select('nome')
+          .eq('id', base.proximaCasaId)
+          .maybeSingle();
+        base.proximaCasaNome = (intel as { nome?: string } | null)?.nome ?? null;
+
+        const { data: pc } = await sb
+          .from('professor_casa')
+          .select('professor_id')
+          .eq('casa_id', base.proximaCasaId)
+          .eq('ano_letivo', ano)
+          .eq('ativo', true)
+          .eq('eh_mentor_principal', true)
+          .eq('institution_id', instId)
+          .order('created_at')
+          .limit(1)
+          .maybeSingle();
+        const proxMentorId = (pc as { professor_id?: string } | null)?.professor_id ?? null;
+        if (proxMentorId) {
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('nome, full_name')
+            .eq('id', proxMentorId)
+            .maybeSingle();
+          const p = prof as { nome?: string | null; full_name?: string | null } | null;
+          base.proximoMentorNome = p?.nome || p?.full_name?.split(' ')[0] || null;
+        }
+      }
+    } catch {
+      /* segue com a base degradada: o rito acontece mesmo sem números */
+    }
+
+    return base;
+  };
+
+  const confirmarFinalizar = async () => {
+    if (!turmaAtiva || !casaMentor) return;
+    const turma = turmaAtiva;
+    const casaId = casaMentor.id;
+    const casaNome = casaMentor.nome;
+
+    setAcaoLoading(true);
+    const { error } = await supabase.rpc('finalizar_fase_turma', { p_turma_id: turma.turma_id });
+    if (error) {
+      // Não-mentor / gate do backend: mensagem clara, modal segue aberto.
+      setAcaoLoading(false);
+      toast.error(error.message || 'Não foi possível finalizar a fase desta turma.');
+      return;
+    }
+
+    const dados = await carregarDadosVirada(turma, casaId, casaNome);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['turmas-casa-ativa'] }),
+      queryClient.invalidateQueries({ queryKey: ['fase-turma'] }),
+      queryClient.invalidateQueries({ queryKey: ['f2-capa-capitulo'] }),
+      queryClient.invalidateQueries({ queryKey: ['notificacoes'] }),
+    ]);
+    setAcaoLoading(false);
+    setConfirmarOpen(false);
+    setVirada(dados); // sem toast: a experiência É a confirmação
+  };
 
   if (isLoading || turmasLoading) {
     return (
@@ -550,6 +822,7 @@ const F2ArboriaPage = () => {
                   turma={turmaAtiva}
                   casaMentorNome={casaMentor.nome}
                   onAdministrar={() => navigate(`/professor/f2/capitulo/${turmaAtiva.turma_id}`)}
+                  onFinalizarFase={() => setConfirmarOpen(true)}
                 />
               ) : (
                 <CartaoNaFila turma={turmaAtiva} />
@@ -558,6 +831,21 @@ const F2ArboriaPage = () => {
           )}
         </>
       )}
+
+      {/* Confirmação deliberada da virada (só a turma cuja vez é do mentor). */}
+      {confirmarOpen && turmaAtiva && turmaAtiva.status === 'vez' && (
+        <FinalizarFaseModal
+          turmaLabel={formatTurmaLabel(turmaAtiva.serie, turmaAtiva.turma_letra) || turmaAtiva.nome}
+          casaNome={casaMentor.nome}
+          casaId={casaMentor.id}
+          loading={acaoLoading}
+          onConfirmar={confirmarFinalizar}
+          onFechar={() => setConfirmarOpen(false)}
+        />
+      )}
+
+      {/* A virada em 2 tempos (o momento de pico). */}
+      {virada && <F2ViradaExperience dados={virada} onFechar={() => setVirada(null)} />}
     </div>
   );
 };
