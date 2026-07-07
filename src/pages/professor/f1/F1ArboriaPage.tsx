@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Play, ClipboardList, CalendarClock, Check, ChevronRight, ChevronDown, Flag, Route, Sprout } from 'lucide-react';
+import { Play, CalendarClock, Check, ChevronRight, ChevronDown, Flag, Route, Sprout } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -201,26 +201,6 @@ const CockpitHoje = ({
           </span>
         </button>
       </div>
-
-      {/* Detalhe da atividade: as especificações da atividade ATUAL (nome,
-          materiais, objetivo, como conduzir, o que observar). Alimentado pelo
-          banco de atividades: por ora, moldura fantasma. */}
-      <section
-        className="rounded-2xl p-4"
-        style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
-      >
-        <div className="flex items-center gap-2 mb-2">
-          <ClipboardList size={18} style={{ color: t.accent }} strokeWidth={1.75} />
-          <h2 className="text-sm font-semibold" style={{ color: t.text }}>
-            Detalhe da atividade
-          </h2>
-        </div>
-        <p className="text-sm leading-relaxed" style={{ color: t.textFaint }}>
-          Use qualquer atividade sua: o Arboria registra o seu olhar sobre os alunos, não
-          a atividade. Quando o banco de atividades chegar, as especificações da aula
-          aparecem aqui.
-        </p>
-      </section>
 
       {/* O caminho deste módulo: o plano (atividades em sequência) do módulo atual.
           Quando a turma TEM plano montado (Definição de Trilha), mostra as
