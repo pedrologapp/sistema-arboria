@@ -99,6 +99,7 @@ const CirculoPessoalPage = lazy(() => import("./pages/professor/circulo/CirculoP
 const CirculoRelatoPage = lazy(() => import("./pages/professor/circulo/CirculoRelatoPage"));
 const AlunosPageWrapper = lazy(() => import("./pages/professor/AlunosPageWrapper"));
 const FasePageWrapper = lazy(() => import("./pages/professor/FasePageWrapper"));
+const CasaPageWrapper = lazy(() => import("./pages/professor/CasaPageWrapper"));
 const PerfilAlunoPageWrapper = lazy(() => import("./pages/professor/PerfilAlunoPageWrapper"));
 const RajadaPageWrapper = lazy(() => import("./pages/professor/RajadaPageWrapper"));
 const ProfessorConfiguracoesWrapper = lazy(() => import("./pages/professor/ProfessorConfiguracoesWrapper"));
@@ -343,6 +344,7 @@ const App = () => (
             <Route path="/professor/mapa" element={<MapaDesenvolvimentoPage />} />
             {/* Aba "Fase" do Infantil (estudo/apoio): reforma 26/06 */}
             <Route path="/professor/fase" element={<FasePageWrapper />} />
+            <Route path="/professor/casa" element={<CasaPageWrapper />} />
             <Route path="/professor/missoes" element={<ProfessorMissoesPage />} />
             <Route path="/professor/missoes/nova" element={<NovaMissaoPage />} />
             <Route path="/professor/missoes/serie/:serie" element={<MissoesSeriePage />} />

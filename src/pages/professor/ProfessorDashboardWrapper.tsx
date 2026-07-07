@@ -1,7 +1,9 @@
 import { useProfessor } from '@/contexts/ProfessorContext';
+import { F2_REFORMA_ATIVA } from '@/config/f2Reforma';
 import ProfessorDashboard from './ProfessorDashboard';
 import InfantilArboriaPage from './infantil/InfantilArboriaPage';
 import F1ArboriaPage from './f1/F1ArboriaPage';
+import F2ArboriaPage from './f2/F2ArboriaPage';
 
 /**
  * Wrapper que escolhe o conteúdo da home do professor baseado no segmento
@@ -20,7 +22,13 @@ const ProfessorDashboardWrapper = () => {
     return <F1ArboriaPage />;
   }
 
-  // Fundamental 2 usa versão completa
+  // Fundamental 2 (reforma, atrás do flag): nova aba Arboria (grade + capa).
+  // Com o flag DESLIGADO, o F2 atual (ProfessorDashboard) fica 100% intacto.
+  if (segmento === 'fundamental2' && F2_REFORMA_ATIVA) {
+    return <F2ArboriaPage />;
+  }
+
+  // Fundamental 2 (atual) usa versão completa
   return <ProfessorDashboard />;
 };
 

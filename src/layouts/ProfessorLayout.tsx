@@ -3,6 +3,8 @@ import { ProfessorProvider, useProfessor } from '@/contexts/ProfessorContext';
 import ProfessorHeader from '@/components/professor/ProfessorHeader';
 import ProfessorBottomNav from '@/components/professor/ProfessorBottomNav';
 import ProfessorLayoutInfantil from '@/layouts/ProfessorLayoutInfantil';
+import ProfessorLayoutF2Novo from '@/layouts/ProfessorLayoutF2Novo';
+import { F2_REFORMA_ATIVA } from '@/config/f2Reforma';
 import { useAppBadge } from '@/hooks/useAppBadge';
 
 interface ProfessorLayoutProps {
@@ -80,7 +82,13 @@ const ProfessorLayoutContent = ({ children }: ProfessorLayoutProps) => {
     );
   }
 
-  // Fundamental 2 usa layout completo (com casa/mentor)
+  // Fundamental 2 (reforma, atrás do flag): shell claro de 4 abas. Com o flag
+  // DESLIGADO cai no layout escuro atual (ProfessorLayoutF2), 100% intacto.
+  if (segmento === 'fundamental2' && F2_REFORMA_ATIVA) {
+    return <ProfessorLayoutF2Novo>{children}</ProfessorLayoutF2Novo>;
+  }
+
+  // Fundamental 2 (atual) usa layout completo escuro (com casa/mentor)
   return <ProfessorLayoutF2>{children}</ProfessorLayoutF2>;
 };
 
