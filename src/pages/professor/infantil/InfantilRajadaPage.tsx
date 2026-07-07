@@ -184,38 +184,6 @@ const INICIOS_FRASE = [
 
 const diaDeHoje = () => Math.floor(Date.now() / 86400000);
 
-/**
- * Modo FECHO ("Fechar a aula, 3 min"): o pós-aula. Em vez de percorrer a turma
- * inteira no ritmo da sala, uma pergunta única no topo e a professora toca só em
- * quem se destacou. Mesma Rajada, mesmo ConcluirModal: muda só o enquadramento.
- */
-const FechoPrompt = ({
-  mecanismo,
-  fio,
-}: {
-  mecanismo?: string | null;
-  fio?: { corDia: string; corLavagem: string; corBorda: string } | null;
-}) => (
-  <div
-    className="rounded-2xl p-4"
-    style={{
-      backgroundColor: fio?.corLavagem ?? t.accentSoft,
-      border: `1px solid ${fio?.corBorda ?? t.accentBorder}`,
-    }}
-  >
-    <p className="text-[10.5px] uppercase tracking-wide font-bold" style={{ color: fio?.corDia ?? t.accentText }}>
-      Fim de aula{mecanismo ? ` · Exploração ${mecanismo}` : ''}
-    </p>
-    <h2 className="font-serif text-[20px] leading-snug mt-1.5" style={{ color: t.text }}>
-      Quem te chamou atenção hoje?
-    </h2>
-    <p className="text-sm mt-2 leading-relaxed" style={{ color: t.textMuted }}>
-      Toque só nas crianças que se destacaram. Conte a cena em uma linha e, se der, guarde a foto do
-      trabalho: ela ajuda a lembrar depois. O resto da turma segue com você.
-    </p>
-  </div>
-);
-
 type Pendencia =
   | { tipo: 'trocar'; alvoId: string }
   | { tipo: 'turma'; alvoTurmaId: string }
@@ -253,9 +221,6 @@ const InfantilRajadaPage = () => {
     setTurmaSelState(id);
     salvarTurmaPreferida(id);
   };
-  // Modo "Fechar a aula (3 min)": vem por state da aba Hoje. Aditivo ao fluxo
-  // padrão ("Iniciar aula"); só troca o enquadramento e a pergunta do topo.
-  const modoFecho = (location.state as { modo?: string } | null)?.modo === 'fecho';
   const [busca, setBusca] = useState('');
   const [activeId, setActiveId] = useState<string | null>(null);
   const [texto, setTexto] = useState('');
@@ -317,7 +282,7 @@ const InfantilRajadaPage = () => {
   // Iniciar aula, 1× por turma/dia, qualquer toque pula. Nunca em re-entrada.
   const [respiro, setRespiro] = useState(false);
   const [respiroSaindo, setRespiroSaindo] = useState(false);
-  const veioDoBotao = !!(location.state as { turmaId?: string } | null)?.turmaId && !modoFecho;
+  const veioDoBotao = !!(location.state as { turmaId?: string } | null)?.turmaId;
   useEffect(() => {
     if (!veioDoBotao || !fase || !turmaId) return;
     const chave = `aula-respiro-${turmaId}-${new Date().toISOString().slice(0, 10)}`;
@@ -600,7 +565,7 @@ const InfantilRajadaPage = () => {
         <button
           onClick={() => fileRef.current?.click()}
           className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-2 py-2"
-          style={modoFecho && !imagem ? { color: t.accentText, backgroundColor: t.accentSoft } : { color: t.textMuted }}
+          style={{ color: t.textMuted }}
         >
           <ImagePlus size={16} /> Foto do trabalho (não da criança)
         </button>
@@ -681,7 +646,7 @@ const InfantilRajadaPage = () => {
           </button>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold truncate" style={{ color: t.text }}>
-              {modoFecho ? 'Fechar a aula' : 'Registro da turma'}
+              Registro da turma
             </p>
             <p className="text-[11px] truncate" style={{ color: t.textFaint }}>
               {fase ? `Exploração ${mecanismo}` : 'Sem exploração ativa'}
@@ -766,10 +731,6 @@ const InfantilRajadaPage = () => {
           </div>
         ) : (
           <>
-            {modoFecho ? (
-              <FechoPrompt mecanismo={mecanismo} fio={fio} />
-            ) : (
-              <>
             {/* Faixa de status. FIO 2: o pulso da aula bate na cor da fase */}
             <div
               className="w-full rounded-xl px-3.5 py-2.5 flex items-center gap-2.5"
@@ -886,8 +847,6 @@ const InfantilRajadaPage = () => {
                     Pode ditar pelo microfone do teclado.
                   </p>
                 </div>
-              </>
-            )}
               </>
             )}
 
