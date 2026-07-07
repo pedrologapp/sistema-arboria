@@ -17,10 +17,10 @@ import { infantilTheme as t } from '@/styles/infantilTheme';
  * Card de ATIVIDADE do plano da turma, expansível.
  *
  * Recolhido: número da ordem + nome (+ objetivo em uma linha).
- * Aberto: um CARROSSEL, um ponto por tela. As seções entram na ORDEM DE USO
- * (como conduzir, o que observar, materiais, objetivo), não na de planejamento:
- * a professora apressada quer o "como fazer" primeiro. Ela desliza o dedo, usa
- * as setas ou os BOTÕES DE ATALHO do topo para pular direto ao ponto que quer.
+ * Aberto: um CARROSSEL, um ponto por tela. As seções entram na ordem Objetivo,
+ * Como conduzir, Materiais, O que observar (ordem pedida pelo Fundador). Ela
+ * desliza o dedo, usa as setas ou os BOTÕES DE ATALHO do topo para pular direto
+ * ao ponto que quer.
  * O PDF, quando existe, é um botão fixo (não uma tela do carrossel).
  *
  * Só entram no carrossel/atalhos as seções COM conteúdo. Se sobra uma só, ela
@@ -180,10 +180,10 @@ const AtividadeCard = ({
   // com conteúdo real.
   const secoes: SecaoDef[] = (
     [
-      { key: 'conduzir', chip: 'Conduzir', titulo: 'Como conduzir', Icone: Compass, texto: atividade.comoConduzir },
-      { key: 'observar', chip: 'Observar', titulo: 'O que observar', Icone: Eye, texto: atividade.oQueObservar },
-      { key: 'materiais', chip: 'Materiais', titulo: 'Materiais', Icone: Package, texto: atividade.materiais },
       { key: 'objetivo', chip: 'Objetivo', titulo: 'Objetivo', Icone: Target, texto: atividade.objetivo },
+      { key: 'conduzir', chip: 'Conduzir', titulo: 'Como conduzir', Icone: Compass, texto: atividade.comoConduzir },
+      { key: 'materiais', chip: 'Materiais', titulo: 'Materiais', Icone: Package, texto: atividade.materiais },
+      { key: 'observar', chip: 'Observar', titulo: 'O que observar', Icone: Eye, texto: atividade.oQueObservar },
     ] as SecaoDef[]
   ).filter((s) => !!s.texto && !!s.texto.trim());
 
