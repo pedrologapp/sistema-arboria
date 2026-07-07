@@ -5,6 +5,7 @@ import { useProfessor } from '@/contexts/ProfessorContext';
 import { useFaseTurma } from '@/hooks/useFaseTurma';
 import { getTurmaPreferida } from '@/lib/infantil';
 import { SANTUARIO_INFANTIL } from '@/lib/infantilSantuario';
+import { getSantuarioF1 } from '@/lib/f1Santuario';
 import { ATIVIDADE_OITO_CAMINHOS_F1 as ATIVIDADE_OITO_CAMINHOS } from '@/lib/f1';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 
@@ -67,7 +68,11 @@ const F1FasePage = () => {
   }
 
   const atual = lendo ?? (faseAtualValida || 1);
-  const m = SANTUARIO_INFANTIL[atual];
+  // Faixa da turma: 1º-3º (superpoderes) vê a cena do aluno de 6-8; 4º-5º
+  // (talentos) vê a cena de 9-10 com a pergunta metacognitiva. Cores e nomes
+  // do santuário seguem universais (SANTUARIO_INFANTIL nos círculos de navegação).
+  const faixa1 = (turmaSelecionada?.serie ?? 1) <= 3;
+  const m = getSantuarioF1(atual, faixa1);
 
   const kicker =
     faseAtualValida === 0
