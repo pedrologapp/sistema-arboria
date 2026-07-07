@@ -446,7 +446,10 @@ const TutorialInfantil = ({ variante = 'infantil', faixa1 = true }: { variante?:
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      <div className="flex-1 flex flex-col max-w-lg w-full mx-auto px-6 pt-6 pb-6 pb-safe overflow-y-auto">
+      <div
+        className="flex-1 flex flex-col max-w-lg w-full mx-auto px-6 pb-6 pb-safe overflow-y-auto"
+        style={{ paddingTop: 'calc(1.5rem + env(safe-area-inset-top, 0px))' }}
+      >
         {/* Topo */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-[10.5px] uppercase font-semibold" style={{ color: t.accentText, letterSpacing: '0.3em' }}>
