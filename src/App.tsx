@@ -125,6 +125,7 @@ const ConteudoGeralPage = lazy(() => import("./pages/professor/ConteudoGeralPage
 const ConteudoInteligenciaPage = lazy(() => import("./pages/professor/ConteudoInteligenciaPage"));
 const ReportesMentorPage = lazy(() => import("./pages/professor/ReportesMentorPage"));
 const CapituloProfessorPage = lazy(() => import("./pages/professor/CapituloProfessorPage"));
+const F2CapituloPage = lazy(() => import("./pages/professor/f2/F2CapituloPage"));
 
 // Loading fallback
 const PageLoader = () => (
@@ -387,6 +388,8 @@ const App = () => (
 
             {/* O Capítulo - alocação de papéis */}
             <Route path="/professor/capitulo" element={<CapituloProfessorPage />} />
+            {/* F2 reformado: tela CLARA de administrar capítulo, por turma (flag F2_REFORMA_ATIVA) */}
+            <Route path="/professor/f2/capitulo/:turmaId" element={<F2CapituloPage />} />
 
             {/* Conteúdo Routes (Infantil/F1) */}
             <Route path="/professor/conteudo" element={<ConteudoPage />} />

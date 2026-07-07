@@ -549,7 +549,7 @@ const F2ArboriaPage = () => {
                 <CapaCapituloTurma
                   turma={turmaAtiva}
                   casaMentorNome={casaMentor.nome}
-                  onAdministrar={() => navigate('/professor/capitulo')}
+                  onAdministrar={() => navigate(`/professor/f2/capitulo/${turmaAtiva.turma_id}`)}
                 />
               ) : (
                 <CartaoNaFila turma={turmaAtiva} />
