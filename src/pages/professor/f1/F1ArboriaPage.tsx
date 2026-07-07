@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Play, ClipboardList, CalendarClock, Check, ChevronRight, ChevronDown, Flag, Route, Sprout } from 'lucide-react';
+import { Play, ClipboardList, CalendarClock, Check, ChevronRight, ChevronDown, Flag, Route, Sprout, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -69,11 +69,13 @@ const CockpitHoje = ({
   atualOrdem,
   irParaAno,
   onIniciarAula,
+  onFecharAula,
 }: {
   faseAtual: FaseDaTurma | null;
   atualOrdem: number;
   irParaAno: () => void;
   onIniciarAula: () => void;
+  onFecharAula: () => void;
 }) => {
   // ANO COMPLETO: a fase 8 foi finalizada. O maior momento do ano da turma
   // NUNCA pode regredir pra "seu ano ainda não começou".
@@ -182,6 +184,29 @@ const CockpitHoje = ({
             <span className="block text-base font-semibold">Iniciar aula</span>
             <span className="block text-sm" style={{ color: 'rgba(255,255,255,0.85)' }}>
               Registre a turma no ritmo da sala
+            </span>
+          </span>
+        </button>
+
+        {/* Porta do FIM de aula: um ritmo a mais, ao lado do "Iniciar aula".
+            Pensada pro DEPOIS, capturando só quem se destacou. Aditiva. */}
+        <button
+          onClick={onFecharAula}
+          className="w-full rounded-2xl p-4 flex items-center gap-3 text-left transition-transform active:scale-[0.99] mt-3"
+          style={{ backgroundColor: t.surface, border: `1px solid ${t.accentBorder}`, boxShadow: t.shadowSm }}
+        >
+          <span
+            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: t.accentSoft }}
+          >
+            <Sparkles size={20} strokeWidth={2} style={{ color: t.accent }} />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold" style={{ color: t.text }}>
+              Fechar a aula (3 min)
+            </span>
+            <span className="block text-xs" style={{ color: t.textMuted }}>
+              Depois da aula: registre quem te chamou atenção
             </span>
           </span>
         </button>
@@ -758,6 +783,7 @@ const F1ArboriaPage = () => {
             atualOrdem={atualOrdem}
             irParaAno={() => setView('ano')}
             onIniciarAula={() => navigate('/professor/aula', { state: { turmaId } })}
+            onFecharAula={() => navigate('/professor/aula', { state: { turmaId, modo: 'fecho' } })}
           />
         ) : (
           <TrilhaAno
