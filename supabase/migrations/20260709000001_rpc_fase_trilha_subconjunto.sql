@@ -190,33 +190,37 @@ BEGIN
     INSERT INTO turma_fase_evento (institution_id, turma_id, ano_letivo, ordem, fase_id, evento, professor_id, ocorrido_em)
     VALUES (v_inst, p_turma_id, v_ano, v_prox, v_fase_prox, 'iniciou', auth.uid(), v_agora);
 
-    SELECT id INTO v_cap_prox FROM capitulos
-     WHERE fase_id = v_fase_prox AND institution_id = v_inst
-     LIMIT 1;
+    -- Mentor e notificacao sao conceito SO do F2 (Casas). No Infantil/F1 nao
+    -- ha mentor, entao nada de notificacao (senao spam de 'sem mentor').
+    IF v_seg = 'fundamental2' THEN
+      SELECT id INTO v_cap_prox FROM capitulos
+       WHERE fase_id = v_fase_prox AND institution_id = v_inst
+       LIMIT 1;
 
-    SELECT pc.professor_id INTO v_mentor
-    FROM professor_casa pc
-    WHERE pc.casa_id = v_intel_prox AND pc.ano_letivo = v_ano
-      AND pc.ativo = true AND pc.eh_mentor_principal = true
-      AND pc.institution_id = v_inst
-    ORDER BY pc.created_at, pc.professor_id
-    LIMIT 1;
+      SELECT pc.professor_id INTO v_mentor
+      FROM professor_casa pc
+      WHERE pc.casa_id = v_intel_prox AND pc.ano_letivo = v_ano
+        AND pc.ativo = true AND pc.eh_mentor_principal = true
+        AND pc.institution_id = v_inst
+      ORDER BY pc.created_at, pc.professor_id
+      LIMIT 1;
 
-    IF v_mentor IS NOT NULL THEN
-      INSERT INTO notificacoes (institution_id, destinatario_id, tipo, titulo, corpo, ref_turma_id, ref_fase_id, ref_capitulo_id)
-      VALUES (v_inst, v_mentor, 'fase_virada',
-              'Sua Casa é a próxima nesta turma',
-              'Uma turma acabou de entrar na fase da sua Casa. Abra a turma para conduzir.',
-              p_turma_id, v_fase_prox, v_cap_prox);
-    ELSE
-      INSERT INTO notificacoes (institution_id, destinatario_id, tipo, titulo, corpo, ref_turma_id, ref_fase_id, ref_capitulo_id)
-      SELECT v_inst, ur.user_id, 'sem_mentor',
-             'Fase virou sem mentor definido',
-             'Uma turma entrou numa fase cuja Casa não tem mentor principal ativo. Defina um mentor.',
-             p_turma_id, v_fase_prox, v_cap_prox
-      FROM public.user_roles ur
-      WHERE ur.role = 'admin'::app_role
-        AND EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = ur.user_id AND p.institution_id = v_inst);
+      IF v_mentor IS NOT NULL THEN
+        INSERT INTO notificacoes (institution_id, destinatario_id, tipo, titulo, corpo, ref_turma_id, ref_fase_id, ref_capitulo_id)
+        VALUES (v_inst, v_mentor, 'fase_virada',
+                'Sua Casa é a próxima nesta turma',
+                'Uma turma acabou de entrar na fase da sua Casa. Abra a turma para conduzir.',
+                p_turma_id, v_fase_prox, v_cap_prox);
+      ELSE
+        INSERT INTO notificacoes (institution_id, destinatario_id, tipo, titulo, corpo, ref_turma_id, ref_fase_id, ref_capitulo_id)
+        SELECT v_inst, ur.user_id, 'sem_mentor',
+               'Fase virou sem mentor definido',
+               'Uma turma entrou numa fase cuja Casa não tem mentor principal ativo. Defina um mentor.',
+               p_turma_id, v_fase_prox, v_cap_prox
+        FROM public.user_roles ur
+        WHERE ur.role = 'admin'::app_role
+          AND EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = ur.user_id AND p.institution_id = v_inst);
+      END IF;
     END IF;
   END IF;
 END $$;
