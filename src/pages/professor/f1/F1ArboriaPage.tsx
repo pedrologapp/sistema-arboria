@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useFaseTurma, type FaseDaTurma } from '@/hooks/useFaseTurma';
+import { useTurmaAtividadePlano, type AtividadePlanoItem } from '@/hooks/useTurmaAtividadePlano';
 import { formatTurmaLabel, getTurmaPreferida, salvarTurmaPreferida } from '@/lib/infantil';
 import { ACADEMIA_F1, nomeAcademia, palavraPoderPlural } from '@/lib/f1';
 import ViradaFaseExperience, { type ViradaDados } from '@/pages/professor/infantil/ViradaFaseExperience';
@@ -67,11 +68,13 @@ const Regua = ({ atual, onClick }: { atual: number; onClick: () => void }) => (
 const CockpitHoje = ({
   faseAtual,
   atualOrdem,
+  plano,
   irParaAno,
   onIniciarAula,
 }: {
   faseAtual: FaseDaTurma | null;
   atualOrdem: number;
+  plano: AtividadePlanoItem[];
   irParaAno: () => void;
   onIniciarAula: () => void;
 }) => {
@@ -207,7 +210,10 @@ const CockpitHoje = ({
         </p>
       </section>
 
-      {/* O caminho deste módulo: o plano (atividades em sequência) do módulo atual */}
+      {/* O caminho deste módulo: o plano (atividades em sequência) do módulo atual.
+          Quando a turma TEM plano montado (Definição de Trilha), mostra as
+          atividades REAIS; senão, cai no fluxo-exemplo (fantasma), sem quebrar
+          as turmas ainda sem plano. */}
       <section
         className="rounded-2xl p-4"
         style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
@@ -218,50 +224,96 @@ const CockpitHoje = ({
             O caminho deste módulo
           </h2>
         </div>
-        <p className="text-sm mb-3 font-medium" style={{ color: t.textMuted }}>
-          Estas atividades são só ILUSTRAÇÃO, não prepare nenhuma delas. As suas atividades
-          reais chegam com o banco de atividades.
-        </p>
 
-        {/* Fluxo de atividades. FANTASMA (nomes plausíveis demais → selo por item) */}
-        <div aria-hidden="true">
-          {ATIVIDADES_EXEMPLO.map((a, i) => {
-            const ultimo = i === ATIVIDADES_EXEMPLO.length - 1;
-            return (
-              <div key={i}>
-                <div
-                  className="rounded-xl p-3 flex items-center gap-2.5"
-                  style={{ border: `1px dashed ${t.silencio}`, backgroundColor: 'transparent' }}
-                >
-                  <span
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0"
-                    style={{
-                      backgroundColor: t.surface,
-                      color: t.textFaint,
-                      border: `1px dashed ${t.silencio}`,
-                    }}
-                  >
-                    {i + 1}
-                  </span>
-                  <span className="text-sm flex-1 min-w-0" style={{ color: t.textFaint }}>
-                    {a.nome}
-                  </span>
-                  <span
-                    className="flex-shrink-0 text-[9px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded"
-                    style={{ color: t.textFaint, border: `1px dashed ${t.silencio}` }}
-                  >
-                    exemplo
-                  </span>
-                </div>
-                {!ultimo && (
-                  <div className="flex justify-center py-0.5">
-                    <ChevronDown size={16} style={{ color: t.silencio }} />
+        {plano.length > 0 ? (
+          <>
+            <p className="text-sm mb-3" style={{ color: t.textMuted }}>
+              As atividades deste módulo, na sequência montada para a sua turma.
+            </p>
+            <div>
+              {plano.map((a, i) => {
+                const ultimo = i === plano.length - 1;
+                return (
+                  <div key={a.planoId}>
+                    <div
+                      className="rounded-xl p-3 flex items-center gap-2.5"
+                      style={{ border: `1px solid ${t.border}`, backgroundColor: t.surfaceAlt }}
+                    >
+                      <span
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0"
+                        style={{ backgroundColor: t.accentSoft, color: t.accentText }}
+                      >
+                        {i + 1}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium truncate" style={{ color: t.text }}>
+                          {a.nome}
+                        </span>
+                        {a.objetivo && (
+                          <span className="block text-[11px] truncate" style={{ color: t.textFaint }}>
+                            {a.objetivo}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    {!ultimo && (
+                      <div className="flex justify-center py-0.5">
+                        <ChevronDown size={16} style={{ color: t.silencio }} />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-sm mb-3 font-medium" style={{ color: t.textMuted }}>
+              Estas atividades são só ILUSTRAÇÃO, não prepare nenhuma delas. As suas atividades
+              reais chegam com o banco de atividades.
+            </p>
+
+            {/* Fluxo de atividades. FANTASMA (nomes plausíveis demais → selo por item) */}
+            <div aria-hidden="true">
+              {ATIVIDADES_EXEMPLO.map((a, i) => {
+                const ultimo = i === ATIVIDADES_EXEMPLO.length - 1;
+                return (
+                  <div key={i}>
+                    <div
+                      className="rounded-xl p-3 flex items-center gap-2.5"
+                      style={{ border: `1px dashed ${t.silencio}`, backgroundColor: 'transparent' }}
+                    >
+                      <span
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0"
+                        style={{
+                          backgroundColor: t.surface,
+                          color: t.textFaint,
+                          border: `1px dashed ${t.silencio}`,
+                        }}
+                      >
+                        {i + 1}
+                      </span>
+                      <span className="text-sm flex-1 min-w-0" style={{ color: t.textFaint }}>
+                        {a.nome}
+                      </span>
+                      <span
+                        className="flex-shrink-0 text-[9px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded"
+                        style={{ color: t.textFaint, border: `1px dashed ${t.silencio}` }}
+                      >
+                        exemplo
+                      </span>
+                    </div>
+                    {!ultimo && (
+                      <div className="flex justify-center py-0.5">
+                        <ChevronDown size={16} style={{ color: t.silencio }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </section>
 
     </div>
@@ -541,6 +593,11 @@ const F1ArboriaPage = () => {
   const turmaId = (turmaValida ? turmaSel : null) ?? turmasVinculadas?.[0]?.id ?? null;
   const { data: faseTurma } = useFaseTurma(turmaId, profile?.institution_id, 'fundamental1');
   const faseCarregando = faseTurma === undefined && !!turmaId && !!profile?.institution_id;
+  // Plano de atividades da fase atual (tolerante: vazio => cai no fluxo-exemplo).
+  const { data: planoAtividades = [] } = useTurmaAtividadePlano(
+    turmaId,
+    faseTurma?.fase?.inteligencia?.id ?? null
+  );
 
   const turmaSelecionada = turmasVinculadas?.find((tv) => tv.id === turmaId) ?? null;
   const serieSel = turmaSelecionada?.serie != null ? String(turmaSelecionada.serie) : null;
@@ -756,6 +813,7 @@ const F1ArboriaPage = () => {
           <CockpitHoje
             faseAtual={faseAtual}
             atualOrdem={atualOrdem}
+            plano={planoAtividades}
             irParaAno={() => setView('ano')}
             onIniciarAula={() => navigate('/professor/aula', { state: { turmaId } })}
           />

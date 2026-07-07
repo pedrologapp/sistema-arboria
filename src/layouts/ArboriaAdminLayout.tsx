@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Library, KeyRound, LogOut } from 'lucide-react';
+import { LayoutDashboard, Library, KeyRound, Route, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 
@@ -17,6 +17,7 @@ const ArboriaAdminLayout = ({ children }: { children: ReactNode }) => {
   const abas = [
     { label: 'Visão geral', path: '/arboria', icon: <LayoutDashboard size={16} strokeWidth={1.75} /> },
     { label: 'Banco de atividades', path: '/arboria/atividades', icon: <Library size={16} strokeWidth={1.75} /> },
+    { label: 'Definição de Trilha', path: '/arboria/trilha', icon: <Route size={16} strokeWidth={1.75} /> },
     { label: 'Logins de professores', path: '/arboria/logins-professores', icon: <KeyRound size={16} strokeWidth={1.75} /> },
   ];
 
