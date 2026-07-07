@@ -30,7 +30,7 @@ const ProfessorHeader = () => {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#1A1A2E] border-b border-violet-500/10">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#1A1A2E] border-b border-violet-500/10" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
       <div className="flex flex-col px-4 py-2 max-w-lg mx-auto">
         {/* Banner: coloque seu nome */}
         {nomeVazio && !editandoNome && (

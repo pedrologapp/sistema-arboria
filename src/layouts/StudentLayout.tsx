@@ -36,8 +36,8 @@ const StudentLayoutContent = ({ children }: StudentLayoutProps) => {
     <div className="min-h-screen bg-[#1A1A2E] text-white">
       <StudentHeader />
       
-      {/* Main content area with padding for header and nav */}
-      <main className="pt-14 pb-24 px-4 max-w-lg mx-auto">
+      {/* Main content area with padding for header and nav (+ notch do iPhone) */}
+      <main className="pb-24 px-4 max-w-lg mx-auto" style={{ paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }}>
         {children}
       </main>
       

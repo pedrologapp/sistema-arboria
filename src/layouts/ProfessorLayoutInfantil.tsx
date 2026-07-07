@@ -127,7 +127,7 @@ const ProfessorLayoutInfantil = ({
       {/* Header: no santuário (aba Fase) o glass escurece junto com a tela */}
       <header
         className={`fixed top-0 left-0 right-0 z-40 ${santuario ? 'glass-dark' : 'glass-light'}`}
-        style={{ boxShadow: '0 1px 3px rgba(28,34,48,0.06)' }}
+        style={{ boxShadow: '0 1px 3px rgba(28,34,48,0.06)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="max-w-lg mx-auto h-14 px-4 flex items-center justify-between">
           <div className="min-w-0 flex items-center gap-2.5">
@@ -193,8 +193,13 @@ const ProfessorLayoutInfantil = ({
         </div>
       </header>
 
-      {/* Conteúdo: key pela rota reinicia a animação de entrada a cada troca */}
-      <main key={location.pathname} className={`pt-14 pb-24 px-4 max-w-lg mx-auto ${slideClass}`}>
+      {/* Conteúdo: key pela rota reinicia a animação de entrada a cada troca.
+          Topo = altura do header (3.5rem) + área segura do notch (iPhone). */}
+      <main
+        key={location.pathname}
+        className={`pb-24 px-4 max-w-lg mx-auto ${slideClass}`}
+        style={{ paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }}
+      >
         <Suspense fallback={<PaginaCarregando />}>{children}</Suspense>
       </main>
 

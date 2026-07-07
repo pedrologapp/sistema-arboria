@@ -34,7 +34,7 @@ const ProfessorLayoutF2 = ({ children }: ProfessorLayoutProps) => {
       <ProfessorHeader />
       
       {/* Main content area with padding for header and nav */}
-      <main className="pt-16 pb-24 px-4 max-w-lg mx-auto">
+      <main className="pb-24 px-4 max-w-lg mx-auto" style={{ paddingTop: 'calc(4rem + env(safe-area-inset-top, 0px))' }}>
         <Suspense
           fallback={
             <div className="pt-8 flex justify-center">
