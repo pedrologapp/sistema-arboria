@@ -1,0 +1,101 @@
+-- =============================================================
+-- >>>>>>>>>>  REVISAR COM RISCOS E DADOS ANTES DE APLICAR  <<<<<<<<<<
+--
+-- Este arquivo é DESENHO. Todo o SQL efetivo está COMENTADO de propósito:
+-- se esta migration rodar como está, é NO-OP (não muda nada). Descomentar só
+-- depois da revisão de Riscos (R1) + Dados + aval do Fundador.
+--
+-- ALVO (Risco R1): impor NO BACKEND que o mentor de uma Casa só escreva
+-- observações / configure capítulo / aloque papéis para uma turma QUANDO a Casa
+-- dele for a Casa ATIVA daquela turma (turma_trilha.ordem_atual resolvido via
+-- turma_fase_ordem). Hoje a trava é por CASA (professor_casa), não por
+-- FASE-ATIVA; então um mentor consegue escrever fora da janela da fase dele.
+--
+-- POR QUE NÃO APLICAR AUTOMÁTICO — pode QUEBRAR escrita existente do F2:
+--   1. observacoes: a policy de INSERT/UPDATE hoje é "professor_id = auth.uid()"
+--      (qualquer professor cria a própria observação) + "professor da casa do
+--      aluno". Amarrar à fase-ativa da turma nega escrita legítima em janelas
+--      de transição, correções retroativas e no fluxo Infantil/F1 (que NÃO tem
+--      Casa e passaria a ser barrado). Precisa de exceção explícita por segmento.
+--   2. capitulo_turma_config / capitulo_alocacoes: as policies de mentor
+--      (20260504000004) já dão escrita ao mentor do capítulo. Somar a condição
+--      de fase-ativa muda o contrato atual em produção do F2 e pode travar
+--      configuração ANTES da turma entrar na fase (que é justamente quando o
+--      mentor prepara o capítulo). Isso é uma DECISÃO DE PRODUTO, não só técnica.
+--   3. Custo/performance: cada escrita passaria a resolver turma_trilha +
+--      turma_fase_ordem por linha; medir antes de impor em hot path.
+--
+-- DESENHO PROPOSTO (helper + policies), a validar:
+-- =============================================================
+
+-- -------------------------------------------------------------
+-- Helper: a Casa p_casa é a Casa ATIVA da turma p_turma neste ano?
+-- (posição atual da turma resolvida via turma_fase_ordem, fallback ordinal)
+-- -------------------------------------------------------------
+-- CREATE OR REPLACE FUNCTION public.casa_e_fase_ativa_da_turma(
+--   p_casa smallint, p_turma_id uuid
+-- )
+-- RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = public STABLE AS $$
+--   SELECT EXISTS (
+--     SELECT 1
+--     FROM public.turma_trilha tt
+--     WHERE tt.turma_id = p_turma_id
+--       AND tt.ano_letivo = EXTRACT(YEAR FROM now())::smallint
+--       AND tt.ordem_atual BETWEEN 1 AND 8
+--       AND public.intel_da_posicao(p_turma_id, tt.ano_letivo, tt.ordem_atual) = p_casa
+--   );
+-- $$;
+
+-- -------------------------------------------------------------
+-- observacoes — trava de fase-ativa APENAS para F2 (Infantil/F1 preservados).
+-- Substituiria/estreitaria "Professor pode criar observações" no F2.
+-- ATENÇÃO: revisar interação com correção retroativa e janela de transição.
+-- -------------------------------------------------------------
+-- DROP POLICY IF EXISTS "Mentor F2 escreve obs só na fase ativa" ON public.observacoes;
+-- CREATE POLICY "Mentor F2 escreve obs só na fase ativa"
+-- ON public.observacoes FOR INSERT
+-- WITH CHECK (
+--   professor_id = auth.uid()
+--   AND institution_id = get_user_institution_id()
+--   AND (
+--     -- Infantil/F1: mantém a regra atual (sem trava de fase-ativa)
+--     NOT EXISTS (
+--       SELECT 1 FROM public.turmas t
+--       WHERE t.id = observacoes.turma_id AND COALESCE(t.segmento,'infantil') = 'fundamental2'
+--     )
+--     -- F2: só o mentor da Casa ativa da turma
+--     OR public.casa_e_fase_ativa_da_turma(observacoes.inteligencia_fase, observacoes.turma_id)
+--   )
+-- );
+
+-- -------------------------------------------------------------
+-- capitulo_turma_config — somar fase-ativa à policy de mentor (20260504000004).
+-- >>> Pode travar a PREPARAÇÃO do capítulo antes da fase começar. Decisão de
+--     produto: permitir preparar antes? Se sim, NÃO aplicar esta condição. <<<
+-- -------------------------------------------------------------
+-- DROP POLICY IF EXISTS "Mentor cria config só na fase ativa" ON public.capitulo_turma_config;
+-- CREATE POLICY "Mentor cria config só na fase ativa"
+-- ON public.capitulo_turma_config FOR INSERT
+-- WITH CHECK (
+--   public.eh_mentor_do_capitulo(capitulo_id, auth.uid())
+--   AND public.casa_e_fase_ativa_da_turma(
+--         (SELECT f.inteligencia_id FROM public.capitulos c JOIN public.fases f ON f.id = c.fase_id WHERE c.id = capitulo_id),
+--         turma_id)
+-- );
+
+-- -------------------------------------------------------------
+-- capitulo_alocacoes — mesma ideia; mesmo alerta de "preparar antes da fase".
+-- -------------------------------------------------------------
+-- DROP POLICY IF EXISTS "Mentor aloca só na fase ativa" ON public.capitulo_alocacoes;
+-- CREATE POLICY "Mentor aloca só na fase ativa"
+-- ON public.capitulo_alocacoes FOR INSERT
+-- WITH CHECK (
+--   public.eh_mentor_do_capitulo(capitulo_id, auth.uid())
+--   AND public.casa_e_fase_ativa_da_turma(
+--         (SELECT f.inteligencia_id FROM public.capitulos c JOIN public.fases f ON f.id = c.fase_id WHERE c.id = capitulo_id),
+--         turma_id)
+-- );
+
+-- =============================================================
+-- FIM DO DESENHO. Nada acima executa. Aguardando revisão Riscos + Dados.
+-- =============================================================
