@@ -59,16 +59,6 @@ const posNoCirculo = (i: number, n: number, raio: number) => {
   return { x: Math.cos(ang) * raio, y: Math.sin(ang) * raio };
 };
 
-/** Fundo bem claro derivado da cor da inteligência (pro chip do caminho). */
-const hexParaRgba = (hex: string, alpha: number) => {
-  const h = hex.replace('#', '');
-  const n = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
-  const r = parseInt(n.slice(0, 2), 16);
-  const g = parseInt(n.slice(2, 4), 16);
-  const b = parseInt(n.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
-
 const LequeObservacao = ({
   inteligenciaId,
   valorAtual,
@@ -192,8 +182,8 @@ const LequeObservacao = ({
       ? 'Como a criança chegou'
       : 'Por qual caminho';
 
-  // Raio do círculo: mais apertado quando há muitas opções (os 8 caminhos)
-  const raio = itens.length > 5 ? 116 : 104;
+  // Raio do círculo: folgado o bastante pra o chip não encostar no hub central.
+  const raio = itens.length > 5 ? 130 : 122;
 
   return (
     <>
@@ -328,16 +318,18 @@ const LequeObservacao = ({
                         ref={i === 0 ? primeiraOpcaoRef : undefined}
                         type="button"
                         onClick={item.onClick}
-                        className="absolute whitespace-nowrap rounded-full px-3 py-2 text-sm font-medium leque-opt focus:outline-none focus-visible:ring-2 active:scale-95"
+                        className="absolute whitespace-nowrap rounded-full px-2.5 py-1.5 text-[13px] font-semibold leque-opt focus:outline-none focus-visible:ring-2 active:scale-95"
                         style={{
                           left: x,
                           top: y,
                           transform: 'translate(-50%, -50%)',
                           minWidth: 44,
                           minHeight: 44,
-                          backgroundColor: corItem ? hexParaRgba(corItem, 0.12) : t.surface,
+                          // caminhos (passo 3): sólidos na cor da IM, texto branco.
+                          // outros passos: pele clara do caderno.
+                          backgroundColor: corItem ?? t.surface,
                           border: `1px solid ${corItem ?? borda}`,
-                          color: corItem ?? t.text,
+                          color: corItem ? '#FFFFFF' : t.text,
                           boxShadow: t.shadowMd,
                           animationDelay: `${i * 28}ms`,
                           ['--tw-ring-color' as string]: corItem ?? acento,

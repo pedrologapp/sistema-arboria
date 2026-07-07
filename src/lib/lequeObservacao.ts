@@ -33,9 +33,10 @@ export const LEQUE_COMECOS: LequeOpcao[] = [
   { l: 'Na hora de fazer', t: 'Na hora de fazer,' },
 ];
 
-/** O galho do Cross-IM. Rótulo claro pra a professora (decisão do Fundador 07/07). */
+/** O galho do Cross-IM. Rótulo claro pra a professora (o chip que leva aos 8
+ *  caminhos das outras inteligências). O texto salvo fica scene-y, sem clínica. */
 export const LEQUE_OUTRO: LequeOpcao = {
-  l: 'de um jeito diferente',
+  l: 'outra inteligência',
   t: 'foi por um caminho inesperado:',
 };
 
