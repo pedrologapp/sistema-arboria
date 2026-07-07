@@ -15,7 +15,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 
 const TOTAL_FASES = 8;
-// Sequência recomendada das 8 inteligências (id == ordem na tabela inteligencias)
+// Nome canônico das 8 inteligências (índice = inteligencia_id - 1). É a ordem
+// PADRÃO da trilha; a turma com configuração própria percorre um subconjunto/
+// ordem lidos de turma_fase_ordem (via useFaseTurma.trilhaIntel).
 const TRILHA = [
   'Linguística',
   'Lógico-Matemática',
@@ -26,6 +28,18 @@ const TRILHA = [
   'Interpessoal',
   'Intrapessoal',
 ];
+
+/** Nome da inteligência a partir do id (1..8), com salvaguarda. */
+const nomeIntel = (id: number) => TRILHA[id - 1] ?? `Inteligência ${id}`;
+
+/**
+ * Fases da trilha da turma, na ordem de percurso. Se a turma tem configuração
+ * (trilhaIntel), usa o subconjunto/ordem dela; senão, a trilha PADRÃO das 8.
+ */
+const montarTrilhaFases = (trilhaIntel: number[] | null): { intelId: number; nome: string }[] =>
+  trilhaIntel
+    ? trilhaIntel.map((id) => ({ intelId: id, nome: nomeIntel(id) }))
+    : TRILHA.map((nome, i) => ({ intelId: i + 1, nome }));
 
 type View = 'hoje' | 'ano';
 
@@ -38,10 +52,10 @@ const ATIVIDADES_EXEMPLO: { nome: string; estado: 'feita' | 'atual' | 'proxima' 
   { nome: 'Roda das descobertas', estado: 'proxima' },
 ];
 
-/** Régua das 8 fases (mapa, não placar). No cockpit é pequena e clicável → leva ao "O ano". */
-const Regua = ({ atual, onClick }: { atual: number; onClick: () => void }) => (
+/** Régua das N fases (mapa, não placar). No cockpit é pequena e clicável → leva ao "O ano". */
+const Regua = ({ atual, total, onClick }: { atual: number; total: number; onClick: () => void }) => (
   <button onClick={onClick} className="w-full flex items-center justify-between px-1 py-1" aria-label="Ver o ano">
-    {Array.from({ length: TOTAL_FASES }).map((_, i) => {
+    {Array.from({ length: total }).map((_, i) => {
       const n = i + 1;
       const passou = n < atual;
       const eAtual = n === atual;
@@ -56,7 +70,7 @@ const Regua = ({ atual, onClick }: { atual: number; onClick: () => void }) => (
               boxShadow: eAtual ? `0 0 0 3px ${t.accentSoft}` : 'none',
             }}
           />
-          {n < TOTAL_FASES && <span className="flex-1 h-px mx-1" style={{ backgroundColor: t.border }} />}
+          {n < total && <span className="flex-1 h-px mx-1" style={{ backgroundColor: t.border }} />}
         </div>
       );
     })}
@@ -67,19 +81,21 @@ const Regua = ({ atual, onClick }: { atual: number; onClick: () => void }) => (
 const CockpitHoje = ({
   faseAtual,
   atualOrdem,
+  total,
   plano,
   irParaAno,
   onIniciarAula,
 }: {
   faseAtual: FaseDaTurma | null;
   atualOrdem: number;
+  total: number;
   plano: AtividadePlanoItem[];
   irParaAno: () => void;
   onIniciarAula: () => void;
 }) => {
-  // ANO COMPLETO: a fase 8 foi finalizada. O maior momento do ano da turma
+  // ANO COMPLETO: a última fase foi finalizada. O maior momento do ano da turma
   // NUNCA pode regredir pra "seu ano ainda não começou".
-  if (atualOrdem > TOTAL_FASES) {
+  if (atualOrdem > total) {
     return (
       <div className="pt-8 text-center space-y-4">
         <div
@@ -144,10 +160,10 @@ const CockpitHoje = ({
 
   return (
     <div className="space-y-5">
-      <Regua atual={atualOrdem} onClick={irParaAno} />
+      <Regua atual={atualOrdem} total={total} onClick={irParaAno} />
 
       <p className="text-[11px] uppercase tracking-wide" style={{ color: t.textFaint }}>
-        Hoje · {hojeFmt} · Exploração {atualOrdem || faseAtual.numero_fase} de {TOTAL_FASES}
+        Hoje · {hojeFmt} · Exploração {atualOrdem || faseAtual.numero_fase} de {total}
       </p>
 
       <div className="-mt-3">
@@ -316,12 +332,16 @@ const CockpitHoje = ({
 /** Sub-aba "O ano": a trilha das 8 explorações. Aqui o professor VÊ o caminho. */
 const TrilhaAno = ({
   atualOrdem,
+  total,
+  trilhaFases,
   irParaHoje,
   onIniciar,
   onFinalizar,
   acaoLoading,
 }: {
   atualOrdem: number;
+  total: number;
+  trilhaFases: { intelId: number; nome: string }[];
   irParaHoje: () => void;
   onIniciar: () => void;
   onFinalizar: () => void;
@@ -331,23 +351,23 @@ const TrilhaAno = ({
     <div className="space-y-1">
       <div className="mb-4">
         <h1 className="text-xl font-bold" style={{ color: t.text }}>
-          As 8 explorações do ano
+          {total === TOTAL_FASES ? 'As 8 explorações do ano' : `As ${total} explorações do ano`}
         </h1>
         <p className="text-sm mt-0.5" style={{ color: t.textMuted }}>
-          {atualOrdem > TOTAL_FASES
-            ? 'Ano completo: as 8 explorações concluídas.'
+          {atualOrdem > total
+            ? `Ano completo: as ${total} explorações concluídas.`
             : atualOrdem > 0
               ? 'Você está aqui.'
               : 'Sua trilha começa na primeira exploração.'}
         </p>
       </div>
 
-      {TRILHA.map((nome, i) => {
+      {trilhaFases.map(({ nome }, i) => {
         const n = i + 1;
         const concluida = atualOrdem > 0 && n < atualOrdem;
         const emCurso = n === atualOrdem;
         const aSeguir = n > atualOrdem || atualOrdem === 0;
-        const isLast = n === TOTAL_FASES;
+        const isLast = n === total;
 
         const dotBg = concluida || emCurso ? t.accent : t.surface;
         const dotBorder = aSeguir && !emCurso ? `2px solid ${t.silencio}` : 'none';
@@ -600,7 +620,9 @@ const InfantilArboriaPage = () => {
   }
 
   const faseAtual = faseTurma?.fase ?? null;
-  const atualOrdem = faseTurma?.ordem ?? 0; // 0 = não começou · 1..8 = em curso · 9 = ano completo
+  const atualOrdem = faseTurma?.ordem ?? 0; // 0 = não começou · 1..total = em curso · >total = ano completo
+  const total = faseTurma?.total ?? TOTAL_FASES; // nº de fases ativas (8 no fallback)
+  const trilhaFases = montarTrilhaFases(faseTurma?.trilhaIntel ?? null);
 
   const primeiroNome = profile?.nome || profile?.full_name?.split(' ')[0] || 'Professora';
   const hora = new Date().getHours();
@@ -649,6 +671,12 @@ const InfantilArboriaPage = () => {
       multiAutores: false,
       dataInicio: null,
       momentosAno: null,
+      totalFases: total,
+      // Inteligência da PRÓXIMA posição (para a abertura). Config -> trilhaIntel;
+      // fallback -> a próxima é a inteligência de id ordemFechada+1.
+      proximaIntelId: faseTurma?.trilhaIntel
+        ? faseTurma.trilhaIntel[ordemFechada] ?? null
+        : ordemFechada + 1,
     };
     try {
       const [obsRes, turmaRes, evRes] = await Promise.all([
@@ -679,8 +707,8 @@ const InfantilArboriaPage = () => {
       base.multiAutores = new Set(obs.map((o: any) => o.professor_id)).size > 1;
       base.dataInicio = evRes?.data?.ocorrido_em ?? null;
 
-      // Fase 8: o Tempo 2 vira o encerramento do ano; contagem anual da turma
-      if (ordemFechada >= 8) {
+      // Última fase: o Tempo 2 vira o encerramento do ano; contagem anual da turma
+      if (ordemFechada >= total) {
         const inicioAno = new Date(new Date().getFullYear(), 0, 1).toISOString();
         const { count } = await supabase
           .from('observacoes')
@@ -797,6 +825,7 @@ const InfantilArboriaPage = () => {
           <CockpitHoje
             faseAtual={faseAtual}
             atualOrdem={atualOrdem}
+            total={total}
             plano={planoAtividades}
             irParaAno={() => setView('ano')}
             onIniciarAula={() => navigate('/professor/aula', { state: { turmaId } })}
@@ -804,6 +833,8 @@ const InfantilArboriaPage = () => {
         ) : (
           <TrilhaAno
             atualOrdem={atualOrdem}
+            total={total}
+            trilhaFases={trilhaFases}
             irParaHoje={() => setView('hoje')}
             onIniciar={onIniciar}
             onFinalizar={onFinalizar}

@@ -9,6 +9,9 @@ import {
   Route,
   ListChecks,
   AlertTriangle,
+  Plus,
+  Minus,
+  RotateCcw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -103,9 +106,13 @@ const ArboriaTrilhaPage = () => {
   const [serieSel, setSerieSel] = useState<string | null>(null);
   const [turmaSel, setTurmaSel] = useState<string | null>(null);
 
-  // Ordem das inteligências (editável)
+  // Trilha da turma: ordem das inteligências ATIVAS (subconjunto). A ordem é
+  // implícita (posicao 1..N = posição no array). Inteligências fora do array
+  // estão DESATIVADAS (não entram na trilha da turma).
   const [ordem, setOrdem] = useState<number[]>(ORDEM_PADRAO);
   const [ordemBase, setOrdemBase] = useState<number[]>(ORDEM_PADRAO);
+  const [temConfig, setTemConfig] = useState(false); // turma tem trilha personalizada gravada?
+  const [temConfigBase, setTemConfigBase] = useState(false);
   const [salvandoOrdem, setSalvandoOrdem] = useState(false);
 
   // Plano de atividades por fase (mapa inteligenciaId -> atividadeIds em ordem)
@@ -156,24 +163,27 @@ const ArboriaTrilhaPage = () => {
     },
   });
 
-  // ===== Ordem gravada da turma (tolerante) =====
+  // ===== Trilha gravada da turma (tolerante) =====
+  // Retorna o subconjunto ATIVO na ordem gravada + se há config. Sem linhas =
+  // turma usa a trilha PADRÃO (as 8, ordem canônica) via fallback do app.
   const { data: ordemData } = useQuery({
     queryKey: ['trilha-ordem', turmaSel, anoLetivo],
     enabled: !!turmaSel,
     retry: false,
-    queryFn: async (): Promise<number[]> => {
+    queryFn: async (): Promise<{ ativos: number[]; temConfig: boolean }> => {
       try {
         const { data, error } = await fromAny('turma_fase_ordem')
           .select('posicao, inteligencia_id')
           .eq('turma_id', turmaSel!)
           .eq('ano_letivo', anoLetivo)
           .order('posicao');
-        if (error || !data) return ORDEM_PADRAO;
+        if (error || !data) return { ativos: ORDEM_PADRAO, temConfig: false };
         const rows = data as unknown as Array<{ posicao: number; inteligencia_id: number }>;
-        if (rows.length < 8) return ORDEM_PADRAO; // ordem incompleta -> padrão canônica
-        return rows.sort((a, b) => a.posicao - b.posicao).map((r) => r.inteligencia_id);
+        if (rows.length === 0) return { ativos: ORDEM_PADRAO, temConfig: false };
+        const ativos = rows.sort((a, b) => a.posicao - b.posicao).map((r) => r.inteligencia_id);
+        return { ativos, temConfig: true };
       } catch {
-        return ORDEM_PADRAO;
+        return { ativos: ORDEM_PADRAO, temConfig: false };
       }
     },
   });
@@ -213,9 +223,12 @@ const ArboriaTrilhaPage = () => {
 
   // Hidrata os estados editáveis quando a turma (ou os dados) mudam
   useEffect(() => {
-    const o = ordemData ?? ORDEM_PADRAO;
-    setOrdem(o);
-    setOrdemBase(o);
+    const ativos = ordemData?.ativos ?? ORDEM_PADRAO;
+    const cfg = ordemData?.temConfig ?? false;
+    setOrdem(ativos);
+    setOrdemBase(ativos);
+    setTemConfig(cfg);
+    setTemConfigBase(cfg);
   }, [ordemData, turmaSel]);
   useEffect(() => {
     setPlano(planoData ?? {});
@@ -233,6 +246,11 @@ const ArboriaTrilhaPage = () => {
       .sort((a, b) => a.ordem - b.ordem);
   };
 
+  // Inteligências DESATIVADAS (fora da trilha da turma), na ordem canônica.
+  const inativos = useMemo(
+    () => INTELIGENCIAS.filter((i) => !ordem.includes(i.id)),
+    [ordem]
+  );
   const ordemMudou = useMemo(() => ordem.join(',') !== ordemBase.join(','), [ordem, ordemBase]);
 
   const moverOrdem = (idx: number, dir: -1 | 1) => {
@@ -245,14 +263,31 @@ const ArboriaTrilhaPage = () => {
     });
   };
 
+  // Ativar uma inteligência: entra no fim da trilha. Desativar: sai (nunca deixa
+  // a trilha vazia, precisa de ao menos 1 fase).
+  const ativar = (intelId: number) => setOrdem((prev) => (prev.includes(intelId) ? prev : [...prev, intelId]));
+  const desativar = (intelId: number) => {
+    setOrdem((prev) => {
+      if (prev.length <= 1) {
+        toast.error('A trilha precisa de ao menos uma inteligência ativa.');
+        return prev;
+      }
+      return prev.filter((id) => id !== intelId);
+    });
+  };
+
   const salvarOrdem = async () => {
     if (!turmaSel || !turmaFocada || !instSel) return;
+    if (ordem.length === 0) {
+      toast.error('Ative ao menos uma inteligência antes de salvar.');
+      return;
+    }
     setSalvandoOrdem(true);
     try {
-      // Grava a permutação COMPLETA das 8 posições de uma vez (a dívida técnica
-      // registrada em turma_fase_ordem exige permutação completa, nunca parcial).
-      // Sem RPC dedicada: apaga as 8 e reinsere. Janela de risco desprezível
-      // numa ferramenta de dono, mono-usuário.
+      // Grava SÓ as fases ATIVAS, posicao 1..N contígua na ordem do array. As
+      // UNIQUE (turma+ano+posicao) e (turma+ano+inteligencia) aceitam o
+      // subconjunto. Delete+insert atômico do ponto de vista do dono
+      // (ferramenta mono-usuário): apaga a trilha antiga e reinsere a atual.
       const del = await fromAny('turma_fase_ordem')
         .delete()
         .eq('turma_id', turmaSel)
@@ -268,9 +303,34 @@ const ArboriaTrilhaPage = () => {
       const ins = await fromAny('turma_fase_ordem').insert(linhas as never);
       if (ins.error) throw ins.error;
       setOrdemBase(ordem);
-      toast.success('Ordem das fases salva.');
+      setTemConfig(true);
+      setTemConfigBase(true);
+      toast.success('Trilha da turma salva.');
     } catch (e) {
-      toast.error((e as Error).message || 'Não foi possível salvar a ordem.');
+      toast.error((e as Error).message || 'Não foi possível salvar a trilha.');
+    } finally {
+      setSalvandoOrdem(false);
+    }
+  };
+
+  // Voltar para a trilha PADRÃO: apaga a config -> a turma passa a usar o
+  // fallback do app (8 inteligências, ordem canônica).
+  const restaurarPadrao = async () => {
+    if (!turmaSel) return;
+    setSalvandoOrdem(true);
+    try {
+      const del = await fromAny('turma_fase_ordem')
+        .delete()
+        .eq('turma_id', turmaSel)
+        .eq('ano_letivo', anoLetivo);
+      if (del.error) throw del.error;
+      setOrdem(ORDEM_PADRAO);
+      setOrdemBase(ORDEM_PADRAO);
+      setTemConfig(false);
+      setTemConfigBase(false);
+      toast.success('Trilha padrão restaurada (as 8 inteligências).');
+    } catch (e) {
+      toast.error((e as Error).message || 'Não foi possível restaurar a trilha padrão.');
     } finally {
       setSalvandoOrdem(false);
     }
@@ -499,18 +559,42 @@ const ArboriaTrilhaPage = () => {
             </div>
           )}
 
-          {/* SEÇÃO A: ordem das inteligências/fases */}
+          {/* SEÇÃO A: trilha da turma (ativar/desativar + ordem) */}
           <section className="rounded-2xl p-4" style={colunaCss}>
             <div className="flex items-center gap-2 mb-1">
               <Route size={18} style={{ color: t.accent }} strokeWidth={1.75} />
               <h2 className="text-sm font-semibold" style={{ color: t.text }}>
-                Ordem das fases
+                Trilha da turma
               </h2>
             </div>
             <p className="text-xs mb-3" style={{ color: t.textMuted }}>
-              A sequência das 8 inteligências que esta turma percorre no ano. Reordene com as setas.
+              Escolha QUAIS inteligências esta turma percorre no ano e em que ORDEM. Ative ou
+              desative cada uma; reordene as ativas com as setas.
             </p>
 
+            {/* Estado da trilha: padrão (sem config) vs personalizada */}
+            <div
+              className="rounded-xl px-3 py-2 mb-3 flex items-center gap-2"
+              style={{
+                backgroundColor: temConfig ? t.accentSoft : t.surfaceSunken,
+                border: `1px solid ${temConfig ? t.accentBorder : t.border}`,
+              }}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style={{ backgroundColor: temConfig ? t.accent : t.textFaint }}
+              />
+              <p className="text-[12px]" style={{ color: temConfig ? t.accentText : t.textMuted }}>
+                {temConfig
+                  ? `Trilha personalizada: ${ordem.length} de 8 inteligências ativas, na ordem abaixo.`
+                  : 'Esta turma usa a trilha padrão: as 8 inteligências, na ordem canônica. Personalize abaixo.'}
+              </p>
+            </div>
+
+            {/* Ativas, em ordem */}
+            <p className="text-[10px] uppercase tracking-wide font-semibold mb-1.5" style={{ color: t.textFaint }}>
+              Na trilha (percorridas em ordem)
+            </p>
             <ol className="space-y-1.5">
               {ordem.map((intelId, idx) => {
                 const intel = intelById(intelId);
@@ -549,13 +633,54 @@ const ArboriaTrilhaPage = () => {
                       >
                         <ChevronDown size={16} />
                       </button>
+                      <button
+                        onClick={() => desativar(intelId)}
+                        disabled={ordem.length <= 1}
+                        className="p-1.5 disabled:opacity-25 ml-0.5"
+                        style={{ color: t.textFaint }}
+                        aria-label={`Desativar ${intel?.nome ?? ''}`}
+                        title="Tirar da trilha"
+                      >
+                        <Minus size={16} />
+                      </button>
                     </div>
                   </li>
                 );
               })}
             </ol>
 
-            <div className="flex items-center gap-2 mt-3">
+            {/* Desativadas */}
+            {inativos.length > 0 && (
+              <>
+                <p className="text-[10px] uppercase tracking-wide font-semibold mt-4 mb-1.5" style={{ color: t.textFaint }}>
+                  Fora da trilha (toque para ativar)
+                </p>
+                <div className="space-y-1.5">
+                  {inativos.map((intel) => (
+                    <button
+                      key={intel.id}
+                      onClick={() => ativar(intel.id)}
+                      className="w-full rounded-xl p-2.5 flex items-center gap-2.5 text-left"
+                      style={{ backgroundColor: t.surface, border: `1px dashed ${t.silencio}` }}
+                      aria-label={`Ativar ${intel.nome}`}
+                    >
+                      <span
+                        className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ border: `1px dashed ${t.silencio}`, color: t.textFaint }}
+                      >
+                        <Plus size={14} />
+                      </span>
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: `${intel.cor}66` }} />
+                      <span className="flex-1 text-sm font-medium truncate" style={{ color: t.textMuted }}>
+                        {intel.nome}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <div className="flex flex-wrap items-center gap-2 mt-4">
               <button
                 onClick={salvarOrdem}
                 disabled={!ordemMudou || salvandoOrdem}
@@ -563,7 +688,7 @@ const ArboriaTrilhaPage = () => {
                 style={{ backgroundColor: t.accent, color: '#FFFFFF' }}
               >
                 {salvandoOrdem && <Loader2 size={15} className="animate-spin" />}
-                Salvar ordem
+                Salvar trilha
               </button>
               {ordemMudou && !salvandoOrdem && (
                 <button
@@ -572,6 +697,15 @@ const ArboriaTrilhaPage = () => {
                   style={{ backgroundColor: t.surfaceSunken, color: t.textMuted }}
                 >
                   Desfazer
+                </button>
+              )}
+              {(temConfig || temConfigBase) && !salvandoOrdem && (
+                <button
+                  onClick={restaurarPadrao}
+                  className="rounded-xl px-3 py-2 text-sm font-medium flex items-center gap-1.5"
+                  style={{ backgroundColor: t.surfaceSunken, color: t.textMuted }}
+                >
+                  <RotateCcw size={14} /> Restaurar trilha padrão
                 </button>
               )}
             </div>

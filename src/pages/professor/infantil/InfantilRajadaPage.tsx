@@ -259,13 +259,17 @@ const InfantilRajadaPage = () => {
   const { data: faseTurma, isLoading: faseLoading } = useFaseTurma(turmaId, profile?.institution_id);
   const fase = faseTurma?.fase ?? null;
   const ordem = faseTurma?.ordem ?? 0;
+  const total = faseTurma?.total ?? 8; // nº de fases ativas (8 no fallback)
   const { data: alunos, isLoading } = useRajadaTurma(turmaId, fase?.id ?? null, user?.id ?? null);
   const rajadaKey = ['rajada-turma', turmaId, fase?.id ?? null, user?.id ?? null];
 
   // O FIO DE COR: a cor oficial do mecanismo da fase costura o chrome da aula
   // (4 pontos fixos), e nunca pousa numa criança. Regra: cor da fase = AULA;
   // índigo = CADERNO (Guardar, busca, modais); verde = REGISTRO FEITO (selo).
-  const fio = ordem >= 1 && ordem <= 8 ? SANTUARIO_INFANTIL[ordem] : null;
+  // Cor/santuário da INTELIGÊNCIA da fase (indexado por inteligencia_id). Com
+  // subconjunto/ordem por turma, a posição != id; o fio segue a inteligência.
+  const fioIntel = fase?.inteligencia?.id ?? 0;
+  const fio = fioIntel >= 1 && fioIntel <= 8 ? SANTUARIO_INFANTIL[fioIntel] : null;
   const fioTransition = { transition: 'background-color 600ms ease, border-color 600ms ease, color 600ms ease' };
 
   // 2 cenas concretas do santuário pro convite da aula, rotacionando por dia
@@ -735,13 +739,13 @@ const InfantilRajadaPage = () => {
               <Eye size={28} style={{ color: t.accent }} strokeWidth={1.5} />
             </div>
             <p className="text-sm max-w-xs mx-auto" style={{ color: t.textMuted }}>
-              {ordem > 8
-                ? `As 8 explorações do ano foram concluídas com ${turmaLabel ? `a turma ${turmaLabel}` : 'esta turma'}. A história de cada criança continua viva no Diário.`
+              {ordem > total
+                ? `As ${total} explorações do ano foram concluídas com ${turmaLabel ? `a turma ${turmaLabel}` : 'esta turma'}. A história de cada criança continua viva no Diário.`
                 : `${turmaLabel ? `A turma ${turmaLabel}` : 'Esta turma'} ainda não começou a trilha; as crianças aparecem aqui assim que a primeira exploração começar.`}
             </p>
             {/* Botão de ação (a nav está escondida dentro da aula: a simulação
                 pegou professoras procurando uma "aba" que não existe aqui) */}
-            {ordem <= 8 && (
+            {ordem <= total && (
               <button
                 onClick={() => navigate('/professor')}
                 className="rounded-full px-4 py-2.5 text-sm font-semibold"

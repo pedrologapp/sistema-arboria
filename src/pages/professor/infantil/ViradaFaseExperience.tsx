@@ -8,7 +8,7 @@ import { infantilTheme as t } from '@/styles/infantilTheme';
 const TOTAL_FASES = 8;
 
 export interface ViradaDados {
-  ordemFechada: number;       // 1..8; a fase que acabou de fechar
+  ordemFechada: number;       // 1..total; a POSIÇÃO da fase que acabou de fechar
   faseFechadaNome: string;
   turmaLabel: string;
   momentos: number | null;    // null = contagem indisponível (degrada sem números)
@@ -16,7 +16,14 @@ export interface ViradaDados {
   totalCriancas: number;
   multiAutores: boolean;      // >1 professora escreveu na fase → "vocês enxergaram"
   dataInicio: string | null;  // ISO, quando a fase fechada começou
-  momentosAno: number | null; // só usado na fase 8 (encerramento do ano)
+  momentosAno: number | null; // só usado na última fase (encerramento do ano)
+  /** Nº de fases ATIVAS da turma. Opcional: ausente = 8 (trilha padrão). */
+  totalFases?: number;
+  /**
+   * Inteligência (id) da PRÓXIMA posição, para a abertura. Opcional: ausente =
+   * fallback canônico (ordemFechada + 1). `null` quando não há próxima.
+   */
+  proximaIntelId?: number | null;
 }
 
 const fmtDia = (iso: string) => {
@@ -59,8 +66,12 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
     return () => window.removeEventListener('keydown', onKey);
   }, [onFechar]);
 
-  const anoCompleto = dados.ordemFechada >= TOTAL_FASES;
-  const proxima = anoCompleto ? null : MECANISMOS_INFANTIL[dados.ordemFechada + 1];
+  // total = nº de fases ativas da turma (8 no fallback). A trilha pode ser um
+  // subconjunto; a próxima inteligência vem configurada (proximaIntelId).
+  const total = dados.totalFases ?? TOTAL_FASES;
+  const anoCompleto = dados.ordemFechada >= total;
+  const proximaId = dados.proximaIntelId ?? dados.ordemFechada + 1;
+  const proxima = anoCompleto || proximaId == null ? null : MECANISMOS_INFANTIL[proximaId];
 
   const silencio =
     dados.momentos == null ? null : Math.max(0, dados.totalCriancas - dados.criancasObservadas);
@@ -117,7 +128,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
 
           <Casc i={2} className="mt-4">
             <p className="text-xs text-center leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>
-              Exploração {dados.ordemFechada} de {TOTAL_FASES} · {dados.turmaLabel}
+              Exploração {dados.ordemFechada} de {total} · {dados.turmaLabel}
               {dados.dataInicio && (
                 <>
                   <br />
@@ -229,9 +240,9 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
           {/* Régua: o ponto novo acende por último, com o broto */}
           <Casc i={0}>
             <div className="flex items-center justify-center mb-6" aria-hidden="true">
-              {Array.from({ length: TOTAL_FASES }).map((_, i) => {
+              {Array.from({ length: total }).map((_, i) => {
                 const n = i + 1;
-                const ordemNova = anoCompleto ? TOTAL_FASES : dados.ordemFechada + 1;
+                const ordemNova = anoCompleto ? total : dados.ordemFechada + 1;
                 const aceso = anoCompleto ? true : n <= dados.ordemFechada;
                 const novo = n === ordemNova;
                 return (
@@ -247,7 +258,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
                         animationDelay: novo ? '1100ms' : undefined,
                       }}
                     />
-                    {n < TOTAL_FASES && <span style={{ width: 16, height: 1, backgroundColor: t.border }} />}
+                    {n < total && <span style={{ width: 16, height: 1, backgroundColor: t.border }} />}
                   </span>
                 );
               })}
@@ -317,7 +328,7 @@ const ViradaFaseExperience = ({ dados, onFechar }: { dados: ViradaDados; onFecha
                     className="text-[11px] uppercase font-semibold text-center"
                     style={{ color: t.accentText, letterSpacing: '0.35em' }}
                   >
-                    Exploração {dados.ordemFechada + 1} de {TOTAL_FASES} · Abertura
+                    Exploração {dados.ordemFechada + 1} de {total} · Abertura
                   </p>
                   <div className="vf-draw mx-auto mt-3" style={{ width: 48, height: 2, backgroundColor: t.accentBorder, animationDelay: '400ms' }} />
                 </Casc>

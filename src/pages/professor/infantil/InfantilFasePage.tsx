@@ -29,8 +29,11 @@ const InfantilFasePage = () => {
   const turmaValida = turmaPref && turmasVinculadas?.some((tv) => tv.id === turmaPref);
   const turmaId = (turmaValida ? turmaPref : null) ?? turmasVinculadas?.[0]?.id ?? null;
   const { data: faseTurma } = useFaseTurma(turmaId, profile?.institution_id);
-  const ordemAtual = faseTurma?.ordem ?? 0;
-  const faseAtualValida = ordemAtual >= 1 && ordemAtual <= 8 ? ordemAtual : 0;
+  // A INTELIGÊNCIA da fase atual (o santuário é indexado por inteligencia_id).
+  // Com subconjunto/ordem por turma, a posição da trilha != id da inteligência;
+  // o destaque segue a inteligência resolvida. Fallback: sem config, id == posição.
+  const intelAtual = faseTurma?.fase?.inteligencia?.id ?? 0;
+  const faseAtualValida = intelAtual >= 1 && intelAtual <= 8 ? intelAtual : 0;
 
   const [lendo, setLendo] = useState<number | null>(null);
 

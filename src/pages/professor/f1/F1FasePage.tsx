@@ -28,8 +28,12 @@ const F1FasePage = () => {
   const turmaValida = turmaPref && turmasVinculadas?.some((tv) => tv.id === turmaPref);
   const turmaId = (turmaValida ? turmaPref : null) ?? turmasVinculadas?.[0]?.id ?? null;
   const { data: faseTurma } = useFaseTurma(turmaId, profile?.institution_id, 'fundamental1');
-  const ordemAtual = faseTurma?.ordem ?? 0;
-  const faseAtualValida = ordemAtual >= 1 && ordemAtual <= 8 ? ordemAtual : 0;
+  // A INTELIGÊNCIA da fase atual (o santuário é indexado por inteligencia_id).
+  // Com subconjunto/ordem por turma, a posição da trilha != id da inteligência;
+  // por isso o destaque segue a inteligência resolvida, não a posição. Fallback:
+  // sem config, o id da inteligência == posição (comportamento de hoje).
+  const intelAtual = faseTurma?.fase?.inteligencia?.id ?? 0;
+  const faseAtualValida = intelAtual >= 1 && intelAtual <= 8 ? intelAtual : 0;
 
   const turmaSelecionada = turmasVinculadas?.find((tv) => tv.id === turmaId) ?? null;
   const serieSel = turmaSelecionada?.serie != null ? String(turmaSelecionada.serie) : null;

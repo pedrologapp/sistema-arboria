@@ -260,13 +260,16 @@ const F1RajadaPage = () => {
   const { data: faseTurma, isLoading: faseLoading } = useFaseTurma(turmaId, profile?.institution_id, 'fundamental1');
   const fase = faseTurma?.fase ?? null;
   const ordem = faseTurma?.ordem ?? 0;
+  const total = faseTurma?.total ?? 8; // nº de fases ativas (8 no fallback)
   const { data: alunos, isLoading } = useRajadaTurma(turmaId, fase?.id ?? null, user?.id ?? null);
   const rajadaKey = ['rajada-turma', turmaId, fase?.id ?? null, user?.id ?? null];
 
   // O FIO DE COR: a cor oficial do mecanismo da fase costura o chrome da aula
   // (4 pontos fixos), e nunca pousa num aluno. Regra: cor da fase = AULA;
   // índigo = CADERNO (Guardar, busca, modais); verde = REGISTRO FEITO (selo).
-  const fio = ordem >= 1 && ordem <= 8 ? SANTUARIO_INFANTIL[ordem] : null;
+  // Indexado por inteligencia_id (com subconjunto/ordem, a posição != id).
+  const fioIntel = fase?.inteligencia?.id ?? 0;
+  const fio = fioIntel >= 1 && fioIntel <= 8 ? SANTUARIO_INFANTIL[fioIntel] : null;
   const fioTransition = { transition: 'background-color 600ms ease, border-color 600ms ease, color 600ms ease' };
 
   // 2 cenas concretas do santuário pro convite da aula, rotacionando por dia
@@ -308,8 +311,9 @@ const F1RajadaPage = () => {
     setTimeout(() => setRespiro(false), 150);
   };
 
-  // O nome de ação do módulo (a Academia); a professora pode ver o nome técnico
-  const moduloNome = ordem >= 1 && ordem <= 8 ? ACADEMIA_F1[ordem] : null;
+  // O nome de ação do módulo (a Academia); a professora pode ver o nome técnico.
+  // ACADEMIA_F1 é indexado por inteligencia_id (com subconjunto, posição != id).
+  const moduloNome = fioIntel >= 1 && fioIntel <= 8 ? ACADEMIA_F1[fioIntel] : null;
   const turmaLabel = useMemo(() => {
     const tv = turmasVinculadas?.find((x) => x.id === turmaId);
     return tv ? formatTurmaLabel(tv.serie, tv.turma_letra) : '';
@@ -735,12 +739,12 @@ const F1RajadaPage = () => {
               <Eye size={28} style={{ color: t.accent }} strokeWidth={1.5} />
             </div>
             <p className="text-sm max-w-xs mx-auto" style={{ color: t.textMuted }}>
-              {ordem > 8
-                ? `Os 8 módulos do ano foram concluídos com ${turmaLabel ? `a turma ${turmaLabel}` : 'esta turma'}. A história de cada aluno continua viva no Diário.`
+              {ordem > total
+                ? `Os ${total} módulos do ano foram concluídos com ${turmaLabel ? `a turma ${turmaLabel}` : 'esta turma'}. A história de cada aluno continua viva no Diário.`
                 : `${turmaLabel ? `A turma ${turmaLabel}` : 'Esta turma'} ainda não começou a trilha; os alunos aparecem aqui assim que o primeiro módulo começar.`}
             </p>
             {/* Botão de ação (a nav está escondida dentro da aula) */}
-            {ordem <= 8 && (
+            {ordem <= total && (
               <button
                 onClick={() => navigate('/professor')}
                 className="rounded-full px-4 py-2.5 text-sm font-semibold"

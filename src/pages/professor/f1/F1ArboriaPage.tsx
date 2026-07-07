@@ -16,17 +16,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 
 const TOTAL_FASES = 8;
-// Sequência recomendada das 8 inteligências (id == ordem na tabela inteligencias)
-const TRILHA = [
-  'Linguística',
-  'Lógico-Matemática',
-  'Espacial',
-  'Musical',
-  'Corporal-Cinestésica',
-  'Naturalista',
-  'Interpessoal',
-  'Intrapessoal',
-];
+
+/**
+ * Fases da trilha da turma, na ordem de percurso, com o nome de módulo da
+ * Academia (ACADEMIA_F1 é indexado por inteligencia_id). Se a turma tem
+ * configuração (trilhaIntel), usa o subconjunto/ordem dela; senão, a trilha
+ * PADRÃO das 8 inteligências (id 1..8).
+ */
+const montarTrilhaFases = (trilhaIntel: number[] | null): { intelId: number; nome: string }[] =>
+  (trilhaIntel ?? [1, 2, 3, 4, 5, 6, 7, 8]).map((id) => ({
+    intelId: id,
+    nome: ACADEMIA_F1[id] ?? `Módulo ${id}`,
+  }));
 
 type View = 'hoje' | 'ano';
 
@@ -39,10 +40,10 @@ const ATIVIDADES_EXEMPLO: { nome: string; estado: 'feita' | 'atual' | 'proxima' 
   { nome: 'Roda das descobertas', estado: 'proxima' },
 ];
 
-/** Régua das 8 fases (mapa, não placar). No cockpit é pequena e clicável → leva ao "O ano". */
-const Regua = ({ atual, onClick }: { atual: number; onClick: () => void }) => (
+/** Régua das N fases (mapa, não placar). No cockpit é pequena e clicável → leva ao "O ano". */
+const Regua = ({ atual, total, onClick }: { atual: number; total: number; onClick: () => void }) => (
   <button onClick={onClick} className="w-full flex items-center justify-between px-1 py-1" aria-label="Ver o ano">
-    {Array.from({ length: TOTAL_FASES }).map((_, i) => {
+    {Array.from({ length: total }).map((_, i) => {
       const n = i + 1;
       const passou = n < atual;
       const eAtual = n === atual;
@@ -57,7 +58,7 @@ const Regua = ({ atual, onClick }: { atual: number; onClick: () => void }) => (
               boxShadow: eAtual ? `0 0 0 3px ${t.accentSoft}` : 'none',
             }}
           />
-          {n < TOTAL_FASES && <span className="flex-1 h-px mx-1" style={{ backgroundColor: t.border }} />}
+          {n < total && <span className="flex-1 h-px mx-1" style={{ backgroundColor: t.border }} />}
         </div>
       );
     })}
@@ -68,19 +69,21 @@ const Regua = ({ atual, onClick }: { atual: number; onClick: () => void }) => (
 const CockpitHoje = ({
   faseAtual,
   atualOrdem,
+  total,
   plano,
   irParaAno,
   onIniciarAula,
 }: {
   faseAtual: FaseDaTurma | null;
   atualOrdem: number;
+  total: number;
   plano: AtividadePlanoItem[];
   irParaAno: () => void;
   onIniciarAula: () => void;
 }) => {
-  // ANO COMPLETO: a fase 8 foi finalizada. O maior momento do ano da turma
+  // ANO COMPLETO: a última fase foi finalizada. O maior momento do ano da turma
   // NUNCA pode regredir pra "seu ano ainda não começou".
-  if (atualOrdem > TOTAL_FASES) {
+  if (atualOrdem > total) {
     return (
       <div className="pt-8 text-center space-y-4">
         <div
@@ -141,16 +144,19 @@ const CockpitHoje = ({
   }
 
   const ordemFase = atualOrdem || faseAtual.numero_fase;
-  const moduloNome = ACADEMIA_F1[ordemFase] ?? `Módulo ${faseAtual.numero_fase}`;
+  // Nome do módulo pela INTELIGÊNCIA da fase (ACADEMIA_F1 é indexado por
+  // inteligencia_id): com subconjunto/ordem, a posição != id.
+  const moduloNome =
+    ACADEMIA_F1[faseAtual.inteligencia?.id ?? ordemFase] ?? `Módulo ${faseAtual.numero_fase}`;
   const mecanismo = faseAtual.inteligencia?.nome ?? null;
   const hojeFmt = format(new Date(), "d 'de' MMM", { locale: ptBR });
 
   return (
     <div className="space-y-5">
-      <Regua atual={atualOrdem} onClick={irParaAno} />
+      <Regua atual={atualOrdem} total={total} onClick={irParaAno} />
 
       <p className="text-[11px] uppercase tracking-wide" style={{ color: t.textFaint }}>
-        Hoje · {hojeFmt} · Módulo {ordemFase} de {TOTAL_FASES}
+        Hoje · {hojeFmt} · Módulo {ordemFase} de {total}
       </p>
 
       <div className="-mt-3">
@@ -323,6 +329,8 @@ const CockpitHoje = ({
 /** Sub-aba "O ano": a trilha dos 8 módulos. Aqui o professor VÊ o caminho. */
 const TrilhaAno = ({
   atualOrdem,
+  total,
+  trilhaFases,
   serie,
   irParaHoje,
   onIniciar,
@@ -330,6 +338,8 @@ const TrilhaAno = ({
   acaoLoading,
 }: {
   atualOrdem: number;
+  total: number;
+  trilhaFases: { intelId: number; nome: string }[];
   serie?: string | null;
   irParaHoje: () => void;
   onIniciar: () => void;
@@ -340,23 +350,23 @@ const TrilhaAno = ({
     <div className="space-y-1">
       <div className="mb-4">
         <h1 className="text-xl font-bold" style={{ color: t.text }}>
-          Os 8 {palavraPoderPlural(serie)} do ano
+          Os {total} {palavraPoderPlural(serie)} do ano
         </h1>
         <p className="text-sm mt-0.5" style={{ color: t.textMuted }}>
-          {atualOrdem > TOTAL_FASES
-            ? 'Ano completo: os 8 módulos concluídos.'
+          {atualOrdem > total
+            ? `Ano completo: os ${total} módulos concluídos.`
             : atualOrdem > 0
               ? 'Você está aqui.'
               : 'Sua trilha começa no primeiro módulo.'}
         </p>
       </div>
 
-      {TRILHA.map((nome, i) => {
+      {trilhaFases.map(({ nome }, i) => {
         const n = i + 1;
         const concluida = atualOrdem > 0 && n < atualOrdem;
         const emCurso = n === atualOrdem;
         const aSeguir = n > atualOrdem || atualOrdem === 0;
-        const isLast = n === TOTAL_FASES;
+        const isLast = n === total;
 
         const dotBg = concluida || emCurso ? t.accent : t.surface;
         const dotBorder = aSeguir && !emCurso ? `2px solid ${t.silencio}` : 'none';
@@ -400,7 +410,7 @@ const TrilhaAno = ({
                     Em andamento
                   </p>
                   <h3 className="text-base font-bold mt-0.5" style={{ color: t.text }}>
-                    {ACADEMIA_F1[n]}
+                    {nome}
                   </h3>
                   <p className="text-sm mt-1" style={{ color: t.textMuted }}>
                     Você está conduzindo este módulo.
@@ -430,7 +440,7 @@ const TrilhaAno = ({
                       className="block text-sm font-medium"
                       style={{ color: concluida ? t.textFaint : t.text }}
                     >
-                      {ACADEMIA_F1[n]}
+                      {nome}
                     </span>
                   </span>
                   {concluida ? (
@@ -613,7 +623,9 @@ const F1ArboriaPage = () => {
   }
 
   const faseAtual = faseTurma?.fase ?? null;
-  const atualOrdem = faseTurma?.ordem ?? 0; // 0 = não começou · 1..8 = em curso · 9 = ano completo
+  const atualOrdem = faseTurma?.ordem ?? 0; // 0 = não começou · 1..total = em curso · >total = ano completo
+  const total = faseTurma?.total ?? TOTAL_FASES; // nº de fases ativas (8 no fallback)
+  const trilhaFases = montarTrilhaFases(faseTurma?.trilhaIntel ?? null);
 
   const primeiroNome = profile?.nome || profile?.full_name?.split(' ')[0] || 'Professora';
   const hora = new Date().getHours();
@@ -662,6 +674,10 @@ const F1ArboriaPage = () => {
       multiAutores: false,
       dataInicio: null,
       momentosAno: null,
+      totalFases: total,
+      proximaIntelId: faseTurma?.trilhaIntel
+        ? faseTurma.trilhaIntel[ordemFechada] ?? null
+        : ordemFechada + 1,
     };
     try {
       const [obsRes, turmaRes, evRes] = await Promise.all([
@@ -692,8 +708,8 @@ const F1ArboriaPage = () => {
       base.multiAutores = new Set(obs.map((o: any) => o.professor_id)).size > 1;
       base.dataInicio = evRes?.data?.ocorrido_em ?? null;
 
-      // Fase 8: o Tempo 2 vira o encerramento do ano; contagem anual da turma
-      if (ordemFechada >= 8) {
+      // Última fase: o Tempo 2 vira o encerramento do ano; contagem anual da turma
+      if (ordemFechada >= total) {
         const inicioAno = new Date(new Date().getFullYear(), 0, 1).toISOString();
         const { count } = await supabase
           .from('observacoes')
@@ -813,6 +829,7 @@ const F1ArboriaPage = () => {
           <CockpitHoje
             faseAtual={faseAtual}
             atualOrdem={atualOrdem}
+            total={total}
             plano={planoAtividades}
             irParaAno={() => setView('ano')}
             onIniciarAula={() => navigate('/professor/aula', { state: { turmaId } })}
@@ -820,6 +837,8 @@ const F1ArboriaPage = () => {
         ) : (
           <TrilhaAno
             atualOrdem={atualOrdem}
+            total={total}
+            trilhaFases={trilhaFases}
             serie={serieSel}
             irParaHoje={() => setView('hoje')}
             onIniciar={onIniciar}
@@ -831,7 +850,7 @@ const F1ArboriaPage = () => {
 
       {confirmarOpen && faseAtual && (
         <FinalizarModal
-          moduloNome={ACADEMIA_F1[atualOrdem] ?? `Módulo ${faseAtual.numero_fase}`}
+          moduloNome={ACADEMIA_F1[faseAtual.inteligencia?.id ?? atualOrdem] ?? `Módulo ${faseAtual.numero_fase}`}
           pendentes={null}
           loading={acaoLoading}
           onConfirmar={confirmarFinalizar}
