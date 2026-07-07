@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useFaseTurma, type FaseDaTurma } from '@/hooks/useFaseTurma';
 import { useTurmaAtividadePlano, type AtividadePlanoItem } from '@/hooks/useTurmaAtividadePlano';
+import { useTurmaAtividadeEventos, derivarCorrente } from '@/hooks/useTurmaAtividadeEventos';
 import { formatTurmaLabel, getTurmaPreferida, salvarTurmaPreferida } from '@/lib/infantil';
 import AtividadeCard from '@/components/professor/AtividadeCard';
 import ViradaFaseExperience, { type ViradaDados } from '@/pages/professor/infantil/ViradaFaseExperience';
@@ -84,6 +85,8 @@ const CockpitHoje = ({
   atualOrdem,
   total,
   plano,
+  concluidas,
+  correnteId,
   irParaAno,
   onIniciarAula,
 }: {
@@ -91,6 +94,8 @@ const CockpitHoje = ({
   atualOrdem: number;
   total: number;
   plano: AtividadePlanoItem[];
+  concluidas: Set<string>;
+  correnteId: string | null;
   irParaAno: () => void;
   onIniciarAula: () => void;
 }) => {
@@ -242,7 +247,14 @@ const CockpitHoje = ({
             </p>
             <div className="space-y-2">
               {plano.map((a, i) => (
-                <AtividadeCard key={a.planoId} atividade={a} numero={i + 1} variante="claro" />
+                <AtividadeCard
+                  key={a.planoId}
+                  atividade={a}
+                  numero={i + 1}
+                  variante="claro"
+                  concluida={concluidas.has(a.atividadeId)}
+                  corrente={a.atividadeId === correnteId}
+                />
               ))}
             </div>
           </>
@@ -580,6 +592,13 @@ const InfantilArboriaPage = () => {
     turmaId,
     faseTurma?.fase?.inteligencia?.id ?? null
   );
+  // Eventos de conclusão das atividades do plano (tolerante: Set vazio => nada
+  // marca concluída). Deriva quais estão concluídas e qual é a atividade da vez.
+  const { data: concluidasSet } = useTurmaAtividadeEventos(
+    turmaId,
+    planoAtividades.map((a) => a.atividadeId)
+  );
+  const { concluidas, correnteId } = derivarCorrente(planoAtividades, concluidasSet ?? new Set());
 
   if (isLoading || faseCarregando) {
     return (
@@ -799,6 +818,8 @@ const InfantilArboriaPage = () => {
             atualOrdem={atualOrdem}
             total={total}
             plano={planoAtividades}
+            concluidas={concluidas}
+            correnteId={correnteId}
             irParaAno={() => setView('ano')}
             onIniciarAula={() => navigate('/professor/aula', { state: { turmaId } })}
           />

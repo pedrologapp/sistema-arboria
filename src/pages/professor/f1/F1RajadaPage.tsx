@@ -8,6 +8,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useRajadaTurma, type AlunoRajada } from '@/hooks/useRajadaTurma';
 import { useFaseTurma } from '@/hooks/useFaseTurma';
+import { useTurmaAtividadePlano } from '@/hooks/useTurmaAtividadePlano';
+import { useTurmaAtividadeEventos, derivarCorrente, marcarAtividadeConcluida } from '@/hooks/useTurmaAtividadeEventos';
+import AtividadeCard from '@/components/professor/AtividadeCard';
 import { SANTUARIO_INFANTIL } from '@/lib/infantilSantuario';
 import { ACADEMIA_F1 } from '@/lib/f1';
 import {
@@ -264,6 +267,21 @@ const F1RajadaPage = () => {
   const { data: alunos, isLoading } = useRajadaTurma(turmaId, fase?.id ?? null, user?.id ?? null);
   const rajadaKey = ['rajada-turma', turmaId, fase?.id ?? null, user?.id ?? null];
 
+  // PLANO do módulo + eventos de conclusão: a atividade DA VEZ à mão na aula.
+  // Tolerante: sem plano, atividadeExibir = null e a moldura fantasma segue igual.
+  const { data: planoAtividades = [] } = useTurmaAtividadePlano(turmaId, fase?.inteligencia?.id ?? null);
+  const { data: concluidasSet } = useTurmaAtividadeEventos(
+    turmaId,
+    planoAtividades.map((a) => a.atividadeId)
+  );
+  const { correnteItem, correnteId, correnteNumero, todasConcluidas } = derivarCorrente(
+    planoAtividades,
+    concluidasSet ?? new Set()
+  );
+  // Card a EXIBIR: a da vez; se o plano acabou, a última (marcada concluída).
+  const atividadeExibir = correnteItem ?? (todasConcluidas ? planoAtividades[planoAtividades.length - 1] : null);
+  const numeroExibir = correnteItem ? correnteNumero : planoAtividades.length;
+
   // O FIO DE COR: a cor oficial do mecanismo da fase costura o chrome da aula
   // (4 pontos fixos), e nunca pousa num aluno. Regra: cor da fase = AULA;
   // índigo = CADERNO (Guardar, busca, modais); verde = REGISTRO FEITO (selo).
@@ -504,6 +522,21 @@ const F1RajadaPage = () => {
   const onFinalizar = () => {
     if (temPendencia) setPendencia({ tipo: 'finalizar' });
     else setConcluirOpen(true);
+  };
+
+  // Finalizar a aula (botão do ConcluirModal): marca a atividade DA VEZ como
+  // concluída pra turma (idempotente) e sai. Marcar NUNCA bloqueia a saída, se
+  // falhar, a aula fecha do mesmo jeito; o registro dos alunos já foi salvo.
+  const finalizarAula = async () => {
+    setConcluirOpen(false);
+    if (turmaId && correnteId && user?.id) {
+      const ok = await marcarAtividadeConcluida(turmaId, correnteId, user.id);
+      if (ok) {
+        queryClient.invalidateQueries({ queryKey: ['turma-atividade-eventos', turmaId] });
+        queryClient.invalidateQueries({ queryKey: ['turma-atividade-plano', turmaId] });
+      }
+    }
+    navigate(-1);
   };
 
   const activeAluno = useMemo(
@@ -797,11 +830,11 @@ const F1RajadaPage = () => {
                   ...fioTransition,
                 }}
               >
-                <span className="flex items-center gap-2 text-sm" style={{ color: t.textMuted }}>
-                  <ClipboardList size={16} style={{ color: fio?.corDia ?? t.accent }} strokeWidth={1.75} />
-                  Detalhe da atividade
+                <span className="flex items-center gap-2 text-sm min-w-0" style={{ color: t.textMuted }}>
+                  <ClipboardList size={16} className="flex-shrink-0" style={{ color: fio?.corDia ?? t.accent }} strokeWidth={1.75} />
+                  <span className="truncate">{atividadeExibir ? atividadeExibir.nome : 'Detalhe da atividade'}</span>
                 </span>
-                <ChevronDown size={16} style={{ color: t.textFaint }} />
+                <ChevronDown size={16} className="flex-shrink-0" style={{ color: t.textFaint }} />
               </button>
             ) : (
               <>
@@ -832,11 +865,29 @@ const F1RajadaPage = () => {
                       <ChevronUp size={16} style={{ color: t.textFaint }} />
                     </button>
                   </div>
-                  <p className="text-sm leading-relaxed" style={{ color: t.textFaint }}>
-                    Use qualquer atividade sua: o Arboria registra o seu olhar sobre os
-                    alunos, não a atividade. Quando o banco de atividades chegar, as
-                    especificações da aula aparecem aqui.
-                  </p>
+                  {atividadeExibir ? (
+                    <div className="mt-1">
+                      <p className="text-[11px] mb-2" style={{ color: t.textFaint }}>
+                        {todasConcluidas
+                          ? 'Todas as atividades deste módulo foram concluídas.'
+                          : 'A atividade da vez neste módulo:'}
+                      </p>
+                      <AtividadeCard
+                        atividade={atividadeExibir}
+                        numero={numeroExibir}
+                        variante="claro"
+                        defaultAberto
+                        concluida={todasConcluidas}
+                        corrente={!todasConcluidas}
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-sm leading-relaxed" style={{ color: t.textFaint }}>
+                      Use qualquer atividade sua: o Arboria registra o seu olhar sobre os
+                      alunos, não a atividade. Quando o banco de atividades chegar, as
+                      especificações da aula aparecem aqui.
+                    </p>
+                  )}
                 </section>
 
                 {/* Convite. FIO 4: a única pele colorida da aula. CONCRETO: mostra
@@ -1062,10 +1113,7 @@ const F1RajadaPage = () => {
           corFio={fio?.cor}
           corDia={fio?.corDia}
           onFechar={() => setConcluirOpen(false)}
-          onSair={() => {
-            setConcluirOpen(false);
-            navigate(-1);
-          }}
+          onSair={finalizarAula}
         />
       )}
     </div>

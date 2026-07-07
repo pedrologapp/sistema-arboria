@@ -4,6 +4,7 @@ import { Feather, Library, ChevronLeft } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useFaseTurma } from '@/hooks/useFaseTurma';
 import { useTurmaAtividadePlano } from '@/hooks/useTurmaAtividadePlano';
+import { useTurmaAtividadeEventos, derivarCorrente } from '@/hooks/useTurmaAtividadeEventos';
 import { getTurmaPreferida } from '@/lib/infantil';
 import { SANTUARIO_INFANTIL } from '@/lib/infantilSantuario';
 import { getSantuarioF1 } from '@/lib/f1Santuario';
@@ -57,6 +58,12 @@ const F1FasePage = () => {
   // da turma): a professora vê as atividades do mecanismo que está lendo.
   const atual = lendo ?? (faseAtualValida || 1);
   const { data: planoAtividades = [] } = useTurmaAtividadePlano(turmaId, atual);
+  // Marca de concluída/atividade da vez, deste mecanismo, para esta turma.
+  const { data: concluidasSet } = useTurmaAtividadeEventos(
+    turmaId,
+    planoAtividades.map((a) => a.atividadeId)
+  );
+  const { concluidas, correnteId } = derivarCorrente(planoAtividades, concluidasSet ?? new Set());
 
   // GATE de carregamento: nunca renderizar um mecanismo "default" que depois
   // troca sozinho
@@ -418,6 +425,8 @@ const F1FasePage = () => {
                   numero={i + 1}
                   variante="escuro"
                   corAcento={m.corAcento}
+                  concluida={concluidas.has(a.atividadeId)}
+                  corrente={a.atividadeId === correnteId}
                 />
               ))}
             </div>

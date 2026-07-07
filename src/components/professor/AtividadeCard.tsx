@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { ChevronDown, Target, Package, Compass, Eye, FileText } from 'lucide-react';
+import { ChevronDown, Target, Package, Compass, Eye, FileText, CheckCircle2 } from 'lucide-react';
 import type { AtividadePlanoItem } from '@/hooks/useTurmaAtividadePlano';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 
@@ -36,6 +36,10 @@ interface Paleta {
   pdfColor: string;
   pdfBorder: string;
   hoverBg: string;
+  /** Cor do texto/ícone da marca "concluída". */
+  concluidaColor: string;
+  /** Fundo suave da marca "concluída". */
+  concluidaBg: string;
 }
 
 const paletaClaro = (): Paleta => ({
@@ -53,6 +57,8 @@ const paletaClaro = (): Paleta => ({
   pdfColor: t.accentText,
   pdfBorder: t.accentBorder,
   hoverBg: t.surfaceSunken,
+  concluidaColor: t.presenteText,
+  concluidaBg: 'rgba(34,160,107,0.12)',
 });
 
 const paletaEscuro = (corAcento?: string): Paleta => ({
@@ -70,6 +76,8 @@ const paletaEscuro = (corAcento?: string): Paleta => ({
   pdfColor: '#FFFFFF',
   pdfBorder: 'rgba(255,255,255,0.3)',
   hoverBg: 'rgba(255,255,255,0.1)',
+  concluidaColor: '#8CE0B4',
+  concluidaBg: 'rgba(140,224,180,0.16)',
 });
 
 /** Bloco rotulado dentro do card aberto: só renderiza se houver conteúdo. */
@@ -109,6 +117,8 @@ const AtividadeCard = ({
   variante,
   corAcento,
   defaultAberto = false,
+  concluida = false,
+  corrente = false,
 }: {
   atividade: AtividadePlanoItem;
   /** Posição exibida no selo (1-based). */
@@ -117,6 +127,10 @@ const AtividadeCard = ({
   /** Só no escuro: cor oficial da inteligência, para tingir selo e rótulos. */
   corAcento?: string;
   defaultAberto?: boolean;
+  /** A atividade já foi marcada como concluída para a turma (finalizar aula). */
+  concluida?: boolean;
+  /** É a atividade DA VEZ (destaque leve na borda). Sem efeito se concluída. */
+  corrente?: boolean;
 }) => {
   const [aberto, setAberto] = useState(defaultAberto);
   const conteudoId = useId();
@@ -125,10 +139,19 @@ const AtividadeCard = ({
   const temDetalhe =
     !!(atividade.objetivo || atividade.materiais || atividade.comoConduzir || atividade.oQueObservar || atividade.pdfUrl);
 
+  // Destaque leve na corrente: a borda ganha a cor de acento (nunca na concluída).
+  const destaque = corrente && !concluida;
+  const corDestaque = variante === 'escuro' ? corAcento ?? '#FFFFFF' : t.accent;
+  const borda = destaque ? corDestaque : p.cardBorder;
+
   return (
     <div
       className="rounded-xl overflow-hidden"
-      style={{ backgroundColor: p.cardBg, border: `1px solid ${p.cardBorder}` }}
+      style={{
+        backgroundColor: p.cardBg,
+        border: `1px solid ${borda}`,
+        boxShadow: destaque ? `0 0 0 1px ${borda}` : undefined,
+      }}
     >
       <button
         type="button"
@@ -139,7 +162,7 @@ const AtividadeCard = ({
       >
         <span
           className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0"
-          style={{ backgroundColor: p.badgeBg, color: p.badgeColor }}
+          style={{ backgroundColor: p.badgeBg, color: p.badgeColor, opacity: concluida ? 0.65 : 1 }}
         >
           {numero}
         </span>
@@ -147,12 +170,21 @@ const AtividadeCard = ({
           <span className="block text-sm font-medium" style={{ color: p.nome }}>
             {atividade.nome}
           </span>
-          {atividade.objetivo && !aberto && (
+          {atividade.objetivo && !aberto && !concluida && (
             <span className="block text-[11px] truncate" style={{ color: p.objetivoFaint }}>
               {atividade.objetivo}
             </span>
           )}
         </span>
+        {concluida && (
+          <span
+            className="flex-shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5"
+            style={{ backgroundColor: p.concluidaBg, color: p.concluidaColor }}
+          >
+            <CheckCircle2 size={13} strokeWidth={2} aria-hidden="true" />
+            <span className="text-[10.5px] font-semibold">concluída</span>
+          </span>
+        )}
         <ChevronDown
           size={18}
           className="flex-shrink-0 transition-transform"
