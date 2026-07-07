@@ -35,8 +35,11 @@ import { infantilTheme as t } from '@/styles/infantilTheme';
  *
  * GESTO ISOLADO: o app usa deslizar horizontal para trocar de inteligência
  * (santuário) e de aba (layout), via onTouchStart/onTouchEnd em ancestrais. Os
- * handlers do carrossel chamam stopPropagation (touch e mouse) para o swipe do
- * card NUNCA borbulhar para o swipe da página/aba.
+ * handlers de gesto ficam na RAIZ do conteúdo aberto do card (chips + carrossel
+ * + rodapé + PDF + beiradas). Qualquer arraste HORIZONTAL que comece em qualquer
+ * ponto do card aberto chama stopPropagation e NUNCA borbulha para o swipe da
+ * página/aba. O arraste VERTICAL é deixado passar de propósito: o scroll da
+ * página nunca é sequestrado (só stopPropagation, jamais preventDefault).
  *
  * Acessível: cabeçalho é <button> com aria-expanded/aria-controls; os atalhos
  * são <button> em role=tablist; as setas são <button> com aria-label; o carrossel
@@ -79,6 +82,23 @@ interface Paleta {
   dotOn: string;
   dotOff: string;
 }
+
+/**
+ * Cor de texto legível sobre um fundo sólido. Serve a pílula "Agora" na variante
+ * escura: `corAcento` pode ser uma inteligência de cor clara, onde texto branco
+ * some. Estima a luminância relativa e devolve texto escuro em fundo claro.
+ * Se a cor não for um hex de 6 dígitos, mantém o branco (fallback seguro).
+ */
+const corLegivelSobre = (hex?: string): string => {
+  if (!hex) return '#FFFFFF';
+  const m = hex.replace('#', '');
+  if (m.length !== 6 || /[^0-9a-fA-F]/.test(m)) return '#FFFFFF';
+  const r = parseInt(m.slice(0, 2), 16);
+  const g = parseInt(m.slice(2, 4), 16);
+  const b = parseInt(m.slice(4, 6), 16);
+  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return lum > 0.6 ? '#1A2233' : '#FFFFFF';
+};
 
 const paletaClaro = (): Paleta => ({
   cardBg: t.surfaceAlt,
@@ -127,7 +147,7 @@ const paletaEscuro = (corAcento?: string): Paleta => ({
   concluidaColor: '#8CE0B4',
   concluidaBg: 'rgba(140,224,180,0.16)',
   agoraBg: corAcento ?? 'rgba(255,255,255,0.2)',
-  agoraColor: '#FFFFFF',
+  agoraColor: corAcento ? corLegivelSobre(corAcento) : '#FFFFFF',
   chipOnBg: corAcento ?? 'rgba(255,255,255,0.92)',
   chipOnColor: '#FFFFFF',
   chipBg: 'rgba(255,255,255,0.08)',
@@ -210,43 +230,64 @@ const AtividadeCard = ({
     });
   };
 
-  // ---- GESTO ISOLADO: swipe do carrossel nunca borbulha para a página/aba ----
+  // Abre/fecha. Ao RECOLHER, o trilho volta para o Objetivo (seção 0): reabrir
+  // sempre começa na ordem escolhida pelo Fundador, não na última seção vista.
+  const alternar = () => {
+    if (aberto) setIndice(0);
+    setAberto((v) => !v);
+  };
+
+  // ---- GESTO ISOLADO A PARTIR DA RAIZ DO CARD ABERTO ----------------------
+  // Estes handlers vivem no contêiner do conteúdo ABERTO (chips + carrossel +
+  // rodapé + PDF + beiradas). Qualquer gesto HORIZONTAL que comece em qualquer
+  // ponto do card aberto é isolado com stopPropagation, então nunca borbulha
+  // para o swipe de inteligência (santuário) nem para o swipe de aba (layout).
+  // O gesto VERTICAL é deixado passar de propósito: o scroll da página nunca é
+  // sequestrado (só usamos stopPropagation, jamais preventDefault).
   const toqueRef = useRef<{ x: number; y: number } | null>(null);
   const mouseRef = useRef<number | null>(null);
 
   const onTouchStart = (e: React.TouchEvent) => {
-    e.stopPropagation();
     const t0 = e.touches[0];
     toqueRef.current = { x: t0.clientX, y: t0.clientY };
   };
   const onTouchMove = (e: React.TouchEvent) => {
-    // Segura a propagação também no meio do gesto: o santuário/layout leem só
-    // start/end, mas isolamos o gesto inteiro por segurança.
-    e.stopPropagation();
+    const ini = toqueRef.current;
+    if (!ini) return;
+    const t0 = e.touches[0];
+    const dx = t0.clientX - ini.x;
+    const dy = t0.clientY - ini.y;
+    // Assim que o gesto se revela horizontal, isola já no meio do movimento.
+    // Enquanto for vertical (scroll), deixa borbular normalmente.
+    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) e.stopPropagation();
   };
   const onTouchEnd = (e: React.TouchEvent) => {
-    e.stopPropagation();
     const ini = toqueRef.current;
     toqueRef.current = null;
     if (!ini) return;
     const fim = e.changedTouches[0];
     const dx = fim.clientX - ini.x;
     const dy = fim.clientY - ini.y;
-    // Só reage a gesto claramente horizontal: não sequestra o scroll vertical.
-    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) ir(dx < 0 ? 1 : -1);
+    // Só um gesto claramente horizontal é tratado como swipe: isola (para não
+    // trocar inteligência/aba) e, se houver carrossel, muda de seção.
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+      e.stopPropagation();
+      ir(dx < 0 ? 1 : -1);
+    }
   };
 
   const onMouseDown = (e: React.MouseEvent) => {
-    e.stopPropagation();
     mouseRef.current = e.clientX;
   };
   const onMouseUp = (e: React.MouseEvent) => {
-    e.stopPropagation();
     const x0 = mouseRef.current;
     mouseRef.current = null;
     if (x0 === null) return;
     const dx = e.clientX - x0;
-    if (Math.abs(dx) > 40) ir(dx < 0 ? 1 : -1);
+    if (Math.abs(dx) > 40) {
+      e.stopPropagation();
+      ir(dx < 0 ? 1 : -1);
+    }
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -293,7 +334,7 @@ const AtividadeCard = ({
     >
       <button
         type="button"
-        onClick={() => setAberto((v) => !v)}
+        onClick={alternar}
         aria-expanded={aberto}
         aria-controls={conteudoId}
         className="w-full text-left p-3 flex items-center gap-2.5 transition-colors"
@@ -351,6 +392,11 @@ const AtividadeCard = ({
           id={conteudoId}
           className="px-3 pb-3.5 pt-0.5"
           style={{ borderTop: `1px solid ${p.divisor}` }}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onMouseDown={onMouseDown}
+          onMouseUp={onMouseUp}
         >
           <div className="pt-1" />
 
@@ -397,11 +443,6 @@ const AtividadeCard = ({
                 aria-label={`${secoes[Math.min(indice, n - 1)]?.titulo ?? ''}, ${Math.min(indice, n - 1) + 1} de ${n}`}
                 tabIndex={0}
                 onKeyDown={onKeyDown}
-                onTouchStart={onTouchStart}
-                onTouchMove={onTouchMove}
-                onTouchEnd={onTouchEnd}
-                onMouseDown={onMouseDown}
-                onMouseUp={onMouseUp}
               >
                 <div
                   className="flex transition-transform duration-300 ease-out motion-reduce:transition-none"
