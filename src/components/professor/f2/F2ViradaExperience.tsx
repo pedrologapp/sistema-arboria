@@ -93,8 +93,11 @@ const F2ViradaExperience = ({ dados, onFechar }: { dados: F2ViradaDados; onFecha
   const corFecha = corDaCasa(dados.casaFechaId);
   const corFechaClara = clarear(corFecha, 0.5); // legível sobre o véu escuro
   const corProx = dados.proximaCasaId != null ? corDaCasa(dados.proximaCasaId) : t.accent;
-  // Encerramento do ano usa o índigo neutro do shell (nenhuma Casa "vence" o ano).
-  const corPassagem = dados.anoCompleto ? t.accent : corProx;
+  // So ha Tempo 2 (passagem) quando existe proxima Casa. A ultima Casa apenas
+  // encerra o capitulo: o encerramento do ANO fica para depois (pedido do Fundador),
+  // entao nao mostramos card de ano aqui.
+  const temProxima = !dados.anoCompleto && dados.proximaCasaId != null;
+  const corPassagem = corProx;
 
   const semObservacao = dados.alunosObservados === 0;
   const observacaoIndisponivel = dados.alunosObservados == null;
@@ -244,12 +247,12 @@ const F2ViradaExperience = ({ dados, onFechar }: { dados: F2ViradaDados; onFecha
 
           <Casc i={7} className="mt-auto pt-8">
             <button
-              onClick={() => setTempo(2)}
+              onClick={() => (temProxima ? setTempo(2) : onFechar())}
               autoFocus
               className="w-full rounded-2xl py-3.5 text-[15px] font-semibold active:scale-[0.99] transition-transform"
               style={{ backgroundColor: '#FFFFFF', color: '#1A130B' }}
             >
-              {dados.anoCompleto ? 'Ver o encerramento do ano' : 'Passar o bastão'}
+              {temProxima ? 'Passar o bastão' : 'Concluir'}
             </button>
           </Casc>
         </div>
@@ -285,52 +288,13 @@ const F2ViradaExperience = ({ dados, onFechar }: { dados: F2ViradaDados; onFecha
                 border: `1px solid ${hexA(corPassagem, 0.35)}`,
               }}
             >
-              {dados.anoCompleto ? (
-                <TreePine size={26} strokeWidth={1.5} style={{ color: corPassagem }} />
-              ) : (
-                <Shield size={26} strokeWidth={1.5} style={{ color: corPassagem }} />
-              )}
+              <Shield size={26} strokeWidth={1.5} style={{ color: corPassagem }} />
             </div>
           </Casc>
 
-          {dados.anoCompleto ? (
-            /* --------- ÚLTIMA CASA -> ENCERRAMENTO DO ANO DA TURMA --------- */
-            <>
-              <Casc i={1} className="mt-6 text-center">
-                <p
-                  className="text-[11px] uppercase font-semibold"
-                  style={{ color: t.accentText, letterSpacing: '0.28em' }}
-                >
-                  Trilha completa
-                </p>
-              </Casc>
-              <Casc i={2} className="mt-4">
-                <h2 className="font-serif text-[28px] leading-tight text-center" style={{ color: t.text }}>
-                  As Casas percorreram o ano com o {dados.turmaLabel}.
-                </h2>
-              </Casc>
-              <Casc i={3} className="mt-4">
-                <p
-                  className="font-serif italic text-[15px] leading-relaxed text-center max-w-[280px] mx-auto"
-                  style={{ color: t.textMuted }}
-                >
-                  Cada Casa deixou a sua marca, e nenhuma apaga a anterior. O que os mentores viram
-                  vive no Diário de cada aluno, e segue com eles.
-                </p>
-              </Casc>
-              <Casc i={4} className="mt-auto pt-8">
-                <button
-                  onClick={onFechar}
-                  className="w-full rounded-2xl py-3.5 text-[15px] font-semibold active:scale-[0.99] transition-transform"
-                  style={{ backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowMd }}
-                >
-                  Concluir a virada
-                </button>
-              </Casc>
-            </>
-          ) : (
-            /* --------- PASSAGEM PARA A PRÓXIMA CASA --------- */
-            <>
+          {/* Passagem para a proxima Casa. O Tempo 2 so e alcancado quando ha
+              proxima Casa (temProxima); a ultima Casa encerra ainda no Tempo 1. */}
+          <>
               <Casc i={1} className="mt-6 text-center">
                 <p
                   className="text-[11px] uppercase font-semibold"
@@ -405,7 +369,6 @@ const F2ViradaExperience = ({ dados, onFechar }: { dados: F2ViradaDados; onFecha
                 </button>
               </Casc>
             </>
-          )}
         </div>
       )}
     </div>
