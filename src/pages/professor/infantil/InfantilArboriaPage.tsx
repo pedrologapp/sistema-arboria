@@ -233,6 +233,7 @@ const CockpitHoje = ({
                   variante="claro"
                   concluida={concluidas.has(a.atividadeId)}
                   corrente={a.atividadeId === correnteId}
+                  defaultAberto={a.atividadeId === correnteId && !concluidas.has(a.atividadeId)}
                 />
               ))}
             </div>
