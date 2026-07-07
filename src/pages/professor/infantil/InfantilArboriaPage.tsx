@@ -10,6 +10,7 @@ import { useProfessor } from '@/contexts/ProfessorContext';
 import { useFaseTurma, type FaseDaTurma } from '@/hooks/useFaseTurma';
 import { useTurmaAtividadePlano, type AtividadePlanoItem } from '@/hooks/useTurmaAtividadePlano';
 import { formatTurmaLabel, getTurmaPreferida, salvarTurmaPreferida } from '@/lib/infantil';
+import AtividadeCard from '@/components/professor/AtividadeCard';
 import ViradaFaseExperience, { type ViradaDados } from '@/pages/professor/infantil/ViradaFaseExperience';
 import { Skeleton } from '@/components/ui/skeleton';
 import { infantilTheme as t } from '@/styles/infantilTheme';
@@ -236,42 +237,13 @@ const CockpitHoje = ({
         {plano.length > 0 ? (
           <>
             <p className="text-sm mb-3" style={{ color: t.textMuted }}>
-              As atividades desta exploração, na sequência montada para a sua turma.
+              As atividades desta exploração, na sequência montada para a sua turma. Toque para
+              abrir cada uma.
             </p>
-            <div>
-              {plano.map((a, i) => {
-                const ultimo = i === plano.length - 1;
-                return (
-                  <div key={a.planoId}>
-                    <div
-                      className="rounded-xl p-3 flex items-center gap-2.5"
-                      style={{ border: `1px solid ${t.border}`, backgroundColor: t.surfaceAlt }}
-                    >
-                      <span
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0"
-                        style={{ backgroundColor: t.accentSoft, color: t.accentText }}
-                      >
-                        {i + 1}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium truncate" style={{ color: t.text }}>
-                          {a.nome}
-                        </span>
-                        {a.objetivo && (
-                          <span className="block text-[11px] truncate" style={{ color: t.textFaint }}>
-                            {a.objetivo}
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                    {!ultimo && (
-                      <div className="flex justify-center py-0.5">
-                        <ChevronDown size={16} style={{ color: t.silencio }} />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="space-y-2">
+              {plano.map((a, i) => (
+                <AtividadeCard key={a.planoId} atividade={a} numero={i + 1} variante="claro" />
+              ))}
             </div>
           </>
         ) : (

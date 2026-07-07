@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Feather, Library, ChevronLeft } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useFaseTurma } from '@/hooks/useFaseTurma';
+import { useTurmaAtividadePlano } from '@/hooks/useTurmaAtividadePlano';
 import { getTurmaPreferida } from '@/lib/infantil';
 import { SANTUARIO_INFANTIL } from '@/lib/infantilSantuario';
 import { getSantuarioF1 } from '@/lib/f1Santuario';
 import { ATIVIDADE_OITO_CAMINHOS_F1 as ATIVIDADE_OITO_CAMINHOS } from '@/lib/f1';
+import AtividadeCard from '@/components/professor/AtividadeCard';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 
 const TOTAL = 8;
@@ -50,6 +52,12 @@ const F1FasePage = () => {
   // o swipe de abas do layout ignora esta rota)
   const toqueRef = useRef<{ x: number; y: number; t: number } | null>(null);
 
+  // A inteligência VISTA agora (o usuário navega os 8; default = a da turma).
+  // O plano das atividades é buscado por turma + esta inteligência (não a fase
+  // da turma): a professora vê as atividades do mecanismo que está lendo.
+  const atual = lendo ?? (faseAtualValida || 1);
+  const { data: planoAtividades = [] } = useTurmaAtividadePlano(turmaId, atual);
+
   // GATE de carregamento: nunca renderizar um mecanismo "default" que depois
   // troca sozinho
   const carregando = faseTurma === undefined && !!turmaId && !!profile?.institution_id;
@@ -71,7 +79,6 @@ const F1FasePage = () => {
     );
   }
 
-  const atual = lendo ?? (faseAtualValida || 1);
   // Faixa da turma: 1º-3º (superpoderes) vê a cena do aluno de 6-8; 4º-5º
   // (talentos) vê a cena de 9-10 com a pergunta metacognitiva. Cores e nomes
   // do santuário seguem universais (SANTUARIO_INFANTIL nos círculos de navegação).
@@ -395,20 +402,38 @@ const F1FasePage = () => {
           </div>
         </div>
 
-        {/* Moldura do banco de atividades */}
-        <div
-          className="rounded-2xl p-4 text-center vf-rise"
-          style={{ border: '1px dashed rgba(255,255,255,0.35)', animationDelay: '800ms' }}
-        >
-          <Library size={16} strokeWidth={1.5} className="mx-auto mb-1.5" style={{ color: 'rgba(255,255,255,0.7)' }} />
-          <p className="text-[13px] font-semibold" style={{ color: 'rgba(255,255,255,0.9)' }}>
-            Atividades deste módulo · em breve
-          </p>
-          <p className="text-xs leading-relaxed mt-0.5" style={{ color: 'rgba(255,255,255,0.65)' }}>
-            Aqui vão morar as atividades prontas para usar na sala: uma a uma, com tudo que
-            você precisa.
-          </p>
-        </div>
+        {/* Atividades desta inteligência, do plano da turma. Cards expansíveis
+            (tema escuro, tingidos pela cor do mecanismo). Sem plano para esta
+            inteligência: estado vazio honesto e discreto, sem promessa de "em breve". */}
+        <section className="vf-rise" style={{ animationDelay: '800ms' }}>
+          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
+            Atividades desta inteligência
+          </h2>
+          {planoAtividades.length > 0 ? (
+            <div className="space-y-2">
+              {planoAtividades.map((a, i) => (
+                <AtividadeCard
+                  key={a.planoId}
+                  atividade={a}
+                  numero={i + 1}
+                  variante="escuro"
+                  corAcento={m.corAcento}
+                />
+              ))}
+            </div>
+          ) : (
+            <div
+              className="rounded-2xl p-4 flex gap-3"
+              style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)' }}
+            >
+              <Library size={16} strokeWidth={1.5} className="flex-shrink-0 mt-0.5" style={{ color: 'rgba(255,255,255,0.6)' }} />
+              <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                Nenhuma atividade montada para esta inteligência na sua turma. O que sua turma
+                for usar aparece aqui.
+              </p>
+            </div>
+          )}
+        </section>
       </div>
     </>
   );

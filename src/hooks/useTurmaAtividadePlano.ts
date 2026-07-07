@@ -12,6 +12,10 @@ export interface AtividadePlanoItem {
   atividadeId: string;
   nome: string;
   objetivo: string | null;
+  materiais: string | null;
+  comoConduzir: string | null;
+  oQueObservar: string | null;
+  pdfUrl: string | null;
   ordem: number;
 }
 
@@ -40,7 +44,9 @@ export const useTurmaAtividadePlano = (
       const anoLetivo = new Date().getFullYear();
       try {
         const { data, error } = await fromAny('turma_atividade_plano')
-          .select('id, ordem, atividade:atividade_id (id, nome, objetivo, ativo)')
+          .select(
+            'id, ordem, atividade:atividade_id (id, nome, objetivo, materiais, como_conduzir, o_que_observar, pdf_url, ativo)'
+          )
           .eq('turma_id', turmaId!)
           .eq('ano_letivo', anoLetivo)
           .eq('inteligencia_id', inteligenciaId!)
@@ -50,7 +56,16 @@ export const useTurmaAtividadePlano = (
         return (data as unknown as Array<{
           id: string;
           ordem: number;
-          atividade: { id: string; nome: string; objetivo: string | null; ativo: boolean } | null;
+          atividade: {
+            id: string;
+            nome: string;
+            objetivo: string | null;
+            materiais: string | null;
+            como_conduzir: string | null;
+            o_que_observar: string | null;
+            pdf_url: string | null;
+            ativo: boolean;
+          } | null;
         }>)
           .filter((r) => r.atividade && r.atividade.ativo !== false)
           .map((r) => ({
@@ -58,6 +73,10 @@ export const useTurmaAtividadePlano = (
             atividadeId: r.atividade!.id,
             nome: r.atividade!.nome,
             objetivo: r.atividade!.objetivo ?? null,
+            materiais: r.atividade!.materiais ?? null,
+            comoConduzir: r.atividade!.como_conduzir ?? null,
+            oQueObservar: r.atividade!.o_que_observar ?? null,
+            pdfUrl: r.atividade!.pdf_url ?? null,
             ordem: r.ordem,
           }));
       } catch {
