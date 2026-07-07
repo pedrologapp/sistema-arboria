@@ -22,6 +22,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { infantilTheme as t } from '@/styles/infantilTheme';
+import LequeObservacao from '@/components/professor/LequeObservacao';
 
 /** Modal de fechamento: celebra o que o professor VIU, nunca o que faltou.
  *  Backdrop/Esc = só fecha o modal (fica na aula); o botão é quem SAI. */
@@ -424,6 +425,15 @@ const F1RajadaPage = () => {
     removerImagem();
   };
 
+  // O leque só EMPURRA texto pro campo (concatena com espaço); o professor
+  // segue editando/apagando normal no teclado. Aditivo: não toca no fluxo atual.
+  const inserirDoLeque = (trecho: string) => {
+    setTexto((prev) => {
+      const base = prev.replace(/\s+$/, '');
+      return base ? `${base} ${trecho}` : trecho;
+    });
+  };
+
   const abrirCard = (alunoId: string) => {
     if (activeId === alunoId) {
       fecharEditor();
@@ -563,13 +573,21 @@ const F1RajadaPage = () => {
         </button>
       )}
       <div className="flex items-center justify-between mt-2">
-        <button
-          onClick={() => fileRef.current?.click()}
-          className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-2 py-2"
-          style={{ color: t.textMuted }}
-        >
-          <ImagePlus size={16} /> Foto do trabalho (não do aluno)
-        </button>
+        <div className="flex items-center gap-0.5 min-w-0">
+          <LequeObservacao
+            inteligenciaId={fase?.inteligencia?.id ?? null}
+            valorAtual={texto}
+            onInserir={inserirDoLeque}
+            cores={{ acento: fio?.corDia, lavagem: fio?.corLavagem, borda: fio?.corBorda }}
+          />
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-2 py-2"
+            style={{ color: t.textMuted }}
+          >
+            <ImagePlus size={16} /> Foto do trabalho (não do aluno)
+          </button>
+        </div>
         <button
           onClick={() => guardar(aluno.id)}
           disabled={(!texto.trim() && !imagem) || registrar.isPending}

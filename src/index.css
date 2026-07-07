@@ -241,6 +241,27 @@ select option:checked {
   .vf-rise { transform: none; }
 }
 
+/* Infantil: o leque de observação (menu radial). As opções "brotam" do centro;
+   o scrim entra suave. Reduced-motion: quase instantâneo, sem escala. */
+@keyframes leque-pop {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes leque-hub-pop {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes leque-scrim-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.leque-opt   { animation: leque-pop 200ms ease-out both; }
+.leque-hub   { animation: leque-hub-pop 200ms ease-out both; }
+.leque-scrim { animation: leque-scrim-in 160ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .leque-opt, .leque-hub, .leque-scrim { animation-duration: 1ms; }
+}
+
 /* Infantil: troca de abas: a tela desliza pro lado (nunca apaga-e-reaparece) */
 @keyframes tab-in-left {
   from { opacity: 0; transform: translateX(28px); }
