@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Shield, ChevronDown, Paperclip, Settings2, Route, Clock, Flag } from 'lucide-react';
+import { Shield, ChevronDown, Paperclip, Settings2, Route, Clock, Flag, CalendarRange, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
@@ -813,6 +813,32 @@ const F2ArboriaPage = () => {
               ))}
             </div>
           </div>
+
+          {/* Ver o ano: caminho claro pra a linha do ano da turma selecionada.
+              Não substitui o toque de seleção; abre a tela dedicada. */}
+          {turmaAtiva && (
+            <button
+              onClick={() => navigate(`/professor/f2/linha-ano/${turmaAtiva.turma_id}`)}
+              className="w-full flex items-center gap-2.5 rounded-2xl p-3 text-left transition-transform active:scale-[0.99]"
+              style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
+            >
+              <span
+                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: t.accentSoft }}
+              >
+                <CalendarRange size={18} style={{ color: t.accent }} strokeWidth={1.75} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold" style={{ color: t.text }}>
+                  Ver o ano do {formatTurmaLabel(turmaAtiva.serie, turmaAtiva.turma_letra) || turmaAtiva.nome}
+                </span>
+                <span className="block text-[11px]" style={{ color: t.textFaint }}>
+                  As Casas na ordem, as datas e a sua vez
+                </span>
+              </span>
+              <ChevronRight size={18} style={{ color: t.textFaint }} className="flex-shrink-0" />
+            </button>
+          )}
 
           {/* Detalhe da turma selecionada */}
           {turmaAtiva && (

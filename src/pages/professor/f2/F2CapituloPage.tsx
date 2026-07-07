@@ -44,7 +44,7 @@ import LequeObservacao from '@/components/professor/LequeObservacao';
  * LÓGICA da tela escura antiga (CapituloProfessorPage), sem tocá-la: a antiga
  * segue servindo o F2 com o flag desligado.
  *
- * Seções: cabeçalho · data da assembleia · etapas do capítulo · elenco/papéis ·
+ * Seções: cabeçalho · data do capítulo · etapas do capítulo · elenco/papéis ·
  * missões (liberar + faltantes) · observações ao vivo. Tudo é salvo na hora
  * (upsert), como já fazia a tela antiga.
  */
@@ -775,9 +775,9 @@ const F2CapituloPage = () => {
         )}
       </div>
 
-      {/* 2. DATA DA ASSEMBLEIA */}
+      {/* 2. DATA DO CAPÍTULO */}
       <section>
-        <SecaoTitulo icon={<CalendarDays size={16} strokeWidth={1.75} />}>Data da assembleia</SecaoTitulo>
+        <SecaoTitulo icon={<CalendarDays size={16} strokeWidth={1.75} />}>Data do capítulo</SecaoTitulo>
         <div
           className="rounded-xl p-4"
           style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
