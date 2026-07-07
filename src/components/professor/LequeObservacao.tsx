@@ -59,6 +59,16 @@ const posNoCirculo = (i: number, n: number, raio: number) => {
   return { x: Math.cos(ang) * raio, y: Math.sin(ang) * raio };
 };
 
+/** Fundo bem claro derivado da cor da inteligência (pro chip do caminho). */
+const hexParaRgba = (hex: string, alpha: number) => {
+  const h = hex.replace('#', '');
+  const n = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const r = parseInt(n.slice(0, 2), 16);
+  const g = parseInt(n.slice(2, 4), 16);
+  const b = parseInt(n.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 const LequeObservacao = ({
   inteligenciaId,
   valorAtual,
@@ -309,6 +319,9 @@ const LequeObservacao = ({
                   {/* Opções ao redor */}
                   {itens.map((item, i) => {
                     const { x, y } = posNoCirculo(i, itens.length, raio);
+                    // No passo 3 (Cross-IM), cada caminho sai NA COR da sua
+                    // inteligência: borda + texto na cor, fundo bem claro derivado.
+                    const corItem = item.opt.cor;
                     return (
                       <button
                         key={`${passo}-${item.opt.l}-${i}`}
@@ -322,12 +335,12 @@ const LequeObservacao = ({
                           transform: 'translate(-50%, -50%)',
                           minWidth: 44,
                           minHeight: 44,
-                          backgroundColor: t.surface,
-                          border: `1px solid ${borda}`,
-                          color: t.text,
+                          backgroundColor: corItem ? hexParaRgba(corItem, 0.12) : t.surface,
+                          border: `1px solid ${corItem ?? borda}`,
+                          color: corItem ?? t.text,
                           boxShadow: t.shadowMd,
                           animationDelay: `${i * 28}ms`,
-                          ['--tw-ring-color' as string]: acento,
+                          ['--tw-ring-color' as string]: corItem ?? acento,
                         }}
                       >
                         {item.opt.l}

@@ -350,13 +350,17 @@ const InfantilRajadaPage = () => {
         if (upErr) throw upErr;
         anexoPath = path;
       }
+      // As reticências do leque são só CUE de continuação: não vão pro diário
+      // (decisão do Fundador). O textarea segue mostrando "..." pra a professora;
+      // aqui, só no ponto de salvar, limpamos e normalizamos os espaços.
+      const textoLimpo = textoObs.replace(/\.\.\./g, '').replace(/\s{2,}/g, ' ').trim();
       const { error } = await supabase.from('observacoes').insert({
         aluno_id: alunoId,
         professor_id: user!.id,
         turma_id: turmaId,
         fase_id: fase.id,
         institution_id: profile?.institution_id,
-        observacao_texto: textoObs,
+        observacao_texto: textoLimpo,
         anexo_url: anexoPath,
       } as any);
       if (error) throw error;
