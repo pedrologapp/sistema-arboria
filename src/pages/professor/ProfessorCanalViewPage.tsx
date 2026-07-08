@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Hash, Users, Eye } from 'lucide-react';
+import { ArrowLeft, Hash, Users, Eye, ChevronLeft } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +10,8 @@ import { MensagemFixada } from '@/components/chat/MensagemFixada';
 import { DateSeparator } from '@/components/chat/DateSeparator';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { format } from 'date-fns';
-import { F2_REFORMA_ATIVA } from '@/config/f2Reforma';
+import { F2_REFORMA_ATIVA, corDaCasa } from '@/config/f2Reforma';
+import { infantilTheme as t } from '@/styles/infantilTheme';
 import { cn } from '@/lib/utils';
 
 const ProfessorCanalViewPage = () => {
@@ -23,7 +24,9 @@ const ProfessorCanalViewPage = () => {
   // Pele CLARA no mesmo gate do chrome (Infantil/F1/F2 reformado); escura só no
   // F2 antigo. No claro o acento usa a cor da Casa; no escuro segue cinza neutro.
   const claro = !(segmento === 'fundamental2' && !F2_REFORMA_ATIVA);
-  const cor = claro ? (casaMentor?.cor_hex || '#4F46E5') : '#94a3b8';
+  // Claro: acento na cor canônica da Casa (corDaCasa por id, como F2CasaPage).
+  // Escuro: cinza neutro do chat do aluno/admin, intacto.
+  const cor = claro ? corDaCasa(casaMentor?.id) : '#94a3b8';
 
   // Buscar dados do canal
   const { data: canal, isLoading: loadingCanal } = useQuery({
@@ -163,33 +166,58 @@ const ProfessorCanalViewPage = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-140px)]">
       {/* Header */}
-      <div className={cn('flex items-center justify-between py-3 border-b', claro ? 'border-[#DDE0E6]' : 'border-violet-500/10')}>
-        <div className="flex items-center gap-3">
+      {claro ? (
+        <div className="glass-light flex items-center gap-2 py-2.5 -mx-4 px-4" style={{ borderBottom: `1px solid ${t.border}` }}>
           <button
             onClick={() => navigate('/professor/chat')}
-            className={cn(
-              'p-2 -ml-1 rounded-lg transition-colors',
-              claro ? 'text-[#5A6473] hover:text-[#1C2230] hover:bg-black/[0.04]' : 'text-white/50 hover:text-white hover:bg-white/[0.06]',
-            )}
+            className="p-1.5 -ml-1.5 rounded-full active:scale-95 flex-shrink-0"
+            style={{ color: t.textMuted }}
             aria-label="Voltar para o chat"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ChevronLeft size={22} />
           </button>
-          {canal?.icone ? (
-            <span className="text-lg">{canal.icone}</span>
-          ) : (
-            <Hash className={cn('w-5 h-5', claro ? 'text-[#5A6473]' : 'text-white/60')} />
-          )}
-          <h1 className={cn('text-lg font-bold', claro ? 'text-[#1C2230]' : 'text-white')}>
-            #{canal?.nome || 'Canal'}
-          </h1>
+          <div
+            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: `${cor}1A` }}
+          >
+            <Hash size={18} style={{ color: cor }} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold truncate" style={{ color: t.text }}>
+              {(canal?.nome || 'Canal').toLowerCase()}
+            </p>
+            <p className="text-[11px] flex items-center gap-1" style={{ color: t.textFaint }}>
+              <Users size={11} />
+              {onlineCount || 0} online
+            </p>
+          </div>
         </div>
+      ) : (
+        <div className="flex items-center justify-between py-3 border-b border-violet-500/10">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/professor/chat')}
+              className="p-2 -ml-1 rounded-lg transition-colors text-white/50 hover:text-white hover:bg-white/[0.06]"
+              aria-label="Voltar para o chat"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            {canal?.icone ? (
+              <span className="text-lg">{canal.icone}</span>
+            ) : (
+              <Hash className="w-5 h-5 text-white/60" />
+            )}
+            <h1 className="text-lg font-bold text-white">
+              #{canal?.nome || 'Canal'}
+            </h1>
+          </div>
 
-        <div className={cn('flex items-center gap-1.5 text-sm', claro ? 'text-[#5A6473]' : 'text-white/60')}>
-          <Users className="w-4 h-4" />
-          <span>{onlineCount || 0}</span>
+          <div className="flex items-center gap-1.5 text-sm text-white/60">
+            <Users className="w-4 h-4" />
+            <span>{onlineCount || 0}</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Mensagens Fixadas */}
       {mensagensFixadas.length > 0 && (
@@ -272,10 +300,13 @@ const ProfessorCanalViewPage = () => {
             casaColor={cor}
           />
         ) : (
-          <div className={cn('p-2.5 rounded-xl text-center', claro ? 'bg-[#F6F7F9]' : 'bg-white/[0.04]')}>
+          <div
+            className={cn('p-2.5 rounded-xl text-center', !claro && 'bg-white/[0.04]')}
+            style={claro ? { backgroundColor: t.surfaceSunken } : undefined}
+          >
             <div className="flex items-center justify-center gap-1.5">
-              <Eye className={cn('w-3.5 h-3.5', claro ? 'text-[#6E7788]' : 'text-white/25')} />
-              <span className={cn('text-xs', claro ? 'text-[#6E7788]' : 'text-white/25')}>Modo leitura</span>
+              <Eye className={cn('w-3.5 h-3.5', !claro && 'text-white/25')} style={claro ? { color: t.textMuted } : undefined} />
+              <span className={cn('text-xs', !claro && 'text-white/25')} style={claro ? { color: t.textMuted } : undefined}>Modo leitura</span>
             </div>
           </div>
         )}

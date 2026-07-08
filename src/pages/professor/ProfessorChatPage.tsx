@@ -1,14 +1,18 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Hash, Lock } from 'lucide-react';
+import { Search, Hash, Lock, MessageCircle, ChevronRight, Crown, Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { getStatusOnline } from '@/utils/statusOnline';
+import { getIniciais } from '@/lib/infantil';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { F2_REFORMA_ATIVA } from '@/config/f2Reforma';
+import { F2_REFORMA_ATIVA, corDaCasa } from '@/config/f2Reforma';
+import { infantilTheme as t } from '@/styles/infantilTheme';
 
 const ProfessorChatPage = () => {
   const navigate = useNavigate();
@@ -21,6 +25,8 @@ const ProfessorChatPage = () => {
   // com o layout escuro atual. Assim o corpo do chat sempre casa com a moldura.
   const claro = !(segmento === 'fundamental2' && !F2_REFORMA_ATIVA);
   const corCasa = casaMentor?.cor_hex || '#4F46E5';
+  // Acento do ramo CLARO: cor canônica da Casa por id (corDaCasa, como F2CasaPage).
+  const cor = corDaCasa(casaMentor?.id);
 
   // ═══════════════════════════════════════
   // QUERIES
@@ -112,7 +118,7 @@ const ProfessorChatPage = () => {
   });
 
   // Alunos da casa (para DMs)
-  const { data: alunosCasa = [] } = useQuery({
+  const { data: alunosCasa = [], isLoading: alunosLoading } = useQuery({
     queryKey: ['prof-alunos-dm', casaMentor?.id, profile?.institution_id],
     queryFn: async () => {
       if (!casaMentor?.id || !profile?.institution_id) return [];
@@ -278,6 +284,91 @@ const ProfessorChatPage = () => {
   };
 
   // ═══════════════════════════════════════
+  // CARTÕES DA PELE CLARA (F2/Infantil/F1)
+  // Só usados no ramo `claro`; o escuro segue com CanalRow/DmRow acima.
+  // ═══════════════════════════════════════
+
+  const CanalCard = ({ canal, readOnly = false }: { canal: any; readOnly?: boolean }) => {
+    const naoLidas = mensagensNaoLidas[canal.id] || 0;
+    return (
+      <button
+        onClick={() => navigate(`/professor/chat/canal/${canal.id}`)}
+        className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-transform active:scale-[0.99]"
+        style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
+      >
+        <div
+          className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: `${cor}1A` }}
+        >
+          <Hash size={18} style={{ color: cor }} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium leading-snug truncate" style={{ color: t.text }}>
+            {canal.nome.toLowerCase()}
+          </p>
+          {readOnly && (
+            <p className="text-xs mt-0.5" style={{ color: t.textFaint }}>Somente leitura</p>
+          )}
+        </div>
+        {naoLidas > 0 && (
+          <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1.5 flex-shrink-0">
+            {naoLidas > 99 ? '99+' : naoLidas}
+          </span>
+        )}
+        <ChevronRight size={18} style={{ color: t.textFaint }} className="flex-shrink-0" />
+      </button>
+    );
+  };
+
+  const DmCard = ({ membro, badge = false }: { membro: any; badge?: boolean }) => {
+    const status = getStatusOnline(membro.ultima_atividade);
+    const cargo = membro.cargos_casa?.find((c: any) => c.ativo)?.cargo;
+    const cargoLabel = cargo === 'lider' ? 'Líder' : cargo === 'coordenador' ? 'Coord.' : '';
+    const CargoIcon = cargo === 'lider' ? Crown : cargo === 'coordenador' ? Star : null;
+    const nome = membro.full_name || membro.nome || 'Sem nome';
+    const legenda = [cargoLabel, [membro.serie, membro.turma].filter(Boolean).join(' ')].filter(Boolean).join(' · ');
+    return (
+      <button
+        onClick={() => iniciarConversa(membro.id)}
+        className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-transform active:scale-[0.99]"
+        style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
+      >
+        <div className="relative flex-shrink-0">
+          <Avatar className="h-11 w-11">
+            <AvatarImage src={membro.avatar_url || undefined} className="object-cover" />
+            <AvatarFallback className="text-sm font-semibold" style={{ backgroundColor: t.accentSoft, color: t.accentText }}>
+              {getIniciais(nome)}
+            </AvatarFallback>
+          </Avatar>
+          {status.status === 'online' && (
+            <span
+              className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2"
+              style={{ backgroundColor: t.presente, borderColor: t.surface }}
+            />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium leading-snug truncate flex items-center gap-1" style={{ color: t.text }}>
+            {CargoIcon && <CargoIcon size={13} style={{ color: cor }} className="flex-shrink-0" />}
+            {nome}
+          </p>
+          {legenda && (
+            <p className="text-xs mt-0.5 truncate" style={{ color: t.textFaint }}>{legenda}</p>
+          )}
+        </div>
+        {badge && <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />}
+        <ChevronRight size={18} style={{ color: t.textFaint }} className="flex-shrink-0" />
+      </button>
+    );
+  };
+
+  const EyebrowSecao = ({ children }: { children: ReactNode }) => (
+    <p className="text-[11px] uppercase tracking-wide font-semibold mb-2 px-1" style={{ color: t.textFaint }}>
+      {children}
+    </p>
+  );
+
+  // ═══════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════
 
@@ -299,6 +390,101 @@ const ProfessorChatPage = () => {
   const membrosComuns = alunosCasa.filter(m => !m.cargos_casa?.find((c: any) => c.ativo)?.cargo);
   const filteredLideranca = termo ? liderancaAlunos.filter(m => (m.full_name || m.nome || '').toLowerCase().includes(termo)) : liderancaAlunos;
   const filteredMembros = termo ? membrosComuns.filter(m => (m.full_name || m.nome || '').toLowerCase().includes(termo)) : membrosComuns;
+
+  // ── PELE CLARA (F2 reformado / Infantil / F1): redesign em cartões F2 ────────
+  if (claro) {
+    return (
+      <div className="pt-5 space-y-5">
+        {/* Cabeçalho no padrão F2: título + ícone no acento, subtítulo em textFaint */}
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: t.text }}>
+            <MessageCircle size={22} style={{ color: cor }} strokeWidth={1.75} />
+            Chat
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: t.textFaint }}>
+            {membrosOnline} {membrosOnline === 1 ? 'aluno online' : 'alunos online'} na casa
+          </p>
+        </div>
+
+        {/* Busca no padrão do F2AlunosPage */}
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: t.textFaint }} />
+          <input
+            type="text"
+            placeholder="Buscar canais ou alunos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm transition-colors focus:outline-none focus-visible:ring-2"
+            style={{ backgroundColor: t.surfaceSunken, border: `1px solid ${t.border}`, color: t.text, ['--tw-ring-color' as string]: t.accent }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = t.accent; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = t.border; }}
+          />
+        </div>
+
+        {/* MINHA CASA */}
+        <div>
+          <EyebrowSecao>Casa {casaMentor?.nome || ''}</EyebrowSecao>
+          <div className="space-y-2">
+            {canalMentoria && <CanalCard canal={canalMentoria} />}
+            {canaisTexto.map((canal) => (
+              <CanalCard key={canal.id} canal={canal} readOnly />
+            ))}
+            {canalLideranca && <CanalCard canal={canalLideranca} />}
+          </div>
+        </div>
+
+        {/* ESCOLA */}
+        {filteredEscola.length > 0 && (
+          <div>
+            <EyebrowSecao>Escola</EyebrowSecao>
+            <div className="space-y-2">
+              {filteredEscola.map((canal) => (
+                <CanalCard key={canal.id} canal={canal} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* MENSAGENS DIRETAS */}
+        <div>
+          <EyebrowSecao>Mensagens diretas</EyebrowSecao>
+          {alunosLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : alunosCasa.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: t.accentSoft }}>
+                <MessageCircle size={26} style={{ color: cor }} strokeWidth={1.5} />
+              </div>
+              <p className="text-sm" style={{ color: t.textMuted }}>Nenhum aluno na casa ainda.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {[...filteredLideranca, ...filteredMembros]
+                .filter((m) => dmNaoLidaIds.has(m.id))
+                .map((m) => <DmCard key={m.id} membro={m} badge />)}
+              {filteredLideranca
+                .filter((m) => !dmNaoLidaIds.has(m.id))
+                .slice(0, 5)
+                .map((m) => <DmCard key={m.id} membro={m} />)}
+              {filteredMembros
+                .filter((m) => !dmNaoLidaIds.has(m.id))
+                .slice(0, 5)
+                .map((m) => <DmCard key={m.id} membro={m} />)}
+              {alunosCasa.length > 10 && !searchTerm && (
+                <p className="py-2 text-center text-xs" style={{ color: t.textFaint }}>
+                  {alunosCasa.length} alunos na casa
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 space-y-5 pb-24">

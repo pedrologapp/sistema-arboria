@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,7 +10,10 @@ import { useEffect, useRef } from 'react';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { StatusIndicator } from '@/components/chat/StatusIndicator';
 import { MensagemBubble } from '@/components/chat/MensagemBubble';
-import { F2_REFORMA_ATIVA } from '@/config/f2Reforma';
+import { F2_REFORMA_ATIVA, corDaCasa } from '@/config/f2Reforma';
+import { getIniciais } from '@/lib/infantil';
+import { getStatusOnline } from '@/utils/statusOnline';
+import { infantilTheme as t } from '@/styles/infantilTheme';
 import { cn } from '@/lib/utils';
 
 interface MensagemPrivada {
@@ -54,7 +57,9 @@ const ProfessorDmPage = () => {
 
   // Pele CLARA no mesmo gate do chrome (Infantil/F1/F2 reformado); escura só no F2 antigo.
   const claro = !(segmento === 'fundamental2' && !F2_REFORMA_ATIVA);
-  const casaColor = casaMentor?.cor_hex || '#6366F1';
+  // No claro o acento é a cor canônica da Casa (corDaCasa por id da inteligência,
+  // como F2CasaPage); no escuro segue o cor_hex do registro, intacto.
+  const casaColor = claro ? corDaCasa(casaMentor?.id) : (casaMentor?.cor_hex || '#6366F1');
 
   // Buscar dados do outro participante (aluno)
   const { data: outroParticipante, isLoading: loadingParticipante } = useQuery({
@@ -190,45 +195,78 @@ const ProfessorDmPage = () => {
     );
   }
 
+  const alunoOnline = claro && getStatusOnline(outroParticipante?.ultima_atividade || null).status === 'online';
+
   return (
     <div className="flex flex-col h-[calc(100vh-140px)]">
       {/* Header */}
-      <div className={cn('flex items-center justify-between py-3 border-b', claro ? 'border-[#DDE0E6]' : 'border-violet-500/10')}>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
+      {claro ? (
+        <div className="glass-light flex items-center gap-2 py-2.5 -mx-4 px-4" style={{ borderBottom: `1px solid ${t.border}` }}>
+          <button
             onClick={() => navigate('/professor/chat')}
-            className={claro ? 'text-[#5A6473] hover:text-[#1C2230]' : 'text-white/60 hover:text-white'}
+            className="p-1.5 -ml-1.5 rounded-full active:scale-95 flex-shrink-0"
+            style={{ color: t.textMuted }}
             aria-label="Voltar para o chat"
           >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-
-          <div className="relative">
+            <ChevronLeft size={22} />
+          </button>
+          <div className="relative flex-shrink-0">
             <Avatar className="h-9 w-9">
-              <AvatarImage src={outroParticipante?.avatar_url || undefined} alt={nomeAluno} />
-              <AvatarFallback className={cn('text-sm', claro ? 'bg-[#EEF0FE] text-[#4338CA]' : 'bg-white/10 text-white/70')}>
-                {iniciaisAluno}
+              <AvatarImage src={outroParticipante?.avatar_url || undefined} alt={nomeAluno} className="object-cover" />
+              <AvatarFallback className="text-xs font-semibold" style={{ backgroundColor: t.accentSoft, color: t.accentText }}>
+                {getIniciais(nomeAluno)}
               </AvatarFallback>
             </Avatar>
-            <div className={cn('absolute -bottom-0.5 -right-0.5 border-2 rounded-full', claro ? 'border-white' : 'border-background')}>
-              <StatusIndicator
-                ultimaAtividade={outroParticipante?.ultima_atividade || null}
-                size="sm"
+            {alunoOnline && (
+              <span
+                className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2"
+                style={{ backgroundColor: t.presente, borderColor: t.surface }}
               />
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold truncate" style={{ color: t.text }}>{nomeAluno}</p>
+            <p className="text-[11px]" style={{ color: t.textFaint }}>{alunoOnline ? 'Online agora' : 'Mensagem direta'}</p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between py-3 border-b border-violet-500/10">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/professor/chat')}
+              className="text-white/60 hover:text-white"
+              aria-label="Voltar para o chat"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+
+            <div className="relative">
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={outroParticipante?.avatar_url || undefined} alt={nomeAluno} />
+                <AvatarFallback className="text-sm bg-white/10 text-white/70">
+                  {iniciaisAluno}
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute -bottom-0.5 -right-0.5 border-2 rounded-full border-background">
+                <StatusIndicator
+                  ultimaAtividade={outroParticipante?.ultima_atividade || null}
+                  size="sm"
+                />
+              </div>
+            </div>
+
+            <div>
+              <span className="font-medium text-white">{nomeAluno}</span>
             </div>
           </div>
 
-          <div>
-            <span className={cn('font-medium', claro ? 'text-[#1C2230]' : 'text-white')}>{nomeAluno}</span>
-          </div>
+          <Button variant="ghost" size="icon" className="text-white/60 hover:text-white" aria-label="Mais opções">
+            <MoreHorizontal className="w-5 h-5" />
+          </Button>
         </div>
-
-        <Button variant="ghost" size="icon" className={claro ? 'text-[#5A6473] hover:text-[#1C2230]' : 'text-white/60 hover:text-white'} aria-label="Mais opções">
-          <MoreHorizontal className="w-5 h-5" />
-        </Button>
-      </div>
+      )}
 
       {/* Mensagens */}
       <ScrollArea className="flex-1 px-2 py-4">
@@ -257,6 +295,7 @@ const ProfessorDmPage = () => {
                 isMe={msg.autor?.id === profile?.id}
                 casaColor={casaColor}
                 light={claro}
+                bolhaDm={claro}
                 agruparComAnterior={deveAgrupar(msg, mensagens[index - 1] || null)}
               />
             ))}
@@ -264,23 +303,32 @@ const ProfessorDmPage = () => {
           </>
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className={cn('w-16 h-16 rounded-full flex items-center justify-center mb-4', claro ? 'bg-[#F6F7F9]' : 'bg-white/5')}>
+            <div
+              className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+              style={claro ? { backgroundColor: t.accentSoft } : undefined}
+            >
               <Avatar className="h-10 w-10">
                 <AvatarImage src={outroParticipante?.avatar_url || undefined} />
-                <AvatarFallback className={claro ? 'bg-[#EEF0FE] text-[#4338CA]' : 'bg-white/10 text-white/50'}>
-                  {iniciaisAluno}
+                <AvatarFallback
+                  className={claro ? '' : 'bg-white/10 text-white/50'}
+                  style={claro ? { backgroundColor: t.accentSoft, color: t.accentText } : undefined}
+                >
+                  {claro ? getIniciais(nomeAluno) : iniciaisAluno}
                 </AvatarFallback>
               </Avatar>
             </div>
-            <p className={cn('text-sm', claro ? 'text-[#5A6473]' : 'text-white/60')}>
-              Inicie uma conversa com {nomeAluno}
+            <p className="text-sm" style={claro ? { color: t.textMuted } : undefined}>
+              <span className={claro ? '' : 'text-white/60'}>Inicie uma conversa com {nomeAluno}</span>
             </p>
           </div>
         )}
       </ScrollArea>
 
       {/* Input - Professor PODE enviar DMs */}
-      <div className={cn('pt-3 pb-2 border-t', claro ? 'border-[#DDE0E6]' : 'border-violet-500/10')}>
+      <div
+        className={cn('pt-3 pb-2', !claro && 'border-t border-violet-500/10')}
+        style={claro ? { borderTop: `1px solid ${t.border}` } : undefined}
+      >
         <ChatInput
           onEnviar={enviarMensagem}
           casaColor={casaColor}
