@@ -342,11 +342,11 @@ const CapaCapituloTurma = ({
       >
         <EscudoCasa casaId={casaMentor?.id ?? null} brasao={turma.casaAtualBrasao} size={44} />
         <h2 className="text-base font-bold mt-3" style={{ color: t.text }}>
-          Sem capítulo ativo nesta fase
+          Em breve, seu capítulo aparece aqui
         </h2>
         <p className="text-sm mt-1.5 max-w-xs mx-auto" style={{ color: t.textMuted }}>
-          Quando a fase da sua Casa tiver um capítulo cadastrado, ele aparece aqui como a capa da
-          jornada da turma.
+          Assim que a fase da sua Casa tiver um capítulo cadastrado, ele nasce neste espaço, como a
+          capa da jornada da turma. Por enquanto, o lugar já está guardado para ele.
         </p>
       </div>
     );
