@@ -7,9 +7,16 @@
 -- professor_casa, helper get_mentor_turma_ids, e as policies ASSIGNED de leitura
 -- de aluno_turma e observacoes.
 --
--- NAO dropa NENHUMA policy. A R18 institution-wide (mig 20260302202306) segue
--- viva de proposito: o F2 ANTIGO em producao depende dela. O assigned-only so
--- fica EFETIVO na Migration 2 (go-live), que dropa a R18.
+-- NAO dropa NENHUMA policy: esta parte SO SOMA caminhos de leitura (assigned).
+-- O assigned-only NAO fica efetivo aqui, e NAO fica efetivo so dropando a R18.
+-- Alem da R18 institution-wide (mig 20260302202306), seguem vivas de proposito
+-- TRES policies casa-wide pre-existentes (permissivas/OR) que dao ao mentor F2
+-- leitura de TODA crianca da sua Casa na instituicao inteira, sem recorte de turma:
+--   observacoes "Professor ve observacoes da sua casa" (mig 20260108195404),
+--   aluno_turma "Professores veem aluno_turma da sua casa" (mig 20260107204528),
+--   profiles    "Professores veem alunos da sua casa"     (mig 20260107204528).
+-- O F2 ANTIGO em producao depende desse conjunto. O assigned-only so fica EFETIVO
+-- quando a Migration 2 (go-live) dropar a R18 E essas tres casa-wide de F2.
 --
 -- RLS e OR: estas policies SOMAM leitura (subconjunto), nao restringem nada.
 -- Zero regressao para Infantil/F1/aluno. Aluno nunca alcanca. Soft-delete intacto.
