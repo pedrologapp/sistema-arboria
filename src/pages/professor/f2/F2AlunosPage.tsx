@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Search, NotebookPen, List, LayoutGrid, ChevronLeft, Shield, ChevronRight } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
-import { useAlunosTurmasComStatus } from '@/hooks/useAlunosTurmasComStatus';
+import { useTurmasF2Instituicao, useAlunosDaTurmaF2 } from '@/hooks/useF2Diario';
 import {
   getIniciais,
   formatTurmaLabel,
@@ -19,21 +19,25 @@ const CHAVE_TURMA = 'f2-diario-turma';
 
 /**
  * Aba DIÁRIO (Fundamental 2, reforma). Fluxo em DOIS passos porque o mentor tem
- * VÁRIAS turmas:
+ * acesso a VÁRIAS turmas:
  *   1. Escolher a turma (grade no estilo da aba Arboria do F2).
  *   2. Lista de alunos daquela turma (mesmo visual claro do Infantil/F1);
  *      tocar num aluno abre o diário (thread).
+ *
+ * ACESSO COMPARTILHADO: no F2 não há vinculação por turma. Qualquer mentor vê
+ * TODAS as turmas do Fundamental 2 da instituição e TODOS os alunos delas
+ * (useTurmasF2Instituicao / useAlunosDaTurmaF2, por institution_id e turma_id).
  *
  * Só é montada quando segmento === 'fundamental2' E F2_REFORMA_ATIVA
  * (o roteamento vive no AlunosPageWrapper). Tema claro, infantilTheme.
  */
 const F2AlunosPage = () => {
   const navigate = useNavigate();
-  const { turmasVinculadas, casaMentor } = useProfessor();
-  const { data: alunos, isLoading } = useAlunosTurmasComStatus();
+  const { profile, casaMentor } = useProfessor();
+  const { data: turmas, isLoading: turmasLoading } = useTurmasF2Instituicao(profile?.institution_id);
 
   // Turma escolhida persiste ao entrar/voltar de um thread (evita reescolher a
-  // cada aluno). Mentor com 1 turma só pula o passo 1 (default abaixo).
+  // cada aluno). Uma só turma no F2 pula o passo 1 (default abaixo).
   const [turmaSel, setTurmaSelState] = useState<string | null>(() => {
     try {
       return sessionStorage.getItem(CHAVE_TURMA);
@@ -61,29 +65,23 @@ const F2AlunosPage = () => {
 
   const cor = corDaCasa(casaMentor?.id);
 
-  // Quantidade de alunos por turma (para o card de seleção).
-  const contagemPorTurma = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const a of alunos ?? []) map.set(a.turmaId, (map.get(a.turmaId) ?? 0) + 1);
-    return map;
-  }, [alunos]);
-
-  // Só turmas realmente vinculadas contam. Mentor com 1 turma pula a escolha.
-  const turmas = turmasVinculadas ?? [];
-  const turmaUnica = turmas.length === 1 ? turmas[0].id : null;
+  const listaTurmas = turmas ?? [];
+  const turmaUnica = listaTurmas.length === 1 ? listaTurmas[0].id : null;
   const turmaAtiva = turmaSel ?? turmaUnica;
-  // Se a turma salva não existe mais nas vinculadas, volta pra escolha.
-  const turmaValida = turmaAtiva && turmas.some((x) => x.id === turmaAtiva) ? turmaAtiva : null;
-  const turmaInfo = turmas.find((x) => x.id === turmaValida) ?? null;
+  // Se a turma salva não existe mais na instituição, volta pra escolha.
+  const turmaValida = turmaAtiva && listaTurmas.some((x) => x.id === turmaAtiva) ? turmaAtiva : null;
+  const turmaInfo = listaTurmas.find((x) => x.id === turmaValida) ?? null;
+
+  // Alunos SÓ da turma escolhida (todos os alunos da turma, sem vinculação).
+  const { data: alunos, isLoading: alunosLoading } = useAlunosDaTurmaF2(turmaValida);
 
   const alunosFiltrados = useMemo(() => {
-    if (!alunos || !turmaValida) return [];
+    if (!alunos) return [];
     return alunos.filter((a) => {
-      if (a.turmaId !== turmaValida) return false;
       if (busca && !normalizarBusca(a.nome).includes(normalizarBusca(busca))) return false;
       return true;
     });
-  }, [alunos, turmaValida, busca]);
+  }, [alunos, busca]);
 
   // ---- PASSO 1: escolher a turma ------------------------------------------
   if (!turmaValida) {
@@ -99,13 +97,13 @@ const F2AlunosPage = () => {
           </p>
         </div>
 
-        {isLoading ? (
+        {turmasLoading ? (
           <div className="grid grid-cols-2 gap-2">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-24 rounded-2xl" />
             ))}
           </div>
-        ) : turmas.length === 0 ? (
+        ) : listaTurmas.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-14 text-center">
             <div
               className="w-14 h-14 rounded-full flex items-center justify-center mb-3"
@@ -114,35 +112,32 @@ const F2AlunosPage = () => {
               <Users size={28} style={{ color: t.accent }} strokeWidth={1.5} />
             </div>
             <p className="text-sm" style={{ color: t.textMuted }}>
-              Você ainda não tem turmas vinculadas.
+              Não há turmas do Fundamental 2 nesta instituição.
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2">
-            {turmas.map((turma) => {
-              const n = contagemPorTurma.get(turma.id) ?? 0;
-              return (
-                <button
-                  key={turma.id}
-                  onClick={() => setTurmaSel(turma.id)}
-                  className="w-full h-full rounded-2xl p-3 text-left transition-transform active:scale-[0.99]"
-                  style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
+            {listaTurmas.map((turma) => (
+              <button
+                key={turma.id}
+                onClick={() => setTurmaSel(turma.id)}
+                className="w-full h-full rounded-2xl p-3 text-left transition-transform active:scale-[0.99]"
+                style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
+              >
+                <span
+                  className="rounded-xl flex items-center justify-center"
+                  style={{ width: 38, height: 38, backgroundColor: `${cor}1A` }}
                 >
-                  <span
-                    className="rounded-xl flex items-center justify-center"
-                    style={{ width: 38, height: 38, backgroundColor: `${cor}1A` }}
-                  >
-                    <Shield size={20} style={{ color: cor }} strokeWidth={1.75} />
-                  </span>
-                  <p className="text-sm font-bold mt-2.5" style={{ color: t.text }}>
-                    {formatTurmaLabel(turma.serie, turma.turma_letra) || turma.nome}
-                  </p>
-                  <p className="text-[11px] mt-0.5" style={{ color: t.textFaint }}>
-                    {n > 0 ? `${n} ${n === 1 ? 'aluno' : 'alunos'}` : 'Ver alunos'}
-                  </p>
-                </button>
-              );
-            })}
+                  <Shield size={20} style={{ color: cor }} strokeWidth={1.75} />
+                </span>
+                <p className="text-sm font-bold mt-2.5" style={{ color: t.text }}>
+                  {formatTurmaLabel(turma.serie, turma.turma_letra) || turma.nome}
+                </p>
+                <p className="text-[11px] mt-0.5" style={{ color: t.textFaint }}>
+                  Ver alunos
+                </p>
+              </button>
+            ))}
           </div>
         )}
       </div>
@@ -150,10 +145,11 @@ const F2AlunosPage = () => {
   }
 
   // ---- PASSO 2: lista de alunos da turma escolhida ------------------------
-  const podeTrocar = turmas.length > 1;
+  const podeTrocar = listaTurmas.length > 1;
   const turmaLabel = turmaInfo
     ? formatTurmaLabel(turmaInfo.serie, turmaInfo.turma_letra) || turmaInfo.nome
     : '';
+  const totalAlunos = alunos?.length ?? 0;
 
   return (
     <div className="pt-5 space-y-4">
@@ -177,14 +173,12 @@ const F2AlunosPage = () => {
         </h1>
         <p className="text-sm mt-0.5" style={{ color: t.textFaint }}>
           {turmaLabel}
-          {alunosFiltrados.length > 0 || !busca
-            ? ` · ${contagemPorTurma.get(turmaValida) ?? 0} ${(contagemPorTurma.get(turmaValida) ?? 0) === 1 ? 'aluno' : 'alunos'}`
-            : ''}
+          {!alunosLoading ? ` · ${totalAlunos} ${totalAlunos === 1 ? 'aluno' : 'alunos'}` : ''}
         </p>
       </div>
 
       {/* Convite no presente */}
-      {!isLoading && (contagemPorTurma.get(turmaValida) ?? 0) > 0 && (
+      {!alunosLoading && totalAlunos > 0 && (
         <div
           className="rounded-2xl p-3.5"
           style={{ backgroundColor: t.accentSoft, border: `1px solid ${t.accentBorder}` }}
@@ -243,7 +237,7 @@ const F2AlunosPage = () => {
       </div>
 
       {/* Lista */}
-      {isLoading ? (
+      {alunosLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-16 w-full rounded-xl" />
