@@ -140,50 +140,65 @@ function usePrefersReducedMotion(): boolean {
 }
 
 // ============================================================
-// Nó da trilha
+// Bloco da trilha: cada FASE é um bloco arredondado preenchido na cor da Casa
+// (antes era um ponto/nó circular). Fica na posição da fase no eixo de tempo; o
+// rail atrás conecta os blocos e faz ler como uma linha do tempo contínua.
 // ============================================================
-const No = ({ p, mentorCor }: { p: PassoLaid; mentorCor: string }) => {
+const Bloco = ({ p, mentorCor }: { p: PassoLaid; mentorCor: string }) => {
   const { passo } = p;
   const base: React.CSSProperties = {
-    width: 13,
-    height: 13,
-    borderRadius: '50%',
+    display: 'block',
+    width: 26,
+    height: 17,
+    borderRadius: 6,
     boxSizing: 'border-box',
   };
   if (passo.ehMentor) {
-    // Sua fase: sólido na cor da Casa do mentor, com anel discreto.
+    // Sua fase: bloco sólido na cor da Casa do mentor, com realce (a bandeira
+    // "sua fase" + data acima reforçam a marca).
     return (
       <span
         style={{
           ...base,
-          width: 16,
-          height: 16,
+          width: 28,
+          height: 20,
           backgroundColor: mentorCor,
-          border: '2px solid #FFFFFF',
-          boxShadow: `0 0 0 3px ${mentorCor}33`,
+          border: '1.5px solid #FFFFFF',
+          boxShadow: `0 0 0 2.5px ${mentorCor}59`,
         }}
       />
     );
   }
   if (passo.estado === 'concluida') {
-    return <span style={{ ...base, backgroundColor: passo.cor, border: '2px solid #FFFFFF' }} />;
+    // Concluída: bloco sólido na cor da Casa.
+    return <span style={{ ...base, backgroundColor: passo.cor, border: '1.5px solid #FFFFFF' }} />;
   }
   if (passo.estado === 'agora') {
+    // Agora: o bloco mais visível da linha (maior + anel de realce na cor).
     return (
       <span
         style={{
           ...base,
-          width: 17,
-          height: 17,
+          width: 30,
+          height: 21,
           backgroundColor: passo.cor,
-          border: '2px solid #FFFFFF',
-          boxShadow: `0 0 0 3px ${passo.cor}2E`,
+          border: '1.5px solid #FFFFFF',
+          boxShadow: `0 0 0 3px ${passo.cor}40`,
         }}
       />
     );
   }
-  // a caminho: contorno na cor da Casa
-  return <span style={{ ...base, backgroundColor: t.surface, border: `2px solid ${passo.cor}` }} />;
+  // A caminho: bloco esmaecido na cor da Casa (fill de baixa opacidade) com
+  // contorno na cor cheia, pra legibilidade mesmo nas Casas de tom claro.
+  return (
+    <span
+      style={{
+        ...base,
+        backgroundColor: `${passo.cor}26`,
+        border: `1.5px solid ${passo.cor}`,
+      }}
+    />
+  );
 };
 
 // ============================================================
@@ -274,7 +289,7 @@ const Lane = ({
             className="absolute"
             style={{ top: '50%', left: `${p.frac * 100}%`, transform: 'translate(-50%, -50%)', zIndex: 2 }}
           >
-            <No p={p} mentorCor={mentorCor} />
+            <Bloco p={p} mentorCor={mentorCor} />
           </span>
         ))}
         {/* bandeira: sua fase */}
