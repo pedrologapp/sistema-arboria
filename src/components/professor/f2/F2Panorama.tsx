@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Maximize2, X, RotateCcw, CalendarDays } from 'lucide-react';
+import { Maximize2, X, RotateCcw, CalendarDays, ChevronDown } from 'lucide-react';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 import { formatTurmaLabel } from '@/lib/infantil';
 import type { PanoramaTurma } from '@/hooks/useF2Panorama';
@@ -508,6 +508,7 @@ const F2Panorama = ({
   mode?: 'inline' | 'button';
 }) => {
   const [cheia, setCheia] = useState(false);
+  const [mostrarInline, setMostrarInline] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const layout = useMemo(
@@ -517,14 +518,16 @@ const F2Panorama = ({
 
   if (turmas.length === 0) return null;
 
-  // MODO BOTÃO: ação secundária que abre o calendário completo em tela cheia.
+  // MODO BOTÃO: um botão que REVELA o painel do calendário embutido (retrato
+  // rolável, com o seu proprio botão de tela cheia). Nao pula pra tela cheia.
   if (mode === 'button') {
     return (
       <>
         <button
           type="button"
-          onClick={() => setCheia(true)}
-          aria-label="Abrir o calendário de todas as turmas em tela cheia"
+          onClick={() => setMostrarInline((v) => !v)}
+          aria-expanded={mostrarInline}
+          aria-label="Ver o calendário de todas as turmas"
           className="w-full flex items-center gap-2.5 rounded-2xl p-3 text-left transition-transform active:scale-[0.99]"
           style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
         >
@@ -542,21 +545,24 @@ const F2Panorama = ({
               O ano de todas as turmas, no tempo
             </span>
           </span>
-          <Maximize2 size={16} style={{ color: t.textFaint }} className="flex-shrink-0" />
+          <ChevronDown
+            size={18}
+            style={{ color: t.textFaint, transform: mostrarInline ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}
+            className="flex-shrink-0"
+          />
         </button>
 
-        {cheia && (
-          <TelaCheia
-            layout={layout}
-            mentorCor={mentorCor}
-            onTurmaClick={(id) => {
-              // Tocar numa turma no calendário fecha a tela cheia e leva ao detalhe.
-              setCheia(false);
-              onTurmaClick(id);
-            }}
-            turmaSel={turmaSel}
-            onFechar={() => setCheia(false)}
-          />
+        {mostrarInline && (
+          <div className="mt-3">
+            <F2Panorama
+              turmas={turmas}
+              cadenciaDias={cadenciaDias}
+              mentorCor={mentorCor}
+              onTurmaClick={onTurmaClick}
+              turmaSel={turmaSel}
+              mode="inline"
+            />
+          </div>
         )}
       </>
     );

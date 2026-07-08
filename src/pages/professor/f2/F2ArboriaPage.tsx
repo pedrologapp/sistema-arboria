@@ -825,21 +825,26 @@ const F2ArboriaPage = () => {
           {/* CALENDÁRIO: botão secundário que abre o panorama completo em tela
               cheia (todas as turmas no tempo). Não toma a aba com o gráfico. */}
           {panorama && panorama.turmas.length > 0 && (
-            <F2Panorama
-              mode="button"
-              turmas={panorama.turmas}
-              cadenciaDias={panorama.cadenciaDias}
-              mentorCor={corDaCasa(casaMentor.id)}
-              onTurmaClick={selecionarTurma}
-              turmaSel={turmaAtiva?.turma_id ?? null}
-            />
+            <div>
+              <p className="text-[11px] uppercase tracking-wide font-semibold mb-2 px-1" style={{ color: t.textFaint }}>
+                Veja o calendário
+              </p>
+              <F2Panorama
+                mode="button"
+                turmas={panorama.turmas}
+                cadenciaDias={panorama.cadenciaDias}
+                mentorCor={corDaCasa(casaMentor.id)}
+                onTurmaClick={selecionarTurma}
+                turmaSel={turmaAtiva?.turma_id ?? null}
+              />
+            </div>
           )}
 
           {/* Suas turmas: grade de DUAS LINHAS que rola na horizontal. As turmas
               preenchem 2 linhas e seguem pra a direita; deslize pra ver o resto. */}
           <div>
             <p className="text-[11px] uppercase tracking-wide font-semibold mb-2 px-1" style={{ color: t.textFaint }}>
-              Suas turmas
+              Escolha aqui sua turma
             </p>
             <div
               tabIndex={0}
