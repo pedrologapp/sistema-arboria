@@ -8,123 +8,43 @@ import { formatTurmaLabel } from '@/lib/infantil';
 import type { PanoramaTurma } from '@/hooks/useF2Panorama';
 
 /**
- * O CALENDÁRIO (panorama) do F2: TODAS as turmas de uma vez, cada uma com a
- * trilha inteira deitada num eixo de MESES. O que já passou fica à esquerda da
- * reta "hoje"; o que vem, à direita. À esquerda de cada turma, a FASE ATUAL. A
- * bandeira na cor da Casa do mentor marca a SUA FASE, com a data.
+ * O CALENDÁRIO (panorama) do F2: TODAS as turmas de uma vez, cada uma como uma
+ * FITA de fases coladas em SEQUÊNCIA (posição 1..N da trilha da turma), pra ler
+ * como "a próxima fase é a seguinte". Os blocos ficam contíguos (encostados),
+ * cada um na cor da Casa. A fita não posiciona por data: a ordem é a sequência.
  *
- * POSICIONAMENTO (honesto): a fase ATUAL de cada turma fica na reta "hoje". As
- * demais se espalham pela cadência (institution_settings.f2_dias_por_encontro,
- * senão ~5 semanas por capítulo) SÓ PARA O LAYOUT. Onde o capítulo TEM data real
- * (capitulo_turma_config.data_evento), o marcador ancora na data real e o rótulo
- * usa a data real; onde não há data, mostra "a definir" (NUNCA inventa data).
+ * A DATA é sempre o INÍCIO da fase (capitulo_turma_config.data_evento). Ela não
+ * move o bloco no tempo: ela ROTULA o início daquela fase. Mostramos ao menos o
+ * início da fase ATUAL (na coluna da esquerda) e o da fase do MENTOR (na bandeira
+ * "sua fase"). Onde não há data, "a definir" (NUNCA inventa data).
+ *
+ * Estados: CONCLUÍDA = sólido na cor; AGORA = a fase em destaque (bloco realçado,
+ * mais alto, com o marcador "hoje"); A CAMINHO = esmaecido (fill baixo + contorno
+ * na cor cheia, legível até nas Casas claras). A Casa do MENTOR ganha a bandeira.
  *
  * SÓ LEITURA / SÓ APRESENTAÇÃO. Recebe os dados já resolvidos pelo useF2Panorama.
+ * O mesmo Gráfico serve o retrato rolável e a tela cheia landscape.
  */
 
-const DIAS_MES = 30.44;
-
-// Geometria compartilhada (px) : usada no retrato rolável e na tela cheia.
-const LABEL_COL = 132;
+// Geometria compartilhada (px): usada no retrato rolável e na tela cheia.
+const LABEL_COL = 138;
 const GAP = 10;
-const LANE_H = 58;
-// Folga NO TOPO do gráfico: a reta "hoje" e as bandeiras "sua fase" sobem acima
-// dos nós. Sem esta reserva, o clip do contêiner (overflow) corta o topo.
-const TOP_PAD = 22;
+const LANE_H = 60;
+// Altura dos blocos da fita e da fase AGORA (realçada, mais alta).
+const H_BASE = 22;
+const H_AGORA = 30;
+// Folga NO TOPO do gráfico: a bandeira "sua fase" e o marcador "hoje" sobem acima
+// da fita. Sem esta reserva, o clip do contêiner (overflow) corta o topo.
+const TOP_PAD = 24;
+// Divisória fina (branca, = cor da superfície) entre blocos coloridos da fita.
+const DIVISORIA = 2;
+const RAIO = 7;
 
-function mvFromDate(d: Date, baseYear: number): number {
-  const dim = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-  return (d.getFullYear() - baseYear) * 12 + d.getMonth() + (d.getDate() - 1) / dim;
-}
 const parseData = (s: string): Date => new Date(`${s}T12:00:00`);
 
-/** "4 ago": data curta pt-BR (meio-dia local evita salto de fuso do YYYY-MM-DD). */
+/** "4 jul": data curta pt-BR (meio-dia local evita salto de fuso do YYYY-MM-DD). */
 const dataCurta = (d: string | null): string | null =>
   d ? format(parseData(d), 'd MMM', { locale: ptBR }) : null;
-
-/** Nome de mês abreviado, capitalizado e sem ponto: "Ago". */
-const mesLabel = (y: number, m0: number): string => {
-  const raw = format(new Date(y, m0, 1), 'MMM', { locale: ptBR }).replace('.', '');
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
-};
-
-interface PassoLaid {
-  passo: PanoramaTurma['passos'][number];
-  frac: number; // 0..1 no eixo
-  ancorada: boolean; // posicionada por data real
-}
-interface TurmaLaid {
-  turma: PanoramaTurma;
-  passos: PassoLaid[];
-  railStart: number;
-  railEnd: number;
-}
-interface Layout {
-  turmas: TurmaLaid[];
-  meses: { frac: number; label: string }[];
-  hojeFrac: number;
-}
-
-/** Calcula as posições no eixo de meses. Pura (sem I/O), memoizável. */
-function montarLayout(turmas: PanoramaTurma[], cadenciaDias: number, hoje: Date): Layout {
-  const baseYear = hoje.getFullYear();
-  const hojeMv = mvFromDate(hoje, baseYear);
-  const cad = (cadenciaDias > 0 ? cadenciaDias : 35) / DIAS_MES;
-
-  let min = hojeMv;
-  let max = hojeMv;
-
-  const comMv = turmas.map((turma) => {
-    const passos = turma.passos.map((passo) => {
-      const ehAtual = turma.ordemAtual >= 1 && passo.posicao === turma.ordemAtual;
-      let mv: number;
-      let ancorada = false;
-      if (ehAtual) {
-        // A fase atual fica SEMPRE na reta "hoje".
-        mv = hojeMv;
-      } else if (passo.data) {
-        // Data real: ancora e rotula pela data.
-        mv = mvFromDate(parseData(passo.data), baseYear);
-        ancorada = true;
-      } else {
-        // Sem data: só espalha pela cadência (layout).
-        mv = hojeMv + (passo.posicao - turma.ordemAtual) * cad;
-      }
-      min = Math.min(min, mv);
-      max = Math.max(max, mv);
-      return { passo, mv, ancorada };
-    });
-    return { turma, passos };
-  });
-
-  let axisMin = min - 0.5;
-  let axisMax = max + 0.5;
-  if (axisMax - axisMin < 1) axisMax = axisMin + 1;
-  const span = axisMax - axisMin;
-  const frac = (mv: number) => Math.min(1, Math.max(0, (mv - axisMin) / span));
-
-  const turmasLaid: TurmaLaid[] = comMv.map(({ turma, passos }) => {
-    const laid = passos.map((p) => ({ passo: p.passo, frac: frac(p.mv), ancorada: p.ancorada }));
-    const fracs = laid.map((l) => l.frac);
-    return {
-      turma,
-      passos: laid,
-      railStart: fracs.length ? Math.min(...fracs) : 0,
-      railEnd: fracs.length ? Math.max(...fracs) : 0,
-    };
-  });
-
-  const meses: { frac: number; label: string }[] = [];
-  for (let k = Math.floor(axisMin); k <= Math.ceil(axisMax); k++) {
-    const center = k + 0.5;
-    if (center < axisMin || center > axisMax) continue;
-    const y = baseYear + Math.floor(k / 12);
-    const m0 = ((k % 12) + 12) % 12;
-    meses.push({ frac: frac(center), label: mesLabel(y, m0) });
-  }
-
-  return { turmas: turmasLaid, meses, hojeFrac: frac(hojeMv) };
-}
 
 function usePrefersReducedMotion(): boolean {
   const [reduz, setReduz] = useState(false);
@@ -140,102 +60,125 @@ function usePrefersReducedMotion(): boolean {
 }
 
 // ============================================================
-// Bloco da trilha: cada FASE é um bloco arredondado preenchido na cor da Casa
-// (antes era um ponto/nó circular). Fica na posição da fase no eixo de tempo; o
-// rail atrás conecta os blocos e faz ler como uma linha do tempo contínua.
+// Um bloco da fita (uma fase). Cor da Casa, cantos só nas pontas da fita.
+// As divisórias entre blocos são o "gap" branco do contêiner (a superfície).
 // ============================================================
-const Bloco = ({ p, mentorCor }: { p: PassoLaid; mentorCor: string }) => {
-  const { passo } = p;
+const Bloco = ({
+  p,
+  first,
+  last,
+  mentorCor,
+}: {
+  p: PanoramaTurma['passos'][number];
+  first: boolean;
+  last: boolean;
+  mentorCor: string;
+}) => {
+  const agora = p.estado === 'agora';
+  // Cantos: arredonda só as pontas da fita; o bloco AGORA é uma peça "levantada"
+  // (arredondada nos 4 cantos, mais alta) que se destaca da fita reta.
+  const radius = agora
+    ? RAIO
+    : `${first ? RAIO : 0}px ${last ? RAIO : 0}px ${last ? RAIO : 0}px ${first ? RAIO : 0}px`;
+
   const base: React.CSSProperties = {
-    display: 'block',
-    width: 26,
-    height: 17,
-    borderRadius: 6,
+    flex: '1 1 0',
+    minWidth: 0,
+    height: H_BASE,
+    borderRadius: radius,
     boxSizing: 'border-box',
+    position: 'relative',
+    zIndex: 1,
   };
-  if (passo.ehMentor) {
-    // Sua fase: bloco sólido na cor da Casa do mentor, com realce (a bandeira
-    // "sua fase" + data acima reforçam a marca).
-    return (
-      <span
-        style={{
-          ...base,
-          width: 28,
-          height: 20,
-          backgroundColor: mentorCor,
-          border: '1.5px solid #FFFFFF',
-          boxShadow: `0 0 0 2.5px ${mentorCor}59`,
-        }}
-      />
-    );
+
+  let style: React.CSSProperties;
+  if (agora) {
+    // AGORA: a fase mais visível. Cor cheia, peça mais alta e levantada, anel
+    // branco por dentro e sombra pra "subir" da fita. É onde está o hoje.
+    style = {
+      ...base,
+      height: H_AGORA,
+      backgroundColor: p.cor,
+      boxShadow: `inset 0 0 0 2px #FFFFFF, 0 2px 6px ${p.cor}66`,
+      zIndex: 3,
+    };
+  } else if (p.estado === 'concluida') {
+    // CONCLUÍDA: sólido na cor da Casa.
+    style = { ...base, backgroundColor: p.cor };
+  } else {
+    // A CAMINHO: esmaecido (fill baixo) com contorno na cor cheia por dentro
+    // (inset), legível mesmo nas Casas de tom claro. Sem alterar o layout.
+    style = {
+      ...base,
+      backgroundColor: `${p.cor}24`,
+      boxShadow: `inset 0 0 0 1.5px ${p.cor}`,
+    };
   }
-  if (passo.estado === 'concluida') {
-    // Concluída: bloco sólido na cor da Casa.
-    return <span style={{ ...base, backgroundColor: passo.cor, border: '1.5px solid #FFFFFF' }} />;
+
+  // A Casa do MENTOR ganha um anel extra na cor do mentor (a bandeira "sua fase"
+  // acima reforça a marca). Somado ao anel do estado quando houver.
+  if (p.ehMentor) {
+    const anelMentor = `inset 0 0 0 2px ${mentorCor}`;
+    style = {
+      ...style,
+      boxShadow: style.boxShadow ? `${style.boxShadow}, ${anelMentor}` : anelMentor,
+    };
   }
-  if (passo.estado === 'agora') {
-    // Agora: o bloco mais visível da linha (maior + anel de realce na cor).
-    return (
-      <span
-        style={{
-          ...base,
-          width: 30,
-          height: 21,
-          backgroundColor: passo.cor,
-          border: '1.5px solid #FFFFFF',
-          boxShadow: `0 0 0 3px ${passo.cor}40`,
-        }}
-      />
-    );
-  }
-  // A caminho: bloco esmaecido na cor da Casa (fill de baixa opacidade) com
-  // contorno na cor cheia, pra legibilidade mesmo nas Casas de tom claro.
-  return (
-    <span
-      style={{
-        ...base,
-        backgroundColor: `${passo.cor}26`,
-        border: `1.5px solid ${passo.cor}`,
-      }}
-    />
-  );
+
+  return <span aria-hidden style={style} />;
 };
 
 // ============================================================
-// Uma turma (lane)
+// Uma turma (lane): à esquerda a FASE ATUAL (+ início); à direita a fita.
 // ============================================================
 const Lane = ({
-  turmaLaid,
+  turma,
   mentorCor,
   onClick,
   ativo,
 }: {
-  turmaLaid: TurmaLaid;
+  turma: PanoramaTurma;
   mentorCor: string;
   onClick: () => void;
   ativo: boolean;
 }) => {
-  const { turma, passos, railStart, railEnd } = turmaLaid;
   const label = formatTurmaLabel(turma.serie, turma.turma_letra) || turma.nome;
-  const mentor = passos.find((p) => p.passo.ehMentor);
-  const suaData = mentor ? dataCurta(mentor.passo.data) : null;
+  const passos = turma.passos;
+  const total = passos.length;
 
+  const idxAgora = passos.findIndex((p) => p.estado === 'agora');
+  const idxMentor = passos.findIndex((p) => p.ehMentor);
+  const mentor = idxMentor >= 0 ? passos[idxMentor] : null;
+  const suaData = mentor ? dataCurta(mentor.data) : null;
+
+  // Centro horizontal de um bloco: os blocos preenchem a faixa em partes iguais.
+  const centroPct = (idx: number): number => (total > 0 ? ((idx + 0.5) / total) * 100 : 50);
+
+  // Fase atual: rótulo, cor e início (data como rótulo, nunca posição).
   let faseAtualTxt: string;
   let corAtual = t.silencio;
+  let dataAtual: string | null = null;
   if (turma.ordemAtual < 1) faseAtualTxt = 'Não começou';
   else if (turma.ordemAtual > turma.total) faseAtualTxt = 'Ano concluído';
   else {
     faseAtualTxt = turma.casaAtualNome ? `Casa ${turma.casaAtualNome}` : `Fase ${turma.ordemAtual}`;
-    const at = passos.find((p) => p.passo.posicao === turma.ordemAtual);
-    corAtual = at?.passo.cor ?? t.silencio;
+    const at = idxAgora >= 0 ? passos[idxAgora] : passos.find((p) => p.posicao === turma.ordemAtual);
+    corAtual = at?.cor ?? t.silencio;
+    dataAtual = at ? dataCurta(at.data) : null;
   }
+
+  const aria =
+    `${label}. Fase atual: ${faseAtualTxt}` +
+    (dataAtual ? `, inicia em ${dataAtual}` : turma.ordemAtual >= 1 && turma.ordemAtual <= turma.total ? ', início a definir' : '') +
+    (mentor ? `. Sua fase (mentor): Casa ${mentor.nome}, ${suaData ? `inicia em ${suaData}` : 'início a definir'}` : '') +
+    '. Abrir a turma.';
 
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={ativo}
-      aria-label={`${label}. Fase atual: ${faseAtualTxt}. Abrir a turma.`}
+      aria-label={aria}
       className="grid items-center text-left w-full"
       style={{
         gridTemplateColumns: `${LABEL_COL}px 1fr`,
@@ -245,7 +188,7 @@ const Lane = ({
         backgroundColor: ativo ? t.accentSoft : 'transparent',
       }}
     >
-      {/* rótulo: turma + fase atual */}
+      {/* rótulo: turma + fase atual + início da fase atual */}
       <span className="min-w-0 pl-1">
         <span className="block text-[13px] font-bold leading-none truncate" style={{ color: t.text }}>
           {label}
@@ -261,48 +204,64 @@ const Lane = ({
             </span>
             <span className="block text-[11px] leading-tight truncate" style={{ color: t.textMuted }}>
               {faseAtualTxt}
+              {turma.ordemAtual >= 1 && turma.ordemAtual <= turma.total && (
+                <span style={{ color: t.textFaint }}>
+                  {dataAtual ? ` · inicia ${dataAtual}` : ' · início a definir'}
+                </span>
+              )}
             </span>
           </span>
         </span>
       </span>
 
-      {/* trilha */}
+      {/* fita de fases (sequência contígua) */}
       <span className="relative block h-full">
-        {/* rail */}
+        {/* a fita em si: blocos coladas, divisórias = gap (superfície branca) */}
         <span
           aria-hidden
-          className="absolute"
+          className="absolute flex items-center"
           style={{
+            left: 0,
+            right: 0,
             top: '50%',
-            left: `${railStart * 100}%`,
-            width: `${Math.max(0, railEnd - railStart) * 100}%`,
-            height: 2,
-            backgroundColor: t.surfaceSunken,
-            borderRadius: 2,
             transform: 'translateY(-50%)',
+            height: H_AGORA,
+            gap: DIVISORIA,
           }}
-        />
-        {passos.map((p) => (
-          <span
-            key={`${p.passo.posicao}-${p.passo.inteligenciaId}`}
-            aria-hidden
-            className="absolute"
-            style={{ top: '50%', left: `${p.frac * 100}%`, transform: 'translate(-50%, -50%)', zIndex: 2 }}
-          >
-            <Bloco p={p} mentorCor={mentorCor} />
-          </span>
-        ))}
-        {/* bandeira: sua fase */}
-        {mentor && (
+        >
+          {passos.map((p, i) => (
+            <Bloco
+              key={`${p.posicao}-${p.inteligenciaId}`}
+              p={p}
+              first={i === 0}
+              last={i === total - 1}
+              mentorCor={mentorCor}
+            />
+          ))}
+        </span>
+
+        {/* marcador "hoje" sobre o bloco da fase AGORA */}
+        {idxAgora >= 0 && (
           <span
             aria-hidden
             className="absolute flex flex-col items-center whitespace-nowrap"
-            style={{
-              top: 2,
-              left: `${mentor.frac * 100}%`,
-              transform: 'translateX(-50%)',
-              zIndex: 4,
-            }}
+            style={{ top: 0, left: `${centroPct(idxAgora)}%`, transform: 'translateX(-50%)', zIndex: 5 }}
+          >
+            <span
+              className="text-[8px] font-bold uppercase tracking-wide px-1.5 rounded-full leading-tight"
+              style={{ color: '#FFFFFF', backgroundColor: t.presenteText }}
+            >
+              hoje
+            </span>
+          </span>
+        )}
+
+        {/* bandeira: sua fase (Casa do mentor) + início */}
+        {mentor && idxMentor !== idxAgora && (
+          <span
+            aria-hidden
+            className="absolute flex flex-col items-center whitespace-nowrap"
+            style={{ top: 0, left: `${centroPct(idxMentor)}%`, transform: 'translateX(-50%)', zIndex: 4 }}
           >
             <span
               className="text-[8px] uppercase tracking-wide font-bold leading-none"
@@ -311,10 +270,10 @@ const Lane = ({
               sua fase
             </span>
             <span
-              className="text-[10px] font-bold tabular-nums leading-none mt-0.5"
+              className="text-[9px] font-bold tabular-nums leading-none mt-0.5"
               style={{ color: mentorCor }}
             >
-              {suaData ?? 'a definir'}
+              {suaData ? `inicia ${suaData}` : 'a definir'}
             </span>
           </span>
         )}
@@ -324,86 +283,64 @@ const Lane = ({
 };
 
 // ============================================================
-// O gráfico (fluido: preenche a largura que receber)
+// O gráfico (fluido: preenche a largura que receber). Uma fita por turma.
 // ============================================================
 const Grafico = ({
-  layout,
+  turmas,
   mentorCor,
   onTurmaClick,
   turmaSel,
 }: {
-  layout: Layout;
+  turmas: PanoramaTurma[];
   mentorCor: string;
   onTurmaClick: (id: string) => void;
   turmaSel: string | null;
 }) => (
   <div style={{ paddingTop: TOP_PAD }}>
-    {/* área das lanes com a reta "hoje" atravessando. O TOP_PAD acima reserva
-        espaço pro rótulo "hoje" e as bandeiras "sua fase", que sobem além do topo. */}
     <div className="relative">
-      <span
-        aria-hidden
-        className="absolute z-10"
-        style={{
-          top: 0,
-          bottom: 0,
-          left: `calc(${LABEL_COL + GAP}px + (100% - ${LABEL_COL + GAP}px) * ${layout.hojeFrac})`,
-          width: 2,
-          backgroundColor: t.presenteText,
-        }}
-      >
-        <span
-          className="absolute text-[8px] font-bold uppercase tracking-wide px-1"
-          style={{
-            top: -2,
-            left: '50%',
-            transform: 'translate(-50%, -100%)',
-            color: t.presenteText,
-            backgroundColor: t.surface,
-          }}
-        >
-          hoje
-        </span>
-      </span>
-
-      {layout.turmas.map((tl) => (
+      {turmas.map((tu) => (
         <Lane
-          key={tl.turma.turma_id}
-          turmaLaid={tl}
+          key={tu.turma_id}
+          turma={tu}
           mentorCor={mentorCor}
-          ativo={turmaSel === tl.turma.turma_id}
-          onClick={() => onTurmaClick(tl.turma.turma_id)}
+          ativo={turmaSel === tu.turma_id}
+          onClick={() => onTurmaClick(tu.turma_id)}
         />
       ))}
     </div>
 
-    {/* eixo de meses */}
+    {/* legenda dos estados: a fita é sequência, não linha do tempo proporcional */}
     <div
-      className="grid items-center"
-      style={{
-        gridTemplateColumns: `${LABEL_COL}px 1fr`,
-        columnGap: GAP,
-        paddingTop: 8,
-        marginTop: 4,
-        borderTop: `1px solid ${t.border}`,
-      }}
+      className="flex items-center gap-3 flex-wrap"
+      style={{ paddingTop: 8, marginTop: 4, borderTop: `1px solid ${t.border}` }}
     >
-      <span />
-      <span className="relative block" style={{ height: 16 }}>
-        {layout.meses.map((m, i) => (
-          <span
-            key={i}
-            className="absolute text-[10px] font-bold"
-            style={{
-              top: 0,
-              left: `${m.frac * 100}%`,
-              transform: 'translateX(-50%)',
-              color: Math.abs(m.frac - layout.hojeFrac) < 0.06 ? t.presenteText : t.textFaint,
-            }}
-          >
-            {m.label}
-          </span>
-        ))}
+      <span className="flex items-center gap-1.5 text-[10px]" style={{ color: t.textMuted }}>
+        <span style={{ width: 14, height: 10, borderRadius: 3, backgroundColor: t.textMuted, opacity: 0.55 }} />
+        Concluída
+      </span>
+      <span className="flex items-center gap-1.5 text-[10px] font-semibold" style={{ color: t.text }}>
+        <span
+          style={{
+            width: 14,
+            height: 12,
+            borderRadius: 3,
+            backgroundColor: t.accent,
+            boxShadow: `inset 0 0 0 2px #FFFFFF`,
+          }}
+        />
+        Agora
+      </span>
+      <span className="flex items-center gap-1.5 text-[10px]" style={{ color: t.textMuted }}>
+        <span
+          style={{
+            width: 14,
+            height: 10,
+            borderRadius: 3,
+            backgroundColor: `${t.textMuted}24`,
+            boxShadow: `inset 0 0 0 1.5px ${t.textMuted}`,
+          }}
+        />
+        A caminho
       </span>
     </div>
   </div>
@@ -413,13 +350,13 @@ const Grafico = ({
 // Overlay TELA CHEIA (landscape, padrão YouTube)
 // ============================================================
 const TelaCheia = ({
-  layout,
+  turmas,
   mentorCor,
   onTurmaClick,
   turmaSel,
   onFechar,
 }: {
-  layout: Layout;
+  turmas: PanoramaTurma[];
   mentorCor: string;
   onTurmaClick: (id: string) => void;
   turmaSel: string | null;
@@ -473,7 +410,7 @@ const TelaCheia = ({
               Calendário do ano
             </p>
             <p className="text-sm font-bold" style={{ color: t.text }}>
-              Todas as suas turmas, no tempo
+              Todas as suas turmas, na sequência das fases
             </p>
           </div>
           <button
@@ -491,7 +428,7 @@ const TelaCheia = ({
           className="rounded-2xl flex-1 min-h-0"
           style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, padding: '10px 18px 6px' }}
         >
-          <Grafico layout={layout} mentorCor={mentorCor} onTurmaClick={onTurmaClick} turmaSel={turmaSel} />
+          <Grafico turmas={turmas} mentorCor={mentorCor} onTurmaClick={onTurmaClick} turmaSel={turmaSel} />
         </div>
       </div>
     </div>,
@@ -504,14 +441,14 @@ const TelaCheia = ({
 // ============================================================
 const F2Panorama = ({
   turmas,
-  cadenciaDias,
   mentorCor,
   onTurmaClick,
   turmaSel,
   mode = 'inline',
 }: {
   turmas: PanoramaTurma[];
-  cadenciaDias: number;
+  /** Mantido por compatibilidade da API; a fita é sequência, não usa cadência. */
+  cadenciaDias?: number;
   mentorCor: string;
   onTurmaClick: (id: string) => void;
   turmaSel: string | null;
@@ -526,15 +463,17 @@ const F2Panorama = ({
   const [mostrarInline, setMostrarInline] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const layout = useMemo(
-    () => montarLayout(turmas, cadenciaDias, new Date()),
-    [turmas, cadenciaDias]
+  // Quantas fases tem a maior trilha: dá a largura mínima pra os blocos não
+  // ficarem finos demais no retrato (a faixa rola na horizontal quando não cabe).
+  const maxPassos = useMemo(
+    () => turmas.reduce((m, tu) => Math.max(m, tu.passos.length), 0),
+    [turmas]
   );
 
   if (turmas.length === 0) return null;
 
   // MODO BOTÃO: um botão que REVELA o painel do calendário embutido (retrato
-  // rolável, com o seu proprio botão de tela cheia). Nao pula pra tela cheia.
+  // rolável, com o seu próprio botão de tela cheia). Não pula pra tela cheia.
   if (mode === 'button') {
     return (
       <>
@@ -557,7 +496,7 @@ const F2Panorama = ({
               Ver o calendário
             </span>
             <span className="block text-[11px]" style={{ color: t.textFaint }}>
-              O ano de todas as turmas, no tempo
+              A sequência de fases de todas as turmas
             </span>
           </span>
           <ChevronDown
@@ -571,7 +510,6 @@ const F2Panorama = ({
           <div className="mt-3">
             <F2Panorama
               turmas={turmas}
-              cadenciaDias={cadenciaDias}
               mentorCor={mentorCor}
               onTurmaClick={onTurmaClick}
               turmaSel={turmaSel}
@@ -583,9 +521,8 @@ const F2Panorama = ({
     );
   }
 
-  // Largura mínima do gráfico no retrato: garante que os meses respirem e a
-  // faixa role horizontalmente quando não couber. ~64px por mês.
-  const minPlot = Math.max(360, layout.meses.length * 64);
+  // Largura mínima do gráfico no retrato: ~48px por fase, pra a fita respirar.
+  const minPlot = Math.max(320, maxPassos * 48);
   const minWidth = LABEL_COL + GAP + minPlot;
 
   return (
@@ -596,7 +533,7 @@ const F2Panorama = ({
             Calendário
           </p>
           <p className="text-[11px]" style={{ color: t.textFaint }}>
-            Cada turma no tempo. A reta verde é hoje.
+            Cada turma na sequência das fases. A fase em destaque é a de agora.
           </p>
         </div>
         <button
@@ -617,7 +554,7 @@ const F2Panorama = ({
         <div ref={scrollRef} className="overflow-x-auto" style={{ padding: '8px 16px 6px' }}>
           <div style={{ minWidth }}>
             <Grafico
-              layout={layout}
+              turmas={turmas}
               mentorCor={mentorCor}
               onTurmaClick={onTurmaClick}
               turmaSel={turmaSel}
@@ -628,13 +565,13 @@ const F2Panorama = ({
           className="flex items-center gap-1.5 text-[10px] px-4 py-2"
           style={{ color: t.textFaint, borderTop: `1px solid ${t.border}` }}
         >
-          <RotateCcw size={11} /> Arraste para o lado ou toque em Tela cheia para ver o ano inteiro.
+          <RotateCcw size={11} /> Arraste para o lado ou toque em Tela cheia para ver a trilha inteira.
         </p>
       </div>
 
       {cheia && (
         <TelaCheia
-          layout={layout}
+          turmas={turmas}
           mentorCor={mentorCor}
           onTurmaClick={onTurmaClick}
           turmaSel={turmaSel}
