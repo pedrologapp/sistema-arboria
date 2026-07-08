@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Shield, ChevronDown, Paperclip, Settings2, Route, Clock, Flag, CalendarRange, ChevronRight } from 'lucide-react';
@@ -10,6 +10,8 @@ import { corDaCasa } from '@/config/f2Reforma';
 import { formatTurmaLabel } from '@/lib/infantil';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTurmasDaCasaAtiva, type TurmaDaCasaAtiva, type StatusTurmaCasa } from '@/hooks/useTurmasDaCasaAtiva';
+import { useF2Panorama } from '@/hooks/useF2Panorama';
+import F2Panorama from '@/components/professor/f2/F2Panorama';
 import F2ViradaExperience, { type F2ViradaDados } from '@/components/professor/f2/F2ViradaExperience';
 
 // Tabelas da reforma (capitulo_encontros/anexos/turma) e colunas novas podem
@@ -74,22 +76,24 @@ const EscudoCasa = ({
   );
 };
 
-/** Cartão de turma na grade. */
+/** Cartão de turma na grade. `compact` = grade menor (3 colunas). */
 const CartaoTurma = ({
   turma,
   ativo,
   onClick,
+  compact = false,
 }: {
   turma: TurmaDaCasaAtiva;
   ativo: boolean;
   onClick: () => void;
+  compact?: boolean;
 }) => {
   const selo = SELO[turma.status];
   const cor = corDaCasa(turma.casaAtualId);
   return (
     <button
       onClick={onClick}
-      className="rounded-2xl p-3 text-left transition-transform active:scale-[0.99]"
+      className={`rounded-2xl text-left transition-transform active:scale-[0.99] ${compact ? 'p-2.5' : 'p-3'}`}
       style={{
         backgroundColor: t.surface,
         border: ativo ? `1.5px solid ${t.accent}` : `1px solid ${t.border}`,
@@ -97,13 +101,13 @@ const CartaoTurma = ({
       }}
       aria-pressed={ativo}
     >
-      <div className="flex items-center gap-2.5">
-        <EscudoCasa casaId={turma.casaAtualId} brasao={turma.casaAtualBrasao} size={38} />
+      <div className="flex items-center gap-2">
+        <EscudoCasa casaId={turma.casaAtualId} brasao={turma.casaAtualBrasao} size={compact ? 30 : 38} />
         <div className="min-w-0">
-          <p className="text-sm font-bold truncate" style={{ color: t.text }}>
+          <p className={`font-bold truncate ${compact ? 'text-[13px]' : 'text-sm'}`} style={{ color: t.text }}>
             {formatTurmaLabel(turma.serie, turma.turma_letra) || turma.nome}
           </p>
-          {turma.casaAtualNome && (
+          {turma.casaAtualNome && !compact && (
             <p className="text-[11px] truncate" style={{ color: t.textFaint }}>
               Casa {turma.casaAtualNome}
             </p>
@@ -111,7 +115,9 @@ const CartaoTurma = ({
         </div>
       </div>
       <span
-        className="inline-block mt-2.5 text-[10px] uppercase tracking-wide font-bold px-2 py-0.5 rounded-full"
+        className={`inline-block uppercase tracking-wide font-bold rounded-full ${
+          compact ? 'mt-2 text-[9px] px-1.5 py-0.5' : 'mt-2.5 text-[10px] px-2 py-0.5'
+        }`}
         style={
           selo.forte
             ? { backgroundColor: t.accent, color: '#FFFFFF' }
@@ -557,17 +563,36 @@ const F2ArboriaPage = () => {
     profile?.institution_id,
     casaMentor?.id
   );
+  const { data: panorama } = useF2Panorama(profile?.institution_id, casaMentor?.id);
 
   const [turmaSel, setTurmaSel] = useState<string | null>(null);
   const [confirmarOpen, setConfirmarOpen] = useState(false);
   const [acaoLoading, setAcaoLoading] = useState(false);
   const [virada, setVirada] = useState<F2ViradaDados | null>(null);
 
+  const detalheRef = useRef<HTMLDivElement>(null);
+
   const turmaAtiva = useMemo(() => {
     if (!turmas || turmas.length === 0) return null;
     const escolhida = turmaSel && turmas.find((x) => x.turma_id === turmaSel);
     return escolhida || turmas.find((x) => x.status === 'vez') || turmas[0];
   }, [turmas, turmaSel]);
+
+  /**
+   * Toque numa turma (na grade OU no calendário): se ela está na fila do mentor,
+   * seleciona e rola até o detalhe (capa/administrar). Se a Casa do mentor já
+   * passou nela (não entra na lista), abre a linha do ano da turma, que existe
+   * para qualquer turma e mostra as datas.
+   */
+  const selecionarTurma = (id: string) => {
+    const naFila = turmas?.some((x) => x.turma_id === id);
+    if (naFila) {
+      setTurmaSel(id);
+      requestAnimationFrame(() => detalheRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    } else {
+      navigate(`/professor/f2/linha-ano/${id}`);
+    }
+  };
 
   /**
    * Dados do FECHAMENTO (Tempo 1) e da PASSAGEM (Tempo 2) da virada, lidos DA
@@ -797,22 +822,37 @@ const F2ArboriaPage = () => {
         </div>
       ) : (
         <>
-          {/* Grade das turmas do mentor */}
+          {/* CALENDÁRIO (panorama): todas as turmas no tempo, de uma vez. */}
+          {panorama && panorama.turmas.length > 0 && (
+            <F2Panorama
+              turmas={panorama.turmas}
+              cadenciaDias={panorama.cadenciaDias}
+              mentorCor={corDaCasa(casaMentor.id)}
+              onTurmaClick={selecionarTurma}
+              turmaSel={turmaAtiva?.turma_id ?? null}
+            />
+          )}
+
+          {/* Suas turmas: grade menor (cards compactos), a fila do mentor. */}
           <div>
             <p className="text-[11px] uppercase tracking-wide font-semibold mb-2 px-1" style={{ color: t.textFaint }}>
               Suas turmas
             </p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {turmas.map((turma) => (
                 <CartaoTurma
                   key={turma.turma_id}
                   turma={turma}
+                  compact
                   ativo={turmaAtiva?.turma_id === turma.turma_id}
-                  onClick={() => setTurmaSel(turma.turma_id)}
+                  onClick={() => selecionarTurma(turma.turma_id)}
                 />
               ))}
             </div>
           </div>
+
+          {/* Âncora do detalhe da turma selecionada (alvo do scroll ao tocar). */}
+          <div ref={detalheRef} />
 
           {/* Ver o ano: caminho claro pra a linha do ano da turma selecionada.
               Não substitui o toque de seleção; abre a tela dedicada. */}
