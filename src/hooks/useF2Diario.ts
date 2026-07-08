@@ -46,23 +46,39 @@ export interface AlunoF2Diario {
   nome: string;
   avatarUrl?: string;
   quantidadeObservacoes: number;
+  /** Turma a que este vínculo (aluno_turma ativo) pertence. Filtro client-side. */
+  turmaId: string;
 }
 
 /**
- * TODOS os alunos de UMA turma F2 (por turma_id), sem filtro por vinculação do
- * professor. Espelha useAlunosTurmasComStatus, mas a fonte é a turma escolhida:
- * qualquer mentor vê todos os alunos daquela turma.
+ * TODOS os alunos de TODAS as turmas do Fundamental 2 da instituição, sem filtro
+ * por vinculação do professor. Cada item carrega o turmaId do seu vínculo ativo,
+ * para o grid-filtro filtrar client-side (default "Todas" = todos os alunos).
+ *
+ * ACESSO COMPARTILHADO: qualquer mentor vê todos os alunos do F2. Mesma fonte de
+ * turmas de useTurmasF2Instituicao (institution_id + segmento fundamental2).
  */
-export const useAlunosDaTurmaF2 = (turmaId?: string | null) => {
+export const useAlunosF2Instituicao = (institutionId?: string | null) => {
   return useQuery({
-    queryKey: ['f2-diario-alunos', turmaId],
-    enabled: !!turmaId,
+    queryKey: ['f2-diario-alunos-inst', institutionId],
+    enabled: !!institutionId,
     queryFn: async (): Promise<AlunoF2Diario[]> => {
-      // Alunos ATIVOS vinculados à turma escolhida.
+      // 1. Turmas F2 da instituição (ids).
+      const { data: turmasRaw, error: turmasErr } = await sb
+        .from('turmas')
+        .select('id')
+        .eq('institution_id', institutionId!)
+        .eq('segmento', 'fundamental2');
+      if (turmasErr) throw turmasErr;
+      const turmaIds = ((turmasRaw as { id: string }[]) ?? []).map((tr) => tr.id);
+      if (turmaIds.length === 0) return [];
+
+      // 2. Alunos ATIVOS dessas turmas.
       const { data: alunosTurma, error } = await supabase
         .from('aluno_turma')
         .select(`
           aluno_id,
+          turma_id,
           profiles!inner (
             id,
             full_name,
@@ -71,7 +87,7 @@ export const useAlunosDaTurmaF2 = (turmaId?: string | null) => {
             avatar_url
           )
         `)
-        .eq('turma_id', turmaId!)
+        .in('turma_id', turmaIds)
         .eq('ativo', true);
 
       if (error) throw error;
@@ -79,7 +95,7 @@ export const useAlunosDaTurmaF2 = (turmaId?: string | null) => {
 
       const alunoIds = alunosTurma.map((at) => (at.profiles as any).id);
 
-      // Contagem de observações por aluno (soft-delete fica de fora).
+      // 3. Contagem de observações por aluno (soft-delete fica de fora).
       const { data: observacoesData } = await supabase
         .from('observacoes')
         .select('aluno_id')
@@ -102,6 +118,7 @@ export const useAlunosDaTurmaF2 = (turmaId?: string | null) => {
           nome: nomeCompleto,
           avatarUrl: p.avatar_url || undefined,
           quantidadeObservacoes: obsMap.get(p.id) ?? 0,
+          turmaId: at.turma_id as string,
         };
       });
 

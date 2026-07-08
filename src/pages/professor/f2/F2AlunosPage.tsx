@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Search, NotebookPen, List, LayoutGrid, ChevronLeft, Shield, ChevronRight } from 'lucide-react';
+import { Users, Search, NotebookPen, List, LayoutGrid, Shield, ChevronRight, LayoutList } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
-import { useTurmasF2Instituicao, useAlunosDaTurmaF2 } from '@/hooks/useF2Diario';
+import { useTurmasF2Instituicao, useAlunosF2Instituicao, type TurmaF2Diario } from '@/hooks/useF2Diario';
 import {
   getIniciais,
   formatTurmaLabel,
@@ -18,15 +18,63 @@ import { corDaCasa } from '@/config/f2Reforma';
 const CHAVE_TURMA = 'f2-diario-turma';
 
 /**
- * Aba DIÁRIO (Fundamental 2, reforma). Fluxo em DOIS passos porque o mentor tem
- * acesso a VÁRIAS turmas:
- *   1. Escolher a turma (grade no estilo da aba Arboria do F2).
- *   2. Lista de alunos daquela turma (mesmo visual claro do Infantil/F1);
- *      tocar num aluno abre o diário (thread).
+ * Card do grid-filtro de turmas (mesmo visual compacto do CartaoTurma da aba
+ * Arboria: escudo + rótulo, borda de acento quando ativo). Aqui NÃO navega:
+ * apenas troca o filtro da lista de alunos abaixo, na mesma tela.
+ */
+const CartaoFiltro = ({
+  label,
+  cor,
+  ativo,
+  onClick,
+  todas = false,
+}: {
+  label: string;
+  cor: string;
+  ativo: boolean;
+  onClick: () => void;
+  todas?: boolean;
+}) => (
+  <button
+    onClick={onClick}
+    className="w-full h-full rounded-2xl text-left transition-transform active:scale-[0.99] p-2.5"
+    style={{
+      backgroundColor: t.surface,
+      border: ativo ? `1.5px solid ${t.accent}` : `1px solid ${t.border}`,
+      boxShadow: ativo ? t.shadowMd : t.shadowSm,
+    }}
+    aria-pressed={ativo}
+  >
+    <div className="flex items-center gap-2">
+      <span
+        className="rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ width: 30, height: 30, backgroundColor: todas ? t.accentSoft : `${cor}1A` }}
+      >
+        {todas ? (
+          <LayoutList size={17} style={{ color: t.accent }} strokeWidth={1.75} />
+        ) : (
+          <Shield size={17} style={{ color: cor }} strokeWidth={1.75} />
+        )}
+      </span>
+      <div className="min-w-0">
+        <p className="text-[13px] font-bold truncate" style={{ color: t.text }}>
+          {label}
+        </p>
+      </div>
+    </div>
+  </button>
+);
+
+/**
+ * Aba DIÁRIO (Fundamental 2, reforma). TELA ÚNICA:
+ *   - No topo, o grid-filtro de turmas (mesmo grid deslizável de 2 linhas da aba
+ *     Arboria), com "Todas" (default). Escolher uma turma só FILTRA a lista.
+ *   - Abaixo, na mesma tela, a lista de alunos (visual claro do Infantil/F1:
+ *     cards, busca, lista/círculos). Tocar num aluno abre o diário (thread).
  *
  * ACESSO COMPARTILHADO: no F2 não há vinculação por turma. Qualquer mentor vê
- * TODAS as turmas do Fundamental 2 da instituição e TODOS os alunos delas
- * (useTurmasF2Instituicao / useAlunosDaTurmaF2, por institution_id e turma_id).
+ * TODAS as turmas do F2 da instituição e TODOS os alunos delas
+ * (useTurmasF2Instituicao / useAlunosF2Instituicao, por institution_id).
  *
  * Só é montada quando segmento === 'fundamental2' E F2_REFORMA_ATIVA
  * (o roteamento vive no AlunosPageWrapper). Tema claro, infantilTheme.
@@ -35,18 +83,18 @@ const F2AlunosPage = () => {
   const navigate = useNavigate();
   const { profile, casaMentor } = useProfessor();
   const { data: turmas, isLoading: turmasLoading } = useTurmasF2Instituicao(profile?.institution_id);
+  const { data: alunos, isLoading: alunosLoading } = useAlunosF2Instituicao(profile?.institution_id);
 
-  // Turma escolhida persiste ao entrar/voltar de um thread (evita reescolher a
-  // cada aluno). Uma só turma no F2 pula o passo 1 (default abaixo).
-  const [turmaSel, setTurmaSelState] = useState<string | null>(() => {
+  // Filtro de turma persiste ao entrar/voltar de um thread. null = "Todas".
+  const [turmaFiltro, setTurmaFiltroState] = useState<string | null>(() => {
     try {
       return sessionStorage.getItem(CHAVE_TURMA);
     } catch {
       return null;
     }
   });
-  const setTurmaSel = (id: string | null) => {
-    setTurmaSelState(id);
+  const setTurmaFiltro = (id: string | null) => {
+    setTurmaFiltroState(id);
     try {
       if (id) sessionStorage.setItem(CHAVE_TURMA, id);
       else sessionStorage.removeItem(CHAVE_TURMA);
@@ -64,121 +112,92 @@ const F2AlunosPage = () => {
   };
 
   const cor = corDaCasa(casaMentor?.id);
+  const listaTurmas: TurmaF2Diario[] = turmas ?? [];
 
-  const listaTurmas = turmas ?? [];
-  const turmaUnica = listaTurmas.length === 1 ? listaTurmas[0].id : null;
-  const turmaAtiva = turmaSel ?? turmaUnica;
-  // Se a turma salva não existe mais na instituição, volta pra escolha.
-  const turmaValida = turmaAtiva && listaTurmas.some((x) => x.id === turmaAtiva) ? turmaAtiva : null;
-  const turmaInfo = listaTurmas.find((x) => x.id === turmaValida) ?? null;
-
-  // Alunos SÓ da turma escolhida (todos os alunos da turma, sem vinculação).
-  const { data: alunos, isLoading: alunosLoading } = useAlunosDaTurmaF2(turmaValida);
+  // Se a turma salva não existe mais na instituição, cai em "Todas".
+  const turmaAtiva = turmaFiltro && listaTurmas.some((x) => x.id === turmaFiltro) ? turmaFiltro : null;
 
   const alunosFiltrados = useMemo(() => {
-    if (!alunos) return [];
-    return alunos.filter((a) => {
-      if (busca && !normalizarBusca(a.nome).includes(normalizarBusca(busca))) return false;
-      return true;
-    });
-  }, [alunos, busca]);
-
-  // ---- PASSO 1: escolher a turma ------------------------------------------
-  if (!turmaValida) {
-    return (
-      <div className="pt-5 space-y-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: t.text }}>
-            <NotebookPen size={22} style={{ color: t.accent }} strokeWidth={1.75} />
-            Diário
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: t.textFaint }}>
-            Escolha a turma para ver seus alunos.
-          </p>
-        </div>
-
-        {turmasLoading ? (
-          <div className="grid grid-cols-2 gap-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-24 rounded-2xl" />
-            ))}
-          </div>
-        ) : listaTurmas.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-14 text-center">
-            <div
-              className="w-14 h-14 rounded-full flex items-center justify-center mb-3"
-              style={{ backgroundColor: t.accentSoft }}
-            >
-              <Users size={28} style={{ color: t.accent }} strokeWidth={1.5} />
-            </div>
-            <p className="text-sm" style={{ color: t.textMuted }}>
-              Não há turmas do Fundamental 2 nesta instituição.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            {listaTurmas.map((turma) => (
-              <button
-                key={turma.id}
-                onClick={() => setTurmaSel(turma.id)}
-                className="w-full h-full rounded-2xl p-3 text-left transition-transform active:scale-[0.99]"
-                style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
-              >
-                <span
-                  className="rounded-xl flex items-center justify-center"
-                  style={{ width: 38, height: 38, backgroundColor: `${cor}1A` }}
-                >
-                  <Shield size={20} style={{ color: cor }} strokeWidth={1.75} />
-                </span>
-                <p className="text-sm font-bold mt-2.5" style={{ color: t.text }}>
-                  {formatTurmaLabel(turma.serie, turma.turma_letra) || turma.nome}
-                </p>
-                <p className="text-[11px] mt-0.5" style={{ color: t.textFaint }}>
-                  Ver alunos
-                </p>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // ---- PASSO 2: lista de alunos da turma escolhida ------------------------
-  const podeTrocar = listaTurmas.length > 1;
-  const turmaLabel = turmaInfo
-    ? formatTurmaLabel(turmaInfo.serie, turmaInfo.turma_letra) || turmaInfo.nome
-    : '';
-  const totalAlunos = alunos?.length ?? 0;
+    const base = alunos ?? [];
+    // Filtro por turma; sem turma ("Todas") dedupe por aluno (um aluno pode ter
+    // vínculo ativo em mais de uma turma e não deve aparecer repetido).
+    let visiveis;
+    if (turmaAtiva) {
+      visiveis = base.filter((a) => a.turmaId === turmaAtiva);
+    } else {
+      const vistos = new Set<string>();
+      visiveis = base.filter((a) => (vistos.has(a.id) ? false : (vistos.add(a.id), true)));
+    }
+    if (busca) {
+      const q = normalizarBusca(busca);
+      visiveis = visiveis.filter((a) => normalizarBusca(a.nome).includes(q));
+    }
+    return visiveis;
+  }, [alunos, turmaAtiva, busca]);
 
   return (
     <div className="pt-5 space-y-4">
-      {/* Header com voltar pra escolha da turma */}
+      {/* Header */}
       <div>
-        {podeTrocar && (
-          <button
-            onClick={() => {
-              setTurmaSel(null);
-              setBusca('');
-            }}
-            className="flex items-center gap-1 text-xs font-medium mb-1.5 -ml-1 p-1 rounded-lg"
-            style={{ color: t.accentText }}
-          >
-            <ChevronLeft size={15} /> Trocar de turma
-          </button>
-        )}
         <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: t.text }}>
           <NotebookPen size={22} style={{ color: t.accent }} strokeWidth={1.75} />
           Diário
         </h1>
         <p className="text-sm mt-0.5" style={{ color: t.textFaint }}>
-          {turmaLabel}
-          {!alunosLoading ? ` · ${totalAlunos} ${totalAlunos === 1 ? 'aluno' : 'alunos'}` : ''}
+          {alunosLoading ? 'Carregando alunos...' : `${alunosFiltrados.length} ${alunosFiltrados.length === 1 ? 'aluno' : 'alunos'}`}
         </p>
       </div>
 
+      {/* Grid-filtro de turmas: mesmo grid deslizável de 2 linhas da aba Arboria.
+          "Todas" (default) + uma turma por card. Escolher só filtra a lista. */}
+      <div>
+        <p className="text-[11px] uppercase tracking-wide font-semibold mb-2 px-1" style={{ color: t.textFaint }}>
+          Escolha sua turma
+        </p>
+        {turmasLoading ? (
+          <div className="grid grid-cols-3 gap-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 rounded-2xl" />
+            ))}
+          </div>
+        ) : (
+          <div
+            tabIndex={0}
+            role="group"
+            aria-label="Filtrar por turma. Deslize para o lado para ver mais."
+            className="overflow-x-auto -mx-4 px-4 py-1"
+            style={{ scrollSnapType: 'x proximity', WebkitOverflowScrolling: 'touch' }}
+          >
+            <div
+              className="grid grid-flow-col auto-cols-max gap-2"
+              style={{ gridTemplateRows: listaTurmas.length > 1 ? 'repeat(2, minmax(0, 1fr))' : 'minmax(0, 1fr)' }}
+            >
+              <div style={{ width: 132, scrollSnapAlign: 'start' }}>
+                <CartaoFiltro
+                  label="Todas"
+                  cor={cor}
+                  todas
+                  ativo={turmaAtiva === null}
+                  onClick={() => setTurmaFiltro(null)}
+                />
+              </div>
+              {listaTurmas.map((turma) => (
+                <div key={turma.id} style={{ width: 132, scrollSnapAlign: 'start' }}>
+                  <CartaoFiltro
+                    label={formatTurmaLabel(turma.serie, turma.turma_letra) || turma.nome}
+                    cor={cor}
+                    ativo={turmaAtiva === turma.id}
+                    onClick={() => setTurmaFiltro(turma.id)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Convite no presente */}
-      {!alunosLoading && totalAlunos > 0 && (
+      {!alunosLoading && alunosFiltrados.length > 0 && (
         <div
           className="rounded-2xl p-3.5"
           style={{ backgroundColor: t.accentSoft, border: `1px solid ${t.accentBorder}` }}
