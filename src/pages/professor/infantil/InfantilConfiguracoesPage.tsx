@@ -19,7 +19,12 @@ const InfantilConfiguracoesPage = () => {
   const { signOut, user } = useAuth();
   const { profile, refreshData, segmento } = useProfessor();
 
-  const nomeSegmento = segmento === 'fundamental1' ? 'Fundamental 1' : 'Educação Infantil';
+  const nomeSegmento =
+    segmento === 'fundamental2'
+      ? 'Fundamental 2'
+      : segmento === 'fundamental1'
+        ? 'Fundamental 1'
+        : 'Educação Infantil';
 
   const fullName =
     profile?.full_name || `${profile?.nome || ''} ${profile?.sobrenome || ''}`.trim() || 'Professora';
@@ -173,15 +178,17 @@ const InfantilConfiguracoesPage = () => {
         </p>
       </div>
 
-      {/* Ajuda */}
-      <Secao titulo="Ajuda">
-        <Item
-          icone={<BookOpen size={19} strokeWidth={1.75} />}
-          titulo="Como usar o Arboria"
-          sub="O tutorial aba por aba: releia quando quiser"
-          onClick={abrirTutorialInfantil}
-        />
-      </Secao>
+      {/* Ajuda: o tutorial e do Infantil/F1 (tem variante propria); no F2 nao entra. */}
+      {segmento !== 'fundamental2' && (
+        <Secao titulo="Ajuda">
+          <Item
+            icone={<BookOpen size={19} strokeWidth={1.75} />}
+            titulo="Como usar o Arboria"
+            sub="O tutorial aba por aba: releia quando quiser"
+            onClick={abrirTutorialInfantil}
+          />
+        </Secao>
+      )}
 
       {/* Segurança */}
       <Secao titulo="Segurança">
