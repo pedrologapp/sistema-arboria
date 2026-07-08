@@ -483,25 +483,25 @@ const F2Panorama = ({
           aria-expanded={mostrarInline}
           aria-label="Ver o calendário de todas as turmas"
           className="w-full flex items-center gap-2.5 rounded-2xl p-3 text-left transition-transform active:scale-[0.99]"
-          style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
+          style={{ backgroundColor: t.accent, border: `1px solid ${t.accent}`, boxShadow: t.shadowMd }}
         >
           <span
             className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: t.accentSoft }}
+            style={{ backgroundColor: 'rgba(255,255,255,0.16)' }}
           >
-            <CalendarDays size={18} style={{ color: t.accent }} strokeWidth={1.75} />
+            <CalendarDays size={18} style={{ color: '#FFFFFF' }} strokeWidth={1.75} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold" style={{ color: t.text }}>
+            <span className="block text-sm font-semibold" style={{ color: '#FFFFFF' }}>
               Ver o calendário
             </span>
-            <span className="block text-[11px]" style={{ color: t.textFaint }}>
+            <span className="block text-[11px]" style={{ color: 'rgba(255,255,255,0.72)' }}>
               A sequência de fases de todas as turmas
             </span>
           </span>
           <ChevronDown
             size={18}
-            style={{ color: t.textFaint, transform: mostrarInline ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}
+            style={{ color: 'rgba(255,255,255,0.8)', transform: mostrarInline ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}
             className="flex-shrink-0"
           />
         </button>

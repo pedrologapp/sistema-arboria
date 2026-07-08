@@ -89,13 +89,18 @@ const CartaoTurma = ({
   compact?: boolean;
 }) => {
   const selo = SELO[turma.status];
+  // "Depois" polui a grade (quase toda turma cai nesse estado): mostra so o nome.
+  const mostrarSelo = turma.status !== 'depois';
   const cor = corDaCasa(turma.casaAtualId);
+  // Selecionada = card indigo (fundo do acento), com texto claro.
+  const corTexto = ativo ? '#FFFFFF' : t.text;
+  const corSub = ativo ? 'rgba(255,255,255,0.72)' : t.textFaint;
   return (
     <button
       onClick={onClick}
       className={`w-full h-full rounded-2xl text-left transition-transform active:scale-[0.99] ${compact ? 'p-2.5' : 'p-3'}`}
       style={{
-        backgroundColor: t.surface,
+        backgroundColor: ativo ? t.accent : t.surface,
         border: ativo ? `1.5px solid ${t.accent}` : `1px solid ${t.border}`,
         boxShadow: ativo ? t.shadowMd : t.shadowSm,
       }}
@@ -104,28 +109,32 @@ const CartaoTurma = ({
       <div className="flex items-center gap-2">
         <EscudoCasa casaId={turma.casaAtualId} brasao={turma.casaAtualBrasao} size={compact ? 30 : 38} />
         <div className="min-w-0">
-          <p className={`font-bold truncate ${compact ? 'text-[13px]' : 'text-sm'}`} style={{ color: t.text }}>
+          <p className={`font-bold truncate ${compact ? 'text-[13px]' : 'text-sm'}`} style={{ color: corTexto }}>
             {formatTurmaLabel(turma.serie, turma.turma_letra) || turma.nome}
           </p>
           {turma.casaAtualNome && !compact && (
-            <p className="text-[11px] truncate" style={{ color: t.textFaint }}>
+            <p className="text-[11px] truncate" style={{ color: corSub }}>
               Casa {turma.casaAtualNome}
             </p>
           )}
         </div>
       </div>
-      <span
-        className={`inline-block uppercase tracking-wide font-bold rounded-full ${
-          compact ? 'mt-2 text-[9px] px-1.5 py-0.5' : 'mt-2.5 text-[10px] px-2 py-0.5'
-        }`}
-        style={
-          selo.forte
-            ? { backgroundColor: t.accent, color: '#FFFFFF' }
-            : { backgroundColor: `${cor}14`, color: cor }
-        }
-      >
-        {selo.texto}
-      </span>
+      {mostrarSelo && (
+        <span
+          className={`inline-block uppercase tracking-wide font-bold rounded-full ${
+            compact ? 'mt-2 text-[9px] px-1.5 py-0.5' : 'mt-2.5 text-[10px] px-2 py-0.5'
+          }`}
+          style={
+            ativo
+              ? { backgroundColor: 'rgba(255,255,255,0.2)', color: '#FFFFFF' }
+              : selo.forte
+                ? { backgroundColor: t.accent, color: '#FFFFFF' }
+                : { backgroundColor: `${cor}14`, color: cor }
+          }
+        >
+          {selo.texto}
+        </span>
+      )}
     </button>
   );
 };
