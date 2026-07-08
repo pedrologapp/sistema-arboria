@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Feather, Shield, Info } from 'lucide-react';
-import { SANTUARIO_F2, MOLDURA_F2 } from '@/lib/f2Santuario';
+import { useNavigate } from 'react-router-dom';
+import { Feather } from 'lucide-react';
+import { SANTUARIO_F2, ATIVIDADE_OITO_CAMINHOS_F2 as ATIVIDADE_OITO_CAMINHOS } from '@/lib/f2Santuario';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 
 const TOTAL = 8;
@@ -8,32 +9,31 @@ const TOTAL = 8;
 /**
  * Aba INTELIGÊNCIAS (Fundamental 2, reforma): o SANTUÁRIO DAS 8 CASAS.
  *
- * Mesmo santuário imersivo do Infantil/F1 (fundo índigo profundo, véu na cor da
- * Casa), na voz do adolescente. TODO mentor vê as oito Casas (não filtra pela
- * Casa dele): a aba é estudo e identidade, nunca checklist para classificar aluno.
- * A moldura do topo e a linha de Cuidado por Casa blindam contra o rótulo rápido.
- * Conteúdo aprovado pelo Fundador (src/lib/f2Santuario.ts).
+ * ESPELHA exatamente o F1FasePage (mesmas seções, mesma ordem, mesmo tratamento):
+ * fundo índigo profundo com o véu na cor da Casa, seletor das 8 no topo, swipe pra
+ * trocar, cada Casa ABRINDO com a história do gênio (a cena), depois o mecanismo,
+ * o "uma atividade, oito caminhos", o que NÃO é sinal, como se revela, como vê o
+ * mundo, o que o mentor cultiva, como observar, e o Cuidado.
+ *
+ * Diferença de segmento: no F2 TODO mentor vê as oito Casas iguais (não há
+ * "módulo atual da turma" a destacar; a aba é estudo e identidade). Conteúdo em
+ * src/lib/f2Santuario.ts (gênios do F1 verbatim + conteúdo aprovado do F2).
  */
 const F2InteligenciasPage = () => {
+  const navigate = useNavigate();
+
   // A Casa VISTA agora (o mentor navega as 8; abre na primeira).
-  const [casaSel, setCasaSel] = useState(1);
-
-  const c = SANTUARIO_F2[casaSel];
-
-  // Fallback do brasão: se a imagem não carregar, cai pro escudo na cor da Casa.
-  const [brasaoOk, setBrasaoOk] = useState(true);
-  useEffect(() => {
-    setBrasaoOk(true);
-  }, [casaSel]);
+  const [atual, setAtual] = useState(1);
 
   // Scroll pro TOPO em toda troca de Casa: sem isso, quem troca no meio da
   // página segue lendo achando que é a Casa anterior.
   useEffect(() => {
     window.scrollTo({ top: 0 });
-  }, [casaSel]);
+  }, [atual]);
 
-  // Swipe DENTRO do santuário troca de Casa (modelo mental natural). Só dispara
-  // com gesto claramente horizontal e rápido, pra não roubar o scroll vertical.
+  // Swipe DENTRO do santuário troca de Casa (o modelo mental natural aqui; o
+  // swipe de abas do layout ignora esta rota). Só dispara com gesto claramente
+  // horizontal e rápido, pra não roubar o scroll vertical.
   const toqueRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const onTouchStart = (e: React.TouchEvent) => {
     const t0 = e.touches[0];
@@ -48,54 +48,62 @@ const F2InteligenciasPage = () => {
     const dy = fim.clientY - ini.y;
     const dt = Date.now() - ini.t;
     if (Math.abs(dx) < 64 || Math.abs(dx) < Math.abs(dy) * 1.8 || dt > 600) return;
-    const destino = dx < 0 ? casaSel + 1 : casaSel - 1;
-    if (destino >= 1 && destino <= TOTAL) setCasaSel(destino);
+    const destino = dx < 0 ? atual + 1 : atual - 1;
+    if (destino >= 1 && destino <= TOTAL) setAtual(destino);
   };
+
+  const m = SANTUARIO_F2[atual];
 
   return (
     <>
-      {/* Fundo full-bleed imersivo: o véu da cor da Casa mesclado ao índigo,
-          transição suave na troca. Igual ao santuário do Infantil/F1. */}
+      {/* Fundo full-bleed: atrás do conteúdo, sob o chrome glass. O véu da cor da
+          Casa se mescla ao índigo; transição suave na troca. Igual ao F1. */}
       <div
         className="fixed inset-0 z-0"
         style={{
           backgroundColor: t.accentDeep,
-          background: `radial-gradient(120% 90% at 50% -10%, ${c.corVeu} 0%, #322B8F 52%, #2B2580 100%)`,
+          background: `radial-gradient(120% 90% at 50% -10%, ${m.corVeu} 0%, #322B8F 52%, #2B2580 100%)`,
           transition: 'background 600ms ease',
         }}
         aria-hidden="true"
       />
 
-      <div
-        className="relative z-10 pt-4 pb-6"
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-      >
-        <p
-          className="text-[11px] uppercase font-semibold mb-3 vf-rise"
-          style={{ color: 'rgba(255,255,255,0.6)', letterSpacing: '0.24em' }}
-        >
-          Inteligências
-        </p>
-
-        {/* MOLDURA de estudo: o que esta aba NÃO é. Fixa no topo, sempre visível:
-            deixa claro que é identidade, nunca checklist (blindagem anti-rótulo). */}
-        <div
-          className="rounded-2xl p-4 mb-4 flex gap-3 vf-rise"
-          style={{
-            backgroundColor: 'rgba(255,255,255,0.07)',
-            border: '1px solid rgba(255,255,255,0.16)',
-          }}
-        >
-          <Info size={16} strokeWidth={1.75} className="flex-shrink-0 mt-0.5" style={{ color: 'rgba(255,255,255,0.8)' }} />
-          <p className="text-[12.5px] leading-relaxed texto-justificado" style={{ color: 'rgba(255,255,255,0.82)' }}>
-            <span className="font-semibold" style={{ color: '#FFFFFF' }}>{MOLDURA_F2.titulo} </span>
-            {MOLDURA_F2.corpo}
+      <div className="relative z-10 pt-4 pb-6" key={atual} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        {/* Entrada da FORMAÇÃO ARBORIA: no topo, visível em todas as Casas (a
+            Formação é compartilhada entre segmentos). Igual ao F1. */}
+        <div className="flex items-center justify-between mb-2 vf-rise">
+          <p
+            className="text-[11px] uppercase font-semibold"
+            style={{ color: 'rgba(255,255,255,0.6)', letterSpacing: '0.24em' }}
+          >
+            Inteligências
           </p>
+          <button
+            onClick={() => navigate('/professor/formacao')}
+            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-semibold active:scale-95"
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.12)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              color: '#FFFFFF',
+            }}
+          >
+            <svg viewBox="0 0 100 100" style={{ width: 12, height: 12 }} aria-hidden="true">
+              <path
+                d="M30 79 L50 27 L70 79"
+                stroke="#FFFFFF"
+                strokeWidth="10"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+              <path d="M50 27 C50 16 58 9 68 8 C69 19 61 26 50 27 Z" fill="#FFFFFF" />
+            </svg>
+            Treinamentos
+          </button>
         </div>
 
-        {/* Seletor das 8 Casas: corpo de botão na cor de cada Casa; a selecionada
-            fica branca. Todo mentor vê as oito. */}
+        {/* Seletor das 8 Casas: corpo de botão na cor de cada Casa. TODO mentor vê
+            as oito; a selecionada fica branca. */}
         <div
           className="flex gap-1.5 justify-center flex-wrap mb-2 vf-rise"
           role="tablist"
@@ -103,22 +111,21 @@ const F2InteligenciasPage = () => {
         >
           {Array.from({ length: TOTAL }).map((_, i) => {
             const n = i + 1;
-            const ehSel = n === casaSel;
-            const casa = SANTUARIO_F2[n];
+            const ehLido = n === atual;
             return (
               <button
                 key={n}
                 role="tab"
-                onClick={() => setCasaSel(n)}
+                onClick={() => setAtual(n)}
                 className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold transition-all active:scale-95"
                 style={{
-                  backgroundColor: ehSel ? '#FFFFFF' : `${casa.cor}55`,
-                  color: ehSel ? casa.cor : '#FFFFFF',
-                  border: `1.5px solid ${ehSel ? '#FFFFFF' : 'rgba(255,255,255,0.4)'}`,
+                  backgroundColor: ehLido ? '#FFFFFF' : `${SANTUARIO_F2[n].cor}55`,
+                  color: ehLido ? SANTUARIO_F2[n].cor : '#FFFFFF',
+                  border: `1.5px solid ${ehLido ? '#FFFFFF' : 'rgba(255,255,255,0.4)'}`,
                   boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
                 }}
-                aria-label={`Casa ${casa.casaNome}`}
-                aria-selected={ehSel}
+                aria-label={`Casa ${SANTUARIO_F2[n].nome}`}
+                aria-selected={ehLido}
               >
                 {n}
               </button>
@@ -126,119 +133,185 @@ const F2InteligenciasPage = () => {
           })}
         </div>
 
+        {/* Dica de toque */}
         <p className="text-[11px] text-center mb-5 vf-rise" style={{ color: 'rgba(255,255,255,0.65)' }}>
           Toque num número para conhecer outra Casa
         </p>
 
-        {/* Cabeçalho da Casa: brasão (ou escudo na cor) + nome. key força a
-            reentrada da animação na troca. */}
-        <div key={casaSel} className="flex flex-col items-center text-center">
-          <div className="vf-rise" aria-hidden="true">
-            {brasaoOk ? (
-              <img
-                src={c.brasao}
-                alt=""
-                onError={() => setBrasaoOk(false)}
-                className="object-contain"
-                style={{ width: 68, height: 68, filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.35))' }}
-              />
-            ) : (
-              <span
-                className="rounded-2xl flex items-center justify-center"
-                style={{ width: 68, height: 68, backgroundColor: `${c.cor}44`, border: '1px solid rgba(255,255,255,0.22)' }}
-              >
-                <Shield size={34} style={{ color: '#FFFFFF' }} strokeWidth={1.75} />
-              </span>
-            )}
-          </div>
-
+        <div className="vf-rise" style={{ animationDelay: '80ms' }}>
           <p
-            className="text-[10.5px] uppercase font-semibold mt-4 vf-rise"
+            className="text-[10.5px] uppercase font-semibold text-center"
             style={{ color: 'rgba(255,255,255,0.8)', letterSpacing: '0.32em' }}
           >
-            Casa {casaSel} de {TOTAL}
+            Casa {atual} de {TOTAL}
           </p>
-          <h1 className="font-serif text-[27px] leading-tight mt-2 vf-rise" style={{ color: '#FFFFFF' }}>
-            Casa {c.casaNome}
+          <h1 className="font-serif text-[27px] leading-tight text-center mt-4" style={{ color: '#FFFFFF' }}>
+            Casa {m.nome}
           </h1>
-          {/* Assinatura de cor da Casa */}
+          {/* Assinatura de COR da Casa: grossa e abaixo do nome */}
           <div
             className="vf-draw mx-auto mt-3 mb-6 rounded-full"
-            style={{ width: 76, height: 6, backgroundColor: c.cor, animationDelay: '200ms' }}
+            style={{ width: 76, height: 6, backgroundColor: m.corAcento, animationDelay: '250ms' }}
           />
         </div>
 
-        {/* Essência (voz editorial, itálico) */}
+        {/* A Cena: abre com a história do gênio */}
         <div
           className="rounded-r-2xl p-4 mb-5 vf-rise"
           style={{
             backgroundColor: 'rgba(255,255,255,0.07)',
-            borderLeft: `3px solid ${c.cor}`,
-            animationDelay: '120ms',
+            borderLeft: `3px solid ${m.corAcento}`,
+            animationDelay: '160ms',
           }}
         >
           <p className="font-serif italic text-[13.5px] leading-relaxed texto-justificado" style={{ color: 'rgba(255,255,255,0.9)' }}>
-            {c.essencia}
+            {m.cena}
           </p>
         </div>
 
-        <section className="mb-5 vf-rise" style={{ animationDelay: '200ms' }}>
-          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: '#FFFFFF' }}>
+        <section className="mb-5 vf-rise" style={{ animationDelay: '240ms' }}>
+          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
             O mecanismo
           </h2>
           <p className="text-sm leading-relaxed texto-justificado" style={{ color: 'rgba(255,255,255,0.92)' }}>
-            {c.mecanismo}
+            {m.mecanismo}
           </p>
         </section>
 
-        <section className="mb-5 vf-rise" style={{ animationDelay: '280ms' }}>
-          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: '#FFFFFF' }}>
-            Como se revela no adolescente
+        {/* UMA ATIVIDADE, OITO CAMINHOS: a peça que produz o "aha"; entender é
+            comparar. Mesmo lugar e formato do F1. */}
+        <section className="mb-5 vf-rise" style={{ animationDelay: '300ms' }}>
+          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-1" style={{ color: m.corAcento }}>
+            {ATIVIDADE_OITO_CAMINHOS.titulo}
           </h2>
-          <ul className="space-y-2">
-            {c.revela.map((x, i) => (
-              <li key={i} className="text-sm leading-relaxed flex gap-2.5" style={{ color: 'rgba(255,255,255,0.92)' }}>
-                <span
-                  className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-2"
-                  style={{ backgroundColor: c.cor, boxShadow: '0 0 0 1.5px rgba(255,255,255,0.35)' }}
-                  aria-hidden="true"
-                />
+          <p className="text-[12.5px] italic mb-3" style={{ color: 'rgba(255,255,255,0.7)' }}>
+            {ATIVIDADE_OITO_CAMINHOS.intro}
+          </p>
+          <div className="space-y-1.5">
+            {Array.from({ length: TOTAL }).map((_, i) => {
+              const n = i + 1;
+              const ehAtual = n === atual;
+              const casa = SANTUARIO_F2[n];
+              return (
+                <button
+                  key={n}
+                  onClick={() => !ehAtual && setAtual(n)}
+                  className="w-full text-left rounded-xl px-3 py-2.5 flex gap-2.5 transition-colors"
+                  style={{
+                    backgroundColor: ehAtual ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${ehAtual ? 'rgba(255,255,255,0.3)' : 'transparent'}`,
+                  }}
+                >
+                  <span
+                    className="w-3 h-3 rounded-full flex-shrink-0 mt-1"
+                    style={{ backgroundColor: casa.cor, boxShadow: '0 0 0 1.5px rgba(255,255,255,0.35)' }}
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-[12px] font-bold" style={{ color: ehAtual ? '#FFFFFF' : 'rgba(255,255,255,0.85)' }}>
+                      Casa {casa.nome}
+                    </span>
+                    <span className="block text-[12.5px] leading-relaxed" style={{ color: ehAtual ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.72)' }}>
+                      {ATIVIDADE_OITO_CAMINHOS.caminhos[n]}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {/* Anti-veredito: a leitura de uma tarefa não fecha nada sozinha */}
+          <p className="text-[11.5px] italic mt-2.5 text-center" style={{ color: 'rgba(255,255,255,0.6)' }}>
+            Um projeto não diz nada: uma série deles começa a dizer.
+          </p>
+        </section>
+
+        <section className="mb-5 vf-rise" style={{ animationDelay: '320ms' }}>
+          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
+            O que NÃO é sinal desta Casa
+          </h2>
+          <ul className="space-y-1.5">
+            {m.naoDefine.map((x, i) => (
+              <li key={i} className="text-sm leading-relaxed flex gap-2" style={{ color: 'rgba(255,255,255,0.92)' }}>
+                <span className="flex-shrink-0 text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>✗</span>
                 {x}
               </li>
             ))}
           </ul>
         </section>
 
-        <section className="mb-5 vf-rise" style={{ animationDelay: '360ms' }}>
+        <section className="mb-5 vf-rise" style={{ animationDelay: '400ms' }}>
+          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
+            Como se revela no adolescente
+          </h2>
+          <ul className="space-y-2">
+            {m.revela.map((x, i) => (
+              <li key={i} className="text-sm leading-relaxed flex gap-2" style={{ color: 'rgba(255,255,255,0.92)' }}>
+                <span className="flex-shrink-0 text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>→</span>
+                {x}
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="mb-5 vf-rise" style={{ animationDelay: '480ms' }}>
+          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
+            Como o adolescente vê o mundo
+          </h2>
+          <p className="font-serif italic text-sm leading-relaxed texto-justificado" style={{ color: 'rgba(255,255,255,0.88)' }}>
+            {m.veMundo}
+          </p>
+        </section>
+
+        {/* O que o mentor cultiva: com a cor da Casa (o slot da "lente" do F1) */}
+        <div
+          className="rounded-2xl p-4 mb-5 vf-rise"
+          style={{
+            backgroundColor: `${m.cor}44`,
+            border: '1px solid rgba(255,255,255,0.22)',
+            animationDelay: '560ms',
+          }}
+        >
           <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: '#FFFFFF' }}>
             O que o mentor cultiva
           </h2>
-          <p className="text-sm leading-relaxed texto-justificado" style={{ color: 'rgba(255,255,255,0.92)' }}>
-            {c.cultiva}
+          <p className="text-sm leading-relaxed texto-justificado" style={{ color: 'rgba(255,255,255,0.95)' }}>
+            {m.lente}
           </p>
-        </section>
+          {/* Anti-"estilos de aprendizagem" / "toda pessoa tem as oito" */}
+          <p
+            className="text-[12.5px] font-semibold mt-2.5 pt-2.5"
+            style={{ color: '#FFFFFF', borderTop: '1px solid rgba(255,255,255,0.2)' }}
+          >
+            Ele usa as oito portas: esta é a que abre mais fácil. Nunca ofereça só uma.
+          </p>
+        </div>
 
-        {/* Referência (o gênio): fecha o mecanismo com a âncora dos 12 anos */}
-        <section
-          className="mb-5 pt-4 vf-rise"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.16)', animationDelay: '440ms' }}
-        >
-          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: '#FFFFFF' }}>
-            Referência
+        <section className="mb-5 vf-rise" style={{ animationDelay: '640ms' }}>
+          <h2 className="text-[13.5px] uppercase tracking-[0.14em] font-bold mb-2.5" style={{ color: m.corAcento }}>
+            Como observar na sua turma
           </h2>
-          <p className="text-[13.5px] leading-relaxed texto-justificado" style={{ color: 'rgba(255,255,255,0.82)' }}>
-            {c.referencia}
+          {/* Antídoto NO TOPO da lista */}
+          <p className="text-[12.5px] italic mb-2.5" style={{ color: 'rgba(255,255,255,0.75)' }}>
+            Isto não é lista pra marcar aluno: registre a cena; a leitura vem depois.
           </p>
+          <ul className="space-y-1.5">
+            {m.observar.map((x, i) => (
+              <li key={i} className="text-sm leading-relaxed flex gap-2" style={{ color: 'rgba(255,255,255,0.92)' }}>
+                <span className="flex-shrink-0 font-bold" style={{ color: '#FFFFFF' }}>·</span>
+                {x}
+              </li>
+            ))}
+          </ul>
         </section>
 
-        {/* Cuidado: a guarda anti-rótulo, mesma em toda Casa. "Toda pessoa tem as
-            oito" fica aqui, junto do conteúdo. Pena, nunca alerta. */}
+        {/* Cuidado: pena, nunca alerta. A guarda anti-rótulo (mesma em toda Casa);
+            "toda pessoa tem as oito" fica aqui, junto do conteúdo. */}
         <div
           className="rounded-2xl p-4 flex gap-3 vf-rise"
           style={{
             backgroundColor: 'rgba(255,255,255,0.08)',
             border: '1px solid rgba(255,255,255,0.18)',
-            animationDelay: '520ms',
+            animationDelay: '720ms',
           }}
         >
           <Feather size={17} strokeWidth={1.5} className="flex-shrink-0 mt-0.5" style={{ color: 'rgba(255,255,255,0.85)' }} />
@@ -247,7 +320,7 @@ const F2InteligenciasPage = () => {
               Cuidado
             </p>
             <p className="text-[13px] leading-relaxed texto-justificado" style={{ color: 'rgba(255,255,255,0.85)' }}>
-              {c.cuidado}
+              {m.cuidado}
             </p>
           </div>
         </div>
