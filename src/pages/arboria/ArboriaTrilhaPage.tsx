@@ -12,6 +12,9 @@ import {
   Plus,
   Minus,
   RotateCcw,
+  Layers,
+  Square,
+  CheckSquare,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,6 +35,17 @@ const INTELIGENCIAS = [
 ];
 const intelById = (id: number) => INTELIGENCIAS.find((i) => i.id === id) ?? null;
 const ORDEM_PADRAO = INTELIGENCIAS.map((i) => i.id); // [1..8] canônica
+
+// Segmentos: mesmos rótulos/ids da tela de Logins (AdminLoginsProfessoresPage).
+// Turmas com segmento null caem em "Outras turmas", nunca ficam invisíveis. Como
+// as atividades do banco são por segmento, filtrar aqui deixa o banco coerente.
+const SEGMENTOS: { id: string; label: string }[] = [
+  { id: 'infantil', label: 'Infantil' },
+  { id: 'fundamental1', label: 'Fundamental 1' },
+  { id: 'fundamental2', label: 'Fundamental 2' },
+  { id: 'outros', label: 'Outras turmas' },
+];
+const segDaTurma = (tt: TurmaOption): string => tt.segmento || 'outros';
 
 // A tabela turma_atividade_plano (e, dependendo do ambiente, turma_fase_ordem)
 // pode não estar nos tipos gerados. Acesso destipado + leituras tolerantes.
@@ -101,10 +115,15 @@ const linhaBase = 'w-full flex items-center gap-2 px-3 py-2.5 text-left transiti
  * criando o vínculo turma + fase + atividade que hoje não existe.
  */
 const ArboriaTrilhaPage = () => {
-  // Cascata
+  // Cascata: Instituição -> Segmento -> Série -> Turma
   const [instSel, setInstSel] = useState<string | null>(null);
+  const [segmentoSel, setSegmentoSel] = useState<string | null>(null);
   const [serieSel, setSerieSel] = useState<string | null>(null);
   const [turmaSel, setTurmaSel] = useState<string | null>(null);
+
+  // Aplicar a trilha em lote a outras turmas do mesmo segmento
+  const [loteSel, setLoteSel] = useState<Set<string>>(new Set());
+  const [aplicandoLote, setAplicandoLote] = useState(false);
 
   // Trilha da turma: ordem das inteligências ATIVAS (subconjunto). A ordem é
   // implícita (posicao 1..N = posição no array). Inteligências fora do array
@@ -145,9 +164,30 @@ const ArboriaTrilhaPage = () => {
     },
   });
   const turmaMap = useMemo(() => new Map(turmas.map((tt) => [tt.id, tt])), [turmas]);
-  const seriesDaInst = useMemo(() => [...new Set(turmas.map((tt) => tt.serie))], [turmas]);
-  const turmasDaSerie = useMemo(() => turmas.filter((tt) => tt.serie === serieSel), [turmas, serieSel]);
+  // Segmentos que têm ao menos uma turma nesta instituição (na ordem canônica).
+  const segmentosComTurmas = useMemo(() => {
+    const set = new Set(turmas.map((tt) => segDaTurma(tt)));
+    return SEGMENTOS.filter((s) => set.has(s.id));
+  }, [turmas]);
+  // Turmas do segmento em foco.
+  const turmasDoSegmento = useMemo(
+    () => turmas.filter((tt) => segDaTurma(tt) === segmentoSel),
+    [turmas, segmentoSel]
+  );
+  const seriesDoSegmento = useMemo(
+    () => [...new Set(turmasDoSegmento.map((tt) => tt.serie))],
+    [turmasDoSegmento]
+  );
+  const turmasDaSerie = useMemo(
+    () => turmasDoSegmento.filter((tt) => tt.serie === serieSel),
+    [turmasDoSegmento, serieSel]
+  );
   const turmaFocada = turmaSel ? turmaMap.get(turmaSel) ?? null : null;
+  // Outras turmas do MESMO segmento (alvos possíveis do "aplicar em lote").
+  const outrasTurmasDoSegmento = useMemo(
+    () => turmasDoSegmento.filter((tt) => tt.id !== turmaSel),
+    [turmasDoSegmento, turmaSel]
+  );
 
   // ===== Banco de atividades da instituição =====
   const { data: atividades = [] } = useQuery({
@@ -234,6 +274,10 @@ const ArboriaTrilhaPage = () => {
     setPlano(planoData ?? {});
     setFaseAberta(null);
   }, [planoData, turmaSel]);
+  // Ao trocar de turma (ou de segmento), zera a seleção de turmas do lote.
+  useEffect(() => {
+    setLoteSel(new Set());
+  }, [turmaSel, segmentoSel]);
 
   // Atividades do banco que servem esta fase para esta turma (intel + segmento + faixa)
   const atividadesDaFase = (intelId: number): Atividade[] => {
@@ -399,6 +443,107 @@ const ArboriaTrilhaPage = () => {
     }
   };
 
+  // ===== Aplicar a trilha em lote a outras turmas do mesmo segmento =====
+  // Grava, numa turma alvo, exatamente a config mostrada na tela (a ordem das
+  // fases + o plano de atividades por fase). Reusa o mesmo mecanismo das duas
+  // funções de salvar acima: delete + insert de turma_fase_ordem e de
+  // turma_atividade_plano. Lança em erro para o chamador tratar por turma.
+  const gravarConfigNaTurma = async (alvoTurmaId: string) => {
+    if (!instSel) throw new Error('Instituição não selecionada.');
+
+    // (a) Ordem das fases: apaga a trilha antiga da turma alvo e reinsere a atual.
+    const delOrdem = await fromAny('turma_fase_ordem')
+      .delete()
+      .eq('turma_id', alvoTurmaId)
+      .eq('ano_letivo', anoLetivo);
+    if (delOrdem.error) throw delOrdem.error;
+    const linhasOrdem = ordem.map((intelId, i) => ({
+      institution_id: instSel,
+      turma_id: alvoTurmaId,
+      ano_letivo: anoLetivo,
+      posicao: i + 1,
+      inteligencia_id: intelId,
+    }));
+    const insOrdem = await fromAny('turma_fase_ordem').insert(linhasOrdem as never);
+    if (insOrdem.error) throw insOrdem.error;
+
+    // (b) Plano de atividades: apaga todo o plano da turma alvo e reinsere as
+    // fases ATIVAS na ordem atual. Fases fora da trilha não entram.
+    const delPlano = await fromAny('turma_atividade_plano')
+      .delete()
+      .eq('turma_id', alvoTurmaId)
+      .eq('ano_letivo', anoLetivo);
+    if (delPlano.error) throw delPlano.error;
+    const linhasPlano: Record<string, unknown>[] = [];
+    ordem.forEach((intelId) => {
+      (plano[intelId] ?? []).forEach((ativId, i) => {
+        linhasPlano.push({
+          institution_id: instSel,
+          turma_id: alvoTurmaId,
+          ano_letivo: anoLetivo,
+          inteligencia_id: intelId,
+          atividade_id: ativId,
+          ordem: i + 1,
+          ativo: true,
+        });
+      });
+    });
+    if (linhasPlano.length > 0) {
+      const insPlano = await fromAny('turma_atividade_plano').insert(linhasPlano as never);
+      if (insPlano.error) throw insPlano.error;
+    }
+  };
+
+  const toggleLote = (turmaId: string) => {
+    setLoteSel((prev) => {
+      const nova = new Set(prev);
+      if (nova.has(turmaId)) nova.delete(turmaId);
+      else nova.add(turmaId);
+      return nova;
+    });
+  };
+  const marcarTodasDoLote = () =>
+    setLoteSel(new Set(outrasTurmasDoSegmento.map((tt) => tt.id)));
+  const limparLote = () => setLoteSel(new Set());
+
+  const aplicarEmLote = async () => {
+    if (!turmaSel || !instSel || loteSel.size === 0) return;
+    if (ordem.length === 0) {
+      toast.error('Ative ao menos uma inteligência antes de aplicar.');
+      return;
+    }
+    setAplicandoLote(true);
+    const alvos = [...loteSel];
+    const falhasIds: string[] = [];
+    // Sequencial e tolerante: uma turma que falhar não aborta o restante.
+    for (const alvoId of alvos) {
+      try {
+        await gravarConfigNaTurma(alvoId);
+      } catch {
+        falhasIds.push(alvoId);
+      }
+    }
+    setAplicandoLote(false);
+    const ok = alvos.length - falhasIds.length;
+    const nomesFalhas = falhasIds.map((id) => {
+      const tt = turmaMap.get(id);
+      return tt ? nomeTurma(tt) : id;
+    });
+    if (falhasIds.length === 0) {
+      toast.success(`Trilha aplicada a ${ok} turma${ok === 1 ? '' : 's'}.`);
+      setLoteSel(new Set());
+    } else if (ok === 0) {
+      toast.error(`Não foi possível aplicar. Falhou em: ${nomesFalhas.join(', ')}.`);
+      setLoteSel(new Set(falhasIds));
+    } else {
+      toast.warning(
+        `Trilha aplicada a ${ok} turma${ok === 1 ? '' : 's'}. Falhou em: ${nomesFalhas.join(', ')}.`
+      );
+      // Mantém marcadas só as que falharam, para reenvio.
+      setLoteSel(new Set(falhasIds));
+    }
+  };
+
   return (
     <div className="pb-10">
       <div className="mb-1">
@@ -407,11 +552,11 @@ const ArboriaTrilhaPage = () => {
         </h1>
       </div>
       <p className="text-sm mb-4" style={{ color: t.textMuted }}>
-        Escolha a instituição, a série e a turma. Depois monte a ordem das fases e, em cada fase, quais
-        atividades do banco entram e em que sequência.
+        Escolha a instituição, o segmento, a série e a turma. Depois monte a ordem das fases e, em cada
+        fase, quais atividades do banco entram e em que sequência.
       </p>
 
-      {/* CASCATA: instituição -> série -> turma */}
+      {/* CASCATA: instituição -> segmento -> série -> turma */}
       <div className="flex gap-3 overflow-x-auto pb-2 items-start">
         {/* Instituição */}
         <div className="w-48 flex-shrink-0 rounded-2xl overflow-hidden" style={colunaCss}>
@@ -425,6 +570,7 @@ const ArboriaTrilhaPage = () => {
                 key={inst.id}
                 onClick={() => {
                   setInstSel(inst.id);
+                  setSegmentoSel(null);
                   setSerieSel(null);
                   setTurmaSel(null);
                 }}
@@ -452,21 +598,65 @@ const ArboriaTrilhaPage = () => {
           )}
         </div>
 
-        {/* Série */}
-        <div className="w-40 flex-shrink-0 rounded-2xl overflow-hidden" style={colunaCss}>
+        {/* Segmento */}
+        <div className="w-44 flex-shrink-0 rounded-2xl overflow-hidden" style={colunaCss}>
           <p className="px-3 py-2 text-[10px] uppercase tracking-wider font-semibold" style={{ color: t.textFaint }}>
-            Série
+            Segmento
           </p>
           {!instSel ? (
             <p className="px-3 py-4 text-[11px]" style={{ color: t.textFaint }}>
               Escolha a instituição
             </p>
-          ) : seriesDaInst.length === 0 ? (
+          ) : segmentosComTurmas.length === 0 ? (
+            <p className="px-3 py-4 text-[11px]" style={{ color: t.textFaint }}>
+              Nenhuma turma
+            </p>
+          ) : (
+            segmentosComTurmas.map((seg) => {
+              const ativa = seg.id === segmentoSel;
+              return (
+                <button
+                  key={seg.id}
+                  onClick={() => {
+                    setSegmentoSel(seg.id);
+                    setSerieSel(null);
+                    setTurmaSel(null);
+                  }}
+                  className={linhaBase}
+                  style={{
+                    backgroundColor: ativa ? t.accentSoft : 'transparent',
+                    borderLeft: `3px solid ${ativa ? t.accent : 'transparent'}`,
+                    borderBottom: `1px solid ${t.border}`,
+                  }}
+                >
+                  <span
+                    className="flex-1 text-[13px] truncate"
+                    style={{ color: ativa ? t.text : t.textMuted, fontWeight: ativa ? 700 : 500 }}
+                  >
+                    {seg.label}
+                  </span>
+                  {ativa && <ChevronRight size={14} style={{ color: t.accent }} />}
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {/* Série */}
+        <div className="w-40 flex-shrink-0 rounded-2xl overflow-hidden" style={colunaCss}>
+          <p className="px-3 py-2 text-[10px] uppercase tracking-wider font-semibold" style={{ color: t.textFaint }}>
+            Série
+          </p>
+          {!segmentoSel ? (
+            <p className="px-3 py-4 text-[11px]" style={{ color: t.textFaint }}>
+              Escolha o segmento
+            </p>
+          ) : seriesDoSegmento.length === 0 ? (
             <p className="px-3 py-4 text-[11px]" style={{ color: t.textFaint }}>
               Nenhuma série
             </p>
           ) : (
-            seriesDaInst.map((serie) => {
+            seriesDoSegmento.map((serie) => {
               const ativa = serie === serieSel;
               return (
                 <button
@@ -887,6 +1077,92 @@ const ArboriaTrilhaPage = () => {
                 );
               })}
             </div>
+          </section>
+
+          {/* SEÇÃO C: aplicar esta trilha a outras turmas do mesmo segmento */}
+          <section className="rounded-2xl p-4" style={colunaCss}>
+            <div className="flex items-center gap-2 mb-1">
+              <Layers size={18} style={{ color: t.accent }} strokeWidth={1.75} />
+              <h2 className="text-sm font-semibold" style={{ color: t.text }}>
+                Aplicar esta trilha a outras turmas
+              </h2>
+            </div>
+            <p className="text-xs mb-3" style={{ color: t.textMuted }}>
+              Copia a trilha e as atividades por fase, exatamente como estão nesta tela, para as turmas
+              marcadas. Só turmas do mesmo segmento, porque as atividades são por segmento. Cada turma
+              marcada tem sua trilha e seu plano substituídos.
+            </p>
+
+            {outrasTurmasDoSegmento.length === 0 ? (
+              <p className="text-xs py-2" style={{ color: t.textFaint }}>
+                Não há outras turmas neste segmento para receber a trilha.
+              </p>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  <button
+                    onClick={marcarTodasDoLote}
+                    className="text-[12px] font-medium rounded-lg px-2.5 py-1"
+                    style={{ backgroundColor: t.surfaceSunken, color: t.textMuted }}
+                  >
+                    Marcar todas
+                  </button>
+                  {loteSel.size > 0 && (
+                    <button
+                      onClick={limparLote}
+                      className="text-[12px] font-medium rounded-lg px-2.5 py-1"
+                      style={{ backgroundColor: t.surfaceSunken, color: t.textMuted }}
+                    >
+                      Limpar
+                    </button>
+                  )}
+                  <span className="text-[11px] ml-auto" style={{ color: t.textFaint }}>
+                    {loteSel.size} marcada{loteSel.size === 1 ? '' : 's'}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  {outrasTurmasDoSegmento.map((tt) => {
+                    const marcada = loteSel.has(tt.id);
+                    return (
+                      <button
+                        key={tt.id}
+                        onClick={() => toggleLote(tt.id)}
+                        disabled={aplicandoLote}
+                        className="w-full rounded-xl p-2.5 flex items-center gap-2.5 text-left disabled:opacity-60"
+                        style={{
+                          backgroundColor: marcada ? t.accentSoft : t.surface,
+                          border: `1px solid ${marcada ? t.accentBorder : t.border}`,
+                        }}
+                        aria-pressed={marcada}
+                      >
+                        {marcada ? (
+                          <CheckSquare size={18} style={{ color: t.accent }} className="flex-shrink-0" />
+                        ) : (
+                          <Square size={18} style={{ color: t.textFaint }} className="flex-shrink-0" />
+                        )}
+                        <span
+                          className="flex-1 text-[13px] truncate"
+                          style={{ color: marcada ? t.accentText : t.text, fontWeight: marcada ? 700 : 500 }}
+                        >
+                          {nomeTurma(tt)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={aplicarEmLote}
+                  disabled={loteSel.size === 0 || aplicandoLote}
+                  className="w-full mt-3 rounded-xl py-2.5 text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
+                  style={{ backgroundColor: t.accent, color: '#FFFFFF' }}
+                >
+                  {aplicandoLote && <Loader2 size={15} className="animate-spin" />}
+                  Aplicar a {loteSel.size} turma{loteSel.size === 1 ? '' : 's'}
+                </button>
+              </>
+            )}
           </section>
         </div>
       )}
