@@ -54,8 +54,14 @@ const ProfessorLayoutF2Novo = ({ children }: ProfessorLayoutF2NovoProps) => {
     [profile?.nome, profile?.sobrenome].filter(Boolean).join(' ') ||
     'Professor';
 
+  // Administrar Capítulo é uma tela imersiva ESCURA com fundo próprio e botão
+  // de voltar dele: o header claro (e a barra, escondida na F2BottomNav) não
+  // podem aparecer por cima. Mesmo espírito do thread/aula em tela cheia.
+  const imersivo = /^\/professor\/f2\/capitulo\/.+/.test(location.pathname);
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: t.bg, color: t.text }}>
+      {!imersivo && (
       <header
         className="fixed top-0 left-0 right-0 z-40 glass-light"
         style={{ boxShadow: '0 1px 3px rgba(28,34,48,0.06)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
@@ -107,11 +113,16 @@ const ProfessorLayoutF2Novo = ({ children }: ProfessorLayoutF2NovoProps) => {
           </div>
         </div>
       </header>
+      )}
 
       <main
         key={location.pathname}
         className="pb-24 px-4 max-w-lg mx-auto"
-        style={{ paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }}
+        style={{
+          paddingTop: imersivo
+            ? 'env(safe-area-inset-top, 0px)'
+            : 'calc(3.5rem + env(safe-area-inset-top, 0px))',
+        }}
       >
         <Suspense fallback={<PaginaCarregando />}>{children}</Suspense>
       </main>

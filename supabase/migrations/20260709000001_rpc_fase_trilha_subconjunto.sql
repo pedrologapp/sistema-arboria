@@ -1,10 +1,11 @@
 -- =============================================================
 -- RPCs de fase: avanço dentro do SUBCONJUNTO ATIVO da trilha da turma.
 --
--- >>> MIGRATION ESCRITA, NÃO APLICADA. <<<
--- NÃO rodar db push / run-sql. Aguarda revisão de Riscos + Dados (mexe em RPC
--- que move a trilha da turma) e aprovação do Fundador. É ADITIVA: só
--- CREATE OR REPLACE FUNCTION, nenhuma coluna/linha/constraint é alterada.
+-- >>> MIGRATION JÁ APLICADA (aplicada pelo CEO; cabeçalho corrigido em 2026-07-08). <<<
+-- Um futuro db push pode incluí-la normalmente: NÃO é aviso de bloqueio. É
+-- ADITIVA: só CREATE OR REPLACE FUNCTION, nenhuma coluna/linha/constraint é
+-- alterada. Passou por revisão de Riscos + Dados (mexe em RPC que move a trilha
+-- da turma) e aprovação do Fundador.
 --
 -- O QUÊ MUDA vs 20260707000006: as RPCs deixam de assumir que a trilha tem
 -- SEMPRE 8 posições. Agora o TOTAL de fases de uma turma é o nº de fases ATIVAS

@@ -128,8 +128,9 @@ const F2AlunosPage = () => {
         </p>
       </div>
 
-      {/* Grid-filtro de turmas: mesmo grid deslizável de 2 linhas da aba Arboria.
-          "Todas" (default) + uma turma por card. Escolher só filtra a lista. */}
+      {/* Filtro de turmas: fileira horizontal deslizável de pílulas (uma só
+          linha). "Todas" (default) + uma turma por pílula. Escolher só filtra
+          a lista. */}
       <div>
         <p className="text-[11px] uppercase tracking-wide font-semibold mb-2 px-1" style={{ color: t.textFaint }}>
           Escolha sua turma

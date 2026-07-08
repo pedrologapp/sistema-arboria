@@ -43,13 +43,20 @@ export const useAlunoThread = (alunoId?: string) => {
         .eq('id', alunoId)
         .single();
 
-      // 2. Turma atual (para registrar observações)
-      const { data: at } = await supabase
+      // 2. Turma atual (para registrar observações). Um aluno pode ter MAIS DE UM
+      //    vínculo ativo (ex.: matriculado em 2 turmas). Com maybeSingle isso
+      //    erra e bloqueia o registro (podeRegistrar=false). Pegamos um vínculo
+      //    ativo de forma determinística (ano letivo mais recente, depois o
+      //    criado mais recentemente) em vez de tratar 2 vínculos como erro.
+      const { data: ats } = await supabase
         .from('aluno_turma')
         .select('turma_id')
         .eq('aluno_id', alunoId)
         .eq('ativo', true)
-        .maybeSingle();
+        .order('ano_letivo', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(1);
+      const at = ats?.[0] ?? null;
 
       // 3. Observações (ordem cronológica = conversa): excluídas (soft-delete) ficam fora
       const { data: obs } = await supabase

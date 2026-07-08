@@ -161,7 +161,11 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
           .eq('professor_id', user.id)
           .eq('ativo', true)
           .eq('eh_mentor_principal', true)
-          .maybeSingle(),
+          // Um professor pode ser mentor principal de 2+ Casas. Com maybeSingle
+          // isso erra e casaMentor vira null (app F2 vazio). Pegamos a primeira
+          // Casa de forma determinística (por casa_id) em vez de tratar como erro.
+          .order('casa_id', { ascending: true })
+          .limit(1),
         profileData?.institution_id
           ? supabase.from('institutions').select('name').eq('id', profileData.institution_id).single()
           : Promise.resolve({ data: null, error: null }),
@@ -193,8 +197,9 @@ export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
         console.error('Error fetching professor casa:', professorCasaRes.error);
       }
       let casaMentorData: Inteligencia | null = null;
-      if ((professorCasaRes.data as any)?.inteligencias) {
-        const intel = (professorCasaRes.data as any).inteligencias as unknown as Inteligencia;
+      const professorCasaRow = (professorCasaRes.data as any[] | null)?.[0] ?? null;
+      if (professorCasaRow?.inteligencias) {
+        const intel = professorCasaRow.inteligencias as unknown as Inteligencia;
         setCasaMentor(intel);
         casaMentorData = intel;
       }

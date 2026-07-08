@@ -853,7 +853,7 @@ const F2ArboriaPage = () => {
               preenchem 2 linhas e seguem pra a direita; deslize pra ver o resto. */}
           <div>
             <p className="text-[11px] uppercase tracking-wide font-semibold mb-2 px-1" style={{ color: t.textFaint }}>
-              Escolha aqui sua turma
+              Escolha sua turma
             </p>
             <div
               tabIndex={0}

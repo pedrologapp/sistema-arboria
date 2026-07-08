@@ -23,10 +23,13 @@ const F2BottomNav = ({ dark = false }: { dark?: boolean }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Dentro de um aluno (thread) e durante a aula, a barra some: tela cheia,
-  // um toque perdido não pode tirar o professor do meio do registro.
+  // Dentro de um aluno (thread), durante a aula e na tela imersiva de
+  // Administrar Capítulo, a barra some: tela cheia, um toque perdido não pode
+  // tirar o professor do meio do registro (nem a barra clara pode aparecer por
+  // cima do fundo escuro do capítulo).
   if (/^\/professor\/alunos\/.+/.test(location.pathname)) return null;
   if (location.pathname === '/professor/aula') return null;
+  if (/^\/professor\/f2\/capitulo\/.+/.test(location.pathname)) return null;
 
   const navItems: NavItemConfig[] = [
     {
