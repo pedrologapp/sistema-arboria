@@ -49,3 +49,11 @@ Conteudo escrito pela Pesquisa Pedagogica (fundamentado no doc mestre + santuari
 - Guardas de doutrina: aba e ESTUDO+IDENTIDADE, nunca a atividade diagnostica (a validacao por Necessidade vive nos capitulos, nao aqui); autorrelato do adolescente e PORTA, nao prova; silencio nao e ausencia.
 - Todo mentor ve as 8 Casas (acesso compartilhado do F2), nao so a sua.
 - Proximo incremento (deferido): 'uma atividade, oito caminhos' do F2 (um capitulo lido pela porta de cada Casa), a peca de comparacao que produz o aha no mentor.
+
+## 2026-07-08 - Modelo de acesso do F2: ASSIGNED-only (mentor ve so as turmas dele)
+Decisao do Fundador, com veto do Riscos ao institution-wide e recomendacao convergente de Dados+Riscos.
+- O mentor F2 le os alunos e as observacoes SO das turmas que conduz (nao todas as turmas do 6-9). Institution-wide de observacoes fica PROIBIDO (fere minimizacao LGPD; expoe dado sensivel de toda crianca a todo mentor).
+- Nuance: os NOMES (profiles) ja eram institution-wide, entao alocar papeis nao trava; o que fica restrito e o HISTORICO de observacoes (o rio dos 12 anos), so das criancas das turmas do mentor (match por enrollment, pra o Diario longitudinal funcionar).
+- Esquema: tabela nova `professor_casa_turma` (mentor+casa+turma+ano, aditiva) = o recorte de turma que falta; professor_casa continua como identidade de Casa. A ABA DE CASAS do admin cria esse vinculo (e e o que libera o acesso: falha fechado, sem vinculo o mentor nao ve).
+- Impacto no codigo: o Diario do F2 passa de "todas as turmas" pra "so as turmas do mentor".
+- Migration em finalizacao (professor_casa_turma + RLS assigned + criado_por + coreografia da policy R18 que e producao). Aplicar so com "pode aplicar" do Fundador.
