@@ -41,3 +41,11 @@ Subiu pra producao (push main, 9 commits) com aprovacao do Fundador ("pode subir
 - **Aula ligada a atividade**: Iniciar aula mostra o card da atividade da vez; Finalizar aula marca 'concluida' (turma_atividade_evento); a proxima assume.
 - Migrations aplicadas com revisao Riscos+Dados (LIBERADO COM RESSALVAS) e R1 corrigido antes de aplicar. F2 continua DORMENTE (flag false).
 - **Ressalva viva**: nao reconfigurar trilha de turma JA iniciada ate existir escrita atomica + contiguidade + trava de reconfig (ver riscos.md, R2/R3/R4). Por ora, so turma em ordem_atual=0.
+
+## 2026-07-07 - Aba Inteligencias do F2: o santuario das 8 Casas (conteudo aprovado)
+Conteudo escrito pela Pesquisa Pedagogica (fundamentado no doc mestre + santuario Infantil/F1), aprovado pelo Fundador. A aba deixa de ser placeholder e vira o santuario imersivo (fundo indigo, veu na cor da Casa, mesmo padrao do F1FasePage).
+- Cada Casa: essencia (identidade), mecanismo (denso, pro mentor), como se revela no adolescente, o que o mentor cultiva, referencia (genios do Infantil/F1 mantidos, continuidade dos 12 anos), e linha de cuidado.
+- Decisoes aprovadas: nomes curtos das Casas; campo 'cuidado' por Casa; moldura de estudo fixa no topo ('nao e checklist; toda pessoa tem as 8'); 'toda pessoa tem as 8' visivel (blindagem anti-rotulo).
+- Guardas de doutrina: aba e ESTUDO+IDENTIDADE, nunca a atividade diagnostica (a validacao por Necessidade vive nos capitulos, nao aqui); autorrelato do adolescente e PORTA, nao prova; silencio nao e ausencia.
+- Todo mentor ve as 8 Casas (acesso compartilhado do F2), nao so a sua.
+- Proximo incremento (deferido): 'uma atividade, oito caminhos' do F2 (um capitulo lido pela porta de cada Casa), a peca de comparacao que produz o aha no mentor.
