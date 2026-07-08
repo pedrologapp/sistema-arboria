@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Shield, ChevronDown, Paperclip, Settings2, Route, Clock, Flag, CalendarRange, ChevronRight } from 'lucide-react';
+import { Shield, ChevronDown, Paperclip, Settings2, Route, Clock, Flag, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
@@ -93,7 +93,7 @@ const CartaoTurma = ({
   return (
     <button
       onClick={onClick}
-      className={`rounded-2xl text-left transition-transform active:scale-[0.99] ${compact ? 'p-2.5' : 'p-3'}`}
+      className={`w-full h-full rounded-2xl text-left transition-transform active:scale-[0.99] ${compact ? 'p-2.5' : 'p-3'}`}
       style={{
         backgroundColor: t.surface,
         border: ativo ? `1.5px solid ${t.accent}` : `1px solid ${t.border}`,
@@ -822,9 +822,11 @@ const F2ArboriaPage = () => {
         </div>
       ) : (
         <>
-          {/* CALENDÁRIO (panorama): todas as turmas no tempo, de uma vez. */}
+          {/* CALENDÁRIO: botão secundário que abre o panorama completo em tela
+              cheia (todas as turmas no tempo). Não toma a aba com o gráfico. */}
           {panorama && panorama.turmas.length > 0 && (
             <F2Panorama
+              mode="button"
               turmas={panorama.turmas}
               cadenciaDias={panorama.cadenciaDias}
               mentorCor={corDaCasa(casaMentor.id)}
@@ -833,52 +835,42 @@ const F2ArboriaPage = () => {
             />
           )}
 
-          {/* Suas turmas: grade menor (cards compactos), a fila do mentor. */}
+          {/* Suas turmas: grade de DUAS LINHAS que rola na horizontal. As turmas
+              preenchem 2 linhas e seguem pra a direita; deslize pra ver o resto. */}
           <div>
             <p className="text-[11px] uppercase tracking-wide font-semibold mb-2 px-1" style={{ color: t.textFaint }}>
               Suas turmas
             </p>
-            <div className="grid grid-cols-3 gap-2">
-              {turmas.map((turma) => (
-                <CartaoTurma
-                  key={turma.turma_id}
-                  turma={turma}
-                  compact
-                  ativo={turmaAtiva?.turma_id === turma.turma_id}
-                  onClick={() => selecionarTurma(turma.turma_id)}
-                />
-              ))}
+            <div
+              tabIndex={0}
+              role="group"
+              aria-label="Suas turmas. Deslize para o lado para ver mais."
+              className="overflow-x-auto -mx-4 px-4 py-1"
+              style={{ scrollSnapType: 'x proximity', WebkitOverflowScrolling: 'touch' }}
+            >
+              <div
+                className="grid grid-flow-col auto-cols-max gap-2"
+                style={{ gridTemplateRows: 'repeat(2, minmax(0, 1fr))' }}
+              >
+                {turmas.map((turma) => (
+                  <div key={turma.turma_id} style={{ width: 132, scrollSnapAlign: 'start' }}>
+                    <CartaoTurma
+                      turma={turma}
+                      compact
+                      ativo={turmaAtiva?.turma_id === turma.turma_id}
+                      onClick={() => selecionarTurma(turma.turma_id)}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
           {/* Âncora do detalhe da turma selecionada (alvo do scroll ao tocar). */}
           <div ref={detalheRef} />
 
-          {/* Ver o ano: caminho claro pra a linha do ano da turma selecionada.
-              Não substitui o toque de seleção; abre a tela dedicada. */}
-          {turmaAtiva && (
-            <button
-              onClick={() => navigate(`/professor/f2/linha-ano/${turmaAtiva.turma_id}`)}
-              className="w-full flex items-center gap-2.5 rounded-2xl p-3 text-left transition-transform active:scale-[0.99]"
-              style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
-            >
-              <span
-                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: t.accentSoft }}
-              >
-                <CalendarRange size={18} style={{ color: t.accent }} strokeWidth={1.75} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold" style={{ color: t.text }}>
-                  Ver o ano do {formatTurmaLabel(turmaAtiva.serie, turmaAtiva.turma_letra) || turmaAtiva.nome}
-                </span>
-                <span className="block text-[11px]" style={{ color: t.textFaint }}>
-                  As Casas na ordem, as datas e a sua vez
-                </span>
-              </span>
-              <ChevronRight size={18} style={{ color: t.textFaint }} className="flex-shrink-0" />
-            </button>
-          )}
+          {/* O card "Ver o ano do <turma>" foi removido: o Calendario ja da a
+              visao do ano de todas as turmas, e tocar numa turma leva ao detalhe. */}
 
           {/* Detalhe da turma selecionada */}
           {turmaAtiva && (

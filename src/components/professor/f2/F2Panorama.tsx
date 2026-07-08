@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Maximize2, X, RotateCcw } from 'lucide-react';
+import { Maximize2, X, RotateCcw, CalendarDays } from 'lucide-react';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 import { formatTurmaLabel } from '@/lib/infantil';
 import type { PanoramaTurma } from '@/hooks/useF2Panorama';
@@ -28,6 +28,9 @@ const DIAS_MES = 30.44;
 const LABEL_COL = 132;
 const GAP = 10;
 const LANE_H = 58;
+// Folga NO TOPO do gráfico: a reta "hoje" e as bandeiras "sua fase" sobem acima
+// dos nós. Sem esta reserva, o clip do contêiner (overflow) corta o topo.
+const TOP_PAD = 22;
 
 function mvFromDate(d: Date, baseYear: number): number {
   const dim = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
@@ -319,8 +322,9 @@ const Grafico = ({
   onTurmaClick: (id: string) => void;
   turmaSel: string | null;
 }) => (
-  <div>
-    {/* área das lanes com a reta "hoje" atravessando */}
+  <div style={{ paddingTop: TOP_PAD }}>
+    {/* área das lanes com a reta "hoje" atravessando. O TOP_PAD acima reserva
+        espaço pro rótulo "hoje" e as bandeiras "sua fase", que sobem além do topo. */}
     <div className="relative">
       <span
         aria-hidden
@@ -489,12 +493,19 @@ const F2Panorama = ({
   mentorCor,
   onTurmaClick,
   turmaSel,
+  mode = 'inline',
 }: {
   turmas: PanoramaTurma[];
   cadenciaDias: number;
   mentorCor: string;
   onTurmaClick: (id: string) => void;
   turmaSel: string | null;
+  /**
+   * `inline`: o cartão do calendário embutido (retrato rolável + botão tela cheia).
+   * `button`: só um botão secundário (tema do shell F2) que ABRE o calendário em
+   *   tela cheia. Usado na aba Arboria pra a aba não ficar tomada pelo gráfico.
+   */
+  mode?: 'inline' | 'button';
 }) => {
   const [cheia, setCheia] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -505,6 +516,51 @@ const F2Panorama = ({
   );
 
   if (turmas.length === 0) return null;
+
+  // MODO BOTÃO: ação secundária que abre o calendário completo em tela cheia.
+  if (mode === 'button') {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setCheia(true)}
+          aria-label="Abrir o calendário de todas as turmas em tela cheia"
+          className="w-full flex items-center gap-2.5 rounded-2xl p-3 text-left transition-transform active:scale-[0.99]"
+          style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
+        >
+          <span
+            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: t.accentSoft }}
+          >
+            <CalendarDays size={18} style={{ color: t.accent }} strokeWidth={1.75} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold" style={{ color: t.text }}>
+              Ver o calendário
+            </span>
+            <span className="block text-[11px]" style={{ color: t.textFaint }}>
+              O ano de todas as turmas, no tempo
+            </span>
+          </span>
+          <Maximize2 size={16} style={{ color: t.textFaint }} className="flex-shrink-0" />
+        </button>
+
+        {cheia && (
+          <TelaCheia
+            layout={layout}
+            mentorCor={mentorCor}
+            onTurmaClick={(id) => {
+              // Tocar numa turma no calendário fecha a tela cheia e leva ao detalhe.
+              setCheia(false);
+              onTurmaClick(id);
+            }}
+            turmaSel={turmaSel}
+            onFechar={() => setCheia(false)}
+          />
+        )}
+      </>
+    );
+  }
 
   // Largura mínima do gráfico no retrato: garante que os meses respirem e a
   // faixa role horizontalmente quando não couber. ~64px por mês.

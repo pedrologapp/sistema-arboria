@@ -18,11 +18,11 @@ import {
   CheckCircle2,
   Circle,
   Clock,
+  Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
-import { infantilTheme as t } from '@/styles/infantilTheme';
 import { corDaCasa, F2_REFORMA_ATIVA } from '@/config/f2Reforma';
 import { formatTurmaLabel } from '@/lib/infantil';
 import { cn } from '@/lib/utils';
@@ -33,20 +33,25 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Skeleton } from '@/components/ui/skeleton';
 import LequeObservacao from '@/components/professor/LequeObservacao';
 
 /**
  * ADMINISTRAR CAPÍTULO: Fundamental 2 (reforma, atrás do flag F2_REFORMA_ATIVA).
  *
- * Centro de comando do mentor para UMA turma cuja vez é da Casa dele. Pele CLARA
- * (infantilTheme), a cor da Casa como acento. Reaproveita o MODELO DE DADOS e a
- * LÓGICA da tela escura antiga (CapituloProfessorPage), sem tocá-la: a antiga
- * segue servindo o F2 com o flag desligado.
+ * Centro de comando do mentor para UMA turma cuja vez é da Casa dele. Pele
+ * IMERSIVA: índigo profundo (o mesmo santuário das Inteligências), tingido pela
+ * COR DA CASA da fase (corDaCasa). Texto branco, cards em branco translúcido, a
+ * cor da Casa como acento (brasão, selos, papéis cheios, botões).
  *
- * Seções: cabeçalho · data do capítulo · etapas do capítulo · elenco/papéis ·
- * missões (liberar + faltantes) · observações ao vivo. Tudo é salvo na hora
- * (upsert), como já fazia a tela antiga.
+ * Reaproveita o MODELO DE DADOS e a LÓGICA da tela clara anterior sem tocar o
+ * comportamento: só a pele mudou (claro -> imersivo). A tela escura antiga
+ * (CapituloProfessorPage) segue servindo o F2 com o flag desligado.
+ *
+ * Estado "Capítulo ainda não liberado": quando a fase/Casa da turma ainda não
+ * tem capítulo montado (sem capítulo ativo, OU capítulo sem papéis), em vez de
+ * tela vazia mostramos uma tela imersiva limpa na cor da Casa. Hoje só a Casa
+ * Interpessoal (A Grande Assembleia) tem elenco montado; as outras caem nesse
+ * estado até ganharem o próprio layout (ver PONTO DE ESCOLHA POR CASA abaixo).
  */
 
 // Tabelas da reforma podem não estar nos tipos gerados: via `sb` (any), como as
@@ -140,6 +145,35 @@ type Brasoes = Record<number, string | null>;
 
 const MAX_MEMBROS_DELEG = 99;
 
+// ============================================================
+// Paleta IMERSIVA (escuro). Tudo que é acento vem de corDaCasa (accent);
+// os tons neutros abaixo são fixos (branco translúcido sobre o índigo).
+// ============================================================
+const D = {
+  text: '#FFFFFF',
+  soft: 'rgba(244,246,255,0.92)',
+  sub: 'rgba(244,246,255,0.62)',
+  faint: 'rgba(244,246,255,0.5)',
+  line: 'rgba(255,255,255,0.14)',
+  card: 'rgba(255,255,255,0.05)',
+  card2: 'rgba(255,255,255,0.08)',
+  chip: 'rgba(255,255,255,0.09)',
+  sunken: 'rgba(0,0,0,0.22)',
+  presente: '#34D399', // verde sóbrio, legível no escuro
+  silencio: 'rgba(255,255,255,0.3)', // ausência de registro; nunca "falta"
+} as const;
+
+// Sufixos de opacidade em hex (accent + alpha) para tingir sem util de cor:
+const A = {
+  a08: '14', // ~8%
+  a10: '1A', // ~10%
+  a15: '26', // ~15%
+  a20: '33', // ~20%
+  a34: '57', // ~34%
+  a40: '66', // ~40%
+  glow: '4D', // ~30%
+} as const;
+
 const nomeCompleto = (a: Aluno | undefined): string =>
   !a ? 'Aluno' : a.full_name || a.nome || 'Aluno';
 
@@ -152,30 +186,60 @@ const filtrarAlunos = (lista: Aluno[], busca: string): Aluno[] => {
   return lista.filter((a) => normalizar(nomeCompleto(a)).includes(q));
 };
 
-/** Escudo da Casa: brasão real se houver, senão escudo na cor da Casa. */
-const EscudoCasa = ({ casaId, brasao, size = 44 }: { casaId: number | null; brasao: string | null; size?: number }) => {
-  const cor = corDaCasa(casaId);
-  if (brasao) {
-    return <img src={brasao} alt="" className="object-contain flex-shrink-0" style={{ width: size, height: size }} />;
+/** Formata YYYY-MM-DD para "12 de agosto" (meio-dia p/ evitar salto de fuso). */
+const dataLonga = (iso: string): string => {
+  try {
+    return new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR', {
+      day: 'numeric',
+      month: 'long',
+    });
+  } catch {
+    return iso;
   }
-  return (
-    <span
-      className="rounded-xl flex items-center justify-center flex-shrink-0"
-      style={{ width: size, height: size, backgroundColor: `${cor}1A` }}
-    >
-      <Shield size={size * 0.55} style={{ color: cor }} strokeWidth={1.75} />
-    </span>
-  );
 };
 
-/** Avatar pequeno do aluno (foto, brasão da casa ou inicial). */
+/** Brasão/escudo da Casa em placa preenchida (cabeçalho e "não liberado"). */
+const BrasaoCasa = ({
+  accent,
+  brasao,
+  size = 56,
+}: {
+  accent: string;
+  brasao: string | null;
+  size?: number;
+}) => (
+  <span
+    className="rounded-2xl flex items-center justify-center flex-shrink-0 mx-auto"
+    style={{
+      width: size,
+      height: size,
+      background: `linear-gradient(160deg, ${accent}, ${accent}CC)`,
+      boxShadow: `0 8px 22px ${accent}${A.glow}, inset 0 1px 0 rgba(255,255,255,0.35)`,
+    }}
+  >
+    {brasao ? (
+      <img src={brasao} alt="" className="object-contain p-1.5 w-full h-full" />
+    ) : (
+      <Shield size={size * 0.5} color="#FFFFFF" strokeWidth={1.7} />
+    )}
+  </span>
+);
+
+/** Avatar pequeno do aluno (foto, brasão da casa ou inicial) sobre o escuro. */
 const AvatarAluno = ({ aluno, brasoes, size = 22 }: { aluno: Aluno | undefined; brasoes: Brasoes; size?: number }) => {
   const brasao = aluno?.casa_id ? brasoes[aluno.casa_id] : null;
   const inicial = nomeCompleto(aluno).slice(0, 1).toUpperCase();
   return (
     <span
-      className="rounded-full flex items-center justify-center font-semibold overflow-hidden flex-shrink-0"
-      style={{ width: size, height: size, backgroundColor: t.surfaceSunken, color: t.textMuted, fontSize: size * 0.42 }}
+      className="rounded-full flex items-center justify-center font-bold overflow-hidden flex-shrink-0"
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: 'rgba(255,255,255,0.14)',
+        color: '#FFFFFF',
+        border: '1px solid rgba(255,255,255,0.3)',
+        fontSize: size * 0.42,
+      }}
     >
       {aluno?.avatar_url ? (
         <img src={aluno.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -188,11 +252,11 @@ const AvatarAluno = ({ aluno, brasoes, size = 22 }: { aluno: Aluno | undefined; 
   );
 };
 
-/** Título de seção com ícone. */
-const SecaoTitulo = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
-  <div className="flex items-center gap-2 mb-2 px-0.5">
-    <span style={{ color: t.accent }}>{icon}</span>
-    <h2 className="text-sm font-semibold" style={{ color: t.text }}>
+/** Título de seção com ícone, sobre o escuro (ícone na cor da Casa). */
+const SecaoTitulo = ({ icon, accent, children }: { icon: React.ReactNode; accent: string; children: React.ReactNode }) => (
+  <div className="flex items-center gap-2 mb-2.5 px-0.5">
+    <span style={{ color: accent }}>{icon}</span>
+    <h2 className="text-[13px] tracking-[0.14em] uppercase font-bold" style={{ color: D.text }}>
       {children}
     </h2>
   </div>
@@ -305,7 +369,7 @@ const F2CapituloPage = () => {
   });
 
   // ---- Papéis / delegações / alocações / membros ----
-  const { data: papeis = [] } = useQuery<Papel[]>({
+  const { data: papeis = [], isLoading: loadingPapeis } = useQuery<Papel[]>({
     queryKey: ['f2cap-papeis', capId],
     enabled: !!capId,
     queryFn: async () => {
@@ -412,7 +476,7 @@ const F2CapituloPage = () => {
   });
 
   // ---- Missões do capítulo + entregas da turma (faltantes) ----
-  const { data: missoes = [], refetch: refetchMissoes } = useQuery<Missao[]>({
+  const { data: missoes = [] } = useQuery<Missao[]>({
     queryKey: ['f2cap-missoes', capId],
     enabled: !!capId,
     queryFn: async () => {
@@ -708,36 +772,76 @@ const F2CapituloPage = () => {
   const [rosterAberto, setRosterAberto] = useState(false);
 
   // ===================== Render =====================
-  if (ctxLoading || loadingCap) {
-    return (
-      <div className="pt-4 space-y-3">
-        <Skeleton className="h-8 w-32 rounded" />
-        <Skeleton className="h-28 w-full rounded-2xl" />
-        <Skeleton className="h-16 w-full rounded-xl" />
-      </div>
-    );
-  }
+  // Fundo imersivo, reutilizado em todos os estados (carregando / não liberado /
+  // montado): índigo profundo tingido no topo pela cor da Casa.
+  const fundo = (
+    <div
+      className="fixed inset-0 z-0"
+      style={{
+        backgroundColor: '#241E63',
+        background: `radial-gradient(125% 90% at 50% -10%, ${accent}${A.a20} 0%, #322B8F 46%, #241E63 100%)`,
+        transition: 'background 500ms ease',
+      }}
+      aria-hidden="true"
+    />
+  );
 
-  if (!capitulo) {
+  // Espera o contexto, o capítulo e (se houver capítulo) os papéis resolverem,
+  // pra não piscar o estado "não liberado" antes de saber se há elenco.
+  const carregando = ctxLoading || loadingCap || (!!capitulo && loadingPapeis);
+
+  if (carregando) {
     return (
-      <div className="pt-4">
-        <BotaoVoltar onClick={() => navigate('/professor')} />
-        <div
-          className="rounded-2xl p-5 text-center mt-3"
-          style={{ backgroundColor: t.surface, border: `1px solid ${t.border}` }}
-        >
-          <h2 className="text-base font-bold" style={{ color: t.text }}>
-            Sem capítulo ativo nesta fase
-          </h2>
-          <p className="text-sm mt-1.5 max-w-xs mx-auto" style={{ color: t.textMuted }}>
-            Quando a fase da sua Casa tiver um capítulo cadastrado, ele aparece aqui para administrar.
-          </p>
+      <>
+        {fundo}
+        <div className="relative z-10 pt-24 flex justify-center" aria-live="polite" aria-busy="true">
+          <div
+            className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2"
+            style={{ borderColor: 'rgba(255,255,255,0.6)' }}
+          />
         </div>
-      </div>
+      </>
     );
   }
 
   const turmaLabel = turma ? formatTurmaLabel(turma.serie, turma.turma_letra) || turma.nome : '';
+
+  // PONTO DE ESCOLHA POR CASA / INTELIGÊNCIA.
+  // Hoje a regra é única e simples: tem capítulo COM papéis montados -> mostra o
+  // elenco; senão -> "ainda não liberado". Quando cada Casa ganhar o seu próprio
+  // layout de capítulo, este é o ponto para ramificar por casaMentor?.id.
+  const capituloMontado = !!capitulo && papeis.length > 0;
+
+  if (!capituloMontado) {
+    return (
+      <>
+        {fundo}
+        <div className="relative z-10 pt-2">
+          <BotaoVoltar onClick={() => navigate('/professor')} />
+          <div className="min-h-[62vh] flex flex-col items-center justify-center text-center px-6 vf-rise">
+            <BrasaoCasa accent={accent} brasao={casaMentor?.brasao_url ?? null} size={64} />
+            <p
+              className="text-[11px] uppercase font-bold mt-5"
+              style={{ color: accent, letterSpacing: '0.22em' }}
+            >
+              Casa {casaMentor?.nome ?? ''}
+              {turmaLabel ? ` · ${turmaLabel}` : ''}
+            </p>
+            <h1 className="font-serif text-[26px] leading-tight mt-3" style={{ color: D.text }}>
+              Capítulo ainda não liberado
+            </h1>
+            <p className="text-sm leading-relaxed mt-3 max-w-xs" style={{ color: D.sub }}>
+              O capítulo desta Casa ainda não foi montado. Quando o elenco estiver pronto, ele
+              aparece aqui para você administrar.
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // A partir daqui: capítulo montado (com elenco). capitulo é não-nulo.
+  const cap = capitulo!;
   const missoesLiberadas = !!turmaConfig?.missoes_liberadas_em;
 
   const papeisMesa = papeis.filter((p) => p.categoria === 'mesa');
@@ -746,97 +850,119 @@ const F2CapituloPage = () => {
   const delegAtivasList = delegacoes.filter((d) => delegacoesAtivas.has(d.codigo));
 
   return (
-    <div className="pt-4 pb-10 space-y-6">
-      <BotaoVoltar onClick={() => navigate('/professor')} />
+    <>
+      {fundo}
+      <div className="relative z-10 pt-2 pb-10 space-y-6">
+        <BotaoVoltar onClick={() => navigate('/professor')} />
 
-      {/* 1. CABEÇALHO */}
-      <div
-        className="rounded-2xl p-5"
-        style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowMd }}
-      >
-        <div className="flex items-start gap-3">
-          <EscudoCasa casaId={casaMentor?.id ?? null} brasao={casaMentor?.brasao_url ?? null} size={48} />
-          <div className="min-w-0">
-            <p className="text-[11px] uppercase tracking-wide font-semibold" style={{ color: accent }}>
-              Casa {casaMentor?.nome ?? ''} {turmaLabel ? `· ${turmaLabel}` : ''}
-            </p>
-            <h1 className="text-xl font-bold mt-0.5 leading-tight" style={{ color: t.text }}>
-              {capitulo.nome}
-            </h1>
-            <p className="text-[11px] uppercase tracking-wide mt-0.5" style={{ color: t.textFaint }}>
-              Capítulo {String(capitulo.numero).padStart(2, '0')}
-            </p>
-          </div>
-        </div>
-        {(capitulo.descricao || capitulo.frase_ancora) && (
-          <p className="text-sm mt-3 leading-relaxed" style={{ color: t.textMuted }}>
-            {capitulo.descricao || capitulo.frase_ancora}
-          </p>
-        )}
-      </div>
-
-      {/* 2. DATA DO CAPÍTULO */}
-      <section>
-        <SecaoTitulo icon={<CalendarDays size={16} strokeWidth={1.75} />}>Data do capítulo</SecaoTitulo>
-        <div
-          className="rounded-xl p-4"
-          style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
+        {/* 1. CABEÇALHO na cor da Casa */}
+        <header
+          className="text-center rounded-2xl px-5 pt-6 pb-6 relative overflow-hidden vf-rise"
+          style={{
+            border: `1px solid ${D.line}`,
+            background: `radial-gradient(120% 130% at 50% -30%, ${accent}${A.glow} 0%, rgba(0,0,0,0) 62%)`,
+          }}
         >
-          <label className="text-[11px] uppercase tracking-wide font-semibold block mb-1.5" style={{ color: t.textFaint }}>
-            Dia do encontro final desta turma
-          </label>
-          <input
-            type="date"
-            value={turmaConfig?.data_evento ?? ''}
-            onChange={(e) => upsertConfig({ data_evento: e.target.value || null })}
-            disabled={savingConfig}
-            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-            style={{ backgroundColor: t.surfaceSunken, border: `1px solid ${t.border}`, color: t.text }}
-          />
-        </div>
-      </section>
-
-      {/* 3. ETAPAS DO CAPÍTULO */}
-      <section>
-        <SecaoTitulo icon={<RouteIcon size={16} strokeWidth={1.75} />}>Etapas do capítulo</SecaoTitulo>
-        {encontros.length === 0 ? (
-          <div
-            className="rounded-xl p-4 text-sm"
-            style={{ backgroundColor: t.surface, border: `1px dashed ${t.border}`, color: t.textFaint }}
+          <BrasaoCasa accent={accent} brasao={casaMentor?.brasao_url ?? null} size={56} />
+          <p
+            className="text-[10px] uppercase font-extrabold mt-3.5"
+            style={{ color: accent, letterSpacing: '0.2em' }}
           >
-            As etapas deste capítulo ainda não foram cadastradas.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {encontros.map((e, i) => (
-              <EtapaEncontro
-                key={e.id}
-                encontro={e}
-                posicao={i + 1}
-                accent={accent}
-                dataPrevista={dataPrevistaPorEncontro[e.id] ?? null}
-                anexos={anexosPorEncontro[e.id] ?? []}
-                onSalvarData={(d) => salvarDataEncontro(e.id, d)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+            Casa {casaMentor?.nome ?? ''}
+          </p>
+          <h1 className="font-serif text-[24px] leading-tight mt-1" style={{ color: D.text }}>
+            {cap.nome}
+          </h1>
+          <p className="text-[12px] mt-1" style={{ color: D.sub }}>
+            {turmaLabel ? `${turmaLabel} · ` : ''}Capítulo {String(cap.numero).padStart(2, '0')}
+          </p>
+          {turmaConfig?.data_evento && (
+            <div
+              className="inline-flex items-center gap-1.5 mt-3.5 rounded-full px-3 py-1.5 text-[12px] font-bold"
+              style={{
+                color: accent,
+                backgroundColor: 'rgba(255,255,255,0.08)',
+                border: `1px solid ${accent}${A.a40}`,
+              }}
+            >
+              <CalendarDays size={13} strokeWidth={2} />
+              Capítulo: {dataLonga(turmaConfig.data_evento)}
+            </div>
+          )}
+          {(cap.descricao || cap.frase_ancora) && (
+            <p className="text-[13px] mt-4 leading-relaxed" style={{ color: D.soft }}>
+              {cap.descricao || cap.frase_ancora}
+            </p>
+          )}
+        </header>
 
-      {/* 4. ELENCO / PAPÉIS */}
-      <section>
-        <SecaoTitulo icon={<Users size={16} strokeWidth={1.75} />}>Elenco e papéis</SecaoTitulo>
-        {papeis.length === 0 ? (
-          <div
-            className="rounded-xl p-4 text-sm"
-            style={{ backgroundColor: t.surface, border: `1px dashed ${t.border}`, color: t.textFaint }}
-          >
-            Este capítulo não tem papéis cadastrados.
+        {/* 2. DATA DO CAPÍTULO */}
+        <section className="vf-rise">
+          <SecaoTitulo icon={<CalendarDays size={16} strokeWidth={1.75} />} accent={accent}>
+            Data do capítulo
+          </SecaoTitulo>
+          <div className="rounded-2xl p-4" style={{ backgroundColor: D.card, border: `1px solid ${D.line}` }}>
+            <label
+              className="text-[11px] uppercase tracking-wide font-semibold block mb-1.5"
+              style={{ color: D.faint }}
+            >
+              Dia do encontro final desta turma
+            </label>
+            <input
+              type="date"
+              value={turmaConfig?.data_evento ?? ''}
+              onChange={(e) => upsertConfig({ data_evento: e.target.value || null })}
+              disabled={savingConfig}
+              className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
+              style={{
+                backgroundColor: D.sunken,
+                border: `1px solid ${D.line}`,
+                color: D.text,
+                colorScheme: 'dark',
+                // @ts-expect-error CSS var for focus ring
+                '--tw-ring-color': `${accent}${A.a40}`,
+              }}
+            />
           </div>
-        ) : (
+        </section>
+
+        {/* 3. ETAPAS DO CAPÍTULO */}
+        <section className="vf-rise">
+          <SecaoTitulo icon={<RouteIcon size={16} strokeWidth={1.75} />} accent={accent}>
+            Etapas do capítulo
+          </SecaoTitulo>
+          {encontros.length === 0 ? (
+            <div
+              className="rounded-2xl p-4 text-sm"
+              style={{ backgroundColor: D.card, border: `1px dashed ${D.line}`, color: D.faint }}
+            >
+              As etapas deste capítulo ainda não foram cadastradas.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {encontros.map((e, i) => (
+                <EtapaEncontro
+                  key={e.id}
+                  encontro={e}
+                  posicao={i + 1}
+                  accent={accent}
+                  dataPrevista={dataPrevistaPorEncontro[e.id] ?? null}
+                  anexos={anexosPorEncontro[e.id] ?? []}
+                  onSalvarData={(d) => salvarDataEncontro(e.id, d)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* 4. ELENCO / PAPÉIS */}
+        <section className="vf-rise">
+          <SecaoTitulo icon={<Users size={16} strokeWidth={1.75} />} accent={accent}>
+            Elenco e papéis
+          </SecaoTitulo>
           <div className="space-y-3">
             {papeisMesa.length > 0 && (
-              <BlocoPapeis titulo="Mesa diretora">
+              <BlocoPapeis titulo="Mesa diretora" accent={accent} contagem={contagemBloco(papeisMesa, alocPorPapel)}>
                 {papeisMesa.map((p) => (
                   <PapelLinha
                     key={p.id}
@@ -852,7 +978,7 @@ const F2CapituloPage = () => {
               </BlocoPapeis>
             )}
             {papeisMed.length > 0 && (
-              <BlocoPapeis titulo="Mediadores">
+              <BlocoPapeis titulo="Mediadores" accent={accent} contagem={contagemBloco(papeisMed, alocPorPapel)}>
                 {papeisMed.map((p) => (
                   <PapelLinha
                     key={p.id}
@@ -868,7 +994,7 @@ const F2CapituloPage = () => {
               </BlocoPapeis>
             )}
             {papeisObs.length > 0 && (
-              <BlocoPapeis titulo="Observatório">
+              <BlocoPapeis titulo="Observatório" accent={accent} contagem={contagemBloco(papeisObs, alocPorPapel)}>
                 {papeisObs.map((p) => (
                   <PapelLinha
                     key={p.id}
@@ -884,7 +1010,7 @@ const F2CapituloPage = () => {
               </BlocoPapeis>
             )}
             {delegAtivasList.length > 0 && (
-              <BlocoPapeis titulo="Delegações">
+              <BlocoPapeis titulo="Delegações" accent={accent} contagem={`${delegAtivasList.length} grupo${delegAtivasList.length === 1 ? '' : 's'}`}>
                 <div className="space-y-2.5">
                   {delegAtivasList.map((deleg) => (
                     <CartaoDelegacao
@@ -908,55 +1034,71 @@ const F2CapituloPage = () => {
               </BlocoPapeis>
             )}
           </div>
-        )}
-      </section>
+        </section>
 
-      {/* 5. MISSÕES */}
-      <section>
-        <SecaoTitulo icon={<Send size={16} strokeWidth={1.75} />}>Missões do capítulo</SecaoTitulo>
-        <SecaoMissoes
-          missoes={missoes}
-          entregas={entregas}
-          alunosDaTurma={alunosDaTurma}
-          alunosById={alunosById}
-          brasoes={brasoes}
-          alocPorPapel={alocPorPapel}
-          alunosEmMembros={alunosEmMembros}
-          liberadas={missoesLiberadas}
-          prazo={turmaConfig?.missoes_data_prazo ?? null}
-          savingConfig={savingConfig}
-          accent={accent}
-          onLiberar={liberarMissoes}
-        />
-      </section>
+        {/* 5. MISSÕES */}
+        <section className="vf-rise">
+          <SecaoTitulo icon={<Send size={16} strokeWidth={1.75} />} accent={accent}>
+            Missões do capítulo
+          </SecaoTitulo>
+          <SecaoMissoes
+            missoes={missoes}
+            entregas={entregas}
+            alunosDaTurma={alunosDaTurma}
+            alunosById={alunosById}
+            brasoes={brasoes}
+            alocPorPapel={alocPorPapel}
+            alunosEmMembros={alunosEmMembros}
+            liberadas={missoesLiberadas}
+            prazo={turmaConfig?.missoes_data_prazo ?? null}
+            savingConfig={savingConfig}
+            accent={accent}
+            onLiberar={liberarMissoes}
+          />
+        </section>
 
-      {/* 6. OBSERVAÇÕES AO VIVO */}
-      <section>
-        <SecaoTitulo icon={<PenLine size={16} strokeWidth={1.75} />}>Observações do projeto</SecaoTitulo>
-        <div
-          className="rounded-xl p-4"
-          style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
-        >
-          <p className="text-sm leading-relaxed" style={{ color: t.textMuted }}>
-            Durante o encontro, registre ao vivo como cada aluno chegou: o mecanismo que apareceu, o
-            caminho que ele usou. {observacoes.length > 0 && (
-              <span style={{ color: t.presenteText }}>{observacoes.length} já registrada{observacoes.length === 1 ? '' : 's'}.</span>
-            )}
-          </p>
+        {/* 6. OBSERVAÇÕES AO VIVO */}
+        <section className="vf-rise">
+          <SecaoTitulo icon={<PenLine size={16} strokeWidth={1.75} />} accent={accent}>
+            Observações do projeto
+          </SecaoTitulo>
           <button
             onClick={() => setRosterAberto(true)}
-            className="w-full mt-3 rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5"
-            style={{ backgroundColor: accent, color: '#FFFFFF', boxShadow: t.shadowSm }}
+            className="w-full text-left rounded-2xl p-4 flex gap-3 items-center transition-transform active:scale-[0.99]"
+            style={{
+              background: `linear-gradient(180deg, ${accent}${A.a15}, rgba(255,255,255,0.04))`,
+              border: `1px solid ${accent}${A.a34}`,
+            }}
           >
-            <PenLine size={16} /> Abrir observações ao vivo
+            <span
+              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: `linear-gradient(160deg, ${accent}, ${accent}CC)` }}
+            >
+              <Eye size={19} color="#FFFFFF" strokeWidth={1.7} />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-[14px] font-bold" style={{ color: D.text }}>
+                Observações ao vivo
+              </span>
+              <span className="block text-[12px] mt-0.5 leading-snug" style={{ color: D.sub }}>
+                No dia, registre como cada aluno conduziu o seu papel.
+                {observacoes.length > 0 && (
+                  <span style={{ color: accent }}>
+                    {' '}
+                    {observacoes.length} já registrada{observacoes.length === 1 ? '' : 's'}.
+                  </span>
+                )}
+              </span>
+            </span>
+            <ChevronDown size={18} className="-rotate-90 flex-shrink-0" style={{ color: D.faint }} />
           </button>
-        </div>
-      </section>
+        </section>
 
-      {/* Rodapé: tudo salvo automaticamente */}
-      <p className="text-center text-[11px]" style={{ color: t.textFaint }}>
-        Cada mudança é salva automaticamente.
-      </p>
+        {/* Rodapé: tudo salvo automaticamente */}
+        <p className="text-center text-[11px]" style={{ color: D.faint }}>
+          Cada mudança é salva automaticamente.
+        </p>
+      </div>
 
       {/* ===== Dialog: alocar papel ===== */}
       <AlocarDialog
@@ -1009,17 +1151,17 @@ const F2CapituloPage = () => {
       <Dialog open={rosterAberto} onOpenChange={(o) => !o && setRosterAberto(false)}>
         <DialogContent
           className="max-w-md"
-          style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, color: t.text }}
+          style={{ backgroundColor: '#241E63', border: `1px solid ${D.line}`, color: D.text }}
         >
           <DialogHeader>
-            <DialogTitle style={{ color: t.text }}>Observações ao vivo</DialogTitle>
-            <DialogDescription style={{ color: t.textMuted }}>
+            <DialogTitle style={{ color: D.text }}>Observações ao vivo</DialogTitle>
+            <DialogDescription style={{ color: D.sub }}>
               Toque num aluno para registrar como ele chegou neste capítulo.
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto -mx-1 px-1 space-y-1.5">
             {alunosDaTurma.length === 0 ? (
-              <p className="text-sm py-4" style={{ color: t.textMuted }}>
+              <p className="text-sm py-4" style={{ color: D.sub }}>
                 Nenhum aluno nesta turma.
               </p>
             ) : (
@@ -1033,21 +1175,21 @@ const F2CapituloPage = () => {
                       abrirObs(al);
                     }}
                     className="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors"
-                    style={{ backgroundColor: t.surfaceAlt }}
+                    style={{ backgroundColor: D.card }}
                   >
                     <AvatarAluno aluno={al} brasoes={brasoes} size={30} />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium truncate" style={{ color: t.text }}>
+                      <span className="block text-sm font-medium truncate" style={{ color: D.text }}>
                         {nomeCompleto(al)}
                       </span>
-                      <span className="block text-[11px] truncate" style={{ color: t.textFaint }}>
+                      <span className="block text-[11px] truncate" style={{ color: D.faint }}>
                         {papelDoAluno[al.id] || 'Sem papel'}
                       </span>
                     </span>
                     {temObs ? (
-                      <CheckCircle2 size={18} style={{ color: t.presente }} />
+                      <CheckCircle2 size={18} style={{ color: D.presente }} />
                     ) : (
-                      <Circle size={18} style={{ color: t.silencio }} />
+                      <Circle size={18} style={{ color: D.silencio }} />
                     )}
                   </button>
                 );
@@ -1061,14 +1203,14 @@ const F2CapituloPage = () => {
       <Dialog open={!!alunoObs} onOpenChange={(o) => !o && fecharObs()}>
         <DialogContent
           className="max-w-lg"
-          style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, color: t.text }}
+          style={{ backgroundColor: '#241E63', border: `1px solid ${D.line}`, color: D.text }}
         >
           {alunoObs && (
             <>
               <DialogHeader>
-                <DialogTitle style={{ color: t.text }}>{alunoObs.nome}</DialogTitle>
-                <DialogDescription style={{ color: t.textMuted }}>
-                  Papel: <span style={{ color: t.text }}>{alunoObs.papel}</span>
+                <DialogTitle style={{ color: D.text }}>{alunoObs.nome}</DialogTitle>
+                <DialogDescription style={{ color: D.sub }}>
+                  Papel: <span style={{ color: D.text }}>{alunoObs.papel}</span>
                 </DialogDescription>
               </DialogHeader>
               <textarea
@@ -1077,7 +1219,7 @@ const F2CapituloPage = () => {
                 placeholder="Como este aluno chegou? (o mecanismo que apareceu, o caminho que ele usou)"
                 rows={6}
                 className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none resize-none"
-                style={{ backgroundColor: t.surfaceSunken, border: `1px solid ${t.border}`, color: t.text }}
+                style={{ backgroundColor: D.sunken, border: `1px solid ${D.line}`, color: D.text }}
               />
               <div className="flex items-center justify-between gap-2 pt-1">
                 <LequeObservacao
@@ -1091,7 +1233,7 @@ const F2CapituloPage = () => {
                     onClick={fecharObs}
                     disabled={salvandoObs}
                     className="px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
-                    style={{ color: t.textMuted }}
+                    style={{ color: D.sub }}
                   >
                     Cancelar
                   </button>
@@ -1101,7 +1243,7 @@ const F2CapituloPage = () => {
                     className="px-4 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40"
                     style={{ backgroundColor: accent, color: '#FFFFFF' }}
                   >
-                    {salvandoObs ? 'Salvando…' : obsByAluno.has(alunoObs.id) ? 'Salvar alterações' : 'Salvar'}
+                    {salvandoObs ? 'Salvando...' : obsByAluno.has(alunoObs.id) ? 'Salvar alterações' : 'Salvar'}
                   </button>
                 </div>
               </div>
@@ -1109,7 +1251,7 @@ const F2CapituloPage = () => {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 };
 
@@ -1117,21 +1259,52 @@ const F2CapituloPage = () => {
 // Subcomponentes
 // ============================================================
 
+/** Contagem "N de M alocados" de um bloco de papéis (ignora papéis ilimitados). */
+const contagemBloco = (lista: Papel[], alocPorPapel: Record<string, Alocacao[]>): string => {
+  let alocados = 0;
+  let vagas = 0;
+  let temIlimitado = false;
+  lista.forEach((p) => {
+    alocados += (alocPorPapel[p.id] || []).length;
+    if (p.vagas_por_turma > 30) temIlimitado = true;
+    else vagas += p.vagas_por_turma;
+  });
+  if (temIlimitado) return `${alocados} alocado${alocados === 1 ? '' : 's'}`;
+  return `${alocados} de ${vagas} alocado${vagas === 1 ? '' : 's'}`;
+};
+
 const BotaoVoltar = ({ onClick }: { onClick: () => void }) => (
   <button
     onClick={onClick}
-    className="inline-flex items-center gap-1.5 text-sm font-medium rounded-lg px-2 py-1 -ml-2"
-    style={{ color: t.textMuted }}
+    className="inline-flex items-center gap-1.5 text-sm font-medium rounded-lg px-2 py-1 -ml-2 transition-colors"
+    style={{ color: 'rgba(255,255,255,0.72)' }}
   >
     <ArrowLeft size={16} /> Voltar
   </button>
 );
 
-const BlocoPapeis = ({ titulo, children }: { titulo: string; children: React.ReactNode }) => (
-  <div className="rounded-xl p-3.5" style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}>
-    <h3 className="text-[11px] tracking-wide uppercase font-semibold mb-2.5 flex items-center gap-1.5" style={{ color: t.textFaint }}>
-      <ScrollText size={12} /> {titulo}
-    </h3>
+const BlocoPapeis = ({
+  titulo,
+  accent,
+  contagem,
+  children,
+}: {
+  titulo: string;
+  accent: string;
+  contagem?: string;
+  children: React.ReactNode;
+}) => (
+  <div>
+    <div className="flex items-center justify-between mb-2 px-1">
+      <h3 className="text-[11px] tracking-[0.16em] uppercase font-extrabold flex items-center gap-1.5" style={{ color: accent }}>
+        <ScrollText size={12} /> Elenco · {titulo}
+      </h3>
+      {contagem && (
+        <span className="text-[11px] font-semibold" style={{ color: D.sub }}>
+          {contagem}
+        </span>
+      )}
+    </div>
     <div className="space-y-2">{children}</div>
   </div>
 );
@@ -1147,9 +1320,10 @@ const ChipAluno = ({
 }) => (
   <button
     onClick={onRemove}
-    className="group flex items-center gap-1.5 pl-1 pr-2 py-0.5 rounded-full text-xs transition-colors"
-    style={{ backgroundColor: t.accentSoft, color: t.accentText, border: `1px solid ${t.accentBorder}` }}
+    className="group flex items-center gap-1.5 pl-1 pr-2 py-0.5 rounded-full text-xs font-semibold transition-colors"
+    style={{ backgroundColor: D.chip, color: D.text, border: `1px solid ${D.line}` }}
     title="Toque para remover"
+    aria-label={`Remover ${nomeCompleto(aluno)}`}
   >
     <AvatarAluno aluno={aluno} brasoes={brasoes} size={18} />
     <span>{nomeCompleto(aluno)}</span>
@@ -1160,10 +1334,10 @@ const ChipAluno = ({
 const BotaoAlocar = ({ label, accent, onClick }: { label: string; accent: string; onClick: () => void }) => (
   <button
     onClick={onClick}
-    className="flex items-center gap-1 pl-2 pr-3 py-1 rounded-full text-xs font-medium"
-    style={{ border: `1px dashed ${accent}66`, color: accent }}
+    className="flex items-center gap-1 pl-2 pr-3 py-1 rounded-full text-xs font-bold transition-colors"
+    style={{ border: `1px dashed ${accent}${A.a40}`, color: accent, backgroundColor: `${accent}${A.a08}` }}
   >
-    <Plus size={12} /> {label}
+    <Plus size={12} strokeWidth={2.6} /> {label}
   </button>
 );
 
@@ -1186,26 +1360,46 @@ const PapelLinha = ({
 }) => {
   const ilimitado = papel.vagas_por_turma > 30;
   const cheio = !ilimitado && alocacoes.length >= papel.vagas_por_turma;
+  const badge = ilimitado
+    ? alocacoes.length > 0
+      ? `${alocacoes.length}`
+      : 'aberto'
+    : cheio
+      ? `${papel.vagas_por_turma} de ${papel.vagas_por_turma}`
+      : alocacoes.length > 0
+        ? `${alocacoes.length} de ${papel.vagas_por_turma}`
+        : papel.vagas_por_turma > 1
+          ? `0 de ${papel.vagas_por_turma}`
+          : 'vaga';
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="text-sm min-w-[130px] mr-1" style={{ color: t.text }}>
-        {papel.nome}
-        {ilimitado
-          ? alocacoes.length > 0 && (
-              <span className="text-[10px] ml-1" style={{ color: t.textFaint }}>
-                ({alocacoes.length})
-              </span>
-            )
-          : papel.vagas_por_turma > 1 && (
-              <span className="text-[10px] ml-1" style={{ color: t.textFaint }}>
-                ({alocacoes.length}/{papel.vagas_por_turma})
-              </span>
-            )}
+    <div
+      className="rounded-2xl p-3 transition-colors"
+      style={{
+        border: `1px solid ${cheio ? `${accent}${A.a34}` : D.line}`,
+        backgroundColor: cheio ? `${accent}${A.a10}` : D.card,
+      }}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-sm font-bold leading-tight" style={{ color: D.text }}>
+          {papel.nome}
+        </div>
+        <span
+          className="flex-shrink-0 text-[10px] font-extrabold rounded-full px-2 py-0.5 whitespace-nowrap"
+          style={
+            cheio
+              ? { color: accent, backgroundColor: `${accent}${A.a20}`, border: `1px solid ${accent}${A.a34}` }
+              : { color: D.sub, backgroundColor: D.card, border: `1px solid ${D.line}` }
+          }
+        >
+          {badge}
+        </span>
       </div>
-      {alocacoes.map((a) => (
-        <ChipAluno key={a.id} aluno={alunosById[a.aluno_id]} brasoes={brasoes} onRemove={() => onRemove(a.id)} />
-      ))}
-      {!cheio && <BotaoAlocar label="alocar" accent={accent} onClick={onAdd} />}
+      <div className="flex flex-wrap gap-1.5 mt-2.5">
+        {alocacoes.map((a) => (
+          <ChipAluno key={a.id} aluno={alunosById[a.aluno_id]} brasoes={brasoes} onRemove={() => onRemove(a.id)} />
+        ))}
+        {!cheio && <BotaoAlocar label="Alocar aluno" accent={accent} onClick={onAdd} />}
+      </div>
     </div>
   );
 };
@@ -1237,15 +1431,23 @@ const CartaoDelegacao = ({
 }) => {
   const cheio = membros.length >= MAX_MEMBROS_DELEG;
   return (
-    <div className="rounded-lg p-3" style={{ backgroundColor: t.surfaceAlt, border: `1px solid ${t.border}` }}>
-      <div className="text-sm font-semibold mb-2.5" style={{ color: t.text }}>
-        {delegacao.nome}
+    <div className="rounded-2xl p-3" style={{ backgroundColor: D.card, border: `1px solid ${D.line}` }}>
+      <div className="flex items-center justify-between mb-2.5">
+        <div className="text-sm font-bold flex items-center gap-2" style={{ color: D.text }}>
+          <span className="w-2.5 h-2.5 rounded-[3px] flex-shrink-0" style={{ backgroundColor: accent }} />
+          {delegacao.nome}
+        </div>
+        {membros.length > 0 && (
+          <span className="text-[10px] font-bold" style={{ color: D.sub }}>
+            {membros.length} membro{membros.length === 1 ? '' : 's'}
+          </span>
+        )}
       </div>
 
       {/* Time */}
       <div className="mb-3">
-        <div className="text-[10px] tracking-wide uppercase mb-1.5" style={{ color: t.textFaint }}>
-          Time{membros.length > 0 ? ` · ${membros.length}` : ''}
+        <div className="text-[10px] tracking-wide uppercase mb-1.5 font-semibold" style={{ color: D.faint }}>
+          Time
         </div>
         <div className="flex flex-wrap gap-1.5">
           {membros.map((m) => (
@@ -1256,17 +1458,17 @@ const CartaoDelegacao = ({
               onRemove={() => onRemoverMembro(m.id, m.aluno_id)}
             />
           ))}
-          {!cheio && <BotaoAlocar label="adicionar" accent={accent} onClick={onAddMembro} />}
+          {!cheio && <BotaoAlocar label="Membro" accent={accent} onClick={onAddMembro} />}
         </div>
       </div>
 
       {/* Papéis */}
       <div>
-        <div className="text-[10px] tracking-wide uppercase mb-1.5" style={{ color: t.textFaint }}>
+        <div className="text-[10px] tracking-wide uppercase mb-1.5 font-semibold" style={{ color: D.faint }}>
           Papéis
         </div>
         {membros.length === 0 ? (
-          <div className="text-[11px] italic py-1" style={{ color: t.textFaint }}>
+          <div className="text-[11px] italic py-1" style={{ color: D.faint }}>
             Adicione membros à delegação primeiro.
           </div>
         ) : (
@@ -1277,7 +1479,7 @@ const CartaoDelegacao = ({
               const disponiveis = membros.filter((m) => !alocadosIds.has(m.aluno_id));
               return (
                 <div key={p.id} className="flex flex-wrap items-center gap-1.5">
-                  <div className="text-[12px] min-w-[100px]" style={{ color: t.text }}>
+                  <div className="text-[12px] min-w-[100px] font-medium" style={{ color: D.soft }}>
                     {p.nome}
                   </div>
                   {alocs.map((a) => (
@@ -1295,7 +1497,12 @@ const CartaoDelegacao = ({
                         if (e.target.value) onAtribuirPapel(p.id, e.target.value);
                       }}
                       className="rounded-full px-2 py-0.5 text-[11px] focus:outline-none"
-                      style={{ backgroundColor: t.surface, border: `1px dashed ${t.border}`, color: t.textMuted }}
+                      style={{
+                        backgroundColor: D.sunken,
+                        border: `1px dashed ${D.line}`,
+                        color: D.sub,
+                        colorScheme: 'dark',
+                      }}
                     >
                       <option value="">+ atribuir</option>
                       {disponiveis.map((m) => (
@@ -1332,34 +1539,38 @@ const EtapaEncontro = ({
 }) => {
   const [aberto, setAberto] = useState(false);
   return (
-    <div className="rounded-xl overflow-hidden" style={{ backgroundColor: t.surface, border: `1px solid ${t.border}` }}>
-      <button onClick={() => setAberto((v) => !v)} className="w-full flex items-center gap-2.5 p-3 text-left">
+    <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: D.card, border: `1px solid ${D.line}` }}>
+      <button
+        onClick={() => setAberto((v) => !v)}
+        className="w-full flex items-center gap-2.5 p-3 text-left"
+        aria-expanded={aberto}
+      >
         <span
           className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0"
-          style={{ backgroundColor: `${accent}1A`, color: accent }}
+          style={{ backgroundColor: `${accent}${A.a20}`, color: accent }}
         >
           {posicao}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold truncate" style={{ color: t.text }}>
+          <span className="block text-sm font-semibold truncate" style={{ color: D.text }}>
             {encontro.titulo}
           </span>
           {dataPrevista && (
-            <span className="block text-[11px] flex items-center gap-1 mt-0.5" style={{ color: t.textFaint }}>
+            <span className="text-[11px] flex items-center gap-1 mt-0.5" style={{ color: D.faint }}>
               <Clock size={11} /> {new Date(`${dataPrevista}T12:00:00`).toLocaleDateString('pt-BR')}
             </span>
           )}
         </span>
         <ChevronDown
           size={16}
-          style={{ color: t.textFaint, transform: aberto ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}
+          style={{ color: D.faint, transform: aberto ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}
         />
       </button>
 
       {aberto && (
-        <div className="px-3 pb-3 space-y-2.5" style={{ borderTop: `1px solid ${t.border}` }}>
+        <div className="px-3 pb-3 space-y-2.5" style={{ borderTop: `1px solid ${D.line}` }}>
           <div className="pt-2.5">
-            <label className="text-[10px] uppercase tracking-wide font-semibold block mb-1" style={{ color: t.textFaint }}>
+            <label className="text-[10px] uppercase tracking-wide font-semibold block mb-1" style={{ color: D.faint }}>
               Data prevista para esta turma
             </label>
             <input
@@ -1367,23 +1578,23 @@ const EtapaEncontro = ({
               value={dataPrevista ?? ''}
               onChange={(e) => onSalvarData(e.target.value)}
               className="rounded-lg px-2.5 py-1.5 text-sm focus:outline-none"
-              style={{ backgroundColor: t.surfaceSunken, border: `1px solid ${t.border}`, color: t.text }}
+              style={{ backgroundColor: D.sunken, border: `1px solid ${D.line}`, color: D.text, colorScheme: 'dark' }}
             />
           </div>
           {encontro.objetivo && (
-            <p className="text-xs leading-relaxed" style={{ color: t.textMuted }}>
-              <span className="font-semibold" style={{ color: t.text }}>
+            <p className="text-xs leading-relaxed" style={{ color: D.soft }}>
+              <span className="font-semibold" style={{ color: D.text }}>
                 Objetivo.{' '}
               </span>
               {encontro.objetivo}
             </p>
           )}
           {encontro.instrucoes ? (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: t.textMuted }}>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: D.soft }}>
               {encontro.instrucoes}
             </p>
           ) : (
-            <p className="text-xs italic" style={{ color: t.textFaint }}>
+            <p className="text-xs italic" style={{ color: D.faint }}>
               Sem instruções cadastradas para esta etapa.
             </p>
           )}
@@ -1396,7 +1607,7 @@ const EtapaEncontro = ({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm"
-                  style={{ backgroundColor: t.surfaceAlt, color: t.accentText }}
+                  style={{ backgroundColor: D.card2, color: accent }}
                 >
                   <Paperclip size={14} strokeWidth={2} />
                   <span className="truncate">{a.nome || a.tipo || 'Anexo'}</span>
@@ -1459,28 +1670,28 @@ const SecaoMissoes = ({
   return (
     <div className="space-y-3">
       {/* Liberar */}
-      <div className="rounded-xl p-4" style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}>
+      <div className="rounded-2xl p-4" style={{ backgroundColor: D.card, border: `1px solid ${D.line}` }}>
         {liberadas ? (
-          <div className="text-sm" style={{ color: t.textMuted }}>
-            <p className="flex items-center gap-1.5 font-medium" style={{ color: t.presenteText }}>
+          <div className="text-sm" style={{ color: D.soft }}>
+            <p className="flex items-center gap-1.5 font-semibold" style={{ color: D.presente }}>
               <CheckCircle2 size={16} /> Missões liberadas para esta turma.
             </p>
             {prazo && (
-              <p className="mt-1 text-[12px]" style={{ color: t.textFaint }}>
+              <p className="mt-1 text-[12px]" style={{ color: D.faint }}>
                 Prazo de entrega: {new Date(prazo).toLocaleDateString('pt-BR')}
               </p>
             )}
           </div>
         ) : (
           <>
-            <p className="text-sm leading-relaxed" style={{ color: t.textMuted }}>
+            <p className="text-sm leading-relaxed" style={{ color: D.soft }}>
               Ao liberar, cada aluno passa a ver a missão do papel dele. O prazo é automático: 7 dias.
             </p>
             <button
               onClick={onLiberar}
               disabled={savingConfig}
-              className="w-full mt-3 rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50"
-              style={{ backgroundColor: accent, color: '#FFFFFF', boxShadow: t.shadowSm }}
+              className="w-full mt-3 rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 transition-transform active:scale-[0.99]"
+              style={{ backgroundColor: accent, color: '#FFFFFF' }}
             >
               <Send size={16} /> Liberar missões do capítulo
             </button>
@@ -1498,28 +1709,31 @@ const SecaoMissoes = ({
             return (
               <div
                 key={missao.id}
-                className="rounded-xl p-3.5"
-                style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
+                className="rounded-2xl p-3.5"
+                style={{ backgroundColor: D.card, border: `1px solid ${D.line}` }}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium min-w-0 truncate" style={{ color: t.text }}>
+                  <p className="text-sm font-semibold min-w-0 truncate" style={{ color: D.text }}>
                     {missao.titulo}
                   </p>
-                  <span className="text-[11px] whitespace-nowrap font-semibold" style={{ color: faltantes.length === 0 ? t.presenteText : t.textMuted }}>
+                  <span
+                    className="text-[11px] whitespace-nowrap font-bold"
+                    style={{ color: faltantes.length === 0 ? D.presente : D.sub }}
+                  >
                     {elegiveis.length - faltantes.length}/{elegiveis.length} entregaram
                   </span>
                 </div>
                 {elegiveis.length === 0 ? (
-                  <p className="text-[11px] italic mt-1" style={{ color: t.textFaint }}>
+                  <p className="text-[11px] italic mt-1" style={{ color: D.faint }}>
                     Ninguém elegível ainda (aloque os papéis).
                   </p>
                 ) : faltantes.length === 0 ? (
-                  <p className="text-[11px] mt-1 flex items-center gap-1" style={{ color: t.presenteText }}>
+                  <p className="text-[11px] mt-1 flex items-center gap-1" style={{ color: D.presente }}>
                     <CheckCircle2 size={12} /> Todos entregaram.
                   </p>
                 ) : (
                   <div className="mt-2">
-                    <p className="text-[10px] uppercase tracking-wide font-semibold mb-1.5" style={{ color: t.textFaint }}>
+                    <p className="text-[10px] uppercase tracking-wide font-semibold mb-1.5" style={{ color: D.faint }}>
                       Faltam entregar
                     </p>
                     <div className="flex flex-wrap gap-1.5">
@@ -1527,7 +1741,7 @@ const SecaoMissoes = ({
                         <span
                           key={a.id}
                           className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 rounded-full text-xs"
-                          style={{ backgroundColor: t.surfaceSunken, color: t.textMuted }}
+                          style={{ backgroundColor: D.sunken, color: D.sub }}
                         >
                           <AvatarAluno aluno={alunosById[a.id]} brasoes={brasoes} size={18} />
                           {nomeCompleto(a)}
@@ -1575,14 +1789,14 @@ const AlocarDialog = ({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
         className="max-w-md"
-        style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, color: t.text }}
+        style={{ backgroundColor: '#241E63', border: `1px solid ${D.line}`, color: D.text }}
       >
         <DialogHeader>
-          <DialogTitle style={{ color: t.text }}>{titulo}</DialogTitle>
-          <DialogDescription style={{ color: t.textMuted }}>{subtitulo}</DialogDescription>
+          <DialogTitle style={{ color: D.text }}>{titulo}</DialogTitle>
+          <DialogDescription style={{ color: D.sub }}>{subtitulo}</DialogDescription>
         </DialogHeader>
         <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: t.textFaint }} />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: D.faint }} />
           <input
             type="text"
             value={busca}
@@ -1590,16 +1804,16 @@ const AlocarDialog = ({
             placeholder="Buscar pelo nome..."
             autoFocus
             className="w-full rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none"
-            style={{ backgroundColor: t.surfaceSunken, border: `1px solid ${t.border}`, color: t.text }}
+            style={{ backgroundColor: D.sunken, border: `1px solid ${D.line}`, color: D.text }}
           />
         </div>
         <div className="max-h-[50vh] overflow-y-auto -mx-1 px-1">
           {alunos.length === 0 ? (
-            <p className="text-sm py-4" style={{ color: t.textMuted }}>
+            <p className="text-sm py-4" style={{ color: D.sub }}>
               Nenhum aluno nesta turma.
             </p>
           ) : lista.length === 0 ? (
-            <p className="text-sm py-4 text-center" style={{ color: t.textFaint }}>
+            <p className="text-sm py-4 text-center" style={{ color: D.faint }}>
               Nenhum resultado.
             </p>
           ) : (
@@ -1612,14 +1826,14 @@ const AlocarDialog = ({
                     disabled={bloqueado}
                     onClick={() => onEscolher(al)}
                     className={cn('w-full text-left flex items-center gap-3 p-2 rounded-lg transition-colors', bloqueado && 'opacity-40 cursor-not-allowed')}
-                    style={{ backgroundColor: bloqueado ? 'transparent' : t.surfaceAlt }}
+                    style={{ backgroundColor: bloqueado ? 'transparent' : D.card }}
                   >
                     <AvatarAluno aluno={al} brasoes={brasoes} size={32} />
-                    <span className="text-sm" style={{ color: t.text }}>
+                    <span className="text-sm" style={{ color: D.text }}>
                       {nomeCompleto(al)}
                     </span>
                     {motivo && (
-                      <span className="ml-auto text-[10px]" style={{ color: t.textFaint }}>
+                      <span className="ml-auto text-[10px]" style={{ color: D.faint }}>
                         {motivo}
                       </span>
                     )}
