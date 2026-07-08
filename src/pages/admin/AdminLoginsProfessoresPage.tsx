@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { KeyRound, Plus, X, Copy, Check, RefreshCw, Ban, Pencil, Dices } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { infantilTheme as t } from '@/styles/infantilTheme';
+import { corDaCasa } from '@/config/f2Reforma';
 import { toast } from 'sonner';
 
 const DOMINIO_EMAIL = '.amadeus@arboria.com';
@@ -26,6 +27,22 @@ interface LoginProfessor {
   email: string;
   nomeExibicao: string;
   segmento: string | null;
+  bloqueado: boolean;
+  turmas: TurmaOption[];
+}
+
+interface Casa {
+  id: number;
+  nome: string;
+  codigo: string | null;
+}
+
+interface Mentor {
+  professorId: string;
+  casaId: number;
+  nome: string;
+  email: string;
+  ativo: boolean;
   bloqueado: boolean;
   turmas: TurmaOption[];
 }
@@ -191,9 +208,20 @@ const AdminLoginsProfessoresPage = () => {
   // Instituicao ativa (o dono escolhe qual escola antes de gerar)
   const [institucaoSel, setInstitucaoSel] = useState<string | null>(null);
 
-  // Navegacao em cascata (colunas): serie e turma em foco
+  // Navegacao em cascata (colunas): segmento, serie/turma (Infantil/F1) e Casa (F2)
+  const [segmentoSel, setSegmentoSel] = useState<string | null>(null);
   const [serieSel, setSerieSel] = useState<string | null>(null);
   const [turmaSel, setTurmaSel] = useState<string | null>(null);
+  const [casaSel, setCasaSel] = useState<number | null>(null);
+
+  // Ramo F2: criar/editar/desativar mentor de Casa
+  const [showCriarMentor, setShowCriarMentor] = useState(false);
+  const [mentorEditando, setMentorEditando] = useState<Mentor | null>(null);
+  const [mentorParaDesativar, setMentorParaDesativar] = useState<Mentor | null>(null);
+  const [mentorNome, setMentorNome] = useState('');
+  const [mentorSenha, setMentorSenha] = useState('');
+  const [mentorPrefixo, setMentorPrefixo] = useState('');
+  const [mentorTurmas, setMentorTurmas] = useState<string[]>([]);
 
   // Acrescentar turma nova
   const [showNovaTurma, setShowNovaTurma] = useState(false);
@@ -239,6 +267,24 @@ const AdminLoginsProfessoresPage = () => {
     },
   });
 
+  // As 8 Casas (inteligencias) e os mentores do F2 (ramo F2 da arvore).
+  const { data: casas = [] } = useQuery({
+    queryKey: ['admin-casas'],
+    queryFn: async () => {
+      const d = await invocar({ acao: 'listar_casas' });
+      return (d.casas || []) as Casa[];
+    },
+  });
+
+  const { data: mentores = [], isLoading: loadingMentores } = useQuery({
+    queryKey: ['admin-mentores', institucaoSel],
+    queryFn: async () => {
+      const d = await invocar({ acao: 'listar_mentores', institutionId: institucaoSel ?? undefined });
+      return (d.mentores || []) as Mentor[];
+    },
+    enabled: !!institucaoSel,
+  });
+
   const turmasPorSegmento = useMemo(() => {
     const gruposSeg: Record<string, TurmaOption[]> = {};
     turmas.forEach((tt) => {
@@ -251,22 +297,51 @@ const AdminLoginsProfessoresPage = () => {
 
   const turmaMap = useMemo(() => new Map(turmas.map((tt) => [tt.id, tt])), [turmas]);
 
-  // Turmas agrupadas por serie (pro gerador: "vejo todas as series")
+  // Turmas agrupadas por serie (pro gerador: "vejo todas as series").
+  // O Fundamental 2 fica de fora: o F2 entra exclusivamente pelo ramo de Casas
+  // (mentores). Login por-turma amarrado a turma F2 geraria conta orfa no ramo F2.
   const seriesOrdenadas = useMemo(() => {
     const gruposSerie: Record<string, TurmaOption[]> = {};
-    turmas.forEach((tt) => {
-      if (!gruposSerie[tt.serie]) gruposSerie[tt.serie] = [];
-      gruposSerie[tt.serie].push(tt);
-    });
+    turmas
+      .filter((tt) => tt.segmento !== 'fundamental2')
+      .forEach((tt) => {
+        if (!gruposSerie[tt.serie]) gruposSerie[tt.serie] = [];
+        gruposSerie[tt.serie].push(tt);
+      });
     return Object.entries(gruposSerie).map(([serie, ts]) => ({ serie, turmas: ts }));
   }, [turmas]);
 
   // ===== Dados das colunas em cascata =====
-  const seriesDaInst = useMemo(() => [...new Set(turmas.map((tt) => tt.serie))], [turmas]);
+  // Segmentos que tem ao menos uma turma nesta instituicao.
+  const segmentosComTurmas = useMemo(() => {
+    const set = new Set(turmas.map((tt) => tt.segmento || 'outros'));
+    return SEGMENTOS.filter((s) => set.has(s.id));
+  }, [turmas]);
+  const ehRamoF2 = segmentoSel === 'fundamental2';
+  // Series/turmas do segmento em foco (ramo Infantil/F1/Outros).
+  const seriesDoSegmento = useMemo(() => {
+    const doSeg = turmas.filter((tt) => (tt.segmento || 'outros') === segmentoSel);
+    return [...new Set(doSeg.map((tt) => tt.serie))];
+  }, [turmas, segmentoSel]);
   const turmasDaSerie = useMemo(
-    () => turmas.filter((tt) => tt.serie === serieSel),
-    [turmas, serieSel]
+    () => turmas.filter((tt) => tt.serie === serieSel && (tt.segmento || 'outros') === segmentoSel),
+    [turmas, serieSel, segmentoSel]
   );
+  // Turmas do Fundamental 2 (recorte possivel de um mentor de Casa).
+  const turmasF2 = useMemo(() => turmas.filter((tt) => tt.segmento === 'fundamental2'), [turmas]);
+  // Mentores ativos por Casa (contador na coluna de Casas).
+  const mentoresPorCasa = useMemo(() => {
+    const m = new Map<number, number>();
+    mentores.forEach((mt) => {
+      if (mt.ativo) m.set(mt.casaId, (m.get(mt.casaId) ?? 0) + 1);
+    });
+    return m;
+  }, [mentores]);
+  const mentoresDaCasa = useMemo(
+    () => (casaSel ? mentores.filter((mt) => mt.casaId === casaSel) : []),
+    [mentores, casaSel]
+  );
+  const casaFocada = casaSel ? casas.find((c) => c.id === casaSel) : null;
   // Quantos logins ativos tocam cada turma (contador na coluna de turmas)
   const loginsPorTurma = useMemo(() => {
     const m = new Map<string, number>();
@@ -287,16 +362,6 @@ const AdminLoginsProfessoresPage = () => {
     } catch {
       toast.error('Falha ao copiar');
     }
-  };
-
-  const abrirCriar = () => {
-    setTurmasSelecionadas([]);
-    setPrefixoEmail('');
-    setPrefixoEditado(false);
-    setSenha(gerarSenha());
-    setNomeExibicao('');
-    setNomeEditado(false);
-    setShowCriar(true);
   };
 
   // Abre "criar login" ja com uma turma marcada (usado na coluna de turmas)
@@ -520,9 +585,156 @@ const AdminLoginsProfessoresPage = () => {
     }
   };
 
+  // ===== Ramo F2: mentores de Casa =====
+  const invalidarMentores = () =>
+    queryClient.invalidateQueries({ queryKey: ['admin-mentores'] });
+
+  const abrirCriarMentor = (casaId: number) => {
+    const casa = casas.find((c) => c.id === casaId);
+    const jaNaCasa = mentores.filter((m) => m.casaId === casaId).length;
+    const base = normalizarPrefixo(`casa${casa?.nome || casaId}`);
+    setMentorTurmas([]);
+    setMentorNome('');
+    setMentorSenha(gerarSenha());
+    setMentorPrefixo(jaNaCasa > 0 ? `${base}${jaNaCasa + 1}` : base);
+    setShowCriarMentor(true);
+  };
+
+  const toggleMentorTurma = (turmaId: string) => {
+    setMentorTurmas((prev) =>
+      prev.includes(turmaId) ? prev.filter((id) => id !== turmaId) : [...prev, turmaId]
+    );
+  };
+
+  const criarMentor = async () => {
+    if (!casaSel) return;
+    const email = `${mentorPrefixo}${DOMINIO_EMAIL}`;
+    if (!mentorPrefixo || mentorTurmas.length === 0 || !mentorNome.trim()) {
+      toast.error('Escolha as turmas e preencha email e nome');
+      return;
+    }
+    if (mentorSenha.length < 8) {
+      toast.error('A senha deve ter pelo menos 8 caracteres');
+      return;
+    }
+    setProcessando(true);
+    try {
+      await invocar({
+        acao: 'criar-mentor',
+        email,
+        senha: mentorSenha,
+        nomeExibicao: mentorNome.trim(),
+        casaId: casaSel,
+        turmaIds: mentorTurmas,
+      });
+      setShowCriarMentor(false);
+      setCredenciais({ email, senha: mentorSenha, nome: mentorNome.trim() });
+      toast.success('Mentor criado');
+      invalidarMentores();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao criar o mentor');
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  const abrirEditarMentor = (mentor: Mentor) => {
+    setMentorEditando(mentor);
+    setMentorTurmas(mentor.turmas.map((tt) => tt.id));
+  };
+
+  const salvarTurmasMentor = async () => {
+    if (!mentorEditando) return;
+    if (mentorTurmas.length === 0) {
+      toast.error('Selecione pelo menos uma turma');
+      return;
+    }
+    setProcessando(true);
+    try {
+      await invocar({
+        acao: 'ajustar-turmas-mentor',
+        userId: mentorEditando.professorId,
+        casaId: mentorEditando.casaId,
+        turmaIds: mentorTurmas,
+      });
+      setMentorEditando(null);
+      toast.success('Turmas do mentor atualizadas');
+      invalidarMentores();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao atualizar as turmas');
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  const desativarMentor = async () => {
+    if (!mentorParaDesativar) return;
+    setProcessando(true);
+    try {
+      await invocar({ acao: 'desativar-mentor', userId: mentorParaDesativar.professorId });
+      setMentorParaDesativar(null);
+      toast.success('Mentor desativado');
+      invalidarMentores();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao desativar o mentor');
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  // Seletor de turmas do F2 (checkboxes por serie do 6o ao 9o).
+  const renderSeletorTurmasF2 = (selecionadas: string[], onToggle: (id: string) => void) => {
+    const porSerie: Record<string, TurmaOption[]> = {};
+    turmasF2.forEach((tt) => {
+      if (!porSerie[tt.serie]) porSerie[tt.serie] = [];
+      porSerie[tt.serie].push(tt);
+    });
+    const series = Object.keys(porSerie).sort();
+    return (
+      <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+        {series.map((serie) => (
+          <div key={serie}>
+            <p className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: t.textFaint }}>
+              {serie}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {porSerie[serie].map((tt) => {
+                const ativa = selecionadas.includes(tt.id);
+                return (
+                  <button
+                    key={tt.id}
+                    type="button"
+                    onClick={() => onToggle(tt.id)}
+                    className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-colors"
+                    style={
+                      ativa
+                        ? { backgroundColor: t.accent, borderColor: t.accent, color: '#FFFFFF' }
+                        : { backgroundColor: t.surfaceSunken, borderColor: t.border, color: t.textMuted }
+                    }
+                  >
+                    Turma {tt.turma_letra}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+        {turmasF2.length === 0 && (
+          <p className="text-xs" style={{ color: t.textFaint }}>
+            Nenhuma turma de Fundamental 2 cadastrada
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  // Seletor por-turma (Novo login / Ajustar turmas de Infantil e F1). O
+  // Fundamental 2 NAO aparece aqui: mentores do F2 sao criados pelo ramo de
+  // Casas. Sem o filtro, o admin poderia amarrar um login por-turma a uma turma
+  // F2 e gerar conta orfa ingerenciavel no ramo F2.
   const renderSeletorTurmas = (selecionadas: string[], onToggle: (id: string) => void) => (
     <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
-      {SEGMENTOS.map((seg) => {
+      {SEGMENTOS.filter((seg) => seg.id !== 'fundamental2').map((seg) => {
         const lista = turmasPorSegmento[seg.id] || [];
         if (lista.length === 0) return null;
         return (
@@ -621,10 +833,11 @@ const AdminLoginsProfessoresPage = () => {
         </button>
       </div>
       <p className="text-sm mb-4" style={{ color: t.textMuted }}>
-        A instituicao, depois a serie, depois a turma, depois os logins.
+        Instituicao, depois o segmento. No Infantil e Fundamental 1 o login e por turma;
+        no Fundamental 2 e por Casa (mentor).
       </p>
 
-      {/* AS QUATRO COLUNAS EM CASCATA */}
+      {/* CASCATA: Instituicao -> Segmento -> (F2: Casas -> mentores | Infantil/F1: serie -> turma -> logins) */}
       <div className="flex gap-3 overflow-x-auto pb-2 items-start">
         {/* Coluna 1: instituicoes */}
         <div className="w-48 flex-shrink-0 rounded-2xl overflow-hidden" style={colunaCss}>
@@ -638,8 +851,10 @@ const AdminLoginsProfessoresPage = () => {
                 key={inst.id}
                 onClick={() => {
                   setInstitucaoSel(inst.id);
+                  setSegmentoSel(null);
                   setSerieSel(null);
                   setTurmaSel(null);
+                  setCasaSel(null);
                 }}
                 className={linhaBase}
                 style={{
@@ -656,17 +871,62 @@ const AdminLoginsProfessoresPage = () => {
           })}
         </div>
 
-        {/* Coluna 2: series */}
+        {/* Coluna 2: segmento */}
+        <div className="w-44 flex-shrink-0 rounded-2xl overflow-hidden" style={colunaCss}>
+          <p className="px-3 py-2 text-[10px] uppercase tracking-wider font-semibold" style={{ color: t.textFaint }}>
+            Segmento
+          </p>
+          {!institucaoSel ? (
+            <p className="px-3 py-4 text-[11px]" style={{ color: t.textFaint }}>Escolha a instituicao</p>
+          ) : segmentosComTurmas.length === 0 ? (
+            <p className="px-3 py-4 text-[11px]" style={{ color: t.textFaint }}>Nenhuma turma</p>
+          ) : (
+            segmentosComTurmas.map((seg) => {
+              const ativa = seg.id === segmentoSel;
+              return (
+                <button
+                  key={seg.id}
+                  onClick={() => {
+                    setSegmentoSel(seg.id);
+                    setSerieSel(null);
+                    setTurmaSel(null);
+                    setCasaSel(null);
+                  }}
+                  className={linhaBase}
+                  style={{
+                    backgroundColor: ativa ? t.accentSoft : 'transparent',
+                    borderLeft: `3px solid ${ativa ? t.accent : 'transparent'}`,
+                    borderBottom: `1px solid ${t.border}`,
+                  }}
+                >
+                  <span className="flex-1 text-[13px] truncate" style={{ color: ativa ? t.text : t.textMuted, fontWeight: ativa ? 700 : 500 }}>
+                    {seg.label}
+                  </span>
+                  {seg.id === 'fundamental2' && (
+                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: t.accentSoft, color: t.accentText }}>
+                      Casas
+                    </span>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {/* ===== RAMO INFANTIL / F1 / OUTROS: serie -> turma -> logins ===== */}
+        {segmentoSel && !ehRamoF2 && (
+        <>
+        {/* Coluna 3: series */}
         <div className="w-40 flex-shrink-0 rounded-2xl overflow-hidden" style={colunaCss}>
           <p className="px-3 py-2 text-[10px] uppercase tracking-wider font-semibold" style={{ color: t.textFaint }}>
             Serie
           </p>
-          {!institucaoSel ? (
-            <p className="px-3 py-4 text-[11px]" style={{ color: t.textFaint }}>Escolha a instituicao</p>
-          ) : seriesDaInst.length === 0 ? (
+          {!segmentoSel ? (
+            <p className="px-3 py-4 text-[11px]" style={{ color: t.textFaint }}>Escolha o segmento</p>
+          ) : seriesDoSegmento.length === 0 ? (
             <p className="px-3 py-4 text-[11px]" style={{ color: t.textFaint }}>Nenhuma serie</p>
           ) : (
-            seriesDaInst.map((serie) => {
+            seriesDoSegmento.map((serie) => {
               const ativa = serie === serieSel;
               return (
                 <button
@@ -837,6 +1097,163 @@ const AdminLoginsProfessoresPage = () => {
             </div>
           )}
         </div>
+        </>
+        )}
+
+        {/* ===== RAMO FUNDAMENTAL 2: Casas -> mentores ===== */}
+        {ehRamoF2 && (
+        <>
+        {/* Coluna 3: Casas */}
+        <div className="w-48 flex-shrink-0 rounded-2xl overflow-hidden" style={colunaCss}>
+          <p className="px-3 py-2 text-[10px] uppercase tracking-wider font-semibold" style={{ color: t.textFaint }}>
+            Casa
+          </p>
+          {casas.length === 0 ? (
+            <p className="px-3 py-4 text-[11px]" style={{ color: t.textFaint }}>Carregando Casas...</p>
+          ) : (
+            casas.map((casa) => {
+              const ativa = casa.id === casaSel;
+              const cor = corDaCasa(casa.id);
+              const qtd = mentoresPorCasa.get(casa.id) ?? 0;
+              return (
+                <button
+                  key={casa.id}
+                  onClick={() => setCasaSel(casa.id)}
+                  className={linhaBase}
+                  style={{
+                    backgroundColor: ativa ? t.accentSoft : 'transparent',
+                    borderLeft: `3px solid ${ativa ? cor : 'transparent'}`,
+                    borderBottom: `1px solid ${t.border}`,
+                  }}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cor }} />
+                  <span className="flex-1 text-[13px] truncate" style={{ color: ativa ? t.text : t.textMuted, fontWeight: ativa ? 700 : 500 }}>
+                    Casa {casa.nome}
+                  </span>
+                  {qtd > 0 && (
+                    <span className="text-[10px] font-semibold px-1.5 rounded-full" style={{ backgroundColor: OK.bg, color: OK.text }}>
+                      {qtd}
+                    </span>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {/* Coluna 4: mentores da Casa */}
+        <div className="flex-1 min-w-[240px] rounded-2xl p-3" style={colunaCss}>
+          {loadingMentores ? (
+            <div className="space-y-2">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-16 rounded-xl animate-pulse" style={{ backgroundColor: t.surfaceSunken }} />
+              ))}
+            </div>
+          ) : !casaFocada ? (
+            <div className="h-full flex items-center justify-center py-10 text-center">
+              <p className="text-[13px]" style={{ color: t.textFaint }}>
+                Escolha uma Casa para ver e criar os mentores dela.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: corDaCasa(casaFocada.id) }} />
+                  <p className="text-sm font-semibold truncate" style={{ color: t.text }}>
+                    Casa {casaFocada.nome}
+                  </p>
+                </div>
+                <button
+                  onClick={() => abrirCriarMentor(casaFocada.id)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold flex-shrink-0"
+                  style={{ backgroundColor: t.accent, color: '#FFFFFF' }}
+                >
+                  <Plus className="w-3.5 h-3.5" /> Novo mentor
+                </button>
+              </div>
+
+              <p className="text-[11px]" style={{ color: t.textFaint }}>
+                Uma Casa pode ter varios mentores, cada um conduzindo turmas diferentes do 6o ao 9o.
+              </p>
+
+              {mentoresDaCasa.length === 0 ? (
+                <p className="text-[12px] py-4" style={{ color: t.textFaint }}>
+                  Nenhum mentor nesta Casa ainda. Use "Novo mentor" para criar o login e alocar as turmas.
+                </p>
+              ) : (
+                mentoresDaCasa.map((mentor) => {
+                  const inativo = !mentor.ativo || mentor.bloqueado;
+                  return (
+                    <div
+                      key={mentor.professorId}
+                      className={cn('p-3 rounded-xl', inativo && 'opacity-60')}
+                      style={{ backgroundColor: t.surfaceSunken, border: `1px solid ${t.border}` }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium truncate" style={{ color: t.text }}>
+                            {mentor.nome || 'Sem nome'}
+                          </p>
+                          <p className="text-[11px] font-mono truncate" style={{ color: t.textFaint }}>
+                            {mentor.email}
+                          </p>
+                        </div>
+                        {inativo && (
+                          <span
+                            className="shrink-0 px-2 py-0.5 rounded-full text-[9px] font-medium border"
+                            style={{ backgroundColor: DANGER.bg, color: DANGER.text, borderColor: DANGER.border }}
+                          >
+                            Desativado
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {mentor.turmas.length === 0 ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] border" style={{ backgroundColor: AMBER.bg, color: AMBER.text, borderColor: AMBER.border }}>
+                            Sem turma atribuida
+                          </span>
+                        ) : (
+                          mentor.turmas.map((tt) => (
+                            <span
+                              key={tt.id}
+                              className="px-2 py-0.5 rounded-full text-[10px] border"
+                              style={{ backgroundColor: t.surface, color: t.textMuted, borderColor: t.border }}
+                            >
+                              {nomeTurma(tt)}
+                            </span>
+                          ))
+                        )}
+                      </div>
+
+                      {!inativo && (
+                        <div className="flex gap-1.5 flex-wrap mt-2">
+                          <button
+                            onClick={() => abrirEditarMentor(mentor)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-medium border transition-colors"
+                            style={{ backgroundColor: t.accentSoft, color: t.accentText, borderColor: t.accentBorder }}
+                          >
+                            <Pencil className="w-3 h-3" /> Ajustar turmas
+                          </button>
+                          <button
+                            onClick={() => setMentorParaDesativar(mentor)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-medium border transition-colors"
+                            style={{ backgroundColor: DANGER.bg, color: DANGER.text, borderColor: DANGER.border }}
+                          >
+                            <Ban className="w-3 h-3" /> Desativar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
+        </>
+        )}
       </div>
 
       {/* Modal: Criar login */}
@@ -1359,6 +1776,160 @@ const AdminLoginsProfessoresPage = () => {
           </div>
         </div>
       )}
+      {/* Modal: Criar mentor de Casa (F2) */}
+      {showCriarMentor && casaFocada && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto" style={modalStyle}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: corDaCasa(casaFocada.id) }} />
+                <div className="min-w-0">
+                  <p className="font-medium truncate" style={{ color: t.text }}>
+                    Novo mentor da Casa {casaFocada.nome}
+                  </p>
+                  <p className="text-[10px] mt-0.5" style={{ color: t.textFaint }}>
+                    Um login individual, com as turmas do 6o ao 9o que ele conduz
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setShowCriarMentor(false)} className="p-1" style={{ color: t.textFaint }}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] block mb-1.5" style={{ color: t.textFaint }}>
+                  Turmas que este mentor conduz
+                </label>
+                {renderSeletorTurmasF2(mentorTurmas, toggleMentorTurma)}
+              </div>
+
+              <div>
+                <label className="text-[10px] block mb-1" style={{ color: t.textFaint }}>
+                  Email de acesso
+                </label>
+                <div className="flex items-center gap-1">
+                  <input
+                    value={mentorPrefixo}
+                    onChange={(e) => setMentorPrefixo(normalizarPrefixo(e.target.value))}
+                    placeholder="casalogica"
+                    className="flex-1 min-w-0 rounded-lg px-3 py-2 text-sm font-mono outline-none"
+                    style={inputStyle}
+                  />
+                  <span className="text-[11px] font-mono shrink-0" style={{ color: t.textMuted }}>
+                    {DOMINIO_EMAIL}
+                  </span>
+                </div>
+                <p className="text-[9px] mt-1" style={{ color: t.textFaint }}>
+                  Com mais de um mentor na Casa, edite para um email unico.
+                </p>
+              </div>
+
+              <div>
+                <label className="text-[10px] block mb-1" style={{ color: t.textFaint }}>
+                  Senha provisoria
+                </label>
+                {renderCampoSenha(mentorSenha, setMentorSenha)}
+              </div>
+
+              <div>
+                <label className="text-[10px] block mb-1" style={{ color: t.textFaint }}>
+                  Nome de exibicao
+                </label>
+                <input
+                  value={mentorNome}
+                  onChange={(e) => setMentorNome(e.target.value)}
+                  placeholder="Nome do mentor"
+                  className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={criarMentor}
+              disabled={processando || mentorTurmas.length === 0 || !mentorPrefixo || !mentorNome.trim() || mentorSenha.length < 8}
+              className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-40"
+              style={{ backgroundColor: t.accent, color: '#FFFFFF' }}
+            >
+              {processando ? 'Criando...' : 'Criar mentor e gerar login'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Ajustar turmas do mentor */}
+      {mentorEditando && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto" style={modalStyle}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium" style={{ color: t.text }}>
+                  Ajustar turmas do mentor
+                </p>
+                <p className="text-[10px] mt-0.5 font-mono" style={{ color: t.textFaint }}>
+                  {mentorEditando.email}
+                </p>
+              </div>
+              <button onClick={() => setMentorEditando(null)} className="p-1" style={{ color: t.textFaint }}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {renderSeletorTurmasF2(mentorTurmas, toggleMentorTurma)}
+
+            <button
+              onClick={salvarTurmasMentor}
+              disabled={processando || mentorTurmas.length === 0}
+              className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-40"
+              style={{ backgroundColor: t.accent, color: '#FFFFFF' }}
+            >
+              {processando ? 'Salvando...' : 'Salvar turmas'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Desativar mentor */}
+      {mentorParaDesativar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={modalStyle}>
+            <div className="flex items-center justify-between">
+              <p className="font-medium" style={{ color: t.text }}>
+                Desativar mentor
+              </p>
+              <button onClick={() => setMentorParaDesativar(null)} className="p-1" style={{ color: t.textFaint }}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs leading-relaxed" style={{ color: t.textMuted }}>
+              O mentor <span className="font-mono" style={{ color: t.text }}>{mentorParaDesativar.email}</span> tera
+              o vinculo de Casa e as turmas encerrados, e o login sera bloqueado. O historico de observacoes e preservado.
+            </p>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setMentorParaDesativar(null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                style={{ backgroundColor: t.surfaceSunken, color: t.textMuted }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={desativarMentor}
+                disabled={processando}
+                className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-colors disabled:opacity-40"
+                style={{ backgroundColor: DANGER.text }}
+              >
+                {processando ? 'Desativando...' : 'Desativar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

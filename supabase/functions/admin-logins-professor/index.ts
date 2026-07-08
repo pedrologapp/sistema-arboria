@@ -86,6 +86,23 @@ Deno.serve(async (req) => {
       return turmaIds.map((id) => map.get(id)).filter(Boolean) as TurmaInfo[];
     };
 
+    // Helper: garante que TODAS as turmas do payload sao da MESMA instituicao
+    // (e, no caso admin, a do proprio token). Como o super_admin nao tem
+    // instituicao e o service_role bypassa a RLS, um payload com turmas de duas
+    // escolas gravaria professor_casa com a institution da 1a turma e
+    // professor_casa_turma de outra. Retorna a institution unica, ou uma Response
+    // de erro pronta para os ramos de mentor de Casa.
+    const instituicaoUnicaDasTurmas = (turmasSel: TurmaInfo[]): string | Response => {
+      const insts = [...new Set(turmasSel.map((t) => t.institution_id))];
+      if (insts.length !== 1) {
+        return jsonResponse({ error: 'Todas as turmas devem ser da mesma instituicao' }, 400);
+      }
+      if (callerInstitutionId && insts[0] !== callerInstitutionId) {
+        return jsonResponse({ error: 'As turmas pertencem a outra instituicao' }, 403);
+      }
+      return insts[0];
+    };
+
     // Helper: valida que o alvo de resetar/desativar/vincular e um professor
     // da MESMA instituicao do admin, e nunca um admin/super_admin (anti-takeover).
     // Retorna null se ok, ou uma Response de erro pronta.
@@ -499,6 +516,364 @@ Deno.serve(async (req) => {
       if (banError) return jsonResponse({ error: `Falha ao bloquear o login: ${banError.message}` }, 500);
 
       console.log(`[admin-logins-professor] Login desativado: ${userId}`);
+      return jsonResponse({ success: true });
+    }
+
+    // ============ LISTAR CASAS (as 8 inteligencias) ============
+    // Referencia global; via service role para o dono (super_admin) sem instituicao.
+    if (acao === 'listar_casas') {
+      const { data, error } = await supabaseAdmin
+        .from('inteligencias')
+        .select('id, nome, codigo')
+        .order('id');
+      if (error) return jsonResponse({ error: error.message }, 500);
+      return jsonResponse({ casas: data || [] });
+    }
+
+    // ============ LISTAR MENTORES (por instituicao) ============
+    // Todos os vinculos de Casa (professor_casa) da instituicao, com as turmas
+    // que cada mentor conduz (professor_casa_turma) e o status do login.
+    if (acao === 'listar_mentores') {
+      const { institutionId: instFiltro } = body as { institutionId?: string };
+      const alvoInst = callerInstitutionId ?? instFiltro ?? null;
+      if (!alvoInst) return jsonResponse({ error: 'Escolha a instituicao' }, 400);
+
+      const { data: vinculosCasa, error: casaError } = await supabaseAdmin
+        .from('professor_casa')
+        .select('professor_id, casa_id, ativo, eh_mentor_principal')
+        .eq('institution_id', alvoInst)
+        .eq('ano_letivo', anoLetivo);
+      if (casaError) return jsonResponse({ error: `casa: ${casaError.message}` }, 500);
+
+      const professorIds = [...new Set((vinculosCasa || []).map((v) => v.professor_id))];
+      if (professorIds.length === 0) return jsonResponse({ mentores: [] });
+
+      // Nomes
+      const { data: profiles } = await supabaseAdmin
+        .from('profiles')
+        .select('id, nome, full_name')
+        .in('id', professorIds);
+      const nomeMap = new Map((profiles || []).map((p) => [p.id, p.full_name || p.nome || '']));
+
+      // Turmas conduzidas por cada mentor (ativas)
+      const { data: vinculosTurma } = await supabaseAdmin
+        .from('professor_casa_turma')
+        .select('professor_id, casa_id, ativo, turmas(id, nome, serie, turma_letra, segmento)')
+        .in('professor_id', professorIds)
+        .eq('ano_letivo', anoLetivo)
+        .eq('ativo', true);
+
+      // Email + status de bloqueio (um getUserById por mentor)
+      const emailResults = await Promise.all(
+        professorIds.map(async (id) => {
+          const { data: u } = await supabaseAdmin.auth.admin.getUserById(id);
+          return {
+            id,
+            email: u?.user?.email ?? '',
+            bannedUntil: (u?.user as { banned_until?: string } | undefined)?.banned_until ?? null,
+          };
+        })
+      );
+      const agora = new Date();
+      const emailMap = new Map(
+        emailResults.map((e) => [
+          e.id,
+          {
+            email: e.email,
+            bloqueado: !!(e.bannedUntil && new Date(e.bannedUntil) > agora),
+          },
+        ])
+      );
+
+      const mentores = (vinculosCasa || []).map((v) => {
+        const authInfo = emailMap.get(v.professor_id);
+        const turmasDoMentor = (vinculosTurma || [])
+          .filter((vt) => vt.professor_id === v.professor_id && vt.casa_id === v.casa_id && vt.turmas)
+          .map((vt) => vt.turmas as unknown as TurmaInfo)
+          .map((tt) => ({
+            id: tt.id,
+            nome: tt.nome,
+            serie: tt.serie,
+            turma_letra: tt.turma_letra,
+            segmento: tt.segmento,
+          }));
+        return {
+          professorId: v.professor_id,
+          casaId: v.casa_id,
+          nome: nomeMap.get(v.professor_id) || '',
+          email: authInfo?.email ?? '',
+          ativo: v.ativo,
+          bloqueado: authInfo?.bloqueado ?? false,
+          turmas: turmasDoMentor,
+        };
+      });
+
+      return jsonResponse({ mentores });
+    }
+
+    // ============ CRIAR MENTOR ============
+    // Cria um LOGIN INDIVIDUAL para um mentor de Casa do F2 e, na mesma transacao
+    // logica: profile + role professor + professor_casa (identidade de Casa) +
+    // professor_casa_turma (uma linha por turma que ele conduz).
+    // Guardas Riscos: criado_por = caller.id nas DUAS tabelas; 1 mentor = 1 conta
+    // (auth.createUser recusa email repetido); senha provisoria forte.
+    if (acao === 'criar-mentor') {
+      const { email, senha, nomeExibicao, casaId, turmaIds } = body as {
+        email?: string; senha?: string; nomeExibicao?: string; casaId?: number; turmaIds?: string[];
+      };
+
+      if (!email || !senha || !nomeExibicao || !casaId || !turmaIds || turmaIds.length === 0) {
+        return jsonResponse({ error: 'Campos obrigatorios: email, senha, nomeExibicao, casaId, turmaIds' }, 400);
+      }
+      if (!Number.isInteger(casaId) || casaId < 1 || casaId > 8) {
+        return jsonResponse({ error: 'Casa invalida (deve ser de 1 a 8)' }, 400);
+      }
+      if (!/^[a-z0-9._+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email)) {
+        return jsonResponse({ error: 'Email invalido' }, 400);
+      }
+      if (!/@arboria\.com$/i.test(email)) {
+        return jsonResponse({ error: 'O email deve terminar com @arboria.com' }, 400);
+      }
+      if (senha.length < 8) {
+        return jsonResponse({ error: 'A senha deve ter pelo menos 8 caracteres' }, 400);
+      }
+
+      const turmasSelecionadas = await buscarTurmasOrdenadas(turmaIds);
+      if (turmasSelecionadas.length !== turmaIds.length) {
+        return jsonResponse({ error: 'Uma ou mais turmas nao foram encontradas nesta instituicao' }, 400);
+      }
+      // Mentor de Casa e do Fundamental 2: o recorte so aceita turmas do F2.
+      const foraDoF2 = turmasSelecionadas.filter((t) => t.segmento !== 'fundamental2');
+      if (foraDoF2.length > 0) {
+        return jsonResponse({ error: 'Mentor de Casa conduz apenas turmas do Fundamental 2' }, 400);
+      }
+
+      // A instituicao do mentor: unica entre as turmas (e, para admin, a do token).
+      const instUnica = instituicaoUnicaDasTurmas(turmasSelecionadas);
+      if (instUnica instanceof Response) return instUnica;
+      const institutionId = instUnica;
+
+      console.log(`[admin-logins-professor] Criando MENTOR ${email} casa=${casaId} com ${turmaIds.length} turma(s)`);
+
+      // 1. Conta no Auth
+      const { data: authData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password: senha,
+        email_confirm: true,
+        user_metadata: { full_name: nomeExibicao },
+      });
+      if (createError) {
+        const msg = /already|registered|exists/i.test(createError.message)
+          ? 'Este email ja esta em uso'
+          : createError.message;
+        return jsonResponse({ error: msg }, 400);
+      }
+      const userId = authData.user.id;
+
+      // Desfaz a conta recem-criada se qualquer passo seguinte falhar.
+      const rollback = async () => {
+        await supabaseAdmin.from('professor_casa_turma').delete().eq('professor_id', userId);
+        await supabaseAdmin.from('professor_casa').delete().eq('professor_id', userId);
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+      };
+
+      // 2. Profile (mentor = segmento fundamental2)
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          nome: nomeExibicao,
+          full_name: nomeExibicao,
+          institution_id: institutionId,
+          segmento: 'fundamental2',
+          conta_criada: true,
+        })
+        .eq('id', userId);
+      if (profileError) {
+        await rollback();
+        return jsonResponse({ error: `Falha ao salvar o perfil: ${profileError.message}` }, 500);
+      }
+
+      // 3. Role professor
+      const { error: roleError } = await supabaseAdmin
+        .from('user_roles')
+        .insert({ user_id: userId, role: 'professor' });
+      if (roleError) {
+        await rollback();
+        return jsonResponse({ error: `Falha ao definir a funcao de professor: ${roleError.message}` }, 500);
+      }
+
+      // 4. professor_casa (identidade de Casa) - criado_por = caller.id (Riscos)
+      const { error: casaInsError } = await supabaseAdmin
+        .from('professor_casa')
+        .insert({
+          professor_id: userId,
+          casa_id: casaId,
+          institution_id: institutionId,
+          ano_letivo: anoLetivo,
+          eh_mentor_principal: true,
+          ativo: true,
+          criado_por: caller.id,
+        });
+      if (casaInsError) {
+        await rollback();
+        return jsonResponse({ error: `Falha ao vincular a Casa: ${casaInsError.message}` }, 500);
+      }
+
+      // 5. professor_casa_turma (uma linha por turma) - criado_por = caller.id (Riscos)
+      const linksTurma = turmasSelecionadas.map((t) => ({
+        professor_id: userId,
+        casa_id: casaId,
+        turma_id: t.id,
+        institution_id: t.institution_id,
+        ano_letivo: anoLetivo,
+        ativo: true,
+        criado_por: caller.id,
+      }));
+      const { error: turmaError } = await supabaseAdmin.from('professor_casa_turma').insert(linksTurma);
+      if (turmaError) {
+        await rollback();
+        return jsonResponse({ error: `Falha ao vincular turmas: ${turmaError.message}` }, 500);
+      }
+
+      console.log(`[admin-logins-professor] Mentor criado: ${userId}`);
+      return jsonResponse({
+        success: true,
+        userId,
+        email,
+        nomeExibicao,
+        casaId,
+        turmas: turmasSelecionadas.map((t) => t.nome || `${t.serie} ${t.turma_letra}`),
+      });
+    }
+
+    // ============ AJUSTAR TURMAS DO MENTOR ============
+    // Reconcilia professor_casa_turma (adiciona/remove turmas) sem mexer no login.
+    if (acao === 'ajustar-turmas-mentor') {
+      const { userId, casaId, turmaIds } = body as {
+        userId?: string; casaId?: number; turmaIds?: string[];
+      };
+      if (!userId || !casaId || !turmaIds || turmaIds.length === 0) {
+        return jsonResponse({ error: 'Campos obrigatorios: userId, casaId, turmaIds' }, 400);
+      }
+
+      const alvoInvalido = await validarAlvoProfessor(userId);
+      if (alvoInvalido) return alvoInvalido;
+
+      const turmasSelecionadas = await buscarTurmasOrdenadas(turmaIds);
+      if (turmasSelecionadas.length !== turmaIds.length) {
+        return jsonResponse({ error: 'Uma ou mais turmas nao foram encontradas' }, 400);
+      }
+      const foraDoF2 = turmasSelecionadas.filter((t) => t.segmento !== 'fundamental2');
+      if (foraDoF2.length > 0) {
+        return jsonResponse({ error: 'Mentor de Casa conduz apenas turmas do Fundamental 2' }, 400);
+      }
+      // Todas as turmas do ajuste sao da mesma instituicao (as linhas de
+      // professor_casa_turma gravam institution_id por turma).
+      const instAjuste = instituicaoUnicaDasTurmas(turmasSelecionadas);
+      if (instAjuste instanceof Response) return instAjuste;
+
+      // A identidade de Casa precisa estar ativa (reativa se o mentor voltou).
+      const { data: casaRow } = await supabaseAdmin
+        .from('professor_casa')
+        .select('id, ativo')
+        .eq('professor_id', userId)
+        .eq('casa_id', casaId)
+        .eq('ano_letivo', anoLetivo)
+        .maybeSingle();
+      if (!casaRow) {
+        return jsonResponse({ error: 'Este professor nao e mentor desta Casa neste ano' }, 400);
+      }
+      if (!casaRow.ativo) {
+        await supabaseAdmin.from('professor_casa').update({ ativo: true }).eq('id', casaRow.id);
+      }
+
+      const { data: existentes, error: existentesError } = await supabaseAdmin
+        .from('professor_casa_turma')
+        .select('id, turma_id, ativo')
+        .eq('professor_id', userId)
+        .eq('casa_id', casaId)
+        .eq('ano_letivo', anoLetivo);
+      if (existentesError) return jsonResponse({ error: existentesError.message }, 500);
+
+      const desejadas = new Set(turmaIds);
+      const existentesMap = new Map((existentes || []).map((v) => [v.turma_id, v]));
+
+      const idsParaDesativar = (existentes || [])
+        .filter((v) => v.ativo && !desejadas.has(v.turma_id))
+        .map((v) => v.id);
+      if (idsParaDesativar.length > 0) {
+        const { error } = await supabaseAdmin
+          .from('professor_casa_turma')
+          .update({ ativo: false })
+          .in('id', idsParaDesativar);
+        if (error) return jsonResponse({ error: `Falha ao remover turmas: ${error.message}` }, 500);
+      }
+
+      const idsParaReativar = (existentes || [])
+        .filter((v) => !v.ativo && desejadas.has(v.turma_id))
+        .map((v) => v.id);
+      if (idsParaReativar.length > 0) {
+        const { error } = await supabaseAdmin
+          .from('professor_casa_turma')
+          .update({ ativo: true })
+          .in('id', idsParaReativar);
+        if (error) return jsonResponse({ error: `Falha ao reativar turmas: ${error.message}` }, 500);
+      }
+
+      const novos = turmasSelecionadas.filter((t) => !existentesMap.has(t.id));
+      if (novos.length > 0) {
+        const { error } = await supabaseAdmin.from('professor_casa_turma').insert(
+          novos.map((t) => ({
+            professor_id: userId,
+            casa_id: casaId,
+            turma_id: t.id,
+            institution_id: t.institution_id,
+            ano_letivo: anoLetivo,
+            ativo: true,
+            criado_por: caller.id,
+          }))
+        );
+        if (error) return jsonResponse({ error: `Falha ao adicionar turmas: ${error.message}` }, 500);
+      }
+
+      console.log(`[admin-logins-professor] Turmas do mentor ${userId} ajustadas: ${turmaIds.length}`);
+      return jsonResponse({ success: true });
+    }
+
+    // ============ DESATIVAR MENTOR ============
+    // Encerra o vinculo de Casa (professor_casa + professor_casa_turma) E bloqueia
+    // o login. O historico de observacoes e preservado (nunca deletado).
+    if (acao === 'desativar-mentor') {
+      const { userId } = body as { userId?: string };
+      if (!userId) return jsonResponse({ error: 'Campo obrigatorio: userId' }, 400);
+
+      const alvoInvalido = await validarAlvoProfessor(userId);
+      if (alvoInvalido) return alvoInvalido;
+
+      const { error: pctError } = await supabaseAdmin
+        .from('professor_casa_turma')
+        .update({ ativo: false })
+        .eq('professor_id', userId);
+      if (pctError) return jsonResponse({ error: `Falha ao desativar turmas: ${pctError.message}` }, 500);
+
+      const { error: pcError } = await supabaseAdmin
+        .from('professor_casa')
+        .update({ ativo: false })
+        .eq('professor_id', userId);
+      if (pcError) return jsonResponse({ error: `Falha ao desativar a Casa: ${pcError.message}` }, 500);
+
+      // Tambem desativa vinculos de turma comuns, se existirem (higiene).
+      await supabaseAdmin
+        .from('professor_turma')
+        .update({ ativo: false })
+        .eq('professor_id', userId);
+
+      const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        ban_duration: '87600h',
+      });
+      if (banError) return jsonResponse({ error: `Falha ao bloquear o login: ${banError.message}` }, 500);
+
+      console.log(`[admin-logins-professor] Mentor desativado: ${userId}`);
       return jsonResponse({ success: true });
     }
 
