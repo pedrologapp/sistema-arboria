@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Search, NotebookPen, List, LayoutGrid, Shield, ChevronRight, LayoutList } from 'lucide-react';
+import { Users, Search, NotebookPen, List, LayoutGrid, ChevronRight } from 'lucide-react';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { useTurmasF2Instituicao, useAlunosF2Instituicao, type TurmaF2Diario } from '@/hooks/useF2Diario';
 import {
@@ -13,7 +13,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { infantilTheme as t } from '@/styles/infantilTheme';
-import { corDaCasa } from '@/config/f2Reforma';
 
 const CHAVE_TURMA = 'f2-diario-turma';
 
@@ -24,44 +23,26 @@ const CHAVE_TURMA = 'f2-diario-turma';
  */
 const CartaoFiltro = ({
   label,
-  cor,
   ativo,
   onClick,
-  todas = false,
 }: {
   label: string;
-  cor: string;
   ativo: boolean;
   onClick: () => void;
-  todas?: boolean;
 }) => (
   <button
     onClick={onClick}
-    className="w-full h-full rounded-2xl text-left transition-transform active:scale-[0.99] p-2.5"
+    className="flex-shrink-0 rounded-xl px-3.5 py-2 transition-transform active:scale-[0.97] whitespace-nowrap"
     style={{
-      backgroundColor: t.surface,
+      backgroundColor: ativo ? t.accent : t.surface,
       border: ativo ? `1.5px solid ${t.accent}` : `1px solid ${t.border}`,
-      boxShadow: ativo ? t.shadowMd : t.shadowSm,
+      boxShadow: ativo ? t.shadowSm : 'none',
     }}
     aria-pressed={ativo}
   >
-    <div className="flex items-center gap-2">
-      <span
-        className="rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ width: 30, height: 30, backgroundColor: todas ? t.accentSoft : `${cor}1A` }}
-      >
-        {todas ? (
-          <LayoutList size={17} style={{ color: t.accent }} strokeWidth={1.75} />
-        ) : (
-          <Shield size={17} style={{ color: cor }} strokeWidth={1.75} />
-        )}
-      </span>
-      <div className="min-w-0">
-        <p className="text-[13px] font-bold truncate" style={{ color: t.text }}>
-          {label}
-        </p>
-      </div>
-    </div>
+    <span className="text-[13px] font-semibold" style={{ color: ativo ? '#FFFFFF' : t.text }}>
+      {label}
+    </span>
   </button>
 );
 
@@ -111,7 +92,6 @@ const F2AlunosPage = () => {
     salvarViewModePreferido(modo);
   };
 
-  const cor = corDaCasa(casaMentor?.id);
   const listaTurmas: TurmaF2Diario[] = turmas ?? [];
 
   // Se a turma salva não existe mais na instituição, cai em "Todas".
@@ -168,28 +148,19 @@ const F2AlunosPage = () => {
             className="overflow-x-auto -mx-4 px-4 py-1"
             style={{ scrollSnapType: 'x proximity', WebkitOverflowScrolling: 'touch' }}
           >
-            <div
-              className="grid grid-flow-col auto-cols-max gap-2"
-              style={{ gridTemplateRows: listaTurmas.length > 1 ? 'repeat(2, minmax(0, 1fr))' : 'minmax(0, 1fr)' }}
-            >
-              <div style={{ width: 132, scrollSnapAlign: 'start' }}>
-                <CartaoFiltro
-                  label="Todas"
-                  cor={cor}
-                  todas
-                  ativo={turmaAtiva === null}
-                  onClick={() => setTurmaFiltro(null)}
-                />
-              </div>
+            <div className="flex gap-2">
+              <CartaoFiltro
+                label="Todas"
+                ativo={turmaAtiva === null}
+                onClick={() => setTurmaFiltro(null)}
+              />
               {listaTurmas.map((turma) => (
-                <div key={turma.id} style={{ width: 132, scrollSnapAlign: 'start' }}>
-                  <CartaoFiltro
-                    label={formatTurmaLabel(turma.serie, turma.turma_letra) || turma.nome}
-                    cor={cor}
-                    ativo={turmaAtiva === turma.id}
-                    onClick={() => setTurmaFiltro(turma.id)}
-                  />
-                </div>
+                <CartaoFiltro
+                  key={turma.id}
+                  label={formatTurmaLabel(turma.serie, turma.turma_letra) || turma.nome}
+                  ativo={turmaAtiva === turma.id}
+                  onClick={() => setTurmaFiltro(turma.id)}
+                />
               ))}
             </div>
           </div>
