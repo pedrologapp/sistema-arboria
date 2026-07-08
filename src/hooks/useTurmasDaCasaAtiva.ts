@@ -8,12 +8,14 @@ const sb = supabase as any;
 
 /**
  * Status de uma turma F2 em relação à Casa do mentor logado:
- *  - 'vez'     : a fase ATIVA da turma É a Casa do mentor (é a vez dele conduzir).
- *  - 'caminho' : a Casa do mentor é a PRÓXIMA posição da trilha desta turma.
- *  - 'depois'  : a Casa do mentor vem mais adiante (ou a trilha nem começou).
- * Turmas em que a Casa do mentor JÁ passou não entram na lista.
+ *  - 'vez'      : a fase ATIVA da turma É a Casa do mentor (é a vez dele conduzir).
+ *  - 'caminho'  : a Casa do mentor é a PRÓXIMA posição da trilha desta turma.
+ *  - 'depois'   : a Casa do mentor vem mais adiante (ou a trilha nem começou).
+ *  - 'passou'   : a Casa do mentor JÁ aconteceu nesta turma (fase já ficou para trás).
+ *  - 'concluida': a turma concluiu o ano das Casas (trilha inteira encerrada).
+ * O mentor VÊ TODAS as turmas que conduz, cada uma com o seu status.
  */
-export type StatusTurmaCasa = 'vez' | 'caminho' | 'depois';
+export type StatusTurmaCasa = 'vez' | 'caminho' | 'depois' | 'passou' | 'concluida';
 
 export interface TurmaDaCasaAtiva {
   turma_id: string;
@@ -65,7 +67,31 @@ export const useTurmasDaCasaAtiva = (
         .eq('institution_id', institutionId!)
         .eq('segmento', 'fundamental2');
       if (turmasErr) throw turmasErr;
-      const turmas = (turmasRaw as { id: string; nome: string; serie: string | null; turma_letra: string | null }[]) ?? [];
+      const turmasF2 = (turmasRaw as { id: string; nome: string; serie: string | null; turma_letra: string | null }[]) ?? [];
+      if (turmasF2.length === 0) return [];
+
+      // 1b. Recorte por ATRIBUIÇÃO: o mentor vê as turmas que ele realmente
+      // conduz (professor_casa_turma), não todas as F2 da instituição. Se ele
+      // ainda não tem vínculo de turma (base legada), cai no comportamento
+      // antigo (todas as F2) para não esconder ninguém.
+      const { data: authData } = await supabase.auth.getUser();
+      const professorId = authData?.user?.id ?? null;
+      let turmas = turmasF2;
+      if (professorId) {
+        const { data: vincRaw } = await sb
+          .from('professor_casa_turma')
+          .select('turma_id')
+          .eq('professor_id', professorId)
+          .eq('casa_id', casaId)
+          .eq('ano_letivo', anoLetivo)
+          .eq('ativo', true);
+        const atribuidas = new Set(
+          ((vincRaw as { turma_id: string }[]) ?? []).map((v) => v.turma_id)
+        );
+        if (atribuidas.size > 0) {
+          turmas = turmasF2.filter((t) => atribuidas.has(t.id));
+        }
+      }
       if (turmas.length === 0) return [];
       const turmaIds = turmas.map((t) => t.id);
 
@@ -93,13 +119,16 @@ export const useTurmasDaCasaAtiva = (
       });
 
       // Mapa turma -> (posicao -> inteligencia_id) e (inteligencia_id -> posicao)
+      // e o TOTAL de fases ATIVAS da turma (max posicao configurada; 8 no fallback).
       const posParaIntel = new Map<string, Map<number, number>>();
       const intelParaPos = new Map<string, Map<number, number>>();
+      const totalPorTurma = new Map<string, number>();
       (ordemRes.data as { turma_id: string; posicao: number; inteligencia_id: number }[] ?? []).forEach((r) => {
         if (!posParaIntel.has(r.turma_id)) posParaIntel.set(r.turma_id, new Map());
         if (!intelParaPos.has(r.turma_id)) intelParaPos.set(r.turma_id, new Map());
         posParaIntel.get(r.turma_id)!.set(r.posicao, r.inteligencia_id);
         intelParaPos.get(r.turma_id)!.set(r.inteligencia_id, r.posicao);
+        totalPorTurma.set(r.turma_id, Math.max(totalPorTurma.get(r.turma_id) ?? 0, r.posicao));
       });
 
       const intelById = new Map<number, IntelInfo>();
@@ -116,22 +145,22 @@ export const useTurmasDaCasaAtiva = (
       for (const turma of turmas) {
         const ordemAtual = ordemAtualPorTurma.get(turma.id) ?? 0;
         const mentorPos = posDaIntel(turma.id, casaId); // 1..8
+        const total = totalPorTurma.get(turma.id) ?? 8;
 
-        // A Casa do mentor já passou nesta turma: não interessa neste painel.
-        if (ordemAtual > 0 && mentorPos < ordemAtual) continue;
-        // Trilha concluída (ordem 9): a Casa do mentor está no passado.
-        if (ordemAtual > 8) continue;
-
+        // O mentor VÊ TODAS as turmas que conduz; nada é escondido. O status
+        // distingue onde a Casa dele está em cada trilha.
         let status: StatusTurmaCasa;
-        if (ordemAtual >= 1 && mentorPos === ordemAtual) status = 'vez';
+        if (ordemAtual > total) status = 'concluida';
+        else if (ordemAtual >= 1 && mentorPos === ordemAtual) status = 'vez';
+        else if (ordemAtual >= 1 && mentorPos < ordemAtual) status = 'passou';
         else if (mentorPos === ordemAtual + 1) status = 'caminho';
         else status = 'depois';
 
-        // Casa que conduz agora (posição atual). Null se não começou.
+        // Casa que conduz agora (posição atual). Null se não começou/concluiu.
         let casaAtualId: number | null = null;
         let casaAtualNome: string | null = null;
         let casaAtualBrasao: string | null = null;
-        if (ordemAtual >= 1 && ordemAtual <= 8) {
+        if (ordemAtual >= 1 && ordemAtual <= total) {
           casaAtualId = intelDaPosicao(turma.id, ordemAtual);
           const info = intelById.get(casaAtualId);
           casaAtualNome = info?.nome ?? null;
@@ -152,8 +181,15 @@ export const useTurmasDaCasaAtiva = (
         });
       }
 
-      // Ordena: a vez primeiro, depois a caminho, depois o resto; por série/letra.
-      const peso: Record<StatusTurmaCasa, number> = { vez: 0, caminho: 1, depois: 2 };
+      // Ordena: a vez primeiro, depois a caminho, o que vem depois, o que já
+      // passou e por fim as concluídas; dentro de cada grupo, por série/letra.
+      const peso: Record<StatusTurmaCasa, number> = {
+        vez: 0,
+        caminho: 1,
+        depois: 2,
+        passou: 3,
+        concluida: 4,
+      };
       resultado.sort((a, b) => {
         if (peso[a.status] !== peso[b.status]) return peso[a.status] - peso[b.status];
         return (a.serie ?? '').localeCompare(b.serie ?? '') || (a.turma_letra ?? '').localeCompare(b.turma_letra ?? '');

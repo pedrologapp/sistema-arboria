@@ -514,30 +514,37 @@ const ArboriaTrilhaPage = () => {
     }
     setAplicandoLote(true);
     const alvos = [...loteSel];
-    const falhasIds: string[] = [];
-    // Sequencial e tolerante: uma turma que falhar não aborta o restante.
+    // Sequencial e tolerante: uma turma que falhar não aborta o restante. O
+    // motivo do erro NÃO é engolido: guardamos a mensagem por turma para o toast
+    // (antes um `catch {}` vazio escondia a causa e a falha ficava invisível).
+    const falhas: { id: string; msg: string }[] = [];
     for (const alvoId of alvos) {
       try {
         await gravarConfigNaTurma(alvoId);
-      } catch {
-        falhasIds.push(alvoId);
+      } catch (e) {
+        falhas.push({ id: alvoId, msg: (e as Error)?.message || 'erro desconhecido' });
       }
     }
     setAplicandoLote(false);
+    const falhasIds = falhas.map((f) => f.id);
     const ok = alvos.length - falhasIds.length;
     const nomesFalhas = falhasIds.map((id) => {
       const tt = turmaMap.get(id);
       return tt ? nomeTurma(tt) : id;
     });
+    // Motivo (a mensagem mais comum entre as falhas) para o dono ver a causa real.
+    const motivo = falhas.length ? falhas[0].msg : '';
     if (falhasIds.length === 0) {
       toast.success(`Trilha aplicada a ${ok} turma${ok === 1 ? '' : 's'}.`);
       setLoteSel(new Set());
     } else if (ok === 0) {
-      toast.error(`Não foi possível aplicar. Falhou em: ${nomesFalhas.join(', ')}.`);
+      toast.error(
+        `Não foi possível aplicar. Falhou em: ${nomesFalhas.join(', ')}.${motivo ? ` Motivo: ${motivo}` : ''}`
+      );
       setLoteSel(new Set(falhasIds));
     } else {
       toast.warning(
-        `Trilha aplicada a ${ok} turma${ok === 1 ? '' : 's'}. Falhou em: ${nomesFalhas.join(', ')}.`
+        `Trilha aplicada a ${ok} turma${ok === 1 ? '' : 's'}. Falhou em: ${nomesFalhas.join(', ')}.${motivo ? ` Motivo: ${motivo}` : ''}`
       );
       // Mantém marcadas só as que falharam, para reenvio.
       setLoteSel(new Set(falhasIds));

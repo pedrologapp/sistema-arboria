@@ -43,6 +43,8 @@ const SELO: Record<StatusTurmaCasa, { texto: string; forte: boolean }> = {
   vez: { texto: 'Sua vez', forte: true },
   caminho: { texto: 'A caminho', forte: false },
   depois: { texto: 'Depois', forte: false },
+  passou: { texto: 'Já passou', forte: false },
+  concluida: { texto: 'Concluída', forte: false },
 };
 
 /** Escudo da Casa: usa o brasão real se houver, senão um escudo na cor da Casa. */
@@ -439,9 +441,27 @@ const CapaCapituloTurma = ({
   );
 };
 
-/** Turma que ainda não é a vez do mentor: quem conduz agora e a posição na fila. */
+/** Turma que não é a vez do mentor agora: quem conduz e onde a Casa dele está
+ *  na trilha (a caminho, mais adiante, já passou ou o ano concluído). */
 const CartaoNaFila = ({ turma }: { turma: TurmaDaCasaAtiva }) => {
   const faltam = turma.mentorPos - Math.max(turma.ordemAtual, 0);
+
+  const titulo =
+    turma.status === 'concluida'
+      ? 'Ano concluído'
+      : turma.casaAtualNome
+        ? `Casa ${turma.casaAtualNome} conduz agora`
+        : 'A trilha ainda não começou';
+
+  const mensagem =
+    turma.status === 'concluida'
+      ? 'Esta turma concluiu o ano das Casas. Você pode rever o que ficou registrado.'
+      : turma.status === 'passou'
+        ? 'A fase da sua Casa já aconteceu nesta turma. Você pode rever o que ficou registrado.'
+        : turma.status === 'caminho'
+          ? 'Sua Casa é a próxima nesta turma.'
+          : `Sua Casa entra na posição ${turma.mentorPos} da trilha${faltam > 0 ? `, faltam ${faltam} ${faltam === 1 ? 'Casa' : 'Casas'}.` : '.'}`;
+
   return (
     <div
       className="rounded-2xl p-5"
@@ -454,7 +474,7 @@ const CartaoNaFila = ({ turma }: { turma: TurmaDaCasaAtiva }) => {
             {formatTurmaLabel(turma.serie, turma.turma_letra) || turma.nome}
           </p>
           <h2 className="text-base font-bold" style={{ color: t.text }}>
-            {turma.casaAtualNome ? `Casa ${turma.casaAtualNome} conduz agora` : 'A trilha ainda não começou'}
+            {titulo}
           </h2>
         </div>
       </div>
@@ -465,9 +485,7 @@ const CartaoNaFila = ({ turma }: { turma: TurmaDaCasaAtiva }) => {
       >
         <Clock size={18} style={{ color: t.accent }} strokeWidth={1.75} className="flex-shrink-0" />
         <p className="text-sm" style={{ color: t.textMuted }}>
-          {turma.status === 'caminho'
-            ? 'Sua Casa é a próxima nesta turma.'
-            : `Sua Casa entra na posição ${turma.mentorPos} da trilha${faltam > 0 ? `, faltam ${faltam} ${faltam === 1 ? 'Casa' : 'Casas'}.` : '.'}`}
+          {mensagem}
         </p>
       </div>
     </div>
@@ -823,10 +841,11 @@ const F2ArboriaPage = () => {
           style={{ backgroundColor: t.surface, border: `1px solid ${t.border}` }}
         >
           <h2 className="text-base font-bold" style={{ color: t.text }}>
-            Nenhuma turma na sua fila agora
+            Nenhuma turma atribuída a você ainda
           </h2>
           <p className="text-sm mt-1.5 max-w-xs mx-auto" style={{ color: t.textMuted }}>
-            Nenhuma turma do Fundamental 2 está na fase da sua Casa ou a caminho dela neste momento.
+            Assim que a coordenação vincular você às turmas que a sua Casa conduz, todas elas aparecem
+            aqui, cada uma com o seu momento na trilha.
           </p>
         </div>
       ) : (
