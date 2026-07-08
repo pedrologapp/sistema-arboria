@@ -10,15 +10,20 @@ import { MensagemFixada } from '@/components/chat/MensagemFixada';
 import { DateSeparator } from '@/components/chat/DateSeparator';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { format } from 'date-fns';
+import { F2_REFORMA_ATIVA } from '@/config/f2Reforma';
+import { cn } from '@/lib/utils';
 
 const ProfessorCanalViewPage = () => {
   const { canalId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { casaMentor, profile } = useProfessor();
+  const { casaMentor, profile, segmento } = useProfessor();
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Cor neutra, nao usa cor da casa
+  // Pele CLARA no mesmo gate do chrome (Infantil/F1/F2 reformado); escura só no
+  // F2 antigo. No claro o acento usa a cor da Casa; no escuro segue cinza neutro.
+  const claro = !(segmento === 'fundamental2' && !F2_REFORMA_ATIVA);
+  const cor = claro ? (casaMentor?.cor_hex || '#4F46E5') : '#94a3b8';
 
   // Buscar dados do canal
   const { data: canal, isLoading: loadingCanal } = useQuery({
@@ -150,7 +155,7 @@ const ProfessorCanalViewPage = () => {
   if (loadingCanal) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="animate-pulse text-white/60">Carregando...</div>
+        <div className={cn('animate-pulse', claro ? 'text-[#5A6473]' : 'text-white/60')}>Carregando...</div>
       </div>
     );
   }
@@ -158,25 +163,29 @@ const ProfessorCanalViewPage = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-140px)]">
       {/* Header */}
-      <div className="flex items-center justify-between py-3 border-b border-violet-500/10">
+      <div className={cn('flex items-center justify-between py-3 border-b', claro ? 'border-[#DDE0E6]' : 'border-violet-500/10')}>
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/professor/chat')}
-            className="p-2 -ml-1 rounded-lg text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors"
+            className={cn(
+              'p-2 -ml-1 rounded-lg transition-colors',
+              claro ? 'text-[#5A6473] hover:text-[#1C2230] hover:bg-black/[0.04]' : 'text-white/50 hover:text-white hover:bg-white/[0.06]',
+            )}
+            aria-label="Voltar para o chat"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           {canal?.icone ? (
             <span className="text-lg">{canal.icone}</span>
           ) : (
-            <Hash className="w-5 h-5 text-white/60" />
+            <Hash className={cn('w-5 h-5', claro ? 'text-[#5A6473]' : 'text-white/60')} />
           )}
-          <h1 className="text-lg font-bold text-white">
+          <h1 className={cn('text-lg font-bold', claro ? 'text-[#1C2230]' : 'text-white')}>
             #{canal?.nome || 'Canal'}
           </h1>
         </div>
-        
-        <div className="flex items-center gap-1.5 text-white/60 text-sm">
+
+        <div className={cn('flex items-center gap-1.5 text-sm', claro ? 'text-[#5A6473]' : 'text-white/60')}>
           <Users className="w-4 h-4" />
           <span>{onlineCount || 0}</span>
         </div>
@@ -189,7 +198,8 @@ const ProfessorCanalViewPage = () => {
             <MensagemFixada
               key={msg.id}
               mensagem={msg}
-              casaColor={"#94a3b8"}
+              casaColor={cor}
+              light={claro}
             />
           ))}
         </div>
@@ -199,25 +209,25 @@ const ProfessorCanalViewPage = () => {
       <ScrollArea className="flex-1 px-1">
         <div className="py-4">
           {loadingMensagens ? (
-            <div className="text-center text-white/40 py-8">
+            <div className={cn('text-center py-8', claro ? 'text-[#6E7788]' : 'text-white/40')}>
               Carregando mensagens...
             </div>
           ) : mensagensNormais.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div 
+              <div
                 className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
-                style={{ backgroundColor: `${"#94a3b8"}20` }}
+                style={{ backgroundColor: `${cor}20` }}
               >
                 {canal?.icone ? (
                   <span className="text-2xl">{canal.icone}</span>
                 ) : (
-                  <Hash className="w-6 h-6" style={{ color: "#94a3b8" }} />
+                  <Hash className="w-6 h-6" style={{ color: cor }} />
                 )}
               </div>
-              <h3 className="text-white font-medium mb-1">
+              <h3 className={cn('font-medium mb-1', claro ? 'text-[#1C2230]' : 'text-white')}>
                 #{canal?.nome}
               </h3>
-              <p className="text-white/50 text-sm max-w-xs">
+              <p className={cn('text-sm max-w-xs', claro ? 'text-[#5A6473]' : 'text-white/50')}>
                 {canal?.descricao || 'Nenhuma mensagem ainda neste canal.'}
               </p>
             </div>
@@ -228,11 +238,12 @@ const ProfessorCanalViewPage = () => {
               const mostrarData = dataAtual !== dataAnterior;
               return (
                 <div key={msg.id}>
-                  {mostrarData && <DateSeparator date={msg.created_at} />}
+                  {mostrarData && <DateSeparator date={msg.created_at} light={claro} />}
                   <MensagemBubble
                     mensagem={msg}
                     isMe={false}
-                    casaColor={"#94a3b8"}
+                    casaColor={cor}
+                    light={claro}
                     agruparComAnterior={!mostrarData && deveAgrupar(msg, mensagensNormais[index - 1] || null)}
                   />
                 </div>
@@ -257,12 +268,14 @@ const ProfessorCanalViewPage = () => {
               });
             }}
             placeholder={`Mensagem em #${canal?.nome?.toLowerCase() || 'canal'}...`}
+            light={claro}
+            casaColor={cor}
           />
         ) : (
-          <div className="p-2.5 rounded-xl text-center bg-white/[0.04]">
+          <div className={cn('p-2.5 rounded-xl text-center', claro ? 'bg-[#F6F7F9]' : 'bg-white/[0.04]')}>
             <div className="flex items-center justify-center gap-1.5">
-              <Eye className="w-3.5 h-3.5 text-white/25" />
-              <span className="text-white/25 text-xs">Modo leitura</span>
+              <Eye className={cn('w-3.5 h-3.5', claro ? 'text-[#6E7788]' : 'text-white/25')} />
+              <span className={cn('text-xs', claro ? 'text-[#6E7788]' : 'text-white/25')}>Modo leitura</span>
             </div>
           </div>
         )}

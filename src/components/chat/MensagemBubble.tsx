@@ -29,6 +29,11 @@ interface MensagemBubbleProps {
   casaColor: string;
   agruparComAnterior?: boolean;
   casaBadge?: CasaBadgeInfo;
+  /**
+   * Pele CLARA (F2 reformado / Infantil / F1). Default false = pele escura
+   * original, preservada para o chat do aluno e do admin.
+   */
+  light?: boolean;
 }
 
 const CARGO_BADGE: Record<string, string> = {
@@ -45,12 +50,13 @@ const CARGO_LABEL: Record<string, string> = {
   embaixador: 'Embaixador',
 };
 
-export const MensagemBubble = ({ 
-  mensagem, 
-  isMe, 
-  casaColor, 
+export const MensagemBubble = ({
+  mensagem,
+  isMe,
+  casaColor,
   agruparComAnterior = false,
-  casaBadge 
+  casaBadge,
+  light = false,
 }: MensagemBubbleProps) => {
   const nomeCompleto = mensagem.autor?.full_name || 'Usuário';
   const partes = nomeCompleto.trim().split(/\s+/);
@@ -60,12 +66,31 @@ export const MensagemBubble = ({
   const hora = format(new Date(mensagem.created_at), 'HH:mm');
   const isAnuncio = mensagem.tipo === 'anuncio';
 
+  // Pele: clara (F2 reformado) vs escura (aluno/admin, default)
+  const c = light
+    ? {
+        hover: 'hover:bg-black/[0.03]',
+        anuncio: 'bg-amber-50 border-l-2 border-amber-400',
+        name: 'text-[#1C2230]',
+        cargo: 'text-[#6E7788]',
+        hora: 'text-[#6E7788]',
+        texto: 'text-[#1C2230]',
+      }
+    : {
+        hover: 'hover:bg-white/5',
+        anuncio: 'bg-yellow-500/10 border-l-2 border-yellow-500',
+        name: 'text-white',
+        cargo: 'text-white/50',
+        hora: 'text-white/30',
+        texto: 'text-white/90',
+      };
+
   // Mensagem agrupada (continuação do mesmo autor)
   if (agruparComAnterior) {
     return (
-      <div className="group flex hover:bg-white/5 px-2 py-0.5">
+      <div className={`group flex ${c.hover} px-2 py-0.5`}>
         <div className="pl-[48px]">
-          <p className="text-white/90 text-sm whitespace-pre-wrap break-words">
+          <p className={`${c.texto} text-sm whitespace-pre-wrap break-words`}>
             {mensagem.conteudo}
           </p>
         </div>
@@ -75,25 +100,25 @@ export const MensagemBubble = ({
 
   // Mensagem com header completo
   return (
-    <div className={`group flex gap-3 hover:bg-white/5 px-2 pt-2 pb-1 ${
-      isAnuncio ? 'bg-yellow-500/10 border-l-2 border-yellow-500' : ''
+    <div className={`group flex gap-3 ${c.hover} px-2 pt-2 pb-1 ${
+      isAnuncio ? c.anuncio : ''
     }`}>
       {/* Avatar */}
       <Avatar className="h-9 w-9 flex-shrink-0">
         <AvatarImage src={mensagem.autor?.avatar_url || undefined} />
-        <AvatarFallback 
+        <AvatarFallback
           className="text-white font-medium"
           style={{ backgroundColor: casaColor }}
         >
           {nomeAutor.charAt(0).toUpperCase()}
         </AvatarFallback>
       </Avatar>
-      
+
       {/* Conteúdo */}
       <div className="flex-1 min-w-0">
         {/* Header: Nome + Cargo + Hora */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-sm font-medium text-white">
+          <span className={`text-sm font-medium ${c.name}`}>
             {nomeAutor}
           </span>
 
@@ -105,23 +130,23 @@ export const MensagemBubble = ({
                 color: casaBadge.cor || casaColor
               }}
             >
-              {casaBadge.emoji} {casaBadge.nome}
+              {light ? casaBadge.nome : `${casaBadge.emoji} ${casaBadge.nome}`}
             </span>
           )}
 
-          {cargoKey && CARGO_BADGE[cargoKey] && (
-            <span className="text-xs text-white/50">
-              {CARGO_BADGE[cargoKey]} {CARGO_LABEL[cargoKey]}
+          {cargoKey && CARGO_LABEL[cargoKey] && (
+            <span className={`text-xs ${c.cargo}`}>
+              {light ? CARGO_LABEL[cargoKey] : `${CARGO_BADGE[cargoKey] || ''} ${CARGO_LABEL[cargoKey]}`}
             </span>
           )}
 
-          <span className="text-[10px] text-white/30">
+          <span className={`text-[10px] ${c.hora}`}>
             {hora}
           </span>
         </div>
-        
+
         {/* Conteúdo da mensagem */}
-        <p className="text-white/90 text-sm whitespace-pre-wrap break-words mt-0.5">
+        <p className={`${c.texto} text-sm whitespace-pre-wrap break-words mt-0.5`}>
           {mensagem.conteudo}
         </p>
       </div>

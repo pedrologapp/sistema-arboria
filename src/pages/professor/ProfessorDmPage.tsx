@@ -10,6 +10,8 @@ import { useEffect, useRef } from 'react';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { StatusIndicator } from '@/components/chat/StatusIndicator';
 import { MensagemBubble } from '@/components/chat/MensagemBubble';
+import { F2_REFORMA_ATIVA } from '@/config/f2Reforma';
+import { cn } from '@/lib/utils';
 
 interface MensagemPrivada {
   id: string;
@@ -47,9 +49,11 @@ const ProfessorDmPage = () => {
   const { conversaId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { profile, casaMentor } = useProfessor();
+  const { profile, casaMentor, segmento } = useProfessor();
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Pele CLARA no mesmo gate do chrome (Infantil/F1/F2 reformado); escura só no F2 antigo.
+  const claro = !(segmento === 'fundamental2' && !F2_REFORMA_ATIVA);
   const casaColor = casaMentor?.cor_hex || '#6366F1';
 
   // Buscar dados do outro participante (aluno)
@@ -181,7 +185,7 @@ const ProfessorDmPage = () => {
   if (loadingParticipante) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white/60" />
+        <div className={cn('animate-spin rounded-full h-8 w-8 border-t-2 border-b-2', claro ? 'border-[#4F46E5]' : 'border-white/60')} />
       </div>
     );
   }
@@ -189,38 +193,39 @@ const ProfessorDmPage = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-140px)]">
       {/* Header */}
-      <div className="flex items-center justify-between py-3 border-b border-violet-500/10">
+      <div className={cn('flex items-center justify-between py-3 border-b', claro ? 'border-[#DDE0E6]' : 'border-violet-500/10')}>
         <div className="flex items-center gap-3">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => navigate('/professor/chat')}
-            className="text-white/60 hover:text-white"
+            className={claro ? 'text-[#5A6473] hover:text-[#1C2230]' : 'text-white/60 hover:text-white'}
+            aria-label="Voltar para o chat"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          
+
           <div className="relative">
             <Avatar className="h-9 w-9">
               <AvatarImage src={outroParticipante?.avatar_url || undefined} alt={nomeAluno} />
-              <AvatarFallback className="bg-white/10 text-white/70 text-sm">
+              <AvatarFallback className={cn('text-sm', claro ? 'bg-[#EEF0FE] text-[#4338CA]' : 'bg-white/10 text-white/70')}>
                 {iniciaisAluno}
               </AvatarFallback>
             </Avatar>
-            <div className="absolute -bottom-0.5 -right-0.5 border-2 border-background rounded-full">
-              <StatusIndicator 
-                ultimaAtividade={outroParticipante?.ultima_atividade || null} 
-                size="sm" 
+            <div className={cn('absolute -bottom-0.5 -right-0.5 border-2 rounded-full', claro ? 'border-white' : 'border-background')}>
+              <StatusIndicator
+                ultimaAtividade={outroParticipante?.ultima_atividade || null}
+                size="sm"
               />
             </div>
           </div>
-          
+
           <div>
-            <span className="font-medium text-white">{nomeAluno}</span>
+            <span className={cn('font-medium', claro ? 'text-[#1C2230]' : 'text-white')}>{nomeAluno}</span>
           </div>
         </div>
-        
-        <Button variant="ghost" size="icon" className="text-white/60 hover:text-white">
+
+        <Button variant="ghost" size="icon" className={claro ? 'text-[#5A6473] hover:text-[#1C2230]' : 'text-white/60 hover:text-white'} aria-label="Mais opções">
           <MoreHorizontal className="w-5 h-5" />
         </Button>
       </div>
@@ -229,7 +234,7 @@ const ProfessorDmPage = () => {
       <ScrollArea className="flex-1 px-2 py-4">
         {loadingMensagens ? (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white/40" />
+            <div className={cn('animate-spin rounded-full h-6 w-6 border-t-2 border-b-2', claro ? 'border-[#4F46E5]' : 'border-white/40')} />
           </div>
         ) : mensagens && mensagens.length > 0 ? (
           <>
@@ -251,6 +256,7 @@ const ProfessorDmPage = () => {
                 }}
                 isMe={msg.autor?.id === profile?.id}
                 casaColor={casaColor}
+                light={claro}
                 agruparComAnterior={deveAgrupar(msg, mensagens[index - 1] || null)}
               />
             ))}
@@ -258,15 +264,15 @@ const ProfessorDmPage = () => {
           </>
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+            <div className={cn('w-16 h-16 rounded-full flex items-center justify-center mb-4', claro ? 'bg-[#F6F7F9]' : 'bg-white/5')}>
               <Avatar className="h-10 w-10">
                 <AvatarImage src={outroParticipante?.avatar_url || undefined} />
-                <AvatarFallback className="bg-white/10 text-white/50">
+                <AvatarFallback className={claro ? 'bg-[#EEF0FE] text-[#4338CA]' : 'bg-white/10 text-white/50'}>
                   {iniciaisAluno}
                 </AvatarFallback>
               </Avatar>
             </div>
-            <p className="text-white/60 text-sm">
+            <p className={cn('text-sm', claro ? 'text-[#5A6473]' : 'text-white/60')}>
               Inicie uma conversa com {nomeAluno}
             </p>
           </div>
@@ -274,11 +280,12 @@ const ProfessorDmPage = () => {
       </ScrollArea>
 
       {/* Input - Professor PODE enviar DMs */}
-      <div className="pt-3 pb-2 border-t border-violet-500/10">
+      <div className={cn('pt-3 pb-2 border-t', claro ? 'border-[#DDE0E6]' : 'border-violet-500/10')}>
         <ChatInput
           onEnviar={enviarMensagem}
           casaColor={casaColor}
           placeholder={`Mensagem para ${nomeAluno}...`}
+          light={claro}
         />
       </div>
     </div>

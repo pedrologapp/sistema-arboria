@@ -8,12 +8,19 @@ import { Input } from '@/components/ui/input';
 import { getStatusOnline } from '@/utils/statusOnline';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { F2_REFORMA_ATIVA } from '@/config/f2Reforma';
 
 const ProfessorChatPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { profile, casaMentor } = useProfessor();
+  const { profile, casaMentor, segmento } = useProfessor();
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Pele CLARA nos mesmos casos em que o CHROME é claro (ProfessorLayout):
+  // Infantil, F1 e F2 reformado. Escura só no F2 antigo (flag off), que segue
+  // com o layout escuro atual. Assim o corpo do chat sempre casa com a moldura.
+  const claro = !(segmento === 'fundamental2' && !F2_REFORMA_ATIVA);
+  const corCasa = casaMentor?.cor_hex || '#4F46E5';
 
   // ═══════════════════════════════════════
   // QUERIES
@@ -195,18 +202,26 @@ const ProfessorChatPage = () => {
   // HELPERS
   // ═══════════════════════════════════════
 
-  const CanalRow = ({ canal, hashColor = 'text-white/30', readOnly = false }: { canal: any; hashColor?: string; readOnly?: boolean }) => {
+  const CanalRow = ({ canal, hashColor, hashColorLight, readOnly = false }: { canal: any; hashColor?: string; hashColorLight?: string; readOnly?: boolean }) => {
     const naoLidas = mensagensNaoLidas[canal.id] || 0;
+    const hash = claro ? (hashColorLight || 'text-[#6E7788]') : (hashColor || 'text-white/30');
     return (
       <button
         onClick={() => navigate(`/professor/chat/canal/${canal.id}`)}
-        className="w-full flex items-center gap-2.5 py-2.5 px-3 rounded-lg text-left hover:bg-white/[0.08] transition-all active:scale-[0.98]"
+        className={cn(
+          'w-full flex items-center gap-2.5 py-2.5 px-3 rounded-lg text-left transition-all active:scale-[0.98]',
+          claro ? 'hover:bg-black/[0.04]' : 'hover:bg-white/[0.08]',
+        )}
       >
-        <Hash className={cn('w-4 h-4 shrink-0', hashColor)} />
-        <span className={cn('flex-1 text-sm truncate', naoLidas > 0 ? 'text-white font-medium' : 'text-white/70')}>
+        <Hash className={cn('w-4 h-4 shrink-0', hash)} />
+        <span className={cn('flex-1 text-sm truncate',
+          claro
+            ? (naoLidas > 0 ? 'text-[#1C2230] font-medium' : 'text-[#5A6473]')
+            : (naoLidas > 0 ? 'text-white font-medium' : 'text-white/70'),
+        )}>
           {canal.nome.toLowerCase()}
         </span>
-        {readOnly && <span className="text-[9px] text-white/20">leitura</span>}
+        {readOnly && <span className={cn('text-[9px]', claro ? 'text-[#6E7788]' : 'text-white/20')}>leitura</span>}
         {naoLidas > 0 && (
           <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1">
             {naoLidas > 99 ? '99+' : naoLidas}
@@ -223,29 +238,36 @@ const ProfessorChatPage = () => {
     return (
       <button
         onClick={() => iniciarConversa(membro.id)}
-        className="w-full flex items-center gap-2.5 py-2.5 px-3 rounded-lg text-left hover:bg-white/[0.08] transition-all active:scale-[0.98]"
+        className={cn(
+          'w-full flex items-center gap-2.5 py-2.5 px-3 rounded-lg text-left transition-all active:scale-[0.98]',
+          claro ? 'hover:bg-black/[0.04]' : 'hover:bg-white/[0.08]',
+        )}
       >
         <div className="relative shrink-0">
-          <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden">
+          <div className={cn('w-8 h-8 rounded-full overflow-hidden', claro ? 'bg-[#E8EAED]' : 'bg-white/10')}>
             {membro.avatar_url ? (
               <img src={membro.avatar_url} alt="" className="w-full h-full object-cover" />
             ) : (
-              <span className="flex items-center justify-center w-full h-full text-xs text-white/50">
+              <span className={cn('flex items-center justify-center w-full h-full text-xs', claro ? 'text-[#5A6473]' : 'text-white/50')}>
                 {(membro.nome || membro.full_name || '?').charAt(0).toUpperCase()}
               </span>
             )}
           </div>
           {status.status === 'online' && (
-            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-[#0d0d0d]" />
+            <div className={cn('absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border-2', claro ? 'border-white' : 'border-[#0d0d0d]')} />
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <span className={cn('text-sm truncate block', badge ? 'text-white font-medium' : 'text-white/70')}>
+          <span className={cn('text-sm truncate block',
+            claro
+              ? (badge ? 'text-[#1C2230] font-medium' : 'text-[#5A6473]')
+              : (badge ? 'text-white font-medium' : 'text-white/70'),
+          )}>
             {membro.full_name || membro.nome || 'Sem nome'}
           </span>
           {(cargoLabel || membro.serie) && (
-            <span className="text-[10px] text-white/30">
-              {cargoLabel && <span className="text-amber-400/60 mr-1">{cargoLabel}</span>}
+            <span className={cn('text-[10px]', claro ? 'text-[#6E7788]' : 'text-white/30')}>
+              {cargoLabel && <span className={cn('mr-1', claro ? 'text-amber-700' : 'text-amber-400/60')}>{cargoLabel}</span>}
               {membro.serie} {membro.turma}
             </span>
           )}
@@ -282,8 +304,8 @@ const ProfessorChatPage = () => {
     <div className="p-4 space-y-5 pb-24">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-white">Chat</h1>
-        <div className="flex items-center gap-1.5 text-white/40 text-xs">
+        <h1 className={cn('text-xl font-semibold', claro ? 'text-[#1C2230]' : 'text-white')}>Chat</h1>
+        <div className={cn('flex items-center gap-1.5 text-xs', claro ? 'text-[#5A6473]' : 'text-white/40')}>
           <div className="w-2 h-2 rounded-full bg-green-500" />
           {membrosOnline} online
         </div>
@@ -291,35 +313,40 @@ const ProfessorChatPage = () => {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+        <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4', claro ? 'text-[#6E7788]' : 'text-white/30')} />
         <Input
           placeholder="Buscar canais ou alunos..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 bg-white/[0.04] border-violet-500/10 text-white placeholder:text-white/30 h-9 text-sm"
+          className={cn(
+            'pl-10 h-9 text-sm',
+            claro
+              ? 'bg-[#E8EAED] border-[#DDE0E6] text-[#1C2230] placeholder:text-[#6E7788]'
+              : 'bg-white/[0.04] border-violet-500/10 text-white placeholder:text-white/30',
+          )}
         />
       </div>
 
       {/* MINHA CASA */}
       <div>
         <div className="flex items-center gap-2 mb-2 px-1">
-          <div className="w-1 h-3.5 rounded-full bg-blue-500" />
-          <p className="text-[10px] font-semibold text-blue-400/80 uppercase tracking-widest">
-            Casa {casaMentor?.nome || ''}
+          <div className="w-1 h-3.5 rounded-full" style={{ backgroundColor: corCasa }} />
+          <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: claro ? corCasa : undefined }}>
+            <span className={claro ? undefined : 'text-blue-400/80'}>Casa {casaMentor?.nome || ''}</span>
           </p>
         </div>
         <div className="space-y-0.5">
           {/* Mentoria: professor pode falar */}
           {canalMentoria && (
-            <CanalRow canal={canalMentoria} hashColor="text-amber-400/50" />
+            <CanalRow canal={canalMentoria} hashColor="text-amber-400/50" hashColorLight="text-amber-700" />
           )}
           {/* Canais de texto: somente leitura */}
           {canaisTexto.map(canal => (
-            <CanalRow key={canal.id} canal={canal} hashColor="text-blue-400/50" readOnly />
+            <CanalRow key={canal.id} canal={canal} hashColor="text-blue-400/50" hashColorLight="text-blue-700" readOnly />
           ))}
           {/* Lideranca */}
           {canalLideranca && (
-            <CanalRow canal={canalLideranca} hashColor="text-amber-400/50" />
+            <CanalRow canal={canalLideranca} hashColor="text-amber-400/50" hashColorLight="text-amber-700" />
           )}
         </div>
       </div>
@@ -329,11 +356,11 @@ const ProfessorChatPage = () => {
         <div>
           <div className="flex items-center gap-2 mb-2 px-1">
             <div className="w-1 h-3.5 rounded-full bg-emerald-500" />
-            <p className="text-[10px] font-semibold text-emerald-400/80 uppercase tracking-widest">Escola</p>
+            <p className={cn('text-[10px] font-semibold uppercase tracking-widest', claro ? 'text-emerald-700' : 'text-emerald-400/80')}>Escola</p>
           </div>
           <div className="space-y-0.5">
             {filteredEscola.map(canal => (
-              <CanalRow key={canal.id} canal={canal} hashColor="text-emerald-400/50" />
+              <CanalRow key={canal.id} canal={canal} hashColor="text-emerald-400/50" hashColorLight="text-emerald-700" />
             ))}
           </div>
         </div>
@@ -343,7 +370,7 @@ const ProfessorChatPage = () => {
       <div>
         <div className="flex items-center gap-2 mb-2 px-1">
           <div className="w-1 h-3.5 rounded-full bg-violet-500" />
-          <p className="text-[10px] font-semibold text-violet-400/80 uppercase tracking-widest">Mensagens Diretas</p>
+          <p className={cn('text-[10px] font-semibold uppercase tracking-widest', claro ? 'text-violet-700' : 'text-violet-400/80')}>Mensagens Diretas</p>
         </div>
         <div className="space-y-0.5">
           {/* Com mensagens nao lidas primeiro */}
@@ -364,7 +391,7 @@ const ProfessorChatPage = () => {
             .map(m => <DmRow key={m.id} membro={m} />)
           }
           {alunosCasa.length > 10 && !searchTerm && (
-            <p className="py-2 text-center text-[10px] text-white/25">
+            <p className={cn('py-2 text-center text-[10px]', claro ? 'text-[#6E7788]' : 'text-white/25')}>
               {alunosCasa.length} alunos na casa
             </p>
           )}
