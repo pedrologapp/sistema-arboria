@@ -57,3 +57,7 @@ Decisao do Fundador, com veto do Riscos ao institution-wide e recomendacao conve
 - Esquema: tabela nova `professor_casa_turma` (mentor+casa+turma+ano, aditiva) = o recorte de turma que falta; professor_casa continua como identidade de Casa. A ABA DE CASAS do admin cria esse vinculo (e e o que libera o acesso: falha fechado, sem vinculo o mentor nao ve).
 - Impacto no codigo: o Diario do F2 passa de "todas as turmas" pra "so as turmas do mentor".
 - Migration em finalizacao (professor_casa_turma + RLS assigned + criado_por + coreografia da policy R18 que e producao). Aplicar so com "pode aplicar" do Fundador.
+
+## 2026-07-08 - Aba de Casas (mentores F2) no ar (dormente/admin)
+Ferramenta de atribuicao de mentores do F2, integrada a pagina de logins do admin. Arvore: Instituicao -> Segmento -> (F2: Casas -> mentores | Infantil/F1: turmas). No F2 cria mentor + aloca turmas 6o-9o + gera login; 2+ mentores por Casa em turmas diferentes. Escreve professor_casa + professor_casa_turma com criado_por=caller. Edge admin-logins-professor republicada (acoes criar-mentor/ajustar/desativar). QA aprovou pra subir; consertos aplicados (F2 fora dos seletores por-turma, assert de instituicao). Deploy 08/07, flag F2 segue false.
+PENDENTE GO-LIVE: Migration 2 corrigida (dropar as 3 policies casa-wide alem da R18, senao assigned-only e cosmetico) + atribuir mentores + trilhas + capitulos + piloto, DEPOIS virar o flag.
