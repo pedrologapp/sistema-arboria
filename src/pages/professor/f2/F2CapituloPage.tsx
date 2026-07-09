@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfessor } from '@/contexts/ProfessorContext';
 import { corDaCasa, F2_REFORMA_ATIVA } from '@/config/f2Reforma';
+import { useTurmasF2Instituicao, type TurmaF2Diario } from '@/hooks/useF2Diario';
 import { formatTurmaLabel } from '@/lib/infantil';
 import { cn } from '@/lib/utils';
 import {
@@ -392,6 +393,12 @@ const F2CapituloPage = () => {
       return (data as TurmaInfo | null) ?? null;
     },
   });
+
+  // ---- Turmas do F2 (para o seletor no topo) ----
+  // Mesma fonte da aba Diário (F2AlunosPage): TODAS as turmas do F2 da instituição
+  // (acesso compartilhado, sem vinculação por turma). Trocar de turma no seletor
+  // navega para o capítulo daquela turma; a atual fica destacada/desabilitada.
+  const { data: turmasF2 = [] } = useTurmasF2Instituicao(profile?.institution_id);
 
   // ---- Capítulo ativo da fase da Casa do mentor ----
   const { data: capitulo, isLoading: loadingCap } = useQuery<Capitulo | null>({
@@ -987,7 +994,16 @@ const F2CapituloPage = () => {
       <>
         {fundo}
         <div className="relative z-10 pt-2">
-          <BotaoVoltar onClick={() => navigate('/professor')} />
+          <div className="flex items-center justify-between gap-2">
+            <BotaoVoltar onClick={() => navigate('/professor')} />
+            <SeletorTurma
+              turmas={turmasF2}
+              turmaAtualId={turmaId}
+              accent={accent}
+              panelBg={bgDeep}
+              onEscolher={(id) => navigate(`/professor/f2/capitulo/${id}`)}
+            />
+          </div>
           <div className="min-h-[62vh] flex flex-col items-center justify-center text-center px-6 vf-rise">
             <BrasaoCasa accent={accentSolid} brasao={casaMentor?.brasao_url ?? null} size={64} />
             <p
@@ -1031,7 +1047,16 @@ const F2CapituloPage = () => {
     <>
       {fundo}
       <div className="relative z-10 pt-2 pb-10 space-y-6">
-        <BotaoVoltar onClick={() => navigate('/professor')} />
+        <div className="flex items-center justify-between gap-2">
+          <BotaoVoltar onClick={() => navigate('/professor')} />
+          <SeletorTurma
+            turmas={turmasF2}
+            turmaAtualId={turmaId}
+            accent={accent}
+            panelBg={bgDeep}
+            onEscolher={(id) => navigate(`/professor/f2/capitulo/${id}`)}
+          />
+        </div>
 
         {/* 1. CABEÇALHO na cor da Casa */}
         <header
@@ -1522,6 +1547,109 @@ const BotaoVoltar = ({ onClick }: { onClick: () => void }) => (
     <ArrowLeft size={16} /> Voltar
   </button>
 );
+
+/**
+ * SELETOR DE TURMA (topo da tela imersiva). Deixa o mentor trocar de turma sem
+ * voltar: escolher outra navega para /professor/f2/capitulo/<id>. Sobre o fundo
+ * escuro, lê em texto BRANCO; a cor da Casa entra só como acento (ícone, seleção),
+ * nunca no corpo do texto. Uma turma só: mostra o rótulo sem dropdown.
+ */
+const SeletorTurma = ({
+  turmas,
+  turmaAtualId,
+  accent,
+  panelBg,
+  onEscolher,
+}: {
+  turmas: TurmaF2Diario[];
+  turmaAtualId: string | undefined;
+  accent: string;
+  panelBg: string;
+  onEscolher: (id: string) => void;
+}) => {
+  const [aberto, setAberto] = useState(false);
+  const rotulo = (t: TurmaF2Diario) => formatTurmaLabel(t.serie, t.turma_letra) || t.nome;
+  const atual = turmas.find((t) => t.id === turmaAtualId);
+  const labelAtual = atual ? rotulo(atual) : 'Turma';
+
+  const pilula = (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5"
+      style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.18)' }}
+    >
+      <Users size={13} style={{ color: accent }} strokeWidth={2} />
+      <span className="text-[12.5px] font-semibold" style={{ color: '#FFFFFF' }}>
+        {labelAtual}
+      </span>
+    </span>
+  );
+
+  // Só uma turma: nada pra escolher, mostra o rótulo em placa estática.
+  if (turmas.length <= 1) return pilula;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setAberto((v) => !v)}
+        className="inline-flex items-center gap-1.5 rounded-full pl-3 pr-2.5 py-1.5 active:scale-[0.98] transition-transform"
+        style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.18)' }}
+        aria-haspopup="listbox"
+        aria-expanded={aberto}
+      >
+        <Users size={13} style={{ color: accent }} strokeWidth={2} />
+        <span className="text-[12.5px] font-semibold" style={{ color: '#FFFFFF' }}>
+          {labelAtual}
+        </span>
+        <ChevronDown
+          size={14}
+          style={{ color: 'rgba(255,255,255,0.6)' }}
+          className={cn('transition-transform', aberto && 'rotate-180')}
+        />
+      </button>
+      {aberto && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setAberto(false)} aria-hidden="true" />
+          <ul
+            role="listbox"
+            className="absolute right-0 top-full mt-2 z-50 min-w-[190px] max-h-[60vh] overflow-y-auto rounded-2xl p-1.5"
+            style={{
+              backgroundColor: panelBg,
+              border: '1px solid rgba(255,255,255,0.16)',
+              boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
+            }}
+          >
+            {turmas.map((t) => {
+              const eAtual = t.id === turmaAtualId;
+              return (
+                <li key={t.id} role="option" aria-selected={eAtual}>
+                  <button
+                    type="button"
+                    disabled={eAtual}
+                    onClick={() => {
+                      setAberto(false);
+                      if (!eAtual) onEscolher(t.id);
+                    }}
+                    className="w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-left disabled:cursor-default"
+                    style={{ backgroundColor: eAtual ? `${accent}1F` : 'transparent' }}
+                  >
+                    <span
+                      className="text-[13px]"
+                      style={{ color: '#FFFFFF', fontWeight: eAtual ? 700 : 500 }}
+                    >
+                      {rotulo(t)}
+                    </span>
+                    {eAtual && <CheckCircle2 size={15} style={{ color: accent }} strokeWidth={2.2} />}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+};
 
 const BlocoPapeis = ({
   titulo,
