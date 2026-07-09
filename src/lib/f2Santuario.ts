@@ -8,15 +8,14 @@
  *
  * Origem de cada campo:
  * - cores + `nome` base: reusados do SANTUARIO_INFANTIL (a cor é a língua comum
- *   dos 12 anos). `nome` é sobrescrito pelos nomes CURTOS aprovados do F2
- *   (Corporal, não Corporal-Cinestésica).
- * - `cena`: abertura do gênio (verbatim do f1Santuario) + a essência da Casa
- *   (conteúdo aprovado do F2).
- * - `mecanismo`, `revela`, `lente` (o que o mentor cultiva), `cuidado`: conteúdo
- *   APROVADO do F2 (o mecanismo mais denso, o "como se revela no adolescente", o
- *   "o que o mentor cultiva", a linha de guarda), verbatim.
- * - `naoDefine`, `veMundo`, `observar`: base do SANTUARIO_INFANTIL adaptada à
- *   LINGUAGEM do F2 (aluno/adolescente, o mentor que pergunta como o aluno fez).
+ *   dos 12 anos). `nome` é sobrescrito pelos nomes CURTOS aprovados do F2.
+ * - `cena`: abertura do gênio (verbatim do f1Santuario) + a essência da Casa.
+ * - `mecanismo`, `revela`, `lente`, `cuidado`: conteúdo do F2.
+ * - `naoDefine`, `veMundo`, `observar`: base do SANTUARIO_INFANTIL na linguagem F2.
+ *
+ * REVISÃO DE LINGUAGEM (Fundador, 09/07): textos reescritos para sair da fórmula
+ * repetida e do excesso de dois-pontos que davam cara de texto automático. O
+ * mecanismo, os limites (naoDefine) e as aberturas dos gênios seguem fiéis.
  */
 import { SANTUARIO_INFANTIL, type SantuarioMecanismo } from './infantilSantuario';
 
@@ -34,9 +33,9 @@ const F2: Record<number, CampoF2> = {
   1: {
     nome: 'Linguística',
     cena:
-      'Charles Dickens, antes de publicar qualquer livro, enchia cadernos com descrições das pessoas que via na rua. Não era exercício: era necessidade. A Casa de quem pensa em palavras, onde a experiência chega já narrada. Une quem organiza o pensamento em nomes, ritmos e histórias, e para quem dizer com precisão é uma forma de entender.',
+      'Charles Dickens, antes de publicar qualquer livro, enchia cadernos com descrições das pessoas que via na rua. Não era exercício, era necessidade. É a Casa de quem pensa com palavras. Para esses alunos, a ideia já nasce em forma de frase, e dizer as coisas com precisão é uma maneira de entender o mundo.',
     mecanismo:
-      'Processa o mundo pela linguagem: som, ritmo, estrutura e significado das palavras. A palavra não veste o pensamento depois de pronto: a palavra é o material com que o pensamento se faz. No adolescente vira consciência: ele sente a diferença entre dois jeitos de dizer a mesma coisa, percebe quando uma frase não fechou, caça a palavra exata. Não é ser falante ou sociável: o filtro é a linguagem como estrutura, não a vontade de estar entre pessoas.',
+      'O que esse aluno processa é a linguagem, o som, o ritmo, a estrutura e o sentido das palavras. A palavra não entra depois, só para vestir uma ideia já pronta. Ela é o próprio material com que a ideia se forma. No adolescente isso vira consciência. Ele sente a diferença entre dois jeitos de dizer a mesma coisa, percebe quando uma frase não fechou e caça a palavra exata. Não confunda com ser falante ou sociável. O filtro aqui é a linguagem como estrutura, e não a vontade de estar perto das pessoas.',
     naoDefine: [
       'Falar muito, ser desinibido ou "bom de papo"',
       'Escrever com letra caprichada ou sem erros de norma',
@@ -51,9 +50,9 @@ const F2: Record<number, CampoF2> = {
       'Pode ser o aluno calado que escreve páginas: o processamento é por dentro.',
     ],
     veMundo:
-      'O mundo chega em palavras antes de chegar em qualquer outra coisa. Ele não pensa e depois traduz em frase: as palavras já estão lá quando o pensamento começa. Sente a diferença entre dois jeitos de dizer a mesma coisa e percebe quando uma frase não fechou. O filtro é a linguagem como estrutura: a experiência chega narrada.',
+      'Para ele, o mundo chega em palavras antes de chegar de qualquer outro jeito. Não é que ele pense primeiro e traduza depois. As palavras já estão ali quando o pensamento começa. Por isso nota a diferença entre dois modos de dizer a mesma coisa e sente na hora quando uma frase ficou torta.',
     lente:
-      'Lapida a precisão e a arquitetura do dizer: argumento, narrativa, o peso de cada palavra. No capítulo, pede que ele defenda, reescreva e nomeie, e observa se o caminho até a resposta vem em linguagem.',
+      'O mentor lapida a precisão e a construção do dizer, o argumento, a narrativa, o peso de cada palavra. No capítulo, vale pedir que ele defenda uma ideia, reescreva e dê nome às coisas, reparando se o caminho até a resposta passa pela linguagem.',
     observar: [
       'Peça que ele conte como pensou: repare quando a resposta vem em narrativa, não em gesto nem em imagem',
       'Quem reescreve a própria frase até soar certa e se incomoda com a palavra imprecisa',
@@ -65,9 +64,9 @@ const F2: Record<number, CampoF2> = {
   2: {
     nome: 'Lógico-Matemática',
     cena:
-      'Uma criança pequena derruba a colher do cadeirão. Você devolve. Ela derruba de novo: olhando para você, não para a colher. De novo. De novo. Não é birra: é um teste, ela verifica se o mundo responde sempre do mesmo jeito. É ciência sem nome, e é a mesma que reaparece anos depois. A Casa de quem lê o mundo como sistema, onde tudo é regra esperando ser descoberta. Une quem processa por "se isso, então aquilo": a busca do padrão antes da aceitação do fato.',
+      'Uma criança pequena derruba a colher do cadeirão. Você devolve. Ela derruba de novo, olhando para você, não para a colher. De novo. De novo. Não é birra, é um teste: ela verifica se o mundo responde sempre do mesmo jeito. É ciência sem nome, e é a mesma que reaparece anos depois. É a Casa de quem lê o mundo como um sistema, cheio de regras esperando para serem descobertas. Esse aluno pensa por "se isso, então aquilo", e procura o padrão antes de aceitar qualquer fato.',
     mecanismo:
-      'Processa padrões, sequências e relações de causa e efeito. Não é sobre números nem velocidade de cálculo: é encadear, isolar a variável, testar a hipótese, exigir que a conclusão se sustente. O mundo chega como conjunto de regras a decifrar, movido pela pergunta que não para: por quê, e se, e de novo. No adolescente ganha rigor: quer a demonstração, desconfia do "é assim porque sim".',
+      'Ele processa padrões, sequências e relações de causa e efeito. Não tem a ver com números nem com calcular rápido. Tem a ver com encadear uma coisa na outra, isolar a variável, testar a hipótese e exigir que a conclusão se sustente. O mundo chega como um conjunto de regras a decifrar, empurrado por uma pergunta que não para, por quê, e se, e de novo. No adolescente isso ganha rigor. Ele quer a demonstração e desconfia do "é assim porque sim".',
     naoDefine: [
       'Tirar nota alta em matemática ou calcular rápido',
       'Ser organizado, "certinho" ou obediente à rotina',
@@ -82,9 +81,9 @@ const F2: Record<number, CampoF2> = {
       'Pode parecer lento: está checando cada elo. A lentidão é método, não dificuldade.',
     ],
     veMundo:
-      'O mundo chega como sistema esperando ser decifrado. Ele não decide procurar padrões: eles aparecem. Nada é aceito como "é assim porque sim"; tudo é relação de causa e efeito a testar. O filtro é a pergunta que não para: por quê, e se, e de novo.',
+      'O mundo chega como um sistema à espera de ser decifrado. Ele não decide procurar padrões, eles simplesmente aparecem. Nada passa como "é assim porque sim". Tudo vira relação de causa e efeito para testar, movido pela mesma pergunta que não descansa, por quê, e se, e de novo.',
     lente:
-      'Lapida o raciocínio que se sustenta: hipótese, prova, coerência. No capítulo, pede que ele justifique e generalize, e observa se chega pela dedução ou pela sorte.',
+      'O mentor lapida o raciocínio que se sustenta sozinho, a hipótese, a prova, a coerência. No capítulo, peça que ele justifique e generalize, observando se chegou lá pela dedução ou pela sorte.',
     observar: [
       'Peça que ele justifique a resposta: repare quando mostra a cadeia ("se isso, então aquilo") em vez de dizer "só sei"',
       'Quem confere o próprio resultado procurando onde teria falhado',
@@ -96,9 +95,9 @@ const F2: Record<number, CampoF2> = {
   3: {
     nome: 'Espacial',
     cena:
-      'Os navegadores das Ilhas Caroline cruzam centenas de quilômetros de oceano sem instrumentos. Eles não veem as ilhas enquanto navegam: eles as imaginam; um mapa vivo, dentro da cabeça, atualizado a cada onda. A Casa de quem pensa em imagens, onde a solução é vista antes de ser dita. Une quem representa o mundo por dentro em formas que gira, monta e desmonta na cabeça.',
+      'Os navegadores das Ilhas Caroline cruzam centenas de quilômetros de oceano sem instrumentos. Eles não veem as ilhas enquanto navegam, eles as imaginam, um mapa vivo dentro da cabeça, atualizado a cada onda. É a Casa de quem pensa em imagens. Esse aluno enxerga a solução montada na cabeça antes de conseguir dizê-la, e representa o mundo por dentro em formas que gira, arma e desarma mentalmente.',
     mecanismo:
-      'Processa formas, posições e relações no espaço. Não é desenhar bem: é construir e manipular imagens mentais, ver a peça girada antes de encaixar, enxergar a estrutura do todo pelas partes. Muitas vezes resolve antes de conseguir explicar, porque a solução chega como figura, não como frase. Distinção fina: aqui o pensamento É a imagem interna; na Casa Corporal o pensamento acontece no gesto.',
+      'Ele processa formas, posições e relações no espaço. Não é sobre desenhar bem. É construir e mexer em imagens mentais, ver a peça já girada antes de encaixar, entender a estrutura inteira a partir das partes. Muitas vezes resolve antes de saber explicar, porque a resposta chega como figura, não como frase. Uma diferença fina ajuda a separar: aqui o pensamento é a imagem interna, enquanto na Casa Corporal o pensamento acontece no gesto.',
     naoDefine: [
       'Desenhar "bonito" ou ter traço caprichado',
       'Gostar de artes',
@@ -113,9 +112,9 @@ const F2: Record<number, CampoF2> = {
       'Diz que enxergou a solução antes de conseguir escrevê-la.',
     ],
     veMundo:
-      'O mundo chega como imagem antes de chegar como palavra. Ele constrói e manipula figuras mentais: gira a peça na cabeça antes de encaixar, enxerga a estrutura do todo pelas partes. Muitas vezes resolve antes de conseguir explicar, porque a solução chega como forma, não como frase. O filtro é a forma, a posição, a relação no espaço.',
+      'Para ele, o mundo chega como imagem antes de virar palavra. Ele arma e gira figuras na cabeça, encaixa a peça mentalmente, vê o todo pelas partes. Costuma resolver antes de conseguir explicar, porque a saída aparece em forma, e não em frase. O que filtra o mundo para ele é a forma, a posição, o espaço.',
     lente:
-      'Lapida a visualização e a leitura de estrutura: projetar, mapear, representar. No capítulo, oferece o problema em forma de espaço e observa quem responde construindo, não só falando.',
+      'O mentor lapida a visualização e a leitura de estrutura, o projetar, o mapear, o representar. No capítulo, ofereça o problema em forma de espaço e repare em quem responde construindo, não só falando.',
     observar: [
       'Peça que ele conte como chegou: repare quando a resposta é uma imagem ("imaginei virado e já sabia onde ia"), não um passo a passo',
       'Quem desenha mapa, esquema ou diagrama em vez de escrever',
@@ -127,9 +126,9 @@ const F2: Record<number, CampoF2> = {
   4: {
     nome: 'Musical',
     cena:
-      'Yehudi Menuhin foi levado escondido a um concerto aos três anos. O som do violino o afetou de um jeito que os pais não esperavam e não haviam provocado. Ele insistiu, não pediu, insistiu: em ter o próprio violino. A inteligência musical dele não esperou escola nem instrumento: estava operando antes. A Casa de quem organiza o mundo pelo som, onde o padrão sonoro chega antes do significado. Une quem pega ritmo, melodia e repetição como estrutura, não como enfeite.',
+      'Yehudi Menuhin foi levado escondido a um concerto aos três anos. O som do violino o afetou de um jeito que os pais não esperavam e não haviam provocado. Ele insistiu, não pediu, insistiu em ter o próprio violino. A inteligência musical dele não esperou escola nem instrumento, já estava operando antes. É a Casa de quem organiza o mundo pelo som. Antes mesmo do significado, esse aluno já captou o padrão sonoro, e escuta ritmo, melodia e repetição como estrutura, não como enfeite.',
     mecanismo:
-      'Processa padrões de som: ritmo, altura, melodia, repetição. Não é cantar afinado nem gostar de música: é o ouvido que encontra a regra sonora, guarda uma sequência ouvida uma vez, sente que um tom mudou antes de saber dizer o quê. O som não distrai, ancora: o silêncio absoluto pode ser o que mais atrapalha. No adolescente vira estratégia consciente: transforma matéria em ritmo ou rima para guardar.',
+      'Ele processa padrões de som, o ritmo, a altura, a melodia, a repetição. Não é cantar afinado nem gostar de música. É um ouvido que acha a regra sonora, guarda uma sequência depois de escutar uma vez, sente que um tom mudou antes de saber explicar o quê. Para ele o som não atrapalha, ancora, e o silêncio total é que costuma incomodar mais. No adolescente isso vira estratégia consciente, ele transforma a matéria em ritmo ou rima para não esquecer.',
     naoDefine: [
       'Cantar afinado ou tocar um instrumento',
       'Gostar de música: quase todo mundo gosta',
@@ -144,9 +143,9 @@ const F2: Record<number, CampoF2> = {
       'Estranha a música conhecida num tom diferente.',
     ],
     veMundo:
-      'O mundo chega com textura sonora. Ele registra o ritmo e a melodia das coisas antes do significado; uma sequência ouvida uma vez fica como estrutura interna. O som não distrai, ancora: o silêncio absoluto pode ser o que mais atrapalha. O filtro procura primeiro o padrão: o ritmo, a repetição que revela a regra.',
+      'O mundo chega para ele com textura sonora. Ele registra o ritmo e a melodia das coisas antes do sentido, e uma sequência ouvida uma vez fica guardada como estrutura. O som não dispersa, sustenta, e o silêncio absoluto é que atrapalha. O que ele procura primeiro é o padrão, o ritmo, a repetição que entrega a regra.',
     lente:
-      'Lapida a escuta que estrutura: encontrar padrão, compor, ler o tempo e a repetição. No capítulo, deixa o som ser ferramenta de pensamento e observa quem organiza o mundo pelo ouvido.',
+      'O mentor lapida a escuta que dá forma, o encontrar padrão, o compor, o ler o tempo e a repetição. No capítulo, deixe o som virar ferramenta de pensamento e veja quem organiza o mundo pelo ouvido.',
     observar: [
       'Peça que ele conte como memorizou: repare quando diz que "virou música na cabeça" ou "achou o ritmo"',
       'Quem percebe rima, repetição e compasso onde os outros só veem texto',
@@ -158,9 +157,9 @@ const F2: Record<number, CampoF2> = {
   5: {
     nome: 'Corporal',
     cena:
-      'Uma artesã experiente molda argila sem olhar para as mãos. As mãos sabem a pressão certa, a velocidade certa, o momento em que a argila cede. Se você perguntar como ela faz, ela dirá: "você sente". Não é resposta evasiva: é a descrição exata de onde mora o conhecimento. A Casa de quem pensa com o corpo, onde a compreensão acontece no fazer, não antes dele. Une quem resolve por movimento, toque e gesto: o corpo não executa o que a cabeça decidiu, o corpo pensa junto.',
+      'Uma artesã experiente molda argila sem olhar para as mãos. As mãos sabem a pressão certa, a velocidade certa, o momento em que a argila cede. Se você perguntar como ela faz, ela dirá que você sente. Não é resposta evasiva, é a descrição exata de onde mora o conhecimento. É a Casa de quem pensa com o corpo. A compreensão vem no momento de fazer, não antes dele. Esse aluno resolve por movimento, toque e gesto, e o corpo dele não só executa o que a cabeça decidiu, ele pensa junto.',
     mecanismo:
-      'Processa e resolve problemas pelo corpo: movimento, toque, ajuste fino de peso, equilíbrio e tempo. O saber mora no gesto: sabe fazer antes de saber explicar, e quando você pergunta como, mostra de novo em vez de contar. Distinção crítica: não é agitação nem impulsividade. Impulsividade é mover-se sem processar; a Casa Corporal é mover-se PARA processar. E não é o mesmo que motricidade fina treinável.',
+      'Ele resolve os problemas pelo corpo, pelo movimento, pelo toque, pelo ajuste fino de peso, equilíbrio e tempo. O saber mora no gesto. Ele sabe fazer antes de saber explicar, e quando você pergunta como, mostra de novo em vez de contar. Aqui mora uma distinção importante. Isso não é agitação nem impulsividade. Impulsividade é mexer sem processar; esta Casa é mexer para processar. E também não se confunde com motricidade fina, que é habilidade treinável.',
     naoDefine: [
       'Ser agitado ou "não parar quieto"',
       'Ser bom de esporte, rápido ou habilidoso',
@@ -175,9 +174,9 @@ const F2: Record<number, CampoF2> = {
       'Reconhece de si que precisa fazer para entender, e pede para pôr a mão.',
     ],
     veMundo:
-      'O mundo chega pelo corpo antes de chegar pelo pensamento. A compreensão acontece no momento em que as mãos fazem: sabe fazer antes de saber explicar, e quando você pergunta como, mostra de novo. Não é agitação: mover-se sem processar é impulsividade; aqui é mover-se PARA processar. O filtro é o fazer.',
+      'O mundo chega para ele pelo corpo antes de chegar pela cabeça. A compreensão acontece na hora em que as mãos fazem. Ele sabe fazer antes de explicar, e se você pergunta como, ele repete o gesto. Não é agitação. Mexer sem processar é impulsividade; aqui, o mexer é o próprio processar. O filtro é o fazer.',
     lente:
-      'Lapida a inteligência que se prova no fazer: precisão do gesto, domínio do próprio corpo, o pensar manipulando. No capítulo, abre o canal do fazer e observa a diferença entre quem se move para pensar e quem só não para.',
+      'O mentor lapida a inteligência que se prova fazendo, a precisão do gesto, o domínio do próprio corpo, o pensar com as mãos. No capítulo, abra o canal do fazer e note a diferença entre quem se mexe para pensar e quem só não para quieto.',
     observar: [
       'Peça que ele conte como fez: repare quando a resposta é "eu senti", "a mão pegou o jeito", ou quando refaz o gesto para explicar',
       'Quem só firma o que aprendeu depois de manipular, montar, escrever com a própria mão',
@@ -189,9 +188,9 @@ const F2: Record<number, CampoF2> = {
   6: {
     nome: 'Naturalista',
     cena:
-      'Charles Darwin, quando menino, colecionava besouros. Não como passatempo, como necessidade: precisava encontrá-los, nomeá-los, separá-los. Décadas depois, essa mesma compulsão por distinções produziu a teoria da evolução. A Casa de quem lê o mundo classificando, onde a distinção chega antes da decisão de percebê-la. Une quem enxerga o que é igual, o que é diferente e onde passa a fronteira entre um grupo e outro.',
+      'Charles Darwin, quando menino, colecionava besouros. Não como passatempo, mas como necessidade: precisava encontrá-los, nomeá-los, separá-los. Décadas depois, essa mesma compulsão por distinções produziu a teoria da evolução. É a Casa de quem lê o mundo classificando. A diferença salta aos olhos antes mesmo de ele procurar por ela. Esse aluno enxerga o que é igual, o que é diferente e onde passa a fronteira entre um grupo e outro.',
     mecanismo:
-      'Reconhece padrões e cria categorias: percebe o desvio, o intruso, a exceção que quase pertence mas não. Não é gostar de natureza: é o olhar que organiza qualquer variedade em famílias, e opera sobre dados, obras, espécies, estilos. Distinção fina com a Lógica: a lógica busca a regra causal (por que acontece); a naturalista busca a taxonomia (a que grupo pertence).',
+      'Ele reconhece padrões e cria categorias. Percebe o desvio, o intruso, a exceção que quase pertence mas não pertence. Não tem a ver com gostar de natureza. É um olhar que organiza qualquer variedade em famílias, e funciona sobre dados, obras, espécies, estilos. Vale separar da Lógica: a Lógica busca a regra causal, o porquê de acontecer, enquanto a Naturalista busca a taxonomia, a que grupo aquilo pertence.',
     naoDefine: [
       'Gostar de natureza, de animais ou de plantas',
       'Preferir ficar ao ar livre',
@@ -206,9 +205,9 @@ const F2: Record<number, CampoF2> = {
       'Pode parecer desligado quando não há nada para comparar: é a inteligência sem material, não desinteresse.',
     ],
     veMundo:
-      'O mundo chega em categorias. Diante de qualquer conjunto, dados, obras, espécies, estilos, a inteligência começa a trabalhar: o que é igual? o que é diferente? onde termina um grupo e começa outro? Ele não decide perceber a distinção: ela já chegou antes da decisão de percebê-la.',
+      'O mundo chega para ele já separado em categorias. Diante de qualquer conjunto, dados, obras, espécies, estilos, a cabeça começa a trabalhar sozinha. O que é igual? O que é diferente? Onde um grupo termina e outro começa? Ele não decide reparar na diferença, ela salta antes de ele pensar em procurá-la.',
     lente:
-      'Lapida o olhar que distingue e ordena: comparar, categorizar, mapear diferenças. No capítulo, dá conjuntos para organizar e observa o critério que o aluno cria sozinho.',
+      'O mentor lapida o olhar que distingue e ordena, o comparar, o categorizar, o mapear diferenças. No capítulo, dê conjuntos para ele organizar e repare no critério que ele cria por conta própria.',
     observar: [
       'Peça que ele explique o critério: repare quando nomeia as categorias e sabe onde termina um grupo e começa outro',
       'Quem percebe diferenças finas que passam batido: a exceção, o que quase pertence mas não',
@@ -220,9 +219,9 @@ const F2: Record<number, CampoF2> = {
   7: {
     nome: 'Interpessoal',
     cena:
-      'Anne Sullivan chegou para ensinar Helen Keller; cega, surda, fechada, quase sem treinamento formal. Em poucas semanas entendeu o que nenhum adulto ao redor tinha visto: Helen não precisava de disciplina. Precisava de conexão. Ela leu o estado interno de uma criança sem linguagem, sem expressão visível. A Casa de quem lê as pessoas, onde a realidade é feita de gente e do que se passa entre elas. Une quem percebe humores, intenções e o clima de um grupo antes de qualquer conversa.',
+      'Anne Sullivan chegou para ensinar Helen Keller, cega, surda, fechada, quase sem treinamento formal. Em poucas semanas entendeu o que nenhum adulto ao redor tinha visto: Helen não precisava de disciplina, precisava de conexão. Ela leu o estado interno de uma criança sem linguagem, sem expressão visível. É a Casa de quem lê as pessoas. Para esse aluno, a realidade é feita de gente e do que acontece entre as pessoas, e ele percebe humores, intenções e o clima de um grupo antes de qualquer conversa começar.',
     mecanismo:
-      'Processa o mundo interno dos outros: estados de ânimo, intenção, a tensão numa voz que parece normal. Não é ser simpático nem popular: é registrar diferenças finas de estado que a maioria não nota e ajustar o comportamento a partir dessa leitura. Não confundir com a Linguística (falar bem é linguagem; ler o que o outro sente é interpessoal). Atenção: a mesma leitura serve para acalmar ou para manipular. A bússola ética ainda está em construção, e é o que o mentor acompanha.',
+      'Ele processa o mundo interno dos outros, o estado de ânimo, a intenção, a tensão numa voz que parece tranquila. Não é ser simpático nem popular. É captar diferenças finas de estado que a maioria não nota e ajustar o próprio jeito a partir dessa leitura. Não confunda com a Linguística, porque falar bem é linguagem, e ler o que o outro sente é interpessoal. Um cuidado: a mesma leitura serve tanto para acalmar quanto para manipular. A bússola ética ainda está se formando, e é justamente isso que o mentor acompanha.',
     naoDefine: [
       'Ser simpático, popular ou ter muitos amigos',
       'Ser "o líder" ou o mais falante',
@@ -237,9 +236,9 @@ const F2: Record<number, CampoF2> = {
       'Pode ser o quieto da beirada que lê a sala inteira em silêncio.',
     ],
     veMundo:
-      'O mundo chega através das pessoas. Ele registra o estado de cada um antes de qualquer conversa: a postura, o desvio do olhar, a tensão numa voz que parece normal. O filtro é relacional: a realidade é feita de gente e do que se passa entre elas. A mesma leitura serve para acalmar ou para manipular, e a bússola ética ainda está em construção.',
+      'O mundo chega para ele através das pessoas. Antes de qualquer conversa, ele já registrou o estado de cada um, a postura, o desvio do olhar, a tensão numa voz que soa normal. O filtro dele é relacional, a realidade é feita de gente e do que passa entre ela. E como a mesma leitura serve para acalmar ou para manipular, a bússola ética ainda está em construção.',
     lente:
-      'Lapida a leitura do outro com direção ética: cooperar, mediar, liderar sem instrumentalizar. No capítulo, dá papéis que exigem coordenar gente e observa como o aluno lê o grupo e responde a ele.',
+      'O mentor lapida a leitura do outro com direção ética, o cooperar, o mediar, o liderar sem usar ninguém. No capítulo, dê papéis que exijam coordenar gente e observe como o aluno lê o grupo e responde a ele.',
     observar: [
       'Peça que ele conte como percebeu: repare quando aponta o sinal ("ficou quieto", "mudou o tom") em vez de dizer "só sei"',
       'Quem lê a dinâmica do grupo e sabe dizer quem puxou, quem cedeu, quem ficou de fora',
@@ -251,9 +250,9 @@ const F2: Record<number, CampoF2> = {
   8: {
     nome: 'Intrapessoal',
     cena:
-      'Virginia Woolf, num ensaio, descreve momentos da infância com uma clareza que vai além da memória: ela não só lembra o que aconteceu; sabe dizer o que sentiu, por que sentiu, e como a sensação virou compreensão. A Casa de quem lê o próprio mundo interno, onde o sentimento chega com etiqueta antes de virar comportamento. Une quem acessa o que sente, por que sente e do que precisa, com uma precisão rara.',
+      'Virginia Woolf, num ensaio, descreve momentos da infância com uma clareza que vai além da memória. Ela não só lembra o que aconteceu, sabe dizer o que sentiu, por que sentiu, e como a sensação virou compreensão. É a Casa de quem lê o próprio mundo interno. O sentimento chega para ela já com nome, antes de virar reação. Esse aluno acessa o que sente, por que sente e do que precisa, com uma precisão rara.',
     mecanismo:
-      'Processa o próprio estado interno: distingue sentimentos que para os outros parecem iguais ("não era raiva, era frustração") e usa isso para decidir. É a mais reservada das oito, quase nunca aparece sozinha: precisa de outra porta (a fala, o desenho, o corpo) para se mostrar. Não confundir com a Interpessoal (uma lê o outro, a outra lê a si). E não confundir com timidez: o sinal é a precisão do autorrelato, não o silêncio.',
+      'Ele processa o próprio estado interno. Distingue sentimentos que para os outros pareceriam a mesma coisa, não era raiva, era frustração, e usa isso para decidir. É a mais reservada das oito e quase nunca aparece sozinha, precisa de outra porta para se mostrar, a fala, o desenho, o corpo. Não confunda com a Interpessoal, porque uma lê o outro e esta lê a si mesma. E não confunda com timidez, o sinal aqui é a precisão com que ele fala de si, não o silêncio.',
     naoDefine: [
       'Ser tímido, quieto ou "na dele"',
       'Preferir trabalhar sozinho',
@@ -268,9 +267,9 @@ const F2: Record<number, CampoF2> = {
       'Escolhe tarefas e parcerias sabendo de si.',
     ],
     veMundo:
-      'O mundo chega filtrado pelo estado interno. Antes de reagir, há um instante em que a inteligência registra como ele está e por quê. O que para outros é um sentimento embolado, para ele chega com etiqueta: não era raiva, era frustração. A experiência interna vira informação antes de virar comportamento.',
+      'O mundo chega para ele filtrado pelo estado interno. Antes de reagir, existe um instante em que ele registra como está e por quê. O que para os outros é um sentimento embolado, para ele já vem separado, não era raiva, era frustração. A experiência de dentro vira informação antes de virar comportamento.',
     lente:
-      'Lapida o autoconhecimento que orienta a ação: nomear o próprio estado, regular, escolher com consciência. No capítulo, abre espaço de reflexão e observa a precisão com que o aluno se lê, sem confundir reserva com ausência.',
+      'O mentor lapida o autoconhecimento que guia a ação, o nomear o próprio estado, o se regular, o escolher com consciência. No capítulo, abra espaço para a reflexão e repare na precisão com que o aluno se lê, sem confundir quem é reservado com quem não tem o que mostrar.',
     observar: [
       'Peça que ele conte o que passou por dentro: repare quando separa o que sentiu, por que sentiu e do que precisava',
       'Quem reconhece o próprio limite no dia e sabe pedir o que ajuda (mais tempo, um canto, silêncio)',
@@ -302,7 +301,7 @@ export const ATIVIDADE_OITO_CAMINHOS_F2 = {
   titulo: 'Uma atividade, oito caminhos',
   atividade: 'O projeto em grupo',
   intro:
-    'O mesmo projeto de capítulo, o mesmo tema, o mesmo grupo. Repare por onde cada aluno entra: o caminho é o que importa, não o resultado pronto.',
+    'O mesmo projeto de capítulo, o mesmo tema, o mesmo grupo. Repare por onde cada aluno entra, porque o caminho é o que importa, não o resultado pronto.',
   caminhos: {
     1: 'Assume o texto e o argumento: escolhe as palavras, cuida do roteiro, defende a ideia. O tema só fica real depois que vira discurso preciso.',
     2: 'Quer a estrutura antes de agir: a ordem do argumento, a causa e o efeito, a evidência que sustenta cada afirmação. O projeto só anda quando a lógica fecha.',
