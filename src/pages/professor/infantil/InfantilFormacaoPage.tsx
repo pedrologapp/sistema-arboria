@@ -7,7 +7,9 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfessor } from '@/contexts/ProfessorContext';
-import { TREINAMENTOS, type TreinamentoFormacao } from '@/lib/infantilFormacao';
+import { TREINAMENTOS as TREINAMENTOS_INFANTIL, type TreinamentoFormacao } from '@/lib/infantilFormacao';
+import { TREINAMENTOS as TREINAMENTOS_F2 } from '@/lib/f2Formacao';
+import { F2_REFORMA_ATIVA } from '@/config/f2Reforma';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 
 const MarcaA = ({ size = 48, cor = t.accent }: { size?: number; cor?: string }) => (
@@ -39,7 +41,16 @@ type Etapa =
 const InfantilFormacaoPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { profile } = useProfessor();
+  const { profile, segmento } = useProfessor();
+
+  // Formação POR SEGMENTO: o professor do Fundamental 2 (sob o flag da reforma)
+  // recebe a Formação do F2. Infantil e F1 seguem com a Formação IDÊNTICA de
+  // sempre. A tela de renderização é a mesma; muda só a fonte do conteúdo.
+  const ehF2 = F2_REFORMA_ATIVA && segmento === 'fundamental2';
+  const TREINAMENTOS = ehF2 ? TREINAMENTOS_F2 : TREINAMENTOS_INFANTIL;
+  // O selo da situação nomeia a categoria por segmento: no F2 são "Casas",
+  // no Infantil/F1 seguem "Inteligências" (texto inalterado para eles).
+  const seloPrefixo = ehF2 ? 'Casa em cena' : 'Inteligência em cena';
 
   const [etapa, setEtapa] = useState<Etapa>({ tela: 'lista' });
   const [concluidos, setConcluidos] = useState<Record<number, string>>({});
@@ -377,7 +388,7 @@ const InfantilFormacaoPage = () => {
                 className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
                 style={{ backgroundColor: s.cor }}
               />
-              Inteligência em cena: {s.inteligencia}
+              {seloPrefixo}: {s.inteligencia}
             </p>
           )}
           <p className="font-serif italic text-[15px] leading-relaxed" style={{ color: t.text }}>
