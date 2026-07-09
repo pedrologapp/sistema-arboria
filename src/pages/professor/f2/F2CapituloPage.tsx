@@ -16,9 +16,7 @@ import {
   Route as RouteIcon,
   PenLine,
   CheckCircle2,
-  Circle,
   Clock,
-  Eye,
   Split,
   Merge,
   ArrowLeftRight,
@@ -179,6 +177,99 @@ const A = {
   glow: '4D', // ~30%
 } as const;
 
+// ============================================================
+// Derivação de cor por Casa (contraste). O Fundador definiu: fundo ESCURO na
+// matiz da Casa + LETRAS claras (alto contraste); a cor da Casa nunca no corpo
+// do texto, só como acento (traço, chip, borda, ícone). Como as 8 cores canônicas
+// variam muito de luminância (ex.: ouro #B8860B, vinho #7F1D1D, marrom #78350F),
+// derivamos por HSL 3 tons por Casa, garantindo legibilidade AA nas 8:
+//  - corFundo/corFundoTopo: fundo PROFUNDO (texto branco lê bem);
+//  - corAcento: versão CLARA e saturada, pra ícones/rótulos/bordas sobre o escuro;
+//  - corSolida: cor RICA pra preenchimentos com TEXTO BRANCO (brasão, botões),
+//    escurecida só nas Casas claras o bastante pro branco passar (~5:1).
+// ============================================================
+type RGB = [number, number, number];
+
+const _hexToRgb = (hex: string): RGB => {
+  const h = hex.replace('#', '');
+  const n = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const int = parseInt(n, 16);
+  return [(int >> 16) & 255, (int >> 8) & 255, int & 255];
+};
+const _toHex = (v: number): string =>
+  Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, '0');
+const _rgbToHex = ([r, g, b]: RGB): string => `#${_toHex(r)}${_toHex(g)}${_toHex(b)}`;
+
+const _rgbToHsl = ([r, g, b]: RGB): [number, number, number] => {
+  const rr = r / 255,
+    gg = g / 255,
+    bb = b / 255;
+  const max = Math.max(rr, gg, bb),
+    min = Math.min(rr, gg, bb);
+  const l = (max + min) / 2;
+  const d = max - min;
+  if (d === 0) return [0, 0, l];
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h: number;
+  if (max === rr) h = (gg - bb) / d + (gg < bb ? 6 : 0);
+  else if (max === gg) h = (bb - rr) / d + 2;
+  else h = (rr - gg) / d + 4;
+  return [h / 6, s, l];
+};
+const _hue = (p: number, q: number, t: number): number => {
+  let tt = t;
+  if (tt < 0) tt += 1;
+  if (tt > 1) tt -= 1;
+  if (tt < 1 / 6) return p + (q - p) * 6 * tt;
+  if (tt < 1 / 2) return q;
+  if (tt < 2 / 3) return p + (q - p) * (2 / 3 - tt) * 6;
+  return p;
+};
+const _hslToRgb = ([h, s, l]: [number, number, number]): RGB => {
+  if (s === 0) return [l * 255, l * 255, l * 255];
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  return [_hue(p, q, h + 1 / 3) * 255, _hue(p, q, h) * 255, _hue(p, q, h - 1 / 3) * 255];
+};
+const _relLum = ([r, g, b]: RGB): number => {
+  const f = (c: number) => {
+    const cc = c / 255;
+    return cc <= 0.03928 ? cc / 12.92 : Math.pow((cc + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+};
+
+/** Fundo imersivo PROFUNDO na matiz da Casa (texto branco lê bem nas 8). */
+const corFundo = (base: string): string => {
+  const [h, s] = _rgbToHsl(_hexToRgb(base));
+  return _rgbToHex(_hslToRgb([h, Math.min(s, 0.55), 0.11]));
+};
+/** Topo do gradiente: a mesma matiz, um tico mais viva. */
+const corFundoTopo = (base: string): string => {
+  const [h, s] = _rgbToHsl(_hexToRgb(base));
+  return _rgbToHex(_hslToRgb([h, Math.min(s, 0.6), 0.17]));
+};
+/** Acento LEGÍVEL: matiz da Casa, clara e saturada, pra ícones/rótulos/traços/
+ *  bordas sobre o fundo escuro. Nunca no corpo do texto (esse é branco/claro). */
+const corAcento = (base: string): string => {
+  const [h, s] = _rgbToHsl(_hexToRgb(base));
+  return _rgbToHex(_hslToRgb([h, Math.max(s, 0.55), 0.66]));
+};
+/** Acento SÓLIDO: cor rica da Casa pra preenchimentos com TEXTO BRANCO (brasão,
+ *  botões). Só escurece as Casas claras o bastante pro branco passar (AA ~5:1). */
+const corSolida = (base: string): string => {
+  const rgb = _hexToRgb(base);
+  if (_relLum(rgb) <= 0.16) return base;
+  const [h, s] = _rgbToHsl(rgb);
+  let l = 0.3;
+  let out = _hslToRgb([h, s, l]);
+  while (_relLum(out) > 0.16 && l > 0.08) {
+    l -= 0.02;
+    out = _hslToRgb([h, s, l]);
+  }
+  return _rgbToHex(out);
+};
+
 const nomeCompleto = (a: Aluno | undefined): string =>
   !a ? 'Aluno' : a.full_name || a.nome || 'Aluno';
 
@@ -276,7 +367,14 @@ const F2CapituloPage = () => {
   const qc = useQueryClient();
   const { profile, casaMentor, segmento, isLoading: ctxLoading } = useProfessor();
 
-  const accent = corDaCasa(casaMentor?.id);
+  // Tons derivados da cor da Casa (contraste AA nas 8): fundo escuro na matiz,
+  // acento CLARO pra foreground (o `accent` propagado pra tudo), e um tom sólido
+  // rico só pros preenchimentos com texto branco (brasão, botões).
+  const casaBase = corDaCasa(casaMentor?.id);
+  const accent = corAcento(casaBase);
+  const accentSolid = corSolida(casaBase);
+  const bgDeep = corFundo(casaBase);
+  const bgTop = corFundoTopo(casaBase);
   const anoLetivo = new Date().getFullYear();
 
   // Só o F2 reformado entra aqui. Segmento errado / flag off: volta pra home.
@@ -781,6 +879,12 @@ const F2CapituloPage = () => {
   const [alunoObs, setAlunoObs] = useState<{ id: string; nome: string; papel: string } | null>(null);
   const [textoObs, setTextoObs] = useState('');
   const [salvandoObs, setSalvandoObs] = useState(false);
+  // Busca da grade de alunos (padrão "iniciar aula" do Infantil/F1).
+  const [buscaObs, setBuscaObs] = useState('');
+  const alunosObsFiltrados = useMemo(
+    () => filtrarAlunos(alunosDaTurma, buscaObs),
+    [alunosDaTurma, buscaObs]
+  );
 
   const abrirObs = (aluno: Aluno) => {
     const nome = nomeCompleto(aluno);
@@ -836,7 +940,6 @@ const F2CapituloPage = () => {
   const [papelParaAlocar, setPapelParaAlocar] = useState<Papel | null>(null);
   const [delegParaAddMembro, setDelegParaAddMembro] = useState<Delegacao | null>(null);
   const [timeParaAlocar, setTimeParaAlocar] = useState<{ papel: Papel; grupo: number } | null>(null);
-  const [rosterAberto, setRosterAberto] = useState(false);
 
   // ===================== Render =====================
   // Fundo imersivo, reutilizado em todos os estados (carregando / não liberado /
@@ -845,8 +948,8 @@ const F2CapituloPage = () => {
     <div
       className="fixed inset-0 z-0"
       style={{
-        backgroundColor: '#241E63',
-        background: `radial-gradient(125% 90% at 50% -10%, ${accent}${A.a20} 0%, #322B8F 46%, #241E63 100%)`,
+        backgroundColor: bgDeep,
+        background: `radial-gradient(125% 92% at 50% -12%, ${accent}22 0%, ${bgTop} 42%, ${bgDeep} 100%)`,
         transition: 'background 500ms ease',
       }}
       aria-hidden="true"
@@ -886,7 +989,7 @@ const F2CapituloPage = () => {
         <div className="relative z-10 pt-2">
           <BotaoVoltar onClick={() => navigate('/professor')} />
           <div className="min-h-[62vh] flex flex-col items-center justify-center text-center px-6 vf-rise">
-            <BrasaoCasa accent={accent} brasao={casaMentor?.brasao_url ?? null} size={64} />
+            <BrasaoCasa accent={accentSolid} brasao={casaMentor?.brasao_url ?? null} size={64} />
             <p
               className="text-[11px] uppercase font-bold mt-5"
               style={{ color: accent, letterSpacing: '0.22em' }}
@@ -938,7 +1041,7 @@ const F2CapituloPage = () => {
             background: `radial-gradient(120% 130% at 50% -30%, ${accent}${A.glow} 0%, rgba(0,0,0,0) 62%)`,
           }}
         >
-          <BrasaoCasa accent={accent} brasao={casaMentor?.brasao_url ?? null} size={56} />
+          <BrasaoCasa accent={accentSolid} brasao={casaMentor?.brasao_url ?? null} size={56} />
           <p
             className="text-[10px] uppercase font-extrabold mt-3.5"
             style={{ color: accent, letterSpacing: '0.2em' }}
@@ -1154,46 +1257,105 @@ const F2CapituloPage = () => {
             liberadas={missoesLiberadas}
             prazo={turmaConfig?.missoes_data_prazo ?? null}
             savingConfig={savingConfig}
-            accent={accent}
+            accent={accentSolid}
             onLiberar={liberarMissoes}
           />
         </section>
 
-        {/* 6. OBSERVAÇÕES AO VIVO */}
+        {/* 6. OBSERVAÇÕES AO VIVO - grade de alunos (padrão "iniciar aula" do
+            Infantil/F1: a turma inteira à mão, toque num aluno pra registrar ali
+            mesmo, um por um, durante o encontro). O registro grava em `observacoes`
+            ligado ao capítulo, mesmo fluxo/salvamento de antes; só a superfície
+            mudou (de botão + roster em diálogo para a grade inline). */}
         <section className="vf-rise">
           <SecaoTitulo icon={<PenLine size={16} strokeWidth={1.75} />} accent={accent}>
             Observações do projeto
           </SecaoTitulo>
-          <button
-            onClick={() => setRosterAberto(true)}
-            className="w-full text-left rounded-2xl p-4 flex gap-3 items-center transition-transform active:scale-[0.99]"
-            style={{
-              background: `linear-gradient(180deg, ${accent}${A.a15}, rgba(255,255,255,0.04))`,
-              border: `1px solid ${accent}${A.a34}`,
-            }}
-          >
-            <span
-              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: `linear-gradient(160deg, ${accent}, ${accent}CC)` }}
+          <p className="text-[12.5px] leading-snug mb-3 px-0.5" style={{ color: D.sub }}>
+            No encontro, acompanhe os grupos e toque num aluno pra registrar como ele conduziu o seu papel.
+            {observacoes.length > 0 && (
+              <span style={{ color: accent }}>
+                {' '}
+                {observacoes.length} já registrada{observacoes.length === 1 ? '' : 's'}.
+              </span>
+            )}
+          </p>
+
+          {alunosDaTurma.length === 0 ? (
+            <div
+              className="rounded-2xl p-4 text-sm"
+              style={{ backgroundColor: D.card, border: `1px dashed ${D.line}`, color: D.faint }}
             >
-              <Eye size={19} color="#FFFFFF" strokeWidth={1.7} />
-            </span>
-            <span className="flex-1 min-w-0">
-              <span className="block text-[14px] font-bold" style={{ color: D.text }}>
-                Observações ao vivo
-              </span>
-              <span className="block text-[12px] mt-0.5 leading-snug" style={{ color: D.sub }}>
-                No dia, registre como cada aluno conduziu o seu papel.
-                {observacoes.length > 0 && (
-                  <span style={{ color: accent }}>
-                    {' '}
-                    {observacoes.length} já registrada{observacoes.length === 1 ? '' : 's'}.
-                  </span>
-                )}
-              </span>
-            </span>
-            <ChevronDown size={18} className="-rotate-90 flex-shrink-0" style={{ color: D.faint }} />
-          </button>
+              Nenhum aluno nesta turma ainda.
+            </div>
+          ) : (
+            <>
+              {/* Busca */}
+              <div className="relative mb-3">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: D.faint }} />
+                <input
+                  type="text"
+                  value={buscaObs}
+                  onChange={(e) => setBuscaObs(e.target.value)}
+                  placeholder="Buscar aluno..."
+                  className="w-full rounded-xl pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2"
+                  style={{
+                    backgroundColor: D.sunken,
+                    border: `1px solid ${D.line}`,
+                    color: D.text,
+                    // @ts-expect-error CSS var for focus ring
+                    '--tw-ring-color': `${accent}${A.a40}`,
+                  }}
+                />
+              </div>
+
+              {/* Grade da turma: toque abre o editor de observação do aluno */}
+              {alunosObsFiltrados.length === 0 ? (
+                <p className="text-sm text-center py-8" style={{ color: D.faint }}>
+                  Nenhum aluno com esse nome.
+                </p>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {alunosObsFiltrados.map((al) => {
+                    const temObs = obsByAluno.has(al.id);
+                    const papel = papelDoAluno[al.id];
+                    return (
+                      <button
+                        key={al.id}
+                        onClick={() => abrirObs(al)}
+                        className="flex flex-col items-center gap-1.5 p-2.5 rounded-2xl text-center active:scale-[0.98] transition-transform"
+                        style={{
+                          backgroundColor: temObs ? `${accent}${A.a10}` : D.card,
+                          border: `1px solid ${temObs ? `${accent}${A.a34}` : D.line}`,
+                        }}
+                      >
+                        <span className="relative">
+                          <AvatarAluno aluno={al} brasoes={brasoes} size={54} />
+                          {temObs && (
+                            <span
+                              className="absolute -bottom-1 -right-1 rounded-full flex items-center justify-center"
+                              style={{ backgroundColor: bgDeep, padding: 1 }}
+                              aria-label="observação registrada"
+                            >
+                              <CheckCircle2 size={16} style={{ color: D.presente }} strokeWidth={2.4} />
+                            </span>
+                          )}
+                        </span>
+                        <span className="block text-[11.5px] font-medium leading-tight line-clamp-2" style={{ color: D.text }}>
+                          {nomeCompleto(al)}
+                        </span>
+                        {papel && (
+                          <span className="block w-full text-[10px] leading-tight line-clamp-1" style={{ color: D.faint }}>
+                            {papel}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
         </section>
 
         {/* Rodapé: tudo salvo automaticamente */}
@@ -1277,63 +1439,11 @@ const F2CapituloPage = () => {
         onClose={() => setTimeParaAlocar(null)}
       />
 
-      {/* ===== Dialog: roster de observações ===== */}
-      <Dialog open={rosterAberto} onOpenChange={(o) => !o && setRosterAberto(false)}>
-        <DialogContent
-          className="max-w-md"
-          style={{ backgroundColor: '#241E63', border: `1px solid ${D.line}`, color: D.text }}
-        >
-          <DialogHeader>
-            <DialogTitle style={{ color: D.text }}>Observações ao vivo</DialogTitle>
-            <DialogDescription style={{ color: D.sub }}>
-              Toque num aluno para registrar como ele chegou neste capítulo.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto -mx-1 px-1 space-y-1.5">
-            {alunosDaTurma.length === 0 ? (
-              <p className="text-sm py-4" style={{ color: D.sub }}>
-                Nenhum aluno nesta turma.
-              </p>
-            ) : (
-              alunosDaTurma.map((al) => {
-                const temObs = obsByAluno.has(al.id);
-                return (
-                  <button
-                    key={al.id}
-                    onClick={() => {
-                      setRosterAberto(false);
-                      abrirObs(al);
-                    }}
-                    className="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors"
-                    style={{ backgroundColor: D.card }}
-                  >
-                    <AvatarAluno aluno={al} brasoes={brasoes} size={30} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium truncate" style={{ color: D.text }}>
-                        {nomeCompleto(al)}
-                      </span>
-                      <span className="block text-[11px] truncate" style={{ color: D.faint }}>
-                        {papelDoAluno[al.id] || 'Sem papel'}
-                      </span>
-                    </span>
-                    {temObs ? (
-                      <CheckCircle2 size={18} style={{ color: D.presente }} />
-                    ) : (
-                      <Circle size={18} style={{ color: D.silencio }} />
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* ===== Dialog: editor de observação de um aluno ===== */}
       <Dialog open={!!alunoObs} onOpenChange={(o) => !o && fecharObs()}>
         <DialogContent
           className="max-w-lg"
-          style={{ backgroundColor: '#241E63', border: `1px solid ${D.line}`, color: D.text }}
+          style={{ backgroundColor: bgDeep, border: `1px solid ${D.line}`, color: D.text }}
         >
           {alunoObs && (
             <>
@@ -1371,7 +1481,7 @@ const F2CapituloPage = () => {
                     onClick={salvarObs}
                     disabled={salvandoObs || !textoObs.trim()}
                     className="px-4 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40"
-                    style={{ backgroundColor: accent, color: '#FFFFFF' }}
+                    style={{ backgroundColor: accentSolid, color: '#FFFFFF' }}
                   >
                     {salvandoObs ? 'Salvando...' : obsByAluno.has(alunoObs.id) ? 'Salvar alterações' : 'Salvar'}
                   </button>

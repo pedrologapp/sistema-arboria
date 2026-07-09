@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Sparkles, RefreshCw, ArrowLeft, X } from 'lucide-react';
 import {
   LEQUE_COMECOS,
@@ -200,7 +201,13 @@ const LequeObservacao = ({
         <Sparkles size={16} strokeWidth={1.9} /> Sugerir
       </button>
 
-      {aberto && (
+      {/* Portal pro body: o leque é `position: fixed` e precisa se ancorar na
+          JANELA, não num ancestral. Dentro do Dialog do capítulo, o DialogContent
+          tem `transform: translate(...)` (Radix), e um ancestral transformado faz
+          o `fixed` resolver contra a CAIXA do diálogo (pequena), amontoando as
+          frases. Portando pro body, o overlay volta a cobrir a viewport inteira,
+          idêntico ao Infantil/F1 (que já não tinham ancestral transformado). */}
+      {aberto && createPortal(
         <div className="fixed inset-0 z-[80] flex flex-col" role="dialog" aria-modal="true" aria-label="Leque de observação">
           {/* Scrim: a turma esmaece atrás; tocar fora fecha */}
           <button
@@ -343,7 +350,8 @@ const LequeObservacao = ({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
