@@ -1113,6 +1113,8 @@ const F2CapituloPage = () => {
             </label>
             <input
               type="date"
+              min="2025-01-01"
+              max="2035-12-31"
               value={turmaConfig?.data_evento ?? ''}
               onChange={(e) => upsertConfig({ data_evento: e.target.value || null })}
               disabled={savingConfig}
@@ -2091,9 +2093,11 @@ const EtapaEncontro = ({
             </label>
             <input
               type="date"
+              min="2025-01-01"
+              max="2035-12-31"
               value={dataPrevista ?? ''}
               onChange={(e) => onSalvarData(e.target.value)}
-              className="rounded-lg px-2.5 py-1.5 text-sm focus:outline-none"
+              className="w-full max-w-[220px] rounded-lg px-2.5 py-1.5 text-sm focus:outline-none"
               style={{ backgroundColor: D.sunken, border: `1px solid ${D.line}`, color: D.text, colorScheme: 'dark' }}
             />
           </div>
