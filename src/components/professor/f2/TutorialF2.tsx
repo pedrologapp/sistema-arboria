@@ -192,6 +192,9 @@ const construirPaginas = (cor: string): Pagina[] => [
         <div className="font-serif text-[27px] leading-tight text-center" style={{ color: t.text }}>
           Bem-vindo(a)<br />ao Arboria
         </div>
+        <p className="text-[14px] leading-relaxed text-center mt-4 max-w-[30ch]" style={{ color: t.textMuted }}>
+          Cada aluno que passa pela sua Casa carrega uma história. Sua tarefa é ajudá-lo a acreditar que <b style={{ color: cor }}>a sua história pode ser extraordinária</b>.
+        </p>
       </>
     ),
   },
