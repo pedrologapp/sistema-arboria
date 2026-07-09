@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import AvatarUpload from '@/components/aluno/AvatarUpload';
 import { abrirTutorialInfantil } from '@/components/professor/infantil/TutorialInfantil';
+import { abrirTutorialF2 } from '@/components/professor/f2/TutorialF2';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 
 /**
@@ -178,17 +179,16 @@ const InfantilConfiguracoesPage = () => {
         </p>
       </div>
 
-      {/* Ajuda: o tutorial e do Infantil/F1 (tem variante propria); no F2 nao entra. */}
-      {segmento !== 'fundamental2' && (
-        <Secao titulo="Ajuda">
-          <Item
-            icone={<BookOpen size={19} strokeWidth={1.75} />}
-            titulo="Como usar o Arboria"
-            sub="O tutorial aba por aba: releia quando quiser"
-            onClick={abrirTutorialInfantil}
-          />
-        </Secao>
-      )}
+      {/* Ajuda: o tutorial aba por aba. Infantil/F1 usam a versao com variante;
+          o F2 (reforma) tem a sua propria (4 abas do mentor + capitulo). */}
+      <Secao titulo="Ajuda">
+        <Item
+          icone={<BookOpen size={19} strokeWidth={1.75} />}
+          titulo="Como usar o Arboria"
+          sub="O tutorial aba por aba: releia quando quiser"
+          onClick={segmento === 'fundamental2' ? abrirTutorialF2 : abrirTutorialInfantil}
+        />
+      </Secao>
 
       {/* Segurança */}
       <Secao titulo="Segurança">

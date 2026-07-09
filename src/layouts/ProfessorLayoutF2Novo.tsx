@@ -6,6 +6,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAppBadge } from '@/hooks/useAppBadge';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 import F2BottomNav from '@/components/professor/f2/F2BottomNav';
+import TutorialF2, { abrirTutorialF2 } from '@/components/professor/f2/TutorialF2';
+import { corDaCasa } from '@/config/f2Reforma';
+import { HelpCircle } from 'lucide-react';
 
 /**
  * Layout do professor. FUNDAMENTAL 2 (reforma, atrás do flag F2_REFORMA_ATIVA).
@@ -95,6 +98,15 @@ const ProfessorLayoutF2Novo = ({ children }: ProfessorLayoutF2NovoProps) => {
           </div>
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            {/* Ajuda: abre o tutorial "Como usar o Arboria" do mentor (F2) */}
+            <button
+              onClick={abrirTutorialF2}
+              className="p-2 rounded-full transition-transform active:scale-95"
+              style={{ color: t.textMuted }}
+              aria-label="Ajuda, como usar o Arboria"
+            >
+              <HelpCircle size={21} strokeWidth={1.75} />
+            </button>
             <button
               onClick={() => navigate('/professor/configuracoes')}
               className="flex-shrink-0 rounded-full transition-transform active:scale-95"
@@ -128,6 +140,10 @@ const ProfessorLayoutF2Novo = ({ children }: ProfessorLayoutF2NovoProps) => {
       </main>
 
       <F2BottomNav />
+
+      {/* Tutorial do mentor: abre sozinho na 1ª entrada; reabrível pelo ícone
+          Ajuda (acima) e por Configurações. Acento na cor da Casa mentorada. */}
+      <TutorialF2 cor={corDaCasa(casaMentor?.id)} />
     </div>
   );
 };
