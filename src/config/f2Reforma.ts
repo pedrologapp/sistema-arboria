@@ -11,7 +11,7 @@
  * Só o Fundador vira este flag (localhost primeiro; nunca em produção sem ordem).
  * Infantil e F1 NÃO são afetados por este flag em nenhum estado.
  */
-export const F2_REFORMA_ATIVA = false;
+export const F2_REFORMA_ATIVA = true; // LOCAL/TESTE: ligado so no working copy do Pedro. NAO commitar true (producao = false).
 
 /**
  * Cores canônicas das 8 inteligências (por id), definidas pelo Fundador para a
