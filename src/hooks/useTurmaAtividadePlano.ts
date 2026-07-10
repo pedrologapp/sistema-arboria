@@ -19,16 +19,43 @@ export interface AtividadePlanoItem {
   ordem: number;
 }
 
+interface AtividadeBanco {
+  id: string;
+  nome: string;
+  objetivo: string | null;
+  materiais: string | null;
+  como_conduzir: string | null;
+  o_que_observar: string | null;
+  pdf_url: string | null;
+  ordem: number | null;
+  ativo: boolean;
+}
+
+const mapBanco = (a: AtividadeBanco): AtividadePlanoItem => ({
+  // Sem plano curado: a própria atividade do banco é o item. planoId = id dela.
+  planoId: a.id,
+  atividadeId: a.id,
+  nome: a.nome,
+  objetivo: a.objetivo ?? null,
+  materiais: a.materiais ?? null,
+  comoConduzir: a.como_conduzir ?? null,
+  oQueObservar: a.o_que_observar ?? null,
+  pdfUrl: a.pdf_url ?? null,
+  ordem: a.ordem ?? 0,
+});
+
 /**
- * PLANO de atividades da turma para uma inteligência (a fase atual).
+ * Atividades da turma para uma inteligência (a fase sendo lida).
  *
- * Lê o vínculo turma + fase + atividade (turma_atividade_plano) que o dono
- * monta na tela "Definição de Trilha", já ordenado.
+ * 1. PLANO CURADO (turma_atividade_plano): o vínculo turma + fase + atividade
+ *    que o dono monta na tela de trilha, já ordenado. Tem prioridade.
+ * 2. FALLBACK POR FAIXA: se não houver plano curado, cai no BANCO de atividades
+ *    (tabela atividades) pela faixa da turma (turmas.serie == atividades.faixa)
+ *    + inteligência. Assim tudo que o dono cadastra no banco por faixa aparece
+ *    direto pro professor, sem precisar montar plano turma a turma.
  *
- * TOLERANTE POR DESIGN: se a migration ainda não estiver aplicada (tabela
- * ausente) ou a query falhar por qualquer motivo, devolve [] em vez de
- * quebrar. O chamador (cockpit da aula) usa o vazio como sinal de "sem plano"
- * e mantém o comportamento de hoje. Nenhuma turma em produção quebra.
+ * TOLERANTE POR DESIGN: qualquer falha ou ausência de tabela devolve [] em vez
+ * de quebrar. O chamador usa o vazio como "sem atividade". Nenhuma turma quebra.
  */
 export const useTurmaAtividadePlano = (
   turmaId?: string | null,
@@ -42,6 +69,8 @@ export const useTurmaAtividadePlano = (
     staleTime: 60_000,
     queryFn: async (): Promise<AtividadePlanoItem[]> => {
       const anoLetivo = new Date().getFullYear();
+
+      // 1. Plano curado da turma (tem prioridade).
       try {
         const { data, error } = await fromAny('turma_atividade_plano')
           .select(
@@ -52,33 +81,63 @@ export const useTurmaAtividadePlano = (
           .eq('inteligencia_id', inteligenciaId!)
           .eq('ativo', true)
           .order('ordem');
-        if (error || !data) return [];
-        return (data as unknown as Array<{
-          id: string;
-          ordem: number;
-          atividade: {
+        if (!error && data) {
+          const plano = (data as unknown as Array<{
             id: string;
-            nome: string;
-            objetivo: string | null;
-            materiais: string | null;
-            como_conduzir: string | null;
-            o_que_observar: string | null;
-            pdf_url: string | null;
-            ativo: boolean;
-          } | null;
-        }>)
-          .filter((r) => r.atividade && r.atividade.ativo !== false)
-          .map((r) => ({
-            planoId: r.id,
-            atividadeId: r.atividade!.id,
-            nome: r.atividade!.nome,
-            objetivo: r.atividade!.objetivo ?? null,
-            materiais: r.atividade!.materiais ?? null,
-            comoConduzir: r.atividade!.como_conduzir ?? null,
-            oQueObservar: r.atividade!.o_que_observar ?? null,
-            pdfUrl: r.atividade!.pdf_url ?? null,
-            ordem: r.ordem,
-          }));
+            ordem: number;
+            atividade: {
+              id: string;
+              nome: string;
+              objetivo: string | null;
+              materiais: string | null;
+              como_conduzir: string | null;
+              o_que_observar: string | null;
+              pdf_url: string | null;
+              ativo: boolean;
+            } | null;
+          }>)
+            .filter((r) => r.atividade && r.atividade.ativo !== false)
+            .map((r) => ({
+              planoId: r.id,
+              atividadeId: r.atividade!.id,
+              nome: r.atividade!.nome,
+              objetivo: r.atividade!.objetivo ?? null,
+              materiais: r.atividade!.materiais ?? null,
+              comoConduzir: r.atividade!.como_conduzir ?? null,
+              oQueObservar: r.atividade!.o_que_observar ?? null,
+              pdfUrl: r.atividade!.pdf_url ?? null,
+              ordem: r.ordem,
+            }));
+          if (plano.length > 0) return plano;
+        }
+      } catch {
+        // segue pro fallback
+      }
+
+      // 2. Fallback: banco de atividades pela faixa (serie) da turma.
+      try {
+        const { data: turma } = await fromAny('turmas')
+          .select('serie, segmento, institution_id')
+          .eq('id', turmaId!)
+          .maybeSingle();
+        const t = turma as {
+          serie: string | null;
+          segmento: string | null;
+          institution_id: string | null;
+        } | null;
+        if (!t?.serie || !t.institution_id) return [];
+
+        const { data, error } = await fromAny('atividades')
+          .select('id, nome, objetivo, materiais, como_conduzir, o_que_observar, pdf_url, ordem, ativo')
+          .eq('institution_id', t.institution_id)
+          .eq('faixa', t.serie)
+          .eq('inteligencia_id', inteligenciaId!)
+          .eq('ativo', true)
+          .order('ordem');
+        if (error || !data) return [];
+        return (data as unknown as AtividadeBanco[])
+          .filter((a) => a.ativo !== false)
+          .map(mapBanco);
       } catch {
         return [];
       }
