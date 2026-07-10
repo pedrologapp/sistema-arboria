@@ -317,9 +317,13 @@ const AtividadeCard = ({
           {s.titulo}
         </span>
       </div>
-      <p className="text-[13px] leading-relaxed whitespace-pre-line" style={{ color: p.corpo }}>
-        {s.texto}
-      </p>
+      {/* Texto com teto de altura + rolagem: textos longos (ex: "conduzir") não
+          esticam mais a tela. Curto aparece inteiro; longo rola dentro da caixa. */}
+      <div className="max-h-[240px] overflow-y-auto overscroll-contain pr-1">
+        <p className="text-[13px] leading-relaxed whitespace-pre-line" style={{ color: p.corpo }}>
+          {s.texto}
+        </p>
+      </div>
     </>
   );
 
