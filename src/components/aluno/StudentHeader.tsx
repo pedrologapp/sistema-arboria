@@ -1,6 +1,8 @@
 import { Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useStudent } from '@/contexts/StudentContext';
+import { useFaseAtualAluno } from '@/hooks/useFaseAtualAluno';
+import { F2_ALUNO_FASE_TRILHA } from '@/config/f2AlunoFase';
 
 interface StudentHeaderProps {
   notificationCount?: number;
@@ -9,7 +11,16 @@ interface StudentHeaderProps {
 const StudentHeader = ({ notificationCount = 0 }: StudentHeaderProps) => {
   const navigate = useNavigate();
   const { faseAtual, institutionName, isLoading, profile, casa } = useStudent();
+  const { data: faseTrilha } = useFaseAtualAluno();
   const inicial = (profile?.nome || profile?.full_name || '?').trim().charAt(0).toUpperCase();
+
+  // Alinha a fase do header a TRILHA (flag on) com fallback pra fase por data.
+  // Mesmo criterio da home, pra header e card da casa nunca divergirem.
+  const usaTrilha = F2_ALUNO_FASE_TRILHA && !!faseTrilha;
+  const faseNome = usaTrilha ? faseTrilha!.nome : faseAtual?.inteligencia?.nome ?? null;
+  const faseCor = usaTrilha
+    ? faseTrilha!.corHex || '#fff'
+    : faseAtual?.inteligencia?.cor_hex || '#fff';
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#1A1A2E] border-b border-violet-500/10" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
@@ -37,13 +48,10 @@ const StudentHeader = ({ notificationCount = 0 }: StudentHeaderProps) => {
             {/* Fase (texto simples com cor) */}
             {isLoading ? (
               <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
-            ) : faseAtual?.inteligencia ? (
+            ) : faseNome ? (
               <div className="flex flex-col items-end">
-                <span
-                  className="text-sm font-medium"
-                  style={{ color: faseAtual.inteligencia.cor_hex || '#fff' }}
-                >
-                  Fase {faseAtual.inteligencia.nome}
+                <span className="text-sm font-medium" style={{ color: faseCor }}>
+                  Fase {faseNome}
                 </span>
               </div>
             ) : null}

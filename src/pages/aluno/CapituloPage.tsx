@@ -1,6 +1,6 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, ChevronRight, Users, ScrollText, Download, BookOpen, Info, Clock, Shirt } from 'lucide-react';
+import { Calendar, ChevronRight, Users, ScrollText, Download, BookOpen, Info, Clock, Shirt, HelpCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +12,8 @@ import {
   DrawerDescription,
 } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
+import { F2_ALUNO_CAPITULO_PREVIEW } from '@/config/f2AlunoCapituloPreview';
+import ArenaBoasVindas from './ArenaBoasVindas';
 import '@/styles/missoes-scifi.css';
 
 const sb = supabase as any;
@@ -22,7 +24,7 @@ const hexToRgb = (hex: string): string | null => {
   return m ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}` : null;
 };
 
-type Categoria = 'mesa' | 'mediador' | 'observatorio' | 'delegacao';
+type Categoria = 'mesa' | 'mediador' | 'observatorio' | 'delegacao' | 'time';
 
 interface Capitulo {
   id: string;
@@ -147,6 +149,11 @@ const pdfDaDelegacao = (codigo: string): string | null => {
   return slug ? `/docs/delegacoes/${slug}.pdf` : null;
 };
 
+// PDF de apoio do time (formato TIMES, ex.: Arena Arboria). Servido como asset
+// estático por ordem do papel/time (1..8). Fora dessa faixa: sem PDF.
+const pdfDoTime = (ordem: number): string | null =>
+  ordem >= 1 && ordem <= 8 ? `/materiais/arena/tema${ordem}.pdf` : null;
+
 const iniciais = (nome: string) =>
   nome.split(' ').slice(0, 2).map(n => n[0]?.toUpperCase()).join('');
 
@@ -155,6 +162,7 @@ const CapituloPage = () => {
   const { profile, faseAtual, casa, casaColor, isLoading: loadingStudent } = useStudent();
   const [papelAberto, setPapelAberto] = useState<Papel | null>(null);
   const [delegacaoAberta, setDelegacaoAberta] = useState<Delegacao | null>(null);
+  const [boasVindasAberta, setBoasVindasAberta] = useState(false);
 
   const { data: turmaId } = useQuery({
     queryKey: ['minha-turma-cap', user?.id],
@@ -273,6 +281,50 @@ const CapituloPage = () => {
     [meuPapel, delegacoes]
   );
 
+  // Detecta o formato TIMES (papéis com categoria 'time', ex.: Arena Arboria).
+  const times = useMemo(
+    () => papeis.filter(p => p.categoria === 'time').sort((a, b) => a.ordem - b.ordem),
+    [papeis]
+  );
+  const ehTimes = times.length > 0;
+
+  // Time do aluno: alocação real (papel_id aponta pra um papel 'time').
+  const meuTimeReal = ehTimes && meuPapel?.categoria === 'time' ? meuPapel : null;
+  // Prévia de localhost: sem alocação real, o 1º time (por ordem) faz de "seu time".
+  const ehPreviewTime = F2_ALUNO_CAPITULO_PREVIEW && ehTimes && !meuTimeReal;
+  const meuTime = meuTimeReal ?? (ehPreviewTime ? times[0] ?? null : null);
+
+  // Destrava por alocação: só quem tem alocação real vê o capítulo TIMES.
+  const temAlocacaoReal = !!minhaAlocacao;
+
+  // Chave do "já viu as boas-vindas" (por capítulo + aluno).
+  const chaveBoasVindas =
+    capitulo?.id && user?.id ? `arboria_arena_boasvindas_v1_${capitulo.id}_${user.id}` : null;
+
+  // AUTO-SURGE: com alocação REAL e sem ter visto ainda, a tela de boas-vindas
+  // abre sozinha ao carregar. Na prévia (sem alocação) não auto-abre: o Fundador
+  // usa o botão "?".
+  useEffect(() => {
+    if (!ehTimes || !temAlocacaoReal || !chaveBoasVindas) return;
+    try {
+      if (localStorage.getItem(chaveBoasVindas)) return;
+    } catch {
+      return;
+    }
+    setBoasVindasAberta(true);
+  }, [ehTimes, temAlocacaoReal, chaveBoasVindas]);
+
+  const fecharBoasVindas = () => {
+    if (chaveBoasVindas) {
+      try {
+        localStorage.setItem(chaveBoasVindas, '1');
+      } catch {
+        /* localStorage indisponível: apenas fecha */
+      }
+    }
+    setBoasVindasAberta(false);
+  };
+
   const dias = calcularDias(turmaConfig?.data_evento ?? null);
 
   if (loadingStudent || loadingCap) {
@@ -300,8 +352,40 @@ const CapituloPage = () => {
   const accentRgb = hexToRgb(accentColor) || '167, 139, 250';
   const scifiVars = { '--sf-accent': accentColor, '--sf-accent-rgb': accentRgb } as CSSProperties;
 
+  // GATE (só formato TIMES): sem alocação real e fora da prévia, o aluno vê a tela
+  // de espera. A prévia do Fundador sobrepõe a destrava, para ele conseguir ver.
+  if (ehTimes && !temAlocacaoReal && !F2_ALUNO_CAPITULO_PREVIEW) {
+    return (
+      <div className="scifi -mx-4 px-4 pt-16" style={scifiVars}>
+        <div className="text-center px-2">
+          <div className="text-xs tracking-[0.4em] uppercase text-white/30 mb-3">Capítulo</div>
+          <h2 className="font-serif text-xl text-white/70 mb-4">Aguardando liberação do professor</h2>
+        </div>
+        <div
+          data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
+          className="sf-panel p-5 text-center max-w-xs mx-auto"
+        >
+          <p className="text-sm text-white/60 leading-relaxed">
+            Seu professor vai te alocar em um time. Quando isso acontecer, a Arena abre aqui pra você.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="scifi space-y-10 pb-8 -mx-4 px-4" style={scifiVars}>
+    <div className="scifi relative space-y-10 pb-8 -mx-4 px-4" style={scifiVars}>
+
+      {/* Botão "?" · reabre a tela de boas-vindas da Arena (só no formato TIMES com time) */}
+      {ehTimes && meuTime && (
+        <button
+          onClick={() => setBoasVindasAberta(true)}
+          aria-label="Sobre a Arena"
+          className="absolute top-2 right-2 z-10 p-2 rounded-full text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition"
+        >
+          <HelpCircle className="w-5 h-5" />
+        </button>
+      )}
 
       {/* ============ STAGE 1 · HERO ============ */}
       <Hero
@@ -310,30 +394,56 @@ const CapituloPage = () => {
         casaColor={casaColor}
         dataEvento={turmaConfig?.data_evento ?? null}
         dias={dias}
+        faseNome={faseAtual?.inteligencia?.nome ?? null}
       />
 
       {/* ============ STAGE 2 · A TRETA ============ */}
       <Treta capitulo={capitulo} />
 
-      {/* ============ STAGE 3 · VOCÊ ============ */}
-      <SeuPapel
-        papel={meuPapel}
-        delegacao={minhaDelegacao}
-        casaColor={casaColor}
-        onAbrirGuia={() => meuPapel && setPapelAberto(meuPapel)}
-      />
+      {ehTimes ? (
+        <>
+          {/* ============ SOBRE A ARENA ============ */}
+          <SobreArena />
 
-      {/* ============ STAGE 4 · ELENCO ============ */}
-      <Elenco
-        papeis={papeis}
-        alocacoes={alocacoes}
-        delegacoes={delegacoesAtivas}
-        membrosDelegacoes={membrosDelegacoes}
-        brasoes={brasoes}
-        onAbrirGuia={(p) => setPapelAberto(p)}
-        onAbrirDelegacao={(d) => setDelegacaoAberta(d)}
-        meuId={user?.id ?? null}
-      />
+          {/* ============ STAGE 3 · SEU TIME ============ */}
+          <SeuTime
+            time={meuTime}
+            ehPreview={ehPreviewTime}
+            onAbrirGuia={() => meuTime && setPapelAberto(meuTime)}
+          />
+
+          {/* ============ STAGE 4 · OS TIMES ============ */}
+          <OsTimes
+            times={times}
+            alocacoes={alocacoes}
+            brasoes={brasoes}
+            meuTimeId={meuTime?.id ?? null}
+            onAbrirGuia={(p) => setPapelAberto(p)}
+          />
+        </>
+      ) : (
+        <>
+          {/* ============ STAGE 3 · VOCÊ ============ */}
+          <SeuPapel
+            papel={meuPapel}
+            delegacao={minhaDelegacao}
+            casaColor={casaColor}
+            onAbrirGuia={() => meuPapel && setPapelAberto(meuPapel)}
+          />
+
+          {/* ============ STAGE 4 · ELENCO ============ */}
+          <Elenco
+            papeis={papeis}
+            alocacoes={alocacoes}
+            delegacoes={delegacoesAtivas}
+            membrosDelegacoes={membrosDelegacoes}
+            brasoes={brasoes}
+            onAbrirGuia={(p) => setPapelAberto(p)}
+            onAbrirDelegacao={(d) => setDelegacaoAberta(d)}
+            meuId={user?.id ?? null}
+          />
+        </>
+      )}
 
       {/* ============ STAGE 5 · O DIA ============ */}
       <ODia capitulo={capitulo} />
@@ -341,7 +451,13 @@ const CapituloPage = () => {
       {/* ============ DRAWER · GUIA DA FUNÇÃO ============ */}
       <Drawer open={!!papelAberto} onOpenChange={(o) => !o && setPapelAberto(null)}>
         <DrawerContent className="bg-[#1A1A2E] border-white/10 text-white max-h-[92vh]">
-          {papelAberto && <GuiaConteudo papel={papelAberto} delegacoes={delegacoes} />}
+          {papelAberto && (
+            <GuiaConteudo
+              papel={papelAberto}
+              delegacoes={delegacoes}
+              ehMeuTime={!!meuTime && papelAberto.id === meuTime.id}
+            />
+          )}
         </DrawerContent>
       </Drawer>
 
@@ -351,6 +467,17 @@ const CapituloPage = () => {
           {delegacaoAberta && <GuiaConteudoDelegacao delegacao={delegacaoAberta} />}
         </DrawerContent>
       </Drawer>
+
+      {/* ============ OVERLAY · BOAS-VINDAS DA ARENA (formato TIMES) ============ */}
+      {ehTimes && meuTime && boasVindasAberta && (
+        <ArenaBoasVindas
+          capituloNome={capitulo.nome}
+          timeNome={meuTime.nome}
+          timeDescricao={meuTime.descricao_curta}
+          casaColor={accentColor}
+          onFechar={fecharBoasVindas}
+        />
+      )}
     </div>
   );
 };
@@ -359,13 +486,14 @@ const CapituloPage = () => {
 // HERO
 // ============================================
 const Hero = ({
-  capitulo, brasaoUrl, casaColor, dataEvento, dias
+  capitulo, brasaoUrl, casaColor, dataEvento, dias, faseNome
 }: {
   capitulo: Capitulo;
   brasaoUrl: string | null;
   casaColor: string;
   dataEvento: string | null;
   dias: number | null;
+  faseNome: string | null;
 }) => (
   <section
     className="relative overflow-hidden -mx-4 px-6 pt-10 pb-12"
@@ -392,7 +520,7 @@ const Hero = ({
 
     {/* tag */}
     <div className="text-center text-[10px] tracking-[0.4em] uppercase text-white/50 mb-3">
-      Capítulo {String(capitulo.numero).padStart(2, '0')} · Fase Interpessoal
+      Capítulo {String(capitulo.numero).padStart(2, '0')}{faseNome ? ` · Fase ${faseNome}` : ''}
     </div>
 
     {/* título */}
@@ -839,6 +967,281 @@ const Avatar = ({
 };
 
 // ============================================
+// SOBRE A ARENA (formato TIMES)
+// ============================================
+// ATENÇÃO: este conteúdo está hard-coded só para este rascunho da Arena Arboria.
+// Depois isto deve vir do banco por capítulo (campo próprio do capítulo TIMES);
+// NÃO é genérico para todo capítulo de TIMES, é específico da Arena.
+const SobreArena = () => (
+  <section>
+    <div className="text-[10px] tracking-[0.4em] uppercase text-white/40 mb-3">
+      A Arena
+    </div>
+
+    <p className="text-sm text-white/80 leading-relaxed mb-4">
+      A Arena Arboria é uma competição de projetos. Seu time escolhe um tema, cria um projeto e, no dia da Arena, prova para todos que ele funciona.
+    </p>
+
+    <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-4">
+      <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-3">
+        Até o dia da apresentação
+      </div>
+      <ol className="space-y-2.5 list-none">
+        {[
+          'Escolham o tema e montem o time.',
+          'Criem o projeto do jeito de vocês. O formato e a apresentação são livres.',
+          'Testem e ajustem até a ideia se provar.',
+          'No dia, subam na Arena e apresentem.',
+        ].map((passo, i) => (
+          <li key={i} className="text-[13px] text-white/80 flex gap-2 leading-relaxed">
+            <span className="text-amber-200/50 font-mono text-[11px] mt-0.5">{i + 1}.</span>
+            <span>{passo}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+
+    {/* Bloco DESTACADO · premiação (ponto que o Fundador quer ressaltar) */}
+    <div
+      data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
+      className="sf-panel mt-4 p-4"
+      style={{ ['--aug-border-bg' as string]: 'rgba(252, 211, 77, 0.35)' }}
+    >
+      <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-2">
+        A premiação
+      </div>
+      <p className="text-sm text-white/85 leading-relaxed">
+        O melhor projeto ganha uma premiação.
+      </p>
+      <p className="text-sm text-white/85 leading-relaxed mt-2">
+        A disputa tem duas etapas: primeiro entre as equipes da sua sala, depois entre os melhores de cada sala, até a escola ter um projeto vencedor.
+      </p>
+      <p className="text-sm text-white/85 leading-relaxed mt-2">
+        O vencedor sai da nota do professor mentor, ponderada pelos votos dos pais e dos alunos.
+      </p>
+    </div>
+  </section>
+);
+
+// ============================================
+// STAGE 3 (TIMES) · SEU TIME
+// ============================================
+const SeuTime = ({
+  time, ehPreview, onAbrirGuia
+}: {
+  time: Papel | null;
+  ehPreview: boolean;
+  onAbrirGuia: () => void;
+}) => {
+  if (!time) {
+    return (
+      <section>
+        <div className="text-[10px] tracking-[0.4em] uppercase text-white/40 mb-3">Você</div>
+        <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-5 text-center">
+          <p className="text-sm text-white/60">
+            Você ainda não foi convocado.
+          </p>
+          <p className="text-xs text-white/40 mt-1">
+            Seu professor vai te alocar em um time.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  const pdf = pdfDoTime(time.ordem);
+
+  return (
+    <section>
+      <div className="text-[10px] tracking-[0.4em] uppercase text-white/40 mb-3 flex items-center gap-2">
+        <span>Seu time</span>
+        {ehPreview && (
+          <span className="px-1.5 py-0.5 rounded-full bg-amber-200/15 ring-1 ring-amber-200/30 text-[9px] tracking-[0.2em] text-amber-100 normal-case">
+            prévia
+          </span>
+        )}
+      </div>
+      <button
+        onClick={onAbrirGuia}
+        data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
+        className="sf-panel sf-accent-border w-full text-left p-5 transition"
+      >
+        <div className="text-[10px] tracking-[0.3em] uppercase text-white/40 mb-2">
+          {time.time_label || 'Seu time'}
+        </div>
+        <div className="font-serif text-2xl text-white leading-tight">{time.nome}</div>
+        {time.descricao_curta && (
+          <p className="text-sm text-white/75 mt-3 leading-relaxed italic font-serif">
+            {time.descricao_curta}
+          </p>
+        )}
+        <div className="flex items-center gap-1 mt-4 text-xs text-amber-200/70">
+          <ScrollText className="w-3.5 h-3.5" />
+          <span>Abrir guia do time</span>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </div>
+      </button>
+
+      {pdf && (
+        <a
+          href={pdf}
+          download
+          target="_blank"
+          rel="noopener noreferrer"
+          data-augmented-ui="tl-clip br-clip border"
+          className="sf-exec mt-3 flex items-center justify-center gap-2 px-4 py-3 transition"
+        >
+          <Download className="w-4 h-4" />
+          <span className="text-sm font-medium">Baixar guia do time</span>
+        </a>
+      )}
+    </section>
+  );
+};
+
+// ============================================
+// STAGE 4 (TIMES) · OS TIMES
+// ============================================
+const OsTimes = ({
+  times, alocacoes, brasoes, meuTimeId, onAbrirGuia
+}: {
+  times: Papel[];
+  alocacoes: AlocacaoComAluno[];
+  brasoes: Brasoes;
+  meuTimeId: string | null;
+  onAbrirGuia: (p: Papel) => void;
+}) => {
+  const alocPorPapel = useMemo(() => {
+    const m: Record<string, AlocacaoComAluno[]> = {};
+    alocacoes.forEach(a => {
+      if (!m[a.papel_id]) m[a.papel_id] = [];
+      m[a.papel_id].push(a);
+    });
+    return m;
+  }, [alocacoes]);
+
+  return (
+    <section>
+      <div className="text-[10px] tracking-[0.4em] uppercase text-white/40 mb-3 flex items-center gap-2">
+        <Users className="w-3 h-3" /> Parte 2 · Os times
+      </div>
+
+      <div
+        data-augmented-ui="tl-clip br-clip border"
+        className="sf-card px-3.5 py-2.5 mb-5 flex items-start gap-2.5"
+        style={{ ['--aug-border-bg' as string]: 'rgba(252, 211, 77, 0.35)' }}
+      >
+        <BookOpen className="w-3.5 h-3.5 text-amber-200/80 mt-0.5 flex-shrink-0" />
+        <p className="text-[12px] text-white/75 leading-relaxed">
+          <span className="text-amber-200/90 font-semibold">Toque no seu time</span> para abrir o guia.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {times.map(t => (
+          <CardTime
+            key={t.id}
+            time={t}
+            alocacoes={alocPorPapel[t.id] || []}
+            brasoes={brasoes}
+            ehMeu={t.id === meuTimeId}
+            onClick={() => onAbrirGuia(t)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+};
+
+// Regra "só o seu time": só o card do time do aluno (ehMeu) abre o guia e mostra
+// a descrição/chevron. Os demais times aparecem apenas como nome + avatares +
+// contagem, sem ação (renderizados como <div>, não clicáveis).
+const CardTime = ({
+  time, alocacoes, brasoes, ehMeu, onClick
+}: {
+  time: Papel; alocacoes: AlocacaoComAluno[]; brasoes: Brasoes; ehMeu: boolean; onClick: () => void;
+}) => {
+  const ilimitado = time.vagas_por_turma > 30;
+  const total = time.vagas_por_turma;
+
+  const contagemEAvatares = (
+    <div className="mt-auto pt-3 flex flex-col items-center gap-2">
+      <div className="flex items-center justify-center min-h-[2rem]">
+        {alocacoes.length === 0 ? (
+          <span className="text-[11px] text-white/30">Vagas abertas</span>
+        ) : (
+          <div className="flex items-center -space-x-1.5">
+            {alocacoes.slice(0, 3).map(a => (
+              <div key={a.id} className="rounded-full ring-2 ring-[#1A1A2E]">
+                <Avatar
+                  nome={nomeAluno(a.aluno)}
+                  url={a.aluno?.avatar_url ?? null}
+                  brasao={a.aluno?.casa_id ? brasoes[a.aluno.casa_id] : null}
+                  pequeno
+                />
+              </div>
+            ))}
+            {alocacoes.length > 3 && (
+              <div className="w-8 h-8 rounded-full ring-2 ring-[#1A1A2E] bg-white/[0.06] flex items-center justify-center text-[10px] text-white/60">
+                +{alocacoes.length - 3}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="flex items-center justify-center gap-1.5">
+        <div className="text-[10px] tracking-wide uppercase text-white/45">
+          {ilimitado ? (
+            <><span className="text-white/80 font-semibold">{alocacoes.length}</span> no time</>
+          ) : (
+            <><span className="text-white/80 font-semibold">{alocacoes.length}</span> / {total} vagas</>
+          )}
+        </div>
+        {ehMeu && <ChevronRight className="w-3.5 h-3.5 text-amber-200/50 flex-shrink-0" />}
+      </div>
+    </div>
+  );
+
+  // Card dos OUTROS times: só nome + avatares + contagem, sem ação.
+  if (!ehMeu) {
+    return (
+      <div
+        data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
+        className="sf-panel w-full h-full flex flex-col p-3.5 min-h-[128px]"
+      >
+        <h4 className="font-serif text-[15px] text-white text-center leading-snug line-clamp-2 min-h-[2.6em]">
+          {time.nome}
+        </h4>
+        {contagemEAvatares}
+      </div>
+    );
+  }
+
+  // Card do SEU time: completo e clicável (abre o guia).
+  return (
+    <button
+      onClick={onClick}
+      data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
+      className="sf-panel sf-accent-border w-full h-full flex flex-col p-3.5 min-h-[128px] transition"
+    >
+      <span className="self-center mb-2 px-1.5 py-0.5 rounded-full bg-amber-200/15 ring-1 ring-amber-200/30 text-[9px] font-semibold tracking-[0.15em] text-amber-100">
+        SEU TIME
+      </span>
+
+      <h4 className="font-serif text-[15px] text-white text-center leading-snug line-clamp-2 min-h-[2.6em]">
+        {time.nome}
+      </h4>
+
+      <p className="text-[11.5px] text-white/60 text-center mt-1 leading-snug line-clamp-2 min-h-[2.4em]">
+        {time.descricao_curta}
+      </p>
+
+      {contagemEAvatares}
+    </button>
+  );
+};
+
+// ============================================
 // STAGE 5 · O DIA
 // ============================================
 const ODia = ({ capitulo }: { capitulo: Capitulo }) => {
@@ -909,8 +1312,10 @@ const ODia = ({ capitulo }: { capitulo: Capitulo }) => {
 // ============================================
 // DRAWER · GUIA DA FUNÇÃO
 // ============================================
-const GuiaConteudo = ({ papel, delegacoes }: { papel: Papel; delegacoes: Delegacao[] }) => {
+const GuiaConteudo = ({ papel, delegacoes, ehMeuTime = false }: { papel: Papel; delegacoes: Delegacao[]; ehMeuTime?: boolean }) => {
   const deleg = papel.delegacao ? delegacoes.find(d => d.codigo === papel.delegacao) : null;
+  // Regra "só o seu time": o PDF de apoio só aparece para o time do próprio aluno.
+  const pdfTime = papel.categoria === 'time' && ehMeuTime ? pdfDoTime(papel.ordem) : null;
   return (
     <>
       <DrawerHeader className="text-left border-b border-white/10">
@@ -1024,6 +1429,25 @@ const GuiaConteudo = ({ papel, delegacoes }: { papel: Papel; delegacoes: Delegac
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* PDF de apoio do time (formato TIMES) */}
+        {pdfTime && (
+          <div className="pt-2">
+            <a
+              href={pdfTime}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 rounded-xl bg-amber-200/15 hover:bg-amber-200/25 ring-1 ring-amber-200/40 px-4 py-3.5 text-amber-100 transition"
+            >
+              <Download className="w-4 h-4" />
+              <span className="text-sm font-medium">Baixar guia do time</span>
+            </a>
+            <p className="text-[11px] text-white/40 text-center mt-2">
+              PDF de apoio com o roteiro completo do time.
+            </p>
           </div>
         )}
       </div>

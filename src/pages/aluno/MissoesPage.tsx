@@ -17,6 +17,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { agoraBrasil } from '@/utils/timezone';
 import { useStudent } from '@/contexts/StudentContext';
+import { F2_ALUNO_FASE_TRILHA } from '@/config/f2AlunoFase';
 import { cn } from '@/lib/utils';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -169,6 +170,22 @@ const MissoesPage = () => {
       const hoje = agoraBrasil();
       hoje.setHours(12, 0, 0, 0);
 
+      // Fase atual pela TRILHA (flag on), igual ao StudentContext: a Casa da vez
+      // define a fase 'atual', em vez das datas. Sem flag/trilha, segue por data.
+      let intelTrilha: number | null = null;
+      if (F2_ALUNO_FASE_TRILHA) {
+        try {
+          const { data: rpcFase } = await (
+            supabase as unknown as { rpc: (fn: string) => Promise<{ data: unknown }> }
+          ).rpc('fase_atual_do_aluno');
+          if (Array.isArray(rpcFase) && rpcFase.length > 0) {
+            intelTrilha = (rpcFase[0] as { inteligencia_id?: number }).inteligencia_id ?? null;
+          }
+        } catch {
+          /* segue por data */
+        }
+      }
+
       const itensLista: ItemFase[] = (Array.from(fasesDedup.values())
         .map(fase => {
           const inteligencia = inteligencias?.find(i => i.id === fase.inteligencia_id);
@@ -178,6 +195,16 @@ const MissoesPage = () => {
           let status: 'futura' | 'atual' | 'passada' = 'futura';
           if (hoje >= inicio && hoje <= fim) status = 'atual';
           else if (hoje > fim) status = 'passada';
+          // Convergencia trilha: a fase ATUAL e a da Casa da trilha (nao a por
+          // data). A que era atual por data vira passada; as demais mantem.
+          if (intelTrilha != null) {
+            status =
+              fase.inteligencia_id === intelTrilha
+                ? 'atual'
+                : status === 'atual'
+                  ? 'passada'
+                  : status;
+          }
           return {
             inteligencia,
             fase,

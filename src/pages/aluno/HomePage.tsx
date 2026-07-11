@@ -4,6 +4,8 @@ import { useState, useEffect, type CSSProperties } from 'react';
 import { Target, MessageCircle, Shield, User, Star, AlertTriangle, Trophy, Sparkles, Bell, HelpCircle, Send, Loader2, LayoutDashboard } from 'lucide-react';
 import { useStudent } from '@/contexts/StudentContext';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
+import { useFaseAtualAluno } from '@/hooks/useFaseAtualAluno';
+import { F2_ALUNO_FASE_TRILHA } from '@/config/f2AlunoFase';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { supabase } from '@/integrations/supabase/client';
 import { Progress } from '@/components/ui/progress';
@@ -102,6 +104,9 @@ const HomePage = () => {
   const navigate = useNavigate();
   const { profile, casa, ranking, faseAtual, casaColor, isLoading } = useStudent();
   const { missoesPendentes, mensagensNaoLidas } = useNotificacoes();
+  // Passo 1 reforma aluno F2: fase atual pela trilha (atras do flag). null quando
+  // flag off ou sem fase -> cai no faseAtual (por data) de sempre.
+  const { data: faseTrilha } = useFaseAtualAluno();
 
   const { data: cargo } = useQuery({
     queryKey: ['cargo-aluno', profile?.id, casa?.id],
@@ -328,14 +333,22 @@ const HomePage = () => {
               </div>
             </div>
 
-            {/* Fase */}
-            {faseAtual && faseAtual.inteligencia && (
+            {/* Fase. Com o flag ligado e a trilha resolvida, mostra a fase da
+                TURMA pela trilha (igual ao professor), em texto coletivo (nunca
+                a identidade do aluno). Senao, o comportamento atual (por data). */}
+            {F2_ALUNO_FASE_TRILHA && faseTrilha ? (
+              <div className="mt-4 pt-4 border-t" style={{ borderColor: `${casaColor}15` }}>
+                <p className="text-xs text-white/50">
+                  A turma está na fase da Casa {faseTrilha.nome}
+                </p>
+              </div>
+            ) : faseAtual && faseAtual.inteligencia ? (
               <div className="mt-4 pt-4 border-t" style={{ borderColor: `${casaColor}15` }}>
                 <p className="text-xs text-white/50">
                   Fase {faseAtual.numero_fase}: {faseAtual.inteligencia.nome}
                 </p>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       )}

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 import { calcularSemanaAtualDaFase, hojeBrasil } from '@/utils/timezone';
 import { applyTheme } from '@/utils/theme';
+import { F2_ALUNO_FASE_TRILHA } from '@/config/f2AlunoFase';
 
 interface Profile {
   id: string;
@@ -130,14 +131,36 @@ export const StudentProvider = ({ children }: StudentProviderProps) => {
       // 2. Fetch everything else IN PARALLEL
       const serieNum = profileData?.serie ? parseInt(profileData.serie) : null;
 
-      // Build fase query (determina fase ativa por datas, nao pelo campo 'ativo')
+      // Build fase query. Com F2_ALUNO_FASE_TRILHA ligado, a fase vem da TRILHA
+      // da turma (igual ao professor), via RPC fase_atual_do_aluno(): resolve a
+      // Casa da vez e buscamos a fase DELA (sem filtro de data). Isso torna a
+      // trilha a fonte unica de "fase atual" pra TODAS as abas do aluno (header,
+      // missoes, capitulo...), conserta o desalinhamento data x trilha. Sem flag,
+      // ou se a trilha nao resolver, cai na fase por datas (comportamento atual).
       const hojeDate = hojeBrasil();
+      let intelTrilha: number | null = null;
+      if (F2_ALUNO_FASE_TRILHA) {
+        try {
+          const { data: rpcFase } = await (
+            supabase as unknown as { rpc: (fn: string) => Promise<{ data: unknown }> }
+          ).rpc('fase_atual_do_aluno');
+          if (Array.isArray(rpcFase) && rpcFase.length > 0) {
+            intelTrilha = (rpcFase[0] as { inteligencia_id?: number }).inteligencia_id ?? null;
+          }
+        } catch {
+          /* cai na fase por data */
+        }
+      }
+
       let faseQuery = supabase
         .from('fases')
         .select('id, numero_fase, semana_atual, data_inicio, data_fim, inteligencia:inteligencias!inteligencia_id(id, nome, codigo, emoji, cor_hex)')
-        .eq('institution_id', profileData.institution_id)
-        .lte('data_inicio', hojeDate)
-        .gte('data_fim', hojeDate);
+        .eq('institution_id', profileData.institution_id);
+      if (intelTrilha != null) {
+        faseQuery = faseQuery.eq('inteligencia_id', intelTrilha);
+      } else {
+        faseQuery = faseQuery.lte('data_inicio', hojeDate).gte('data_fim', hojeDate);
+      }
       if (profileData.segmento) faseQuery = faseQuery.or(`segmento.eq.${profileData.segmento},segmento.is.null`);
       if (serieNum) faseQuery = faseQuery.or(`serie.eq.${serieNum},serie.is.null`);
 
