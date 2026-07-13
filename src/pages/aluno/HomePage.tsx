@@ -8,6 +8,7 @@ import { useFaseAtualAluno } from '@/hooks/useFaseAtualAluno';
 import { useCapituloHome } from '@/hooks/useCapituloHome';
 import { F2_ALUNO_FASE_TRILHA } from '@/config/f2AlunoFase';
 import { F2_ALUNO_HOME_NOVA } from '@/config/f2AlunoHomeNova';
+import { F2_ALUNO_TOUR } from '@/config/f2AlunoTour';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { supabase } from '@/integrations/supabase/client';
 import { Progress } from '@/components/ui/progress';
@@ -170,13 +171,16 @@ const HomePage = () => {
     staleTime: 120000,
   });
 
-  // Onboarding: mostra uma vez para cada aluno (chave versionada)
+  // Onboarding ANTIGO: mostra uma vez para cada aluno (chave versionada).
+  // Substituido pelo tour novo (AlunoTour, no header) quando F2_ALUNO_TOUR liga:
+  // nesse caso o modal antigo nunca dispara, evitando dois pop-ups de inicializacao.
   const onboardingKey = `arboria_onboarding_v2_${profile?.id}`;
   const [showOnboarding, setShowOnboarding] = useState(false);
   // Drawer de utilidades da HomeNova (check-in, avisos, relatos, cross-im, etc.)
   const [utilAberto, setUtilAberto] = useState(false);
 
   useEffect(() => {
+    if (F2_ALUNO_TOUR) return; // tour novo assume a inicializacao
     if (!profile?.id) return;
     if (!localStorage.getItem(onboardingKey)) {
       setShowOnboarding(true);

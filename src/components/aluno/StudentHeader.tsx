@@ -1,8 +1,11 @@
-import { Bell } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Bell, HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useStudent } from '@/contexts/StudentContext';
 import { useFaseAtualAluno } from '@/hooks/useFaseAtualAluno';
 import { F2_ALUNO_FASE_TRILHA } from '@/config/f2AlunoFase';
+import { F2_ALUNO_TOUR } from '@/config/f2AlunoTour';
+import AlunoTour from '@/pages/aluno/AlunoTour';
 
 interface StudentHeaderProps {
   notificationCount?: number;
@@ -14,6 +17,18 @@ const StudentHeader = ({ notificationCount = 0 }: StudentHeaderProps) => {
   const { data: faseTrilha } = useFaseAtualAluno();
   const inicial = (profile?.nome || profile?.full_name || '?').trim().charAt(0).toUpperCase();
 
+  // Tour imersivo (Help): "?" no lugar do sino + auto-surge na 1a vez.
+  const [tourAberto, setTourAberto] = useState(false);
+  const casaColor = casa?.cor_hex || '#a78bfa';
+  useEffect(() => {
+    if (!F2_ALUNO_TOUR || !profile?.id) return;
+    const key = `arboria_tour_v1_${profile.id}`;
+    if (!localStorage.getItem(key)) {
+      setTourAberto(true);
+      localStorage.setItem(key, '1');
+    }
+  }, [profile?.id]);
+
   // Alinha a fase do header a TRILHA (flag on) com fallback pra fase por data.
   // Mesmo criterio da home, pra header e card da casa nunca divergirem.
   const usaTrilha = F2_ALUNO_FASE_TRILHA && !!faseTrilha;
@@ -23,6 +38,7 @@ const StudentHeader = ({ notificationCount = 0 }: StudentHeaderProps) => {
     : faseAtual?.inteligencia?.cor_hex || '#fff';
 
   return (
+    <>
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#1A1A2E] border-b border-violet-500/10" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
       <div className="flex flex-col px-4 py-2 max-w-lg mx-auto">
         {/* Linha 1: Logo + Fase + Notificações */}
@@ -56,15 +72,25 @@ const StudentHeader = ({ notificationCount = 0 }: StudentHeaderProps) => {
               </div>
             ) : null}
             
-            {/* Sino */}
-            <button className="relative p-1 text-white/60 hover:text-white transition-colors">
-              <Bell className="w-5 h-5" />
-              {notificationCount > 0 && (
-                <span className="absolute top-0 right-0 min-w-[14px] h-3.5 px-1 flex items-center justify-center text-[9px] font-bold text-white bg-red-500 rounded-full">
-                  {notificationCount > 99 ? '99+' : notificationCount}
-                </span>
-              )}
-            </button>
+            {/* "?" do tour (no lugar do sino) ou o sino, conforme o flag */}
+            {F2_ALUNO_TOUR ? (
+              <button
+                onClick={() => setTourAberto(true)}
+                className="p-1 text-white/60 hover:text-white transition-colors"
+                aria-label="Como o Arboria funciona"
+              >
+                <HelpCircle className="w-5 h-5" />
+              </button>
+            ) : (
+              <button className="relative p-1 text-white/60 hover:text-white transition-colors">
+                <Bell className="w-5 h-5" />
+                {notificationCount > 0 && (
+                  <span className="absolute top-0 right-0 min-w-[14px] h-3.5 px-1 flex items-center justify-center text-[9px] font-bold text-white bg-red-500 rounded-full">
+                    {notificationCount > 99 ? '99+' : notificationCount}
+                  </span>
+                )}
+              </button>
+            )}
 
             {/* Avatar -> Perfil */}
             <button
@@ -86,6 +112,10 @@ const StudentHeader = ({ notificationCount = 0 }: StudentHeaderProps) => {
         )}
       </div>
     </header>
+    {F2_ALUNO_TOUR && tourAberto && (
+      <AlunoTour casaColor={casaColor} onFechar={() => setTourAberto(false)} />
+    )}
+    </>
   );
 };
 
