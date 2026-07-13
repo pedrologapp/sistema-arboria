@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, MessageCircle, Hash, Users, Lock } from 'lucide-react';
+import { Search, MessageCircle, Hash, Users, Lock, AtSign, Crown, Megaphone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { F2_ALUNO_VISOR_NOVO } from '@/config/f2AlunoVisorNovo';
 import { useStudent } from '@/contexts/StudentContext';
 import { Input } from '@/components/ui/input';
 import { getStatusOnline } from '@/utils/statusOnline';
@@ -312,6 +313,35 @@ const ChatPage = () => {
     }
   };
 
+  // ── Visor novo: nome de exibicao do canal (titulo limpo, sem hashtag) ──
+  const getNomeCanalNovo = (canal: any) => {
+    switch (canal.tipo) {
+      case 'mentoria': return 'Mentoria';
+      case 'lideranca_casa': return 'Lideranca';
+      case 'conselho_lideres': return 'Conselho dos lideres';
+      case 'escola_avisos': return 'Avisos da escola';
+      case 'escola_geral': return 'Geral da escola';
+      default: return canal.nome || 'Canal';
+    }
+  };
+
+  // ── Visor novo: linha de previa do canal (sem query nova; usa descricao/tipo) ──
+  const getPreviewCanalNovo = (canal: any, locked: boolean) => {
+    if (locked) {
+      if (canal.tipo === 'conselho_lideres') return 'So para lideres de casa';
+      return 'So para lideres e coordenadores';
+    }
+    if (canal.descricao) return canal.descricao;
+    switch (canal.tipo) {
+      case 'mentoria': return 'Conversa com o mentor da casa';
+      case 'lideranca_casa': return 'So para lideres e coordenadores';
+      case 'conselho_lideres': return 'So para lideres de casa';
+      case 'escola_avisos': return 'Comunicados da escola';
+      case 'escola_geral': return 'Conversa geral da escola';
+      default: return 'Canal da casa';
+    }
+  };
+
   const CanalRow = ({ canal, locked = false, onLockedClick, hashColor = 'text-white/30' }: { canal: any; locked?: boolean; onLockedClick?: () => void; hashColor?: string }) => {
     const naoLidas = mensagensNaoLidas[canal.id] || 0;
     return (
@@ -416,6 +446,203 @@ const ChatPage = () => {
   const accentColor = casaColor || casa?.cor_hex || '#a78bfa';
   const accentRgb = hexToRgb(accentColor) || '167, 139, 250';
   const scifiVars = { '--sf-accent': accentColor, '--sf-accent-rgb': accentRgb } as CSSProperties;
+
+  // ═══════════════════════════════════════
+  // VISOR NOVO (atras do flag F2_ALUNO_VISOR_NOVO)
+  // Re-renderiza os MESMOS dados e regras de acesso no layout do mockup.
+  // Nao cria query nova nem afrouxa gating: canais bloqueados seguem
+  // apagados + cadeado, com o mesmo onLockedClick de hoje.
+  // ═══════════════════════════════════════
+  if (F2_ALUNO_VISOR_NOVO) {
+    const accentTint = /^#[0-9a-f]{6}$/i.test(accentColor) ? `${accentColor}22` : 'rgba(255,255,255,.06)';
+
+    const CanalRowNovo = ({ canal, locked = false, onLockedClick, icon }: { canal: any; locked?: boolean; onLockedClick?: () => void; icon: JSX.Element }) => {
+      const naoLidas = mensagensNaoLidas[canal.id] || 0;
+      return (
+        <button
+          onClick={() => (locked ? onLockedClick?.() : navigate(`/aluno/chat/canal/${canal.id}`))}
+          className={cn(
+            'w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-left border border-white/[0.08] bg-white/[0.035] transition-all',
+            locked ? 'opacity-60' : 'hover:bg-white/[0.06] active:scale-[0.99]'
+          )}
+        >
+          <div className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0" style={{ backgroundColor: accentTint, color: accentColor }}>
+            {icon}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-semibold text-white truncate">{getNomeCanalNovo(canal)}</p>
+            <p className="text-[11px] text-white/40 truncate">{getPreviewCanalNovo(canal, locked)}</p>
+          </div>
+          {locked && <Lock className="w-3.5 h-3.5 text-white/30 shrink-0" />}
+          {!locked && naoLidas > 0 && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: accentColor }} />}
+        </button>
+      );
+    };
+
+    // Canais da casa em GRADE (2 colunas). Mesmas regras de gating do CanalRowNovo.
+    const CanalCardNovo = ({ canal, locked = false, onLockedClick, icon }: { canal: any; locked?: boolean; onLockedClick?: () => void; icon: JSX.Element }) => {
+      const naoLidas = mensagensNaoLidas[canal.id] || 0;
+      return (
+        <button
+          onClick={() => (locked ? onLockedClick?.() : navigate(`/aluno/chat/canal/${canal.id}`))}
+          className={cn(
+            'flex flex-col gap-2.5 p-3.5 rounded-2xl text-left border border-white/[0.08] bg-white/[0.035] transition-all min-h-[96px]',
+            locked ? 'opacity-60' : 'hover:bg-white/[0.06] active:scale-[0.98]'
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0" style={{ backgroundColor: accentTint, color: accentColor }}>
+              {icon}
+            </div>
+            {locked ? (
+              <Lock className="w-3.5 h-3.5 text-white/30 shrink-0" />
+            ) : (
+              naoLidas > 0 && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: accentColor }} />
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="text-[13px] font-semibold text-white truncate">{getNomeCanalNovo(canal)}</p>
+            <p className="text-[11px] text-white/40 truncate">{getPreviewCanalNovo(canal, locked)}</p>
+          </div>
+        </button>
+      );
+    };
+
+    const DmRowNovo = ({ membro, badge = false }: { membro: any; badge?: boolean }) => {
+      const label = membro._label as string | undefined;
+      const inicial = (membro.nome || membro.full_name || '?').charAt(0).toUpperCase();
+      const serieTxt = membro.serie ? `${membro.serie.replace(/\D/g, '')}º${membro.turma || ''}` : '';
+      const preview = label || (serieTxt ? `Membro da casa · ${serieTxt}` : 'Membro da casa');
+      return (
+        <button
+          onClick={() => iniciarConversa(membro.id)}
+          className="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-left border border-white/[0.08] bg-white/[0.035] hover:bg-white/[0.06] active:scale-[0.99] transition-all"
+        >
+          <div className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 overflow-hidden bg-white/[0.06] text-white/70 text-[12px] font-bold">
+            {membro.avatar_url ? <img src={membro.avatar_url} alt="" className="w-full h-full object-cover" /> : inicial}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-semibold text-white truncate">{getNomeCurto(membro)}</p>
+            <p className="text-[11px] text-white/40 truncate">{preview}</p>
+          </div>
+          {badge && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: accentColor }} />}
+        </button>
+      );
+    };
+
+    // DMs no visor novo: MESMAS pessoas e MESMAS regras que o layout atual.
+    const cargoLabel: Record<string, string> = { lider: 'Lider da casa', vice: 'Vice-lider', coordenador: 'Coordenador', embaixador: 'Embaixador' };
+    const dmMentor = mentorCasa ? [{ ...mentorCasa, _label: 'Mentor da casa' }] : [];
+    const dmLideranca = filteredLideranca.map((m) => {
+      const cargo = m.cargos_casa?.find((c: any) => c.ativo)?.cargo;
+      return { ...m, _label: cargoLabel[cargo] || 'Lideranca' };
+    });
+    // Buscando: mostra TODOS os membros que casam; sem busca, so os 6 primeiros.
+    const buscando = termo.length > 0;
+    const dmMembrosVisiveis = buscando ? filteredMembros : filteredMembros.slice(0, 6);
+    const dmMentorFiltrado = buscando
+      ? dmMentor.filter((m) => (m.full_name || m.nome || '').toLowerCase().includes(termo))
+      : dmMentor;
+    const dmLista = [...dmMentorFiltrado, ...dmLideranca, ...dmMembrosVisiveis];
+
+    return (
+      <div className="p-4 pb-24 space-y-4">
+        {/* Titulo */}
+        <div className="flex items-center justify-between pt-1">
+          <h1 className="font-serif text-[22px] font-semibold text-white">Conversas</h1>
+          <div className="flex items-center gap-1.5 text-white/40 text-[11px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+            {membrosOnline} online
+          </div>
+        </div>
+
+        {/* Busca de membros */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar membro"
+            className="w-full pl-9 pr-3 py-2.5 rounded-2xl bg-white/[0.04] border border-white/[0.08] text-[13px] text-white placeholder-white/30 focus:outline-none focus:border-white/20"
+          />
+        </div>
+
+        {/* Canais da casa */}
+        {!buscando && (
+        <div className="space-y-2">
+          <p className="text-[10px] tracking-[0.28em] uppercase text-white/30 px-0.5">Canais da casa</p>
+          <div className="grid grid-cols-2 gap-2">
+            {canaisCasa.map((canal) => (
+              <CanalCardNovo
+                key={canal.id}
+                canal={canal}
+                icon={canal.tipo === 'mentoria' ? <AtSign className="w-4 h-4" /> : <Hash className="w-4 h-4" />}
+              />
+            ))}
+            {canalLideranca && (
+              <CanalCardNovo
+                canal={canalLideranca}
+                locked={!isLiderancaCasa}
+                onLockedClick={() => setShowLiderancaLockedModal(true)}
+                icon={<Crown className="w-4 h-4" />}
+              />
+            )}
+            {canalConselho && (
+              <CanalCardNovo
+                canal={canalConselho}
+                locked={!isLider}
+                onLockedClick={() => setShowLockedModal(true)}
+                icon={<Crown className="w-4 h-4" />}
+              />
+            )}
+          </div>
+        </div>
+        )}
+
+        {/* Escola */}
+        {!buscando && canaisEscola.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-[10px] tracking-[0.28em] uppercase text-white/30 px-0.5">Escola</p>
+            <div className="space-y-2">
+              {canaisEscola.map((canal) => (
+                <CanalRowNovo key={canal.id} canal={canal} icon={<Megaphone className="w-4 h-4" />} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Mensagens (DMs) / resultados da busca */}
+        <div className="space-y-2">
+          <p className="text-[10px] tracking-[0.28em] uppercase text-white/30 px-0.5">
+            {buscando ? 'Membros' : 'Mensagens'}
+          </p>
+          <div className="space-y-2">
+            {dmLista.map((m) => (
+              <DmRowNovo key={m.id} membro={m} badge={dmNaoLidaIds.has(m.id)} />
+            ))}
+            {!buscando && filteredMembros.length > dmMembrosVisiveis.length && (
+              <button
+                onClick={() => navigate('/aluno/chat/membros')}
+                className="w-full py-2.5 text-[11px] text-white/40 hover:text-white/70 transition-colors"
+              >
+                Ver todos os {membrosSemCargo.length} membros
+              </button>
+            )}
+            {dmLista.length === 0 && (
+              <p className="text-[12px] text-white/30 px-0.5 py-2">
+                {buscando ? 'Nenhum membro encontrado.' : 'Ainda nao ha conversas por aqui.'}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Modais de canal bloqueado (mesmo gating de hoje) */}
+        <ConselhoLideresLocked isOpen={showLockedModal} onClose={() => setShowLockedModal(false)} />
+        <LiderancaCasaLocked isOpen={showLiderancaLockedModal} onClose={() => setShowLiderancaLockedModal(false)} />
+      </div>
+    );
+  }
 
   return (
     <div className="scifi p-4 space-y-5 pb-24" style={scifiVars}>

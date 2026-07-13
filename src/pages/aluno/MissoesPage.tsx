@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { agoraBrasil } from '@/utils/timezone';
 import { useStudent } from '@/contexts/StudentContext';
 import { F2_ALUNO_FASE_TRILHA } from '@/config/f2AlunoFase';
+import { F2_ALUNO_VISOR_NOVO } from '@/config/f2AlunoVisorNovo';
 import { cn } from '@/lib/utils';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -117,6 +118,8 @@ const MissoesPage = () => {
   const [questsCapitulo, setQuestsCapitulo] = useState<Quest[]>([]);
   const [concluidas, setConcluidas] = useState<Concluida[]>([]);
   const [filtroConcluidas, setFiltroConcluidas] = useState<string>('todas');
+  // Segmento da aba nova (atras do flag F2_ALUNO_VISOR_NOVO). Inerte com flag off.
+  const [segNovo, setSegNovo] = useState<'ativas' | 'concluidas'>('ativas');
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -599,6 +602,243 @@ const MissoesPage = () => {
   const accentColor = casa?.cor_hex || '#a78bfa';
   const accentRgb = hexToRgb(accentColor) || '167, 139, 250';
   const scifiVars = { '--sf-accent': accentColor, '--sf-accent-rgb': accentRgb } as CSSProperties;
+
+  // ================= VISOR NOVO (atras do flag F2_ALUNO_VISOR_NOVO) =================
+  // Reproduz a aba "Missoes" do mockup aprovado (aluno_abas_proposta.html): titulo
+  // serif, abas Ativas/Concluidas, secao "Do capitulo" em card destacado e secao
+  // "Da fase" como lista com chip de status. Reaproveita os MESMOS dados de hoje
+  // (questsFase, questsCapitulo, concluidas); nenhuma query nova. Sem semanas.
+  // Desligada, cai no return de sempre abaixo (nenhuma regressao).
+  if (F2_ALUNO_VISOR_NOVO) {
+    const casaColor = accentColor;
+    const fmtPrazo = (iso: string) =>
+      new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+
+    const subtitulo = (q: Quest) => {
+      const partes: string[] = [];
+      if (q.legenda) partes.push(q.legenda);
+      if (q.prazo) partes.push(`até ${fmtPrazo(q.prazo)}`);
+      return partes.join(' · ');
+    };
+
+    // Chip de status. "A fazer" usa a cor da casa (acento); os demais, cores fixas
+    // do mockup (enviada ambar, aprovada verde, refazer vermelho suave).
+    const renderChip = (status: StatusQuest | 'aprovada') => {
+      const base = 'shrink-0 text-[9.5px] font-bold uppercase tracking-[0.04em] px-2 py-[3px] rounded-md';
+      if (status === 'disponivel') {
+        return (
+          <span className={base} style={{ color: casaColor, backgroundColor: `${casaColor}28` }}>
+            A fazer
+          </span>
+        );
+      }
+      if (status === 'enviada') {
+        return <span className={cn(base, 'text-[#F0C97F]')} style={{ backgroundColor: 'rgba(245,158,11,0.14)' }}>Enviada</span>;
+      }
+      if (status === 'aprovada') {
+        return <span className={cn(base, 'text-[#7FE3C1]')} style={{ backgroundColor: 'rgba(16,185,129,0.15)' }}>Aprovada</span>;
+      }
+      return <span className={cn(base, 'text-[#F0A17F]')} style={{ backgroundColor: 'rgba(224,72,59,0.16)' }}>Refazer</span>;
+    };
+
+    const lbl = 'text-[9.5px] tracking-[0.28em] uppercase text-white/30 px-0.5';
+
+    return (
+      <div className="scifi min-h-screen px-5 py-6 pb-24" style={scifiVars}>
+        {/* Cabecalho: titulo serif + refresh discreto */}
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="font-serif text-[22px] font-semibold text-white leading-tight">Missões</h1>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors text-white/40 hover:text-white disabled:opacity-50"
+          >
+            <RefreshCw className={cn('w-4 h-4', refreshing && 'animate-spin')} />
+          </button>
+        </div>
+
+        {/* Abas Ativas / Concluidas (segtabs do mockup) */}
+        <div className="flex gap-5 text-[13px] mb-5">
+          <button
+            onClick={() => setSegNovo('ativas')}
+            className={cn(
+              'pb-1 transition-colors',
+              segNovo === 'ativas' ? 'text-white font-semibold' : 'text-white/35'
+            )}
+            style={segNovo === 'ativas' ? { borderBottom: `2px solid ${casaColor}` } : undefined}
+          >
+            Ativas
+          </button>
+          <button
+            onClick={() => setSegNovo('concluidas')}
+            className={cn(
+              'pb-1 transition-colors',
+              segNovo === 'concluidas' ? 'text-white font-semibold' : 'text-white/35'
+            )}
+            style={segNovo === 'concluidas' ? { borderBottom: `2px solid ${casaColor}` } : undefined}
+          >
+            Concluídas
+          </button>
+        </div>
+
+        {segNovo === 'ativas' ? (
+          <div className="space-y-3">
+            {/* Do capitulo: sempre presente; placeholder quando vazia */}
+            {questsCapitulo.length > 0 ? (
+              <>
+                <div className={lbl}>Do capítulo</div>
+                {questsCapitulo.map(q => (
+                  <button
+                    key={q.id}
+                    onClick={() => navigate(`/aluno/missoes/${q.id}`)}
+                    className="relative overflow-hidden rounded-2xl border border-white/[0.10] bg-white/[0.035] w-full text-left p-3.5 active:scale-[0.99] transition-transform"
+                  >
+                    <div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{ background: `radial-gradient(120% 90% at 50% -20%, ${casaColor}2e 0%, transparent 60%)` }}
+                    />
+                    <div className="relative z-10">
+                      <div className="text-[9.5px] tracking-[0.30em] uppercase text-white/30">
+                        {q.legenda || 'Missão do capítulo'}
+                      </div>
+                      <h3 className="font-serif text-[17px] font-semibold text-white mt-1.5 leading-tight">
+                        {q.titulo}
+                      </h3>
+                      <div className="flex items-center justify-between gap-2 mt-3">
+                        {renderChip(q.status)}
+                        {(q.pontos != null || q.prazo) && (
+                          <span className="text-[10.5px] font-semibold text-amber-400 tabular-nums">
+                            {q.pontos != null && <>vale {q.pontos} pts</>}
+                            {q.pontos != null && q.prazo && ' · '}
+                            {q.prazo && <>até {fmtPrazo(q.prazo)}</>}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </>
+            ) : (
+              <>
+                <div className={lbl}>Do capítulo</div>
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-3.5">
+                  <div className="text-[13px] font-semibold text-white">Em breve</div>
+                  <p className="text-[11px] text-white/35 mt-1">A missão do capítulo aparece aqui quando o professor liberar.</p>
+                </div>
+              </>
+            )}
+
+            {/* Da fase: sempre presente; placeholder quando vazia */}
+            {questsFase.length > 0 ? (
+              <>
+                <div className={cn(lbl, 'pt-1')}>
+                  Da fase{faseAtual ? ` · ${faseAtual.inteligencia.nome}` : ''}
+                </div>
+                {questsFase.map(q => (
+                  <button
+                    key={q.id}
+                    onClick={() => navigate(`/aluno/missoes/${q.id}`)}
+                    className="rounded-2xl border border-white/[0.08] bg-white/[0.035] w-full text-left active:scale-[0.99] transition-transform"
+                  >
+                    <div className="flex items-center gap-3 px-3.5 py-3">
+                      <div className="flex-1 min-w-0">
+                        <b className="text-[12.5px] font-semibold text-white block truncate">{q.titulo}</b>
+                        {subtitulo(q) && (
+                          <p className="text-[10.5px] text-white/30 mt-0.5 truncate">{subtitulo(q)}</p>
+                        )}
+                      </div>
+                      {renderChip(q.status)}
+                    </div>
+                  </button>
+                ))}
+              </>
+            ) : (
+              <>
+                <div className={cn(lbl, 'pt-1')}>
+                  Da fase{faseAtual ? ` · ${faseAtual.inteligencia.nome}` : ''}
+                </div>
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-3.5">
+                  <div className="text-[13px] font-semibold text-white">Em breve será liberada</div>
+                  <p className="text-[11px] text-white/35 mt-1">As missões desta fase são liberadas conforme a turma avança.</p>
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {concluidas.length === 0 ? (
+              <div className="flex flex-col items-center justify-center text-center py-12 px-4">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
+                  style={{ backgroundColor: `${casaColor}24` }}
+                >
+                  <Trophy className="w-5 h-5" style={{ color: casaColor }} />
+                </div>
+                <h3 className="font-medium text-[14px] text-white mb-1">Nenhuma missão concluída ainda</h3>
+                <p className="text-[12px] text-white/35 max-w-[240px]">Suas missões aprovadas aparecem aqui.</p>
+              </div>
+            ) : (
+              <>
+                {/* Filtro por fase / capitulo */}
+                {gruposConcluidas.length > 1 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <button
+                      onClick={() => setFiltroConcluidas('todas')}
+                      className={cn(
+                        'text-[12px] font-medium px-3 py-1 rounded-full border transition-colors',
+                        filtroConcluidas === 'todas' ? 'text-white' : 'text-white/40 border-white/[0.08]'
+                      )}
+                      style={filtroConcluidas === 'todas' ? { color: casaColor, borderColor: `${casaColor}4d`, backgroundColor: `${casaColor}18` } : undefined}
+                    >
+                      Todas
+                    </button>
+                    {gruposConcluidas.map(g => (
+                      <button
+                        key={g.key}
+                        onClick={() => setFiltroConcluidas(g.key)}
+                        className={cn(
+                          'inline-flex items-center gap-1.5 text-[12px] font-medium px-3 py-1 rounded-full border transition-colors',
+                          filtroConcluidas === g.key ? 'text-white' : 'text-white/40 border-white/[0.08]'
+                        )}
+                        style={filtroConcluidas === g.key ? { color: casaColor, borderColor: `${casaColor}4d`, backgroundColor: `${casaColor}18` } : undefined}
+                      >
+                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: g.cor }} />
+                        {g.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {concluidasFiltradas.map(c => (
+                  <div
+                    key={c.id}
+                    className="rounded-2xl border border-white/[0.08] bg-white/[0.035]"
+                  >
+                    <div className="flex items-center gap-3 px-3.5 py-3">
+                      <div className="flex-1 min-w-0">
+                        <b className="text-[12.5px] font-semibold text-white block truncate">{c.titulo}</b>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: c.grupoCor }} />
+                          <span className="text-[10.5px] text-white/30 truncate">{c.grupoLabel}</span>
+                        </div>
+                      </div>
+                      {c.tipo === 'feita' ? (
+                        renderChip('aprovada')
+                      ) : (
+                        <span className="shrink-0 text-[9.5px] font-bold uppercase tracking-[0.04em] px-2 py-[3px] rounded-md text-white/40 bg-white/[0.06]">
+                          Não entregue
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="scifi min-h-screen px-5 py-6 pb-24" style={scifiVars}>

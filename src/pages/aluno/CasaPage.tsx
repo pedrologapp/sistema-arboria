@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import DesafioDiarioCard from '@/components/aluno/DesafioDiarioCard';
 import { useDesafioDiario } from '@/hooks/useDesafioDiario';
+import { F2_ALUNO_VISOR_NOVO } from '@/config/f2AlunoVisorNovo';
 import '@/styles/missoes-scifi.css';
 
 // "#a78bfa" -> "167, 139, 250" (alimenta a var --sf-accent-rgb com a cor da casa)
@@ -27,15 +28,18 @@ interface MembroComCargo {
   serie: string | null;
 }
 
+// Essencia da Casa: PERTENCIMENTO SEM ROTULO (decisao do Fundador 12/07). Quem
+// fala e sempre a Casa, nunca o aluno. Proibido "voce pensa assim", exclusividade
+// ("so"), teto, ou ausencia nos outros. Voz acolhedora aprovada.
 const descricoesPadrao: Record<string, string> = {
-  'linguistica': 'A gente pensa em palavras. Antes de fazer qualquer coisa, já estamos montando frases na cabeça. Contar histórias, convencer, explicar: isso é natural pra quem é da Linguística. Onde outros ficam em silêncio, a gente cria significado.',
-  'logico-matematica': 'A gente enxerga padrões onde os outros veem bagunça. Conexões, lógica e soluções aparecem na nossa cabeça antes mesmo de procurar. Pensar com estratégia e resolver problemas é o que nos move.',
-  'espacial': 'A gente vê coisas que ainda não existem. Formas, espaços e possibilidades ganham vida na nossa mente antes de existirem no mundo real. Enquanto outros pensam em palavras, a gente pensa em imagens.',
-  'musical': 'A gente sente o mundo pelo som. Ritmo, melodia, harmonia, tudo isso chega pra gente de um jeito que os outros não percebem. Não é só ouvir música: é pensar e sentir através dela.',
-  'corporal-cinestesica': 'A gente pensa em movimento. Nosso corpo não só executa: ele descobre, cria e resolve. Enquanto outros ficam planejando, a gente já está em ação, aprendendo fazendo.',
-  'naturalista': 'A gente lê o mundo como um sistema vivo. Classificar, organizar, perceber o que conecta as coisas: isso é natural pra quem é da Naturalista. Onde outros veem desordem, a gente encontra padrões.',
-  'interpessoal': 'A gente entende as pessoas antes mesmo delas falarem. Perceber o que alguém está sentindo, o clima de um grupo, quem precisa de ajuda: isso é natural pra quem é da Interpessoal. Conectar e liderar é o nosso jeito.',
-  'intrapessoal': 'A gente se conhece de verdade. Saber o que está sentindo, por que está sentindo e usar isso pra tomar decisões melhores: isso é natural pra quem é da Intrapessoal. A gente sabe quem é, e isso muda tudo.',
+  'linguistica': 'Aqui, a palavra tem casa. Contar, explicar, convencer, dar nome ao que ainda não tinha nome: nesta Casa esse jeito circula à vontade e encontra gente que funciona parecido com você. É um lugar pra usar isso sem precisar explicar por quê.',
+  'logico-matematica': 'Aqui, o raciocínio tem casa. Achar o padrão, montar a estratégia, ligar uma coisa na outra até o problema abrir: nesta Casa esse jeito circula à vontade e encontra gente que funciona parecido com você. É um lugar pra pensar em voz alta sem precisar pedir licença.',
+  'espacial': 'Aqui, a imaginação tem lugar. Ver a forma antes dela existir, girar as coisas na cabeça, pensar em imagens, projetar o que ainda é só ideia: nesta Casa esse jeito é natural e você encontra gente que enxerga parecido. Um lugar pra desenhar por fora o que você já vê por dentro.',
+  'musical': 'Aqui, o som tem casa. Sentir o ritmo, seguir a melodia, pensar através daquilo que se escuta: nesta Casa esse jeito circula à vontade e encontra gente que funciona parecido com você. É um lugar pra deixar a música ser um modo de entender, e não só de ouvir.',
+  'corporal-cinestesica': 'Aqui, o movimento tem lugar. Aprender fazendo, resolver com as mãos, deixar o corpo achar o caminho antes das palavras: nesta Casa esse jeito é celebrado e você encontra gente que funciona parecido com você. Um lugar pra pôr a mão na massa e descobrir no gesto.',
+  'naturalista': 'Aqui, a observação tem casa. Reparar no detalhe, classificar, ler o mundo como um sistema vivo, perceber o que conecta uma coisa à outra: nesta Casa esse jeito circula à vontade e encontra gente que funciona parecido com você. Um lugar pra olhar de perto sem ter pressa.',
+  'interpessoal': 'Aqui, a leitura das pessoas tem lugar. Sentir o clima de um grupo, aproximar quem estava distante, cuidar, puxar os outros junto: nesta Casa esse jeito é natural e você encontra gente que funciona parecido com você. Um lugar pra estar entre pessoas e fazer disso um caminho.',
+  'intrapessoal': 'Aqui, o mundo de dentro tem casa. Saber o que sente e por quê, entender as próprias razões, decidir a partir disso: nesta Casa esse jeito circula à vontade e encontra gente que funciona parecido com você. Um lugar pra ouvir a si mesmo sem achar que é pouco.',
 };
 
 const cargoLabels: Record<string, string> = {
@@ -52,6 +56,7 @@ const CasaPage = () => {
   const [pontosTotaisCasa, setPontosTotaisCasa] = useState(0);
   const [posicaoCasa, setPosicaoCasa] = useState(0);
   const [totalCasas, setTotalCasas] = useState(8);
+  const [rankingCasas, setRankingCasas] = useState<{ casa_id: number; casa_nome: string; posicao: number; total_pontos: number }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [desafiosData, setDesafiosData] = useState<any[]>([]);
@@ -83,7 +88,7 @@ const CasaPage = () => {
           .maybeSingle(),
         supabase
           .from('ranking_casas')
-          .select('casa_id')
+          .select('casa_id, casa_nome, posicao, total_pontos')
           .eq('institution_id', profile.institution_id),
         supabase
           .from('ranking_alunos_por_casa')
@@ -106,6 +111,14 @@ const CasaPage = () => {
       setPontosTotaisCasa(rankingCasaRes.data?.total_pontos || 0);
       setPosicaoCasa(rankingCasaRes.data?.posicao || 0);
       setTotalCasas(rankingTodasRes.data?.length || 8);
+      setRankingCasas(
+        (rankingTodasRes.data || []).map(r => ({
+          casa_id: Number(r.casa_id),
+          casa_nome: r.casa_nome || '',
+          posicao: Number(r.posicao) || 0,
+          total_pontos: Number(r.total_pontos) || 0,
+        }))
+      );
 
       // Buscar avatars e serie
       const alunoIds = membrosRes.data?.map(m => m.aluno_id).filter(Boolean) || [];
@@ -204,6 +217,272 @@ const CasaPage = () => {
   const accentColor = casaColor || casa?.cor_hex || '#a78bfa';
   const accentRgb = hexToRgb(accentColor) || '167, 139, 250';
   const scifiVars = { '--sf-accent': accentColor, '--sf-accent-rgb': accentRgb } as CSSProperties;
+
+  // ==========================================================================
+  // VISOR NOVO (atras da flag F2_ALUNO_VISOR_NOVO). Espirito: a Casa como
+  // coletivo e pertencimento, nao o ranking pessoal do aluno. Sem placar
+  // individual, sem "sua contribuicao", sem top5 individual.
+  // ==========================================================================
+  if (F2_ALUNO_VISOR_NOVO) {
+    const membrosOrdenados = [...membros].sort(sortBySerie);
+    const inicial = (nome: string | null | undefined) => (nome || '?').trim().charAt(0).toUpperCase();
+    const avatarPile = membrosOrdenados.slice(0, 3);
+    const restantes = Math.max(totalMembros - avatarPile.length, 0);
+
+    const lbl = 'text-[9.5px] tracking-[0.28em] uppercase text-white/30 px-0.5';
+
+    // Essencia curada (pertencimento sem rotulo) tem prioridade no visor novo.
+    // O texto antigo em inteligencias.descricao (linguagem de identidade) fica so
+    // no caminho antigo; nao mexemos no banco (texto de crianca = gate do Fundador).
+    const essencia = descricoesPadrao[codigoNormalizado] || descricao;
+
+    // Placar em torcida: a Casa como time. Meta = encostar na Casa imediatamente
+    // acima no ranking (ou, se lider, manter distancia da que vem logo atras).
+    // Degrada de forma silenciosa se faltar dado pra computar o gap.
+    const casaAcima = posicaoCasa > 1 ? rankingCasas.find(c => c.posicao === posicaoCasa - 1) : undefined;
+    const casaAbaixo = rankingCasas.find(c => c.posicao === posicaoCasa + 1);
+    const gapAcima = casaAcima ? casaAcima.total_pontos - pontosTotaisCasa : null;
+    const gapAbaixo = casaAbaixo ? pontosTotaisCasa - casaAbaixo.total_pontos : null;
+    const metaNode =
+      posicaoCasa === 1
+        ? casaAbaixo && gapAbaixo != null && gapAbaixo > 0
+          ? (
+            <>
+              A Casa está na frente. A <b style={{ color: accentColor }}>Casa {casaAbaixo.casa_nome}</b> está{' '}
+              <b className="tabular-nums" style={{ color: accentColor }}>{gapAbaixo.toLocaleString('pt-BR')}</b> pontos atrás, bora manter a distância.
+            </>
+          )
+          : null
+        : posicaoCasa > 1 && casaAcima && gapAcima != null && gapAcima > 0
+          ? (
+            <>
+              Faltam <b className="tabular-nums" style={{ color: accentColor }}>{gapAcima.toLocaleString('pt-BR')}</b> pontos pra encostar na{' '}
+              <b style={{ color: accentColor }}>Casa {casaAcima.casa_nome}</b>.
+            </>
+          )
+          : null;
+
+    return (
+      <div className="scifi min-h-screen px-5 py-6 pb-24" style={scifiVars}>
+        {/* Cabecalho: titulo serif + refresh discreto (igual Missoes) */}
+        <div className="flex items-center justify-between mb-5">
+          <h1 className="font-serif text-[22px] font-semibold text-white leading-tight">Casa</h1>
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors text-white/40 hover:text-white disabled:opacity-50"
+          >
+            <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
+          </button>
+        </div>
+
+        {/* Identidade da casa: brasao no halo + nome + essencia */}
+        <div className="flex flex-col items-center text-center gap-3 mb-6">
+          <div
+            className="w-28 h-28 rounded-full flex items-center justify-center"
+            style={{
+              background: `radial-gradient(circle, ${accentColor}55, transparent 70%)`,
+              boxShadow: `inset 0 0 0 1px ${accentColor}88, 0 0 40px ${accentColor}33`,
+            }}
+          >
+            <CasaBrasao
+              brasaoUrl={casa.brasao_url}
+              emoji={casa.emoji}
+              nome={casa.nome}
+              size="medium"
+              className="w-16 h-16"
+            />
+          </div>
+          <h2 className="font-serif text-2xl font-semibold" style={{ color: accentColor }}>
+            Casa {casa.nome}
+          </h2>
+          {essencia && (
+            <p className="text-white/55 text-sm leading-relaxed max-w-md px-2">{essencia}</p>
+          )}
+        </div>
+
+        {/* Placar em torcida: a Casa como time, nunca o ranking do aluno */}
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] px-4 pt-4 pb-3.5 mb-6">
+          {/* Forca da Casa */}
+          <div className="flex items-baseline justify-between gap-2.5">
+            <span className="text-[9.5px] tracking-[0.26em] uppercase text-white/30 shrink-0">Força da Casa</span>
+            <span className="font-serif text-[30px] font-semibold text-white leading-none tabular-nums">
+              {pontosTotaisCasa.toLocaleString('pt-BR')}
+              <span className="font-sans text-[13px] font-semibold ml-1" style={{ color: accentColor }}>pts</span>
+            </span>
+          </div>
+          <p className="text-[11.5px] text-white/35 mt-1.5">Tudo que cada membro entrega soma aqui.</p>
+
+          <div className="h-px bg-white/[0.08] my-3.5" />
+
+          {/* Onde estamos hoje */}
+          <div className="flex items-center justify-between gap-2.5">
+            <span className="text-[9.5px] tracking-[0.22em] uppercase text-white/25 shrink-0">Onde estamos hoje</span>
+            <span className="text-sm font-semibold text-white tabular-nums">
+              {posicaoCasa ? `${posicaoCasa}ª` : '--'}
+              <span className="text-white/35 font-normal text-xs ml-1">entre {totalCasas} Casas</span>
+            </span>
+          </div>
+
+          {/* Meta: encostar na Casa de cima (ou manter distancia, se lider) */}
+          {metaNode && (
+            <div
+              className="rounded-xl px-3 py-2.5 mt-3"
+              style={{ backgroundColor: `${accentColor}18`, border: `1px solid ${accentColor}33` }}
+            >
+              <p className="text-[13px] text-white/85 leading-snug">{metaNode}</p>
+            </div>
+          )}
+
+          {/* Convite (a Casa chama, coletivo) */}
+          <p
+            className="text-center text-[12.5px] italic mt-4 pt-3.5 border-t border-white/[0.08]"
+            style={{ color: accentColor }}
+          >
+            Cada missão sua levanta a Casa.
+          </p>
+        </div>
+
+        {/* Quem conduz: lider + coordenadores */}
+        <div className="mb-6">
+          <h3 className={cn(lbl, 'mb-3')}>Quem conduz</h3>
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] overflow-hidden">
+            {lider ? (
+              <div className="flex items-center gap-3 py-3 px-3.5">
+                <div className="w-9 h-9 rounded-full bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
+                  {lider.avatar_url ? (
+                    <img src={lider.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-sm font-semibold" style={{ color: accentColor }}>
+                      {inicial(lider.aluno_nome)}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm text-white truncate">{lider.aluno_nome}</div>
+                  <div className="text-[11px] text-white/40">
+                    Lider da casa{lider.serie ? ` · ${lider.serie.replace(' Ano', '')}` : ''}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="py-3 px-3.5 text-sm text-white/30">Nenhum lider eleito ainda</div>
+            )}
+            {coordenadores.length > 0 && (
+              <>
+                {(expandirCoords ? coordenadores : coordenadores.slice(0, 4)).map(coord => (
+                  <div key={coord.aluno_id} className="flex items-center gap-3 py-2.5 px-3.5 border-t border-white/[0.05]">
+                    <div className="w-7 h-7 rounded-full bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
+                      {coord.avatar_url ? (
+                        <img src={coord.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xs text-white/60">{inicial(coord.aluno_nome)}</span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[13px] text-white/80 truncate">{coord.aluno_nome}</div>
+                      <div className="text-[10px] text-white/35">
+                        Coordenador{coord.serie ? ` · ${coord.serie.replace(' Ano', '')}` : ''}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {coordenadores.length > 4 && (
+                  <button
+                    onClick={() => setExpandirCoords(!expandirCoords)}
+                    className="w-full py-2.5 px-3.5 text-xs text-white/40 text-center hover:bg-white/[0.04] transition-colors flex items-center justify-center gap-1 border-t border-white/[0.05]"
+                  >
+                    {expandirCoords ? (
+                      <>Recolher <ChevronUp className="w-3 h-3" /></>
+                    ) : (
+                      <>Ver mais {coordenadores.length - 4} <ChevronDown className="w-3 h-3" /></>
+                    )}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* A casa: pilha de avatares + ver todos */}
+        <div>
+          <h3 className={cn(lbl, 'mb-3')}>A casa</h3>
+          <button
+            onClick={() => setExpandirMembros(!expandirMembros)}
+            className="rounded-2xl border border-white/[0.08] bg-white/[0.035] w-full flex items-center gap-3 p-3.5 active:scale-[0.99] transition-transform"
+          >
+            <div className="flex items-center pl-1.5">
+              {avatarPile.map(m => (
+                <div
+                  key={m.aluno_id}
+                  className="w-8 h-8 rounded-full bg-white/10 overflow-hidden -ml-1.5 flex items-center justify-center"
+                  style={{ border: '2px solid #15152A' }}
+                >
+                  {m.avatar_url ? (
+                    <img src={m.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[11px] text-white/60">{inicial(m.aluno_nome)}</span>
+                  )}
+                </div>
+              ))}
+              {restantes > 0 && (
+                <div
+                  className="w-8 h-8 rounded-full bg-white/10 -ml-1.5 flex items-center justify-center text-[10px] text-white/60"
+                  style={{ border: '2px solid #15152A' }}
+                >
+                  +{restantes}
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0 text-left ml-2">
+              <div className="text-sm text-white/85">{totalMembros} membros</div>
+              <div className="text-[11px] text-white/40">Ver todos</div>
+            </div>
+            {expandirMembros ? (
+              <ChevronUp className="w-4 h-4 text-white/40" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-white/40" />
+            )}
+          </button>
+
+          {expandirMembros && (
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] overflow-hidden mt-2">
+              {membrosOrdenados.map((membro, idx) => {
+                const isMe = membro.aluno_id === user?.id;
+                return (
+                  <div
+                    key={membro.aluno_id}
+                    className={cn(
+                      'flex items-center gap-3 py-2.5 px-3.5',
+                      isMe && 'bg-white/[0.04]',
+                      idx > 0 && 'border-t border-white/[0.05]'
+                    )}
+                  >
+                    <div className="w-7 h-7 rounded-full bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
+                      {membro.avatar_url ? (
+                        <img src={membro.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xs text-white/60">{inicial(membro.aluno_nome)}</span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className={cn('text-sm truncate block', isMe ? 'text-white font-medium' : 'text-white/80')}>
+                        {membro.aluno_nome}
+                        {isMe && <span className="text-white/30 ml-1">(voce)</span>}
+                      </span>
+                    </div>
+                    {membro.serie && (
+                      <span className="text-[11px] text-white/30 shrink-0">{membro.serie.replace(' Ano', '')}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="scifi p-4 space-y-5 pb-24" style={scifiVars}>

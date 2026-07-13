@@ -1,14 +1,17 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect, type CSSProperties } from 'react';
-import { Target, MessageCircle, Shield, User, Star, AlertTriangle, Trophy, Sparkles, Bell, HelpCircle, Send, Loader2, LayoutDashboard } from 'lucide-react';
+import { Target, MessageCircle, Shield, User, Star, AlertTriangle, Trophy, Sparkles, Bell, HelpCircle, Send, Loader2, LayoutDashboard, ArrowRight, ChevronRight, Smile } from 'lucide-react';
 import { useStudent } from '@/contexts/StudentContext';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
 import { useFaseAtualAluno } from '@/hooks/useFaseAtualAluno';
+import { useCapituloHome } from '@/hooks/useCapituloHome';
 import { F2_ALUNO_FASE_TRILHA } from '@/config/f2AlunoFase';
+import { F2_ALUNO_HOME_NOVA } from '@/config/f2AlunoHomeNova';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { supabase } from '@/integrations/supabase/client';
 import { Progress } from '@/components/ui/progress';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { hojeBrasil } from '@/utils/timezone';
 import { CROSS_IM_COMBINACOES, MECANISMOS_CASA } from '@/data/crossImData';
 import OnboardingModal from '@/components/aluno/OnboardingModal';
@@ -107,6 +110,8 @@ const HomePage = () => {
   // Passo 1 reforma aluno F2: fase atual pela trilha (atras do flag). null quando
   // flag off ou sem fase -> cai no faseAtual (por data) de sempre.
   const { data: faseTrilha } = useFaseAtualAluno();
+  // Capitulo ativo da fase da turma (so roda com F2_ALUNO_HOME_NOVA ligado).
+  const { capitulo: capituloHome } = useCapituloHome();
 
   const { data: cargo } = useQuery({
     queryKey: ['cargo-aluno', profile?.id, casa?.id],
@@ -168,6 +173,8 @@ const HomePage = () => {
   // Onboarding: mostra uma vez para cada aluno (chave versionada)
   const onboardingKey = `arboria_onboarding_v2_${profile?.id}`;
   const [showOnboarding, setShowOnboarding] = useState(false);
+  // Drawer de utilidades da HomeNova (check-in, avisos, relatos, cross-im, etc.)
+  const [utilAberto, setUtilAberto] = useState(false);
 
   useEffect(() => {
     if (!profile?.id) return;
@@ -215,6 +222,291 @@ const HomePage = () => {
   const accentColor = casaColor || casa?.cor_hex || '#a78bfa';
   const accentRgb = hexToRgb(accentColor) || '167, 139, 250';
   const scifiVars = { '--sf-accent': accentColor, '--sf-accent-rgb': accentRgb } as CSSProperties;
+
+  // Texto coletivo da fase da turma (nunca a identidade do aluno): pela trilha
+  // quando resolvida, senao pela fase por data. Reaproveita a regra do card atual.
+  const nomeFaseTurma = F2_ALUNO_FASE_TRILHA && faseTrilha
+    ? faseTrilha.nome
+    : faseAtual?.inteligencia?.nome ?? null;
+
+  // ================= HOME NOVA (atras do flag F2_ALUNO_HOME_NOVA) =================
+  // Reproduz o mockup aprovado (home_aluno_proposta.html): jornada no topo,
+  // capitulo em destaque, missoes, e um unico cartao compacto que abre um drawer
+  // com as utilidades (check-in, avisos, relatos, cross-im). Reaproveita os mesmos
+  // dados e subcomponentes de hoje. Desligada, cai no return abaixo (home de hoje).
+  if (F2_ALUNO_HOME_NOVA) {
+    const dataHoje = (() => {
+      const s = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    })();
+
+    return (
+      <div className="scifi p-4 space-y-3.5 pb-24" style={scifiVars}>
+        <OnboardingModal
+          isOpen={showOnboarding}
+          onClose={fecharOnboarding}
+          casaNome={casa?.nome}
+          casaCor={casaColor}
+          casaBrasaoUrl={casa?.brasao_url}
+          casaEmoji={casa?.emoji}
+          alunoNome={firstName}
+        />
+
+        {/* 1. Saudacao (mockup .hi) */}
+        <div className="pt-1 animate-fade-in">
+          <h1 className="font-serif text-[21px] font-semibold text-white leading-tight">
+            {getSaudacao()}, {firstName}
+          </h1>
+          <p className="text-[12.5px] text-white/30 mt-1">{dataHoje}</p>
+        </div>
+
+        {/* 2. Urgencia (mesmo cartao de hoje) */}
+        {missoesUrgentes && missoesUrgentes.length > 0 && (
+          <button
+            onClick={() => {
+              if (missoesUrgentes.length === 1) {
+                navigate(`/aluno/missoes/${missoesUrgentes[0].id}`);
+              } else {
+                navigate('/aluno/missoes');
+              }
+            }}
+            data-augmented-ui="tl-clip br-clip border"
+            className="sf-card w-full p-3 text-left active:scale-[0.98] transition-transform"
+            style={{ ['--aug-border-bg' as string]: 'rgba(245, 158, 11, 0.4)' }}
+          >
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+              <div className="flex-1">
+                <p className="text-white text-sm font-medium">
+                  {missoesUrgentes.length === 1 ? '1 missão para entregar' : `${missoesUrgentes.length} missões para entregar`}
+                </p>
+                <p className="text-amber-400/60 text-[10px] mt-0.5">
+                  {missoesUrgentes.length === 1 ? 'Toque para abrir' : 'Prazo encerrando'}
+                </p>
+              </div>
+            </div>
+          </button>
+        )}
+
+        {/* Aluno sem casa */}
+        {!casa && (
+          <div className="rounded-[18px] border border-white/[0.08] bg-white/[0.035] animate-fade-in p-5 text-center">
+            <p className="text-white font-medium">Bem-vindo ao Arboria!</p>
+            <p className="text-white/40 text-sm mt-2">Você ainda não foi alocado a uma casa. Aguarde seu professor: em breve você vai descobrir a qual casa pertence!</p>
+          </div>
+        )}
+
+        {/* 3. Cartao de JORNADA (mockup .journey) */}
+        {casa && (
+          <div
+            className="relative overflow-hidden rounded-[18px] bg-white/[0.035] animate-fade-in animate-fade-in-d1"
+            style={{ border: `1px solid ${casaColor}47` }}
+          >
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: `linear-gradient(155deg, ${casaColor}29 0%, transparent 55%)` }}
+            />
+            <div className="relative z-10 p-4">
+              {/* linha: crest + casa + cargo */}
+              <div className="flex items-center gap-[14px]">
+                <div
+                  className="shrink-0 w-[52px] h-[52px] rounded-full flex items-center justify-center"
+                  style={{
+                    background: `radial-gradient(circle, ${casaColor}59 0%, transparent 70%)`,
+                    boxShadow: `inset 0 0 0 1px ${casaColor}80, 0 0 26px ${casaColor}38`,
+                  }}
+                >
+                  <CasaBrasao brasaoUrl={casa.brasao_url} emoji={casa.emoji} nome={casa.nome} size="small" className="w-10 h-10" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-serif text-[20px] font-semibold leading-tight" style={{ color: casaColor }}>
+                    Casa {casa.nome}
+                  </h3>
+                  <p className="text-[12px] text-white/50 mt-0.5">
+                    {cargo || 'Membro'}
+                    {profile?.serie && ` · ${profile.serie}° ${profile.turma || ''}`}
+                  </p>
+                </div>
+              </div>
+
+              {/* divisor fino */}
+              <div className="h-px my-[14px]" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} />
+
+              {/* linha coletiva da fase */}
+              {nomeFaseTurma ? (
+                <p className="text-[12.5px] text-white/50 leading-relaxed">
+                  A turma está na fase da Casa <span className="text-white/85 font-semibold">{nomeFaseTurma}</span>
+                </p>
+              ) : (
+                <p className="text-[12.5px] text-white/40">A turma ainda não iniciou uma fase.</p>
+              )}
+
+              {/* placar discreto e apagado */}
+              <p className="mt-3 text-[11.5px] text-white/30 tabular-nums">
+                <span className="text-white/50 font-semibold">{ranking?.total_pontos || 0}</span> pontos
+                {' · '}
+                <span className="text-white/50 font-semibold">{ranking?.posicao_na_casa || '--'}º</span> na casa
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* 4. Cartao do CAPITULO DA VEZ (mockup .cap). So renderiza se houver capitulo ativo. */}
+        {capituloHome && (
+          <button
+            onClick={() => navigate('/aluno/capitulo')}
+            className="relative overflow-hidden rounded-[18px] border border-white/[0.10] bg-white/[0.035] w-full text-left p-4 active:scale-[0.99] transition-transform animate-fade-in animate-fade-in-d2"
+          >
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: `radial-gradient(120% 90% at 50% -20%, ${casaColor}2e 0%, transparent 60%)` }}
+            />
+            <div className="relative z-10">
+              <div className="text-[10px] tracking-[0.34em] uppercase text-white/30">Capítulo da vez</div>
+              <h3 className="font-serif text-[24px] font-semibold text-white mt-2 leading-tight">{capituloHome.nome}</h3>
+              {capituloHome.frase_ancora && (
+                <p className="font-serif italic text-[13px] mt-2 leading-[1.5]" style={{ color: casaColor }}>
+                  {capituloHome.frase_ancora}
+                </p>
+              )}
+
+              {(capituloHome.timeNome || capituloHome.dias !== null) && (
+                <div className="flex items-center justify-between gap-2.5 mt-[14px]">
+                  {capituloHome.timeNome ? (
+                    <span className="inline-flex items-center gap-[7px] text-[12px] text-white/50">
+                      Seu time
+                      <span
+                        className="px-[9px] py-[3px] rounded-full text-[10.5px] font-semibold"
+                        style={{ color: casaColor, backgroundColor: `${casaColor}24`, border: `1px solid ${casaColor}4d` }}
+                      >
+                        {capituloHome.timeNome}
+                      </span>
+                    </span>
+                  ) : (
+                    <span />
+                  )}
+                  {capituloHome.dias !== null && capituloHome.dias > 0 && (
+                    <span className="text-[11px] font-semibold text-amber-400">
+                      faltam {capituloHome.dias} {capituloHome.dias === 1 ? 'dia' : 'dias'}
+                    </span>
+                  )}
+                  {capituloHome.dias === 0 && (
+                    <span className="text-[11px] font-semibold text-amber-300 tracking-wider">É HOJE</span>
+                  )}
+                </div>
+              )}
+
+              {/* botao preenchido (mockup .cta) */}
+              <div
+                className="mt-[14px] flex items-center justify-center gap-2 rounded-[12px] py-3 text-white font-bold text-[13.5px]"
+                style={{ backgroundColor: casaColor }}
+              >
+                <span>Entrar no capítulo</span>
+                <ArrowRight className="w-[18px] h-[18px]" />
+              </div>
+            </div>
+          </button>
+        )}
+
+        {/* 5. Cartao de MISSOES (mockup .strip) */}
+        <button
+          onClick={() => navigate('/aluno/missoes')}
+          className="rounded-[18px] border border-white/[0.08] bg-white/[0.035] w-full text-left active:scale-[0.98] transition-transform animate-fade-in animate-fade-in-d2"
+        >
+          <div className="flex items-center gap-3 px-[15px] py-[13px]">
+            <div className="w-[38px] h-[38px] rounded-[11px] shrink-0 flex items-center justify-center" style={{ backgroundColor: `${casaColor}24` }}>
+              <Target className="w-[18px] h-[18px]" style={{ color: casaColor }} />
+            </div>
+            <div className="flex-1">
+              <p className="text-white font-semibold text-[13.5px]">Missões da Fase</p>
+              <p className="text-white/30 text-[11px] mt-0.5">
+                {nomeFaseTurma ?? 'Nenhuma fase ativa'}
+              </p>
+            </div>
+            {missoesPendentes > 0 && (
+              <span className="min-w-[20px] h-[20px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10.5px] font-bold px-1.5">
+                {missoesPendentes}
+              </span>
+            )}
+          </div>
+        </button>
+
+        {/* 6. Cartao SECUNDARIO compacto (mockup .secondary): abre o drawer de utilidades */}
+        <button
+          onClick={() => setUtilAberto(true)}
+          className="rounded-[18px] border border-white/[0.08] bg-white/[0.035] w-full text-left opacity-90 active:scale-[0.98] transition-transform animate-fade-in animate-fade-in-d3"
+        >
+          <div className="flex items-center gap-[10px] px-[14px] py-[11px]">
+            <div className="w-[30px] h-[30px] rounded-[9px] shrink-0 flex items-center justify-center bg-white/[0.05]">
+              <Smile className="w-[15px] h-[15px] text-white/50" />
+            </div>
+            <div className="flex-1">
+              <p className="text-[12.5px] font-semibold text-white/50">Como você está hoje?</p>
+              <p className="text-[10.5px] text-white/30 mt-0.5">Check-in do dia · avisos</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-white/30" />
+          </div>
+        </button>
+
+        {/* 7. Frase viva (mesma de hoje) */}
+        {frasesDisponiveis.length > 0 && (
+          <div className="animate-fade-in animate-fade-in-d5 text-center py-6 mb-4">
+            <p
+              className="text-lg italic leading-relaxed transition-all duration-400 px-4"
+              style={{
+                color: `${casaColor}90`,
+                opacity: fraseVisible ? 1 : 0,
+                transform: fraseVisible ? 'translateY(0)' : 'translateY(6px)',
+              }}
+            >
+              "{frasesDisponiveis[fraseIndex]}"
+            </p>
+          </div>
+        )}
+
+        {/* DRAWER de utilidades: mantem todas as funcoes, so saem da tela principal */}
+        <Drawer open={utilAberto} onOpenChange={setUtilAberto}>
+          <DrawerContent className="bg-[#1A1A2E] border-white/10 text-white max-h-[92vh]">
+            <DrawerHeader className="text-left">
+              <DrawerTitle className="font-serif text-white">Como você está hoje?</DrawerTitle>
+              <DrawerDescription className="text-white/50">
+                Check-in do dia, avisos e um espaço para você falar.
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="scifi px-4 pb-8 space-y-4 overflow-y-auto" style={scifiVars}>
+              {isLiderOuCoord && resumoCasa && (
+                <button
+                  onClick={() => { setUtilAberto(false); navigate('/aluno/dashboard'); }}
+                  data-augmented-ui="tl-clip br-clip border"
+                  className="sf-card w-full p-3.5 text-left active:scale-[0.98] transition-transform"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl" style={{ backgroundColor: `${casaColor}20` }}>
+                      <Shield className="w-5 h-5" style={{ color: casaColor }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-white font-medium text-sm">Painel de {cargo}</p>
+                      <p className="text-white/40 text-[11px] mt-0.5">
+                        {resumoCasa.comEntrega}/{resumoCasa.totalMembros} membros com entregas · {resumoCasa.pctEntrega}%
+                      </p>
+                    </div>
+                    <div className="text-lg font-bold" style={{ color: casaColor }}>{resumoCasa.pctEntrega}%</div>
+                  </div>
+                </button>
+              )}
+
+              <CheckInEmocional userId={profile?.id} casaColor={casaColor} />
+              <AvisosCard />
+              <CrossImHomeCard casaCodigo={casa?.codigo} faseCodigo={faseAtual?.inteligencia?.codigo} corCasa={casaColor} />
+              {casa?.codigo && <DesafioDiarioLembrete casaCodigo={casa.codigo} casaColor={casaColor} />}
+              <CampoRelato userId={profile?.id} institutionId={profile?.institution_id} faseId={faseAtual?.id} semana={semanaAtual} casaColor={casaColor} />
+              <RelatarProblemaCard userId={profile?.id} institutionId={profile?.institution_id} />
+            </div>
+          </DrawerContent>
+        </Drawer>
+      </div>
+    );
+  }
 
   return (
     <div className="scifi p-4 space-y-4 pb-24" style={scifiVars}>

@@ -361,10 +361,7 @@ const CapituloPage = () => {
           <div className="text-xs tracking-[0.4em] uppercase text-white/30 mb-3">Capítulo</div>
           <h2 className="font-serif text-xl text-white/70 mb-4">Aguardando liberação do professor</h2>
         </div>
-        <div
-          data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
-          className="sf-panel p-5 text-center max-w-xs mx-auto"
-        >
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-5 text-center max-w-xs mx-auto">
           <p className="text-sm text-white/60 leading-relaxed">
             Seu professor vai te alocar em um time. Quando isso acontecer, a Arena abre aqui pra você.
           </p>
