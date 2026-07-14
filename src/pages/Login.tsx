@@ -8,9 +8,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Lock, Eye, EyeOff, ArrowLeft, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { F2_COORDENADOR } from "@/config/f2Coordenador";
 
 const Login = () => {
-  const { user, isAdmin, isSuperAdmin, signIn, isLoading: authLoading, adminCheckComplete } = useAuth();
+  const { user, isAdmin, isSuperAdmin, isCoordenador, signIn, isLoading: authLoading, adminCheckComplete } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -45,7 +46,13 @@ const Login = () => {
           navigate('/admin/monitor');
           return;
         }
-        
+
+        // Coordenador (papel novo, só leitura): visor dark. Atrás do flag.
+        if (F2_COORDENADOR && isCoordenador) {
+          navigate('/coordenador');
+          return;
+        }
+
         // Check if user is professor
         const { data: professorRole } = await supabase
           .from('user_roles')
@@ -65,7 +72,7 @@ const Login = () => {
     };
     
     checkRoleAndRedirect();
-  }, [user, isAdmin, isSuperAdmin, authLoading, adminCheckComplete, navigate]);
+  }, [user, isAdmin, isSuperAdmin, isCoordenador, authLoading, adminCheckComplete, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

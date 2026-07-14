@@ -6,10 +6,12 @@ interface ProtectedRouteProps {
   requireAdmin?: boolean;
   /** Painel Arboria (/arboria): só o dono da plataforma */
   requireSuperAdmin?: boolean;
+  /** Visor do Coordenador (/coordenador): só o papel coordenador (leitura, por segmento) */
+  requireCoordenador?: boolean;
 }
 
-const ProtectedRoute = ({ children, requireAdmin = false, requireSuperAdmin = false }: ProtectedRouteProps) => {
-  const { user, isAdmin, isSuperAdmin, isLoading } = useAuth();
+const ProtectedRoute = ({ children, requireAdmin = false, requireSuperAdmin = false, requireCoordenador = false }: ProtectedRouteProps) => {
+  const { user, isAdmin, isSuperAdmin, isCoordenador, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -28,6 +30,10 @@ const ProtectedRoute = ({ children, requireAdmin = false, requireSuperAdmin = fa
   }
 
   if (requireSuperAdmin && !isSuperAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (requireCoordenador && !isCoordenador) {
     return <Navigate to="/dashboard" replace />;
   }
 

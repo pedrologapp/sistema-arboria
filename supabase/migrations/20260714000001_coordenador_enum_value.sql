@@ -1,0 +1,26 @@
+-- =============================================================
+-- COORDENADOR (parte A de 3): valor de enum, ISOLADO.
+--
+-- PAPEL: coordenador = perfil SO-LEITURA por SEGMENTO. Ve o painel das
+-- turmas do(s) seu(s) segmento(s) na instituicao e o texto das observacoes
+-- (mural). NAO escreve observacao, NAO edita trilha, NAO gerencia nada.
+-- (A eventual escrita de Diario proprio do coordenador e trilho SEPARADO,
+-- objeto de outro parecer do Riscos; NAO entra aqui.)
+--
+-- POR QUE UM ARQUIVO SO PRA ISTO: no Postgres, um valor novo de enum criado
+-- com ALTER TYPE ... ADD VALUE NAO pode ser USADO na MESMA transacao em que
+-- foi adicionado. Como o Supabase CLI roda cada migration numa transacao, o
+-- valor 'coordenador' precisa NASCER numa migration propria (esta), e so as
+-- migrations SEGUINTES (B e C) podem referencia-lo em policies/funcoes.
+--
+-- ADITIVO: apenas acrescenta um rotulo ao enum. Nao altera dados, nao
+-- reescreve o enum, nao mexe em nenhuma linha. Idempotente (IF NOT EXISTS).
+--
+-- ROLLBACK: Postgres NAO suporta remover um valor de enum. O "rollback"
+-- pratico e nao conceder o papel a ninguem (a tabela user_roles nao passa a
+-- ter linhas 'coordenador' so por este ALTER). Sem papel concedido, o valor
+-- fica inerte. Revisao de Riscos + Dados antes do merge (mudanca de esquema).
+-- NAO alimenta IA.
+-- =============================================================
+
+ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'coordenador';

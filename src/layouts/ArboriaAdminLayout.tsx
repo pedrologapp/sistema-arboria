@@ -1,8 +1,9 @@
 import { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Library, KeyRound, Route, BookOpen, LogOut } from 'lucide-react';
+import { LayoutDashboard, Library, KeyRound, Route, BookOpen, Users, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { infantilTheme as t } from '@/styles/infantilTheme';
+import { F2_COORDENADOR } from '@/config/f2Coordenador';
 
 /**
  * PAINEL ARBORIA: o painel do DONO da plataforma (papel super_admin).
@@ -20,6 +21,9 @@ const ArboriaAdminLayout = ({ children }: { children: ReactNode }) => {
     { label: 'Capítulos', path: '/arboria/capitulos', icon: <BookOpen size={16} strokeWidth={1.75} /> },
     { label: 'Definição de Trilha', path: '/arboria/trilha', icon: <Route size={16} strokeWidth={1.75} /> },
     { label: 'Logins de professores', path: '/arboria/logins-professores', icon: <KeyRound size={16} strokeWidth={1.75} /> },
+    ...(F2_COORDENADOR
+      ? [{ label: 'Coordenadores', path: '/arboria/coordenadores', icon: <Users size={16} strokeWidth={1.75} /> }]
+      : []),
   ];
 
   return (

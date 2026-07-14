@@ -13,6 +13,7 @@ import ProfessorProtectedRoute from "@/components/ProfessorProtectedRoute";
 import { AdminLayout } from "@/components/AdminLayout";
 import StudentLayout from "@/layouts/StudentLayout";
 import ProfessorLayout from "@/layouts/ProfessorLayout";
+import { F2_COORDENADOR } from "@/config/f2Coordenador";
 
 // Páginas essenciais (eager, sempre carregam)
 import Index from "./pages/Index";
@@ -30,6 +31,19 @@ const ProfessorShell = () => (
       <Outlet />
     </ProfessorLayout>
   </ProfessorProtectedRoute>
+);
+
+/**
+ * Shell do COORDENADOR: guarda (papel coordenador) + layout DARK montados UMA
+ * vez; as 3 abas trocam só o <Outlet/>. Espelha o ProfessorShell. Toda a árvore
+ * fica atrás do flag F2_COORDENADOR (default false).
+ */
+const CoordenadorShell = () => (
+  <ProtectedRoute requireCoordenador>
+    <CoordenadorLayout>
+      <Outlet />
+    </CoordenadorLayout>
+  </ProtectedRoute>
 );
 
 // Páginas comuns (lazy)
@@ -109,6 +123,7 @@ const ArboriaVisaoPage = lazy(() => import("./pages/arboria/ArboriaVisaoPage"));
 const ArboriaAtividadesPage = lazy(() => import("./pages/arboria/ArboriaAtividadesPage"));
 const ArboriaCapitulosPage = lazy(() => import("./pages/arboria/ArboriaCapitulosPage"));
 const ArboriaTrilhaPage = lazy(() => import("./pages/arboria/ArboriaTrilhaPage"));
+const ArboriaCoordenadoresPage = lazy(() => import("./pages/arboria/ArboriaCoordenadoresPage"));
 const MissoesSeriePage = lazy(() => import("./pages/professor/MissoesSeriePage"));
 const MissoesSemanaPage = lazy(() => import("./pages/professor/MissoesSemanaPage"));
 const MissoesListaPage = lazy(() => import("./pages/professor/MissoesListaPage"));
@@ -129,6 +144,15 @@ const ReportesMentorPage = lazy(() => import("./pages/professor/ReportesMentorPa
 const CapituloProfessorPage = lazy(() => import("./pages/professor/CapituloProfessorPage"));
 const F2CapituloPage = lazy(() => import("./pages/professor/f2/F2CapituloPage"));
 const F2LinhaAnoPage = lazy(() => import("./pages/professor/f2/F2LinhaAnoPage"));
+
+// Coordenador pages (lazy) — visor DARK, atrás do flag F2_COORDENADOR
+const CoordenadorLayout = lazy(() => import("./layouts/CoordenadorLayout"));
+const CoordenadorGestaoPage = lazy(() => import("./pages/coordenador/CoordenadorGestaoPage"));
+const CoordenadorTurmaPage = lazy(() => import("./pages/coordenador/CoordenadorTurmaPage"));
+const CoordenadorAlunoPage = lazy(() => import("./pages/coordenador/CoordenadorAlunoPage"));
+const CoordenadorCasaPage = lazy(() => import("./pages/coordenador/CoordenadorCasaPage"));
+const CoordenadorInteligenciasPage = lazy(() => import("./pages/coordenador/CoordenadorInteligenciasPage"));
+const CoordenadorDiarioPage = lazy(() => import("./pages/coordenador/CoordenadorDiarioPage"));
 
 // Loading fallback
 const PageLoader = () => (
@@ -205,6 +229,15 @@ const App = () => (
                 </ArboriaAdminLayout>
               </ProtectedRoute>
             } />
+            {F2_COORDENADOR && (
+              <Route path="/arboria/coordenadores" element={
+                <ProtectedRoute requireSuperAdmin>
+                  <ArboriaAdminLayout>
+                    <ArboriaCoordenadoresPage />
+                  </ArboriaAdminLayout>
+                </ProtectedRoute>
+              } />
+            )}
 
             <Route path="/admin" element={<Navigate to="/admin/monitor" replace />} />
             <Route path="/admin/monitor" element={
@@ -416,6 +449,20 @@ const App = () => (
             <Route path="/professor/conteudo/inteligencia/:inteligenciaId" element={<ConteudoInteligenciaPage />} />
 
             </Route>
+
+            {/* Coordenador Routes (papel novo, LEITURA, DARK). Só existem com o
+                flag F2_COORDENADOR ligado; o acesso é guardado por requireCoordenador
+                e o ESCOPO das turmas é imposto no banco (RLS + coordenador_segmento). */}
+            {F2_COORDENADOR && (
+              <Route element={<CoordenadorShell />}>
+                <Route path="/coordenador" element={<CoordenadorGestaoPage />} />
+                <Route path="/coordenador/turma/:id" element={<CoordenadorTurmaPage />} />
+                <Route path="/coordenador/aluno/:id" element={<CoordenadorAlunoPage />} />
+                <Route path="/coordenador/casa/:id" element={<CoordenadorCasaPage />} />
+                <Route path="/coordenador/inteligencias" element={<CoordenadorInteligenciasPage />} />
+                <Route path="/coordenador/diario" element={<CoordenadorDiarioPage />} />
+              </Route>
+            )}
 
             {/* Aluno Routes */}
             <Route path="/aluno" element={<Navigate to="/aluno/home" replace />} />

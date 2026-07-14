@@ -8,6 +8,8 @@ interface AuthContextType {
   isAdmin: boolean;
   /** Dono da plataforma (papel super_admin): acessa o Painel Arboria (/arboria) */
   isSuperAdmin: boolean;
+  /** Coordenador pedagógico (papel coordenador): só LEITURA, escopo por segmento. Visor /coordenador. */
+  isCoordenador: boolean;
   isLoading: boolean;
   adminCheckComplete: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -34,6 +36,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isCoordenador, setIsCoordenador] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [adminCheckComplete, setAdminCheckComplete] = useState(false);
 
@@ -69,6 +72,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  const checkCoordenadorRole = async (userId: string) => {
+    try {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'coordenador' as never)
+        .maybeSingle();
+      return !!roleData;
+    } catch {
+      // Antes da migration do papel existir (enum app_role sem 'coordenador'),
+      // a consulta falha: sem drama, cai em false.
+      return false;
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -86,19 +105,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // Defer admin check with setTimeout to avoid deadlock
           setTimeout(async () => {
             if (!isMounted) return;
-            const [result, superResult] = await Promise.all([
+            const [result, superResult, coordResult] = await Promise.all([
               checkAdminRole(session.user.id),
               checkSuperAdminRole(session.user.id),
+              checkCoordenadorRole(session.user.id),
             ]);
             if (isMounted) {
               setIsAdmin(result);
               setIsSuperAdmin(superResult);
+              setIsCoordenador(coordResult);
               setAdminCheckComplete(true);
             }
           }, 0);
         } else if (event === 'SIGNED_OUT') {
           setIsAdmin(false);
           setIsSuperAdmin(false);
+          setIsCoordenador(false);
           setAdminCheckComplete(true);
         }
       }
@@ -112,13 +134,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        const [isAdminResult, isSuperResult] = await Promise.all([
+        const [isAdminResult, isSuperResult, isCoordResult] = await Promise.all([
           checkAdminRole(session.user.id),
           checkSuperAdminRole(session.user.id),
+          checkCoordenadorRole(session.user.id),
         ]);
         if (isMounted) {
           setIsAdmin(isAdminResult);
           setIsSuperAdmin(isSuperResult);
+          setIsCoordenador(isCoordResult);
           setAdminCheckComplete(true);
           setIsLoading(false);
         }
@@ -184,6 +208,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setUser(null);
     setIsAdmin(false);
     setIsSuperAdmin(false);
+    setIsCoordenador(false);
     setAdminCheckComplete(true);
   };
 
@@ -192,6 +217,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     session,
     isAdmin,
     isSuperAdmin,
+    isCoordenador,
     isLoading,
     adminCheckComplete,
     signIn,
