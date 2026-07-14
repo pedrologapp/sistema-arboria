@@ -19,6 +19,8 @@ import { agoraBrasil } from '@/utils/timezone';
 import { useStudent } from '@/contexts/StudentContext';
 import { F2_ALUNO_FASE_TRILHA } from '@/config/f2AlunoFase';
 import { F2_ALUNO_VISOR_NOVO } from '@/config/f2AlunoVisorNovo';
+import { F2_ALUNO_LOOP_V1 } from '@/config/f2AlunoLoopV1';
+import { F2_ALUNO_CONCLUIDAS_JORNADA } from '@/config/f2AlunoConcluidasJornada';
 import { cn } from '@/lib/utils';
 import { CasaBrasao } from '@/components/CasaBrasao';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -78,6 +80,7 @@ interface Concluida {
   grupoLabel: string;
   grupoCor: string;
   tipo: 'feita' | 'perdida';
+  data?: string | null;
 }
 
 const STATUS_META: Record<StatusQuest, { label: string; classes: string; Icon: LucideIcon }> = {
@@ -413,7 +416,7 @@ const MissoesPage = () => {
       // ---------- Concluídas (com grupo p/ filtro por fase) ----------
       const { data: aprovadas } = await supabase
         .from('entregas')
-        .select('id, pontos_concedidos, missao:missoes(titulo, capitulo_id, fase_id)')
+        .select('id, pontos_concedidos, data_avaliacao, missao:missoes(titulo, capitulo_id, fase_id)')
         .eq('aluno_id', profile.id)
         .eq('status', 'aprovada')
         .order('data_avaliacao', { ascending: false });
@@ -461,6 +464,7 @@ const MissoesPage = () => {
           grupoLabel,
           grupoCor,
           tipo: 'feita' as const,
+          data: e.data_avaliacao,
         };
       });
       setConcluidas([...concluidasArr, ...perdidas]);
@@ -633,7 +637,7 @@ const MissoesPage = () => {
         );
       }
       if (status === 'enviada') {
-        return <span className={cn(base, 'text-[#F0C97F]')} style={{ backgroundColor: 'rgba(245,158,11,0.14)' }}>Enviada</span>;
+        return <span className={cn(base, 'text-[#F0C97F]')} style={{ backgroundColor: 'rgba(245,158,11,0.14)' }}>{F2_ALUNO_LOOP_V1 ? 'Em análise' : 'Enviada'}</span>;
       }
       if (status === 'aprovada') {
         return <span className={cn(base, 'text-[#7FE3C1]')} style={{ backgroundColor: 'rgba(16,185,129,0.15)' }}>Aprovada</span>;
@@ -642,6 +646,36 @@ const MissoesPage = () => {
     };
 
     const lbl = 'text-[9.5px] tracking-[0.28em] uppercase text-white/30 px-0.5';
+
+    // Progresso (topo) + Jornada (Concluidas), atras de F2_ALUNO_CONCLUIDAS_JORNADA.
+    const totalFeitas = concluidas.filter(c => c.tipo === 'feita').length;
+    const faseAtualKey = faseAtual?.inteligencia?.id != null ? `f${faseAtual.inteligencia.id}` : null;
+    const estadoAtivo = (s: string) => (s === 'enviada' ? 'analise' : s === 'refazer' ? 'refazer' : 'a-fazer');
+    const itensJornada = [
+      ...concluidas.map(c => ({ id: c.id, titulo: c.titulo, grupoKey: c.grupoKey, estado: c.tipo === 'feita' ? 'feita' : 'perdida', data: c.data ?? null })),
+      ...questsFase.map(q => ({ id: `af-${q.id}`, titulo: q.titulo, grupoKey: faseAtualKey || 'fase', estado: estadoAtivo(q.status), data: null as string | null })),
+      ...questsCapitulo.map(q => ({ id: `ac-${q.id}`, titulo: q.titulo, grupoKey: 'capitulo', estado: estadoAtivo(q.status), data: null as string | null })),
+    ];
+    const grupoMeta = new Map<string, { key: string; label: string; cor: string }>();
+    gruposConcluidas.forEach(g => grupoMeta.set(g.key, { key: g.key, label: g.label, cor: g.cor }));
+    if (faseAtualKey && !grupoMeta.has(faseAtualKey) && faseAtual?.inteligencia) {
+      grupoMeta.set(faseAtualKey, { key: faseAtualKey, label: faseAtual.inteligencia.nome, cor: faseAtual.inteligencia.cor_hex || '#22C55E' });
+    }
+    if (itensJornada.some(i => i.grupoKey === 'capitulo') && !grupoMeta.has('capitulo')) {
+      grupoMeta.set('capitulo', { key: 'capitulo', label: 'Capítulo', cor: '#A78BFA' });
+    }
+    const gruposJornada = Array.from(grupoMeta.values())
+      .filter(g => itensJornada.some(i => i.grupoKey === g.key))
+      .sort((a, b) => (a.key === faseAtualKey ? -1 : b.key === faseAtualKey ? 1 : 0));
+    const gruposComFeitas = Array.from(grupoMeta.values())
+      .map(g => ({ ...g, feitas: concluidas.filter(c => c.grupoKey === g.key && c.tipo === 'feita').length }))
+      .filter(g => g.feitas > 0);
+    const legendaEstado = (it: { estado: string; data: string | null }) =>
+      it.estado === 'feita' ? (it.data ? `concluída · ${fmtPrazo(it.data)}` : 'concluída')
+      : it.estado === 'perdida' ? 'não entregue'
+      : it.estado === 'analise' ? 'em análise'
+      : it.estado === 'refazer' ? 'refazer'
+      : 'a fazer';
 
     return (
       <div className="scifi min-h-screen px-5 py-6 pb-24" style={scifiVars}>
@@ -656,6 +690,48 @@ const MissoesPage = () => {
             <RefreshCw className={cn('w-4 h-4', refreshing && 'animate-spin')} />
           </button>
         </div>
+
+        {/* Progresso pessoal, sempre visivel acima das abas (nunca ranking) */}
+        {F2_ALUNO_CONCLUIDAS_JORNADA && (
+          <div
+            className="rounded-2xl border border-white/[0.08] p-4 mb-4"
+            style={{ background: `linear-gradient(160deg, ${casaColor}1f, ${casaColor}05 70%)` }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-[54px] h-[54px] rounded-full flex items-center justify-center shrink-0"
+                style={{ backgroundColor: `${casaColor}28`, border: `1px solid ${casaColor}80` }}
+              >
+                <span className="font-serif text-[20px] text-white tabular-nums">{totalFeitas}</span>
+              </div>
+              <div className="min-w-0">
+                <div className="font-serif text-[16px] text-white leading-tight">Sua trilha este ano</div>
+                <div className="text-[11.5px] text-white/45 mt-0.5">
+                  {totalFeitas > 0
+                    ? `${totalFeitas} ${totalFeitas === 1 ? 'missão concluída' : 'missões concluídas'} até aqui`
+                    : 'Sua primeira missão começa a trilha'}
+                </div>
+              </div>
+            </div>
+            {gruposComFeitas.length > 0 && (
+              <>
+                <div className="flex gap-[3px] mt-3.5 h-[7px]">
+                  {gruposComFeitas.map(g => (
+                    <span key={g.key} className="block rounded-[3px]" style={{ flex: g.feitas, backgroundColor: g.cor }} />
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2.5">
+                  {gruposComFeitas.map(g => (
+                    <span key={g.key} className="inline-flex items-center gap-1.5 text-[10px] text-white/40">
+                      <i className="inline-block w-2 h-2 rounded-[2px]" style={{ backgroundColor: g.cor }} />
+                      {g.label}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Abas Ativas / Concluidas (segtabs do mockup) */}
         <div className="flex gap-5 text-[13px] mb-5">
@@ -766,7 +842,7 @@ const MissoesPage = () => {
           </div>
         ) : (
           <div className="space-y-2">
-            {concluidas.length === 0 ? (
+            {concluidas.length === 0 && !F2_ALUNO_CONCLUIDAS_JORNADA ? (
               <div className="flex flex-col items-center justify-center text-center py-12 px-4">
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
@@ -776,6 +852,74 @@ const MissoesPage = () => {
                 </div>
                 <h3 className="font-medium text-[14px] text-white mb-1">Nenhuma missão concluída ainda</h3>
                 <p className="text-[12px] text-white/35 max-w-[240px]">Suas missões aprovadas aparecem aqui.</p>
+              </div>
+            ) : F2_ALUNO_CONCLUIDAS_JORNADA ? (
+              <div className="pt-1">
+                {/* Trilha comecando: nada na jornada ainda */}
+                {itensJornada.length === 0 && (
+                  <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] px-4 py-6 text-center">
+                    <p className="text-[13px] text-white/60">Sua trilha está começando.</p>
+                    <p className="text-[11.5px] text-white/35 mt-1 max-w-[260px] mx-auto">
+                      As missões que você concluir aparecem aqui. As que passarem do prazo sem entrega aparecem como não entregue.
+                    </p>
+                  </div>
+                )}
+
+                {/* Agrupado pelas fases: concluidas, nao entregues e a fazer */}
+                {gruposJornada.map(g => {
+                  const itens = itensJornada.filter(i => i.grupoKey === g.key);
+                  const feitas = itens.filter(i => i.estado === 'feita').length;
+                  const ehAgora = faseAtualKey != null && g.key === faseAtualKey;
+                  return (
+                    <div key={g.key} className="mb-5">
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: g.cor }} />
+                        <span className="text-[10.5px] tracking-[0.12em] uppercase font-semibold" style={{ color: g.cor }}>
+                          {g.label}
+                        </span>
+                        <span className="text-[10px] text-white/25 ml-auto">
+                          {ehAgora ? 'agora' : `${feitas} ${feitas === 1 ? 'concluída' : 'concluídas'}`}
+                        </span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {itens.map(it => (
+                          <div
+                            key={it.id}
+                            className={cn(
+                              'flex items-center gap-3 px-3 py-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.035]',
+                              it.estado === 'perdida' && 'opacity-50'
+                            )}
+                          >
+                            {it.estado === 'feita' ? (
+                              <span
+                                className="w-[22px] h-[22px] rounded-full flex items-center justify-center shrink-0"
+                                style={{ backgroundColor: g.cor }}
+                              >
+                                <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="#12122A" strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M5 13l4 4L19 7" />
+                                </svg>
+                              </span>
+                            ) : it.estado === 'perdida' ? (
+                              <span className="w-[22px] h-[22px] rounded-full shrink-0 border border-dashed border-white/25" />
+                            ) : (
+                              <span className="w-[22px] h-[22px] rounded-full shrink-0" style={{ border: `1.5px solid ${g.cor}80` }} />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <b className="text-[12.5px] font-semibold text-white block truncate">{it.titulo}</b>
+                              <span className="text-[10.5px] text-white/30">{legendaEstado(it)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {itensJornada.length > 0 && (
+                  <div className="text-center text-[11px] text-white/30 italic mt-4">
+                    Cada missão fica guardada aqui, ano após ano.
+                  </div>
+                )}
               </div>
             ) : (
               <>

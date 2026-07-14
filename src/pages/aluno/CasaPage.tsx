@@ -10,6 +10,7 @@ import { CasaBrasao } from '@/components/CasaBrasao';
 import DesafioDiarioCard from '@/components/aluno/DesafioDiarioCard';
 import { useDesafioDiario } from '@/hooks/useDesafioDiario';
 import { F2_ALUNO_VISOR_NOVO } from '@/config/f2AlunoVisorNovo';
+import { F2_ALUNO_MURAL_CASA } from '@/config/f2AlunoMuralCasa';
 import '@/styles/missoes-scifi.css';
 
 // "#a78bfa" -> "167, 139, 250" (alimenta a var --sf-accent-rgb com a cor da casa)
@@ -71,6 +72,68 @@ const CasaPage = () => {
   const { desafio: desafioHoje, saudacao: saudacaoDesafio } = useDesafioDiario(desafiosData, casa?.codigo);
   const [expandirCoords, setExpandirCoords] = useState(false);
   const [expandirMembros, setExpandirMembros] = useState(false);
+
+  // ==========================================================================
+  // MURAL DA CASA (atras da flag F2_ALUNO_MURAL_CASA). Feed COLETIVO: missoes
+  // concluidas por membros, ordem cronologica. Fonte: pontos_gerais (tipo
+  // 'missao'), que o aluno pode ler por institution_id (RLS existente); assim
+  // vemos os feitos de TODA a Casa, sem tabela nova. entregas nao serve aqui:
+  // a RLS de aluno em entregas e "aluno_id = auth.uid()" (so as proprias).
+  // Doutrina: nada de pontos por pessoa, nada de posicao, so a linha do time.
+  // ==========================================================================
+  const { data: muralEventos = [] } = useQuery({
+    queryKey: ['mural-casa', casa?.id, profile?.institution_id],
+    enabled: F2_ALUNO_MURAL_CASA && F2_ALUNO_VISOR_NOVO && !!casa?.id && !!profile?.institution_id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pontos_gerais')
+        .select('id, created_at, aluno_id, missao_id, missao:missoes(titulo)')
+        .eq('casa_id', casa!.id)
+        .eq('institution_id', profile!.institution_id)
+        .eq('tipo', 'missao')
+        .not('missao_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(24);
+
+      if (error) throw error;
+
+      // Um evento por (aluno, missao): mantem o mais recente, evita repetir a
+      // mesma conclusao. Nao e contagem nem ranking, so dedupe da timeline.
+      const vistos = new Set<string>();
+      const eventos: { id: string; aluno_id: string; missaoTitulo: string }[] = [];
+      for (const row of data || []) {
+        const missao = Array.isArray(row.missao) ? row.missao[0] : row.missao;
+        const titulo = missao?.titulo;
+        if (!titulo || !row.aluno_id) continue;
+        const chave = `${row.aluno_id}|${row.missao_id}`;
+        if (vistos.has(chave)) continue;
+        vistos.add(chave);
+        eventos.push({ id: row.id, aluno_id: row.aluno_id, missaoTitulo: titulo });
+        if (eventos.length >= 8) break;
+      }
+
+      if (eventos.length === 0) return [];
+
+      // Nome + avatar dos autores (profiles e legivel pelos colegas de Casa,
+      // mesmo padrao usado pra montar a lista de membros).
+      const alunoIds = Array.from(new Set(eventos.map(e => e.aluno_id)));
+      const { data: perfis } = await supabase
+        .from('profiles')
+        .select('id, full_name, nome, avatar_url')
+        .in('id', alunoIds);
+      const perfilMap = Object.fromEntries(
+        (perfis || []).map(p => [p.id, { nome: p.full_name || p.nome, avatar_url: p.avatar_url }])
+      );
+
+      return eventos.map(e => ({
+        id: e.id,
+        missaoTitulo: e.missaoTitulo,
+        nome: perfilMap[e.aluno_id]?.nome || 'Alguem da Casa',
+        avatar_url: perfilMap[e.aluno_id]?.avatar_url || null,
+      }));
+    },
+  });
 
   const fetchData = useCallback(async () => {
     if (!casa?.id || !profile?.institution_id) {
@@ -342,6 +405,47 @@ const CasaPage = () => {
             Cada missão sua levanta a Casa.
           </p>
         </div>
+
+        {/* Mural: feed coletivo dos feitos recentes da Casa (atras da flag).
+            So conclusoes de missoes: e a linha do time, nunca ranking pessoal. */}
+        {F2_ALUNO_MURAL_CASA && (
+          <div className="mb-6">
+            <h3 className={cn(lbl, 'mb-3')}>Mural</h3>
+            {muralEventos.length > 0 ? (
+              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] overflow-hidden">
+                {muralEventos.map((ev, idx) => (
+                  <div
+                    key={ev.id}
+                    className={cn('flex items-center gap-3 py-3 px-3.5', idx > 0 && 'border-t border-white/[0.05]')}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-full bg-white/10 overflow-hidden shrink-0 flex items-center justify-center"
+                      style={{ boxShadow: `inset 0 0 0 1px ${accentColor}55` }}
+                    >
+                      {ev.avatar_url ? (
+                        <img src={ev.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xs font-semibold" style={{ color: accentColor }}>
+                          {inicial(ev.nome)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[13px] text-white/60 leading-snug min-w-0">
+                      <span className="text-white font-medium">{ev.nome}</span> concluiu{' '}
+                      <span className="text-white font-medium">{ev.missaoTitulo}</span>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] px-4 py-5">
+                <p className="text-[13px] text-white/40 leading-snug">
+                  Os feitos recentes da Casa vão aparecer aqui conforme cada missão é concluída.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Quem conduz: lider + coordenadores */}
         <div className="mb-6">

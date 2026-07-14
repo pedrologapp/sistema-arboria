@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { F2_ALUNO_LOOP_V1 } from '@/config/f2AlunoLoopV1';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { 
@@ -720,7 +721,7 @@ const MissaoDetalhePage = () => {
           transition={{ delay: 0.3 }}
           className="text-xl font-bold text-white mb-2"
         >
-          Missão enviada!
+          {F2_ALUNO_LOOP_V1 ? 'Recebido!' : 'Missão enviada!'}
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 10 }}
@@ -728,7 +729,9 @@ const MissaoDetalhePage = () => {
           transition={{ delay: 0.4 }}
           className="text-white/50 text-sm mb-8"
         >
-          Sua entrega foi registrada. O professor vai avaliar em breve.
+          {F2_ALUNO_LOOP_V1
+            ? 'Sua missão está em análise. O professor vai olhar com calma.'
+            : 'Sua entrega foi registrada. O professor vai avaliar em breve.'}
         </motion.p>
         <motion.div
           initial={{ opacity: 0 }}
@@ -895,7 +898,7 @@ const MissaoDetalhePage = () => {
             >
               {entrega.status === 'pendente' && (
                 <span className="text-xs px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                  Enviada. Aguardando avaliacao
+                  {F2_ALUNO_LOOP_V1 ? 'Recebido, em análise' : 'Enviada. Aguardando avaliacao'}
                 </span>
               )}
               {entrega.status === 'aprovada' && (
@@ -1230,7 +1233,7 @@ const MissaoDetalhePage = () => {
               <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
                 <div className="flex items-center gap-2 text-blue-400 mb-2">
                   <Clock className="w-5 h-5" />
-                  <span className="font-medium">Aguardando avaliacao</span>
+                  <span className="font-medium">{F2_ALUNO_LOOP_V1 ? 'Em análise' : 'Aguardando avaliacao'}</span>
                 </div>
                 <p className="text-sm text-white/60">
                   Enviado em {entrega.data_entrega ? format(new Date(entrega.data_entrega), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR }) : '-'}

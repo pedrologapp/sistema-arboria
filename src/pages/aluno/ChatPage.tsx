@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, MessageCircle, Hash, Users, Lock, AtSign, Crown, Megaphone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { F2_ALUNO_VISOR_NOVO } from '@/config/f2AlunoVisorNovo';
+import { F2_ALUNO_CHAT_PREVIA } from '@/config/f2AlunoChatPrevia';
 import { useStudent } from '@/contexts/StudentContext';
 import { Input } from '@/components/ui/input';
 import { getStatusOnline } from '@/utils/statusOnline';
@@ -216,6 +217,9 @@ const ChatPage = () => {
           if (payload.new.autor_id !== profile.id) {
             queryClient.invalidateQueries({ queryKey: ['mensagens-nao-lidas'] });
           }
+          if (F2_ALUNO_CHAT_PREVIA) {
+            queryClient.invalidateQueries({ queryKey: ['canal-previa'] });
+          }
         })
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens_privadas' }, (payload) => {
           if (payload.new.autor_id !== profile.id) {
@@ -246,6 +250,45 @@ const ChatPage = () => {
     const meu = membrosCasa?.find(m => m.id === profile?.id);
     return !!meu?.cargos_casa?.find((c: any) => c.ativo && (c.cargo === 'lider' || c.cargo === 'coordenador'));
   }, [membrosCasa, profile?.id]);
+
+  // ── Previa da ultima mensagem real (atras do flag F2_ALUNO_CHAT_PREVIA) ──
+  // So entram os canais que o aluno JA pode ver: canais da casa + escola, mais
+  // Lideranca/Conselho SOMENTE quando desbloqueados. Canal travado nunca entra
+  // na lista de ids, entao nunca vira previa (defesa em camadas; a RLS de
+  // mensagens_canal ja seria a barreira real de qualquer jeito).
+  const idsCanaisComPrevia = useMemo(() => {
+    if (!F2_ALUNO_CHAT_PREVIA) return [];
+    const ids: string[] = [...canaisCasa, ...canaisEscola].map(c => c.id);
+    if (canalLideranca && isLiderancaCasa) ids.push(canalLideranca.id);
+    if (canalConselho && isLider) ids.push(canalConselho.id);
+    return ids;
+  }, [canaisCasa, canaisEscola, canalLideranca, canalConselho, isLiderancaCasa, isLider]);
+
+  // Uma unica consulta: ultimas mensagens dos canais visiveis, ordenadas por
+  // data desc; agrupa a mais recente por canal_id no cliente (sem N queries).
+  const { data: previaCanais = {} } = useQuery({
+    queryKey: ['canal-previa', idsCanaisComPrevia],
+    queryFn: async () => {
+      if (!idsCanaisComPrevia.length) return {};
+      const { data } = await supabase
+        .from('mensagens_canal')
+        .select('canal_id, conteudo, created_at, autor:profiles!mensagens_canal_autor_id_fkey(nome, full_name)')
+        .in('canal_id', idsCanaisComPrevia)
+        .order('created_at', { ascending: false })
+        .limit(300);
+      const mapa: Record<string, { autor: string; texto: string }> = {};
+      for (const msg of (data as any[]) || []) {
+        if (mapa[msg.canal_id]) continue; // primeira ocorrencia = mais recente
+        const autorRaw = Array.isArray(msg.autor) ? msg.autor[0] : msg.autor;
+        const nomeCompleto: string = autorRaw?.nome || autorRaw?.full_name || '';
+        const primeiroNome = nomeCompleto.trim().split(/\s+/)[0] || '';
+        mapa[msg.canal_id] = { autor: primeiroNome, texto: (msg.conteudo || '').trim() };
+      }
+      return mapa;
+    },
+    enabled: F2_ALUNO_CHAT_PREVIA && idsCanaisComPrevia.length > 0,
+    staleTime: 15000,
+  });
 
   // Iniciar conversa DM (só com membros da mesma casa, exceto líder→líder)
   const iniciarConversa = async (outroUsuarioId: string) => {
@@ -325,11 +368,22 @@ const ChatPage = () => {
     }
   };
 
-  // ── Visor novo: linha de previa do canal (sem query nova; usa descricao/tipo) ──
+  // ── Visor novo: linha de previa do canal ──
+  // Canal travado: texto neutro de sempre (nunca busca mensagem de canal travado).
+  // Flag F2_ALUNO_CHAT_PREVIA ligado: mostra a ultima mensagem real ("Nome: texto",
+  // truncada por CSS); sem mensagem ainda, um texto neutro discreto.
+  // Flag desligado: descricao fixa de hoje (sem regressao).
   const getPreviewCanalNovo = (canal: any, locked: boolean) => {
     if (locked) {
       if (canal.tipo === 'conselho_lideres') return 'So para lideres de casa';
       return 'So para lideres e coordenadores';
+    }
+    if (F2_ALUNO_CHAT_PREVIA) {
+      const previa = (previaCanais as Record<string, { autor: string; texto: string }>)[canal.id];
+      if (previa && previa.texto) {
+        return previa.autor ? `${previa.autor}: ${previa.texto}` : previa.texto;
+      }
+      return 'Nenhuma mensagem ainda';
     }
     if (canal.descricao) return canal.descricao;
     switch (canal.tipo) {
