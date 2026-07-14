@@ -1942,6 +1942,55 @@ export type Database = {
           },
         ]
       }
+      reacoes_mensagem_canal: {
+        Row: {
+          aluno_id: string
+          created_at: string | null
+          id: string
+          institution_id: string
+          mensagem_id: string
+          reacao: string
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string | null
+          id?: string
+          institution_id: string
+          mensagem_id: string
+          reacao: string
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string | null
+          id?: string
+          institution_id?: string
+          mensagem_id?: string
+          reacao?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reacoes_mensagem_canal_mensagem_id_fkey"
+            columns: ["mensagem_id"]
+            isOneToOne: false
+            referencedRelation: "mensagens_canal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reacoes_mensagem_canal_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reacoes_mensagem_canal_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mensagens_canal: {
         Row: {
           autor_id: string

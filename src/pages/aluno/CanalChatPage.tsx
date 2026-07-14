@@ -10,6 +10,8 @@ import { DateSeparator } from '@/components/chat/DateSeparator';
 import { format } from 'date-fns';
 import { MensagemFixada } from '@/components/chat/MensagemFixada';
 import { ChatInput } from '@/components/chat/ChatInput';
+import { F2_ALUNO_REACOES } from '@/config/f2AlunoReacoes';
+import { ReacoesMensagem, REACOES_ORDEM, type ReacaoTipo, type ReacaoAgregada } from '@/components/chat/ReacoesMensagem';
 
 const CanalChatPage = () => {
   const { canalId } = useParams();
@@ -94,6 +96,76 @@ const CanalChatPage = () => {
 
   const mensagensFixadas = useMemo(() => mensagens?.filter(m => m.fixada) || [], [mensagens]);
   const mensagensNormais = useMemo(() => mensagens?.filter(m => !m.fixada) || [], [mensagens]);
+
+  // ── Reacoes rapidas (gated por F2_ALUNO_REACOES) ──────────────────────────
+  const mensagemIds = useMemo(() => (mensagens || []).map(m => m.id), [mensagens]);
+
+  const { data: reacoesRaw } = useQuery({
+    queryKey: ['reacoes-canal', canalId, mensagemIds],
+    queryFn: async () => {
+      if (mensagemIds.length === 0) return [];
+      // Uma unica query pro lote inteiro (sem N+1). A RLS filtra por visibilidade.
+      const { data, error } = await supabase
+        .from('reacoes_mensagem_canal')
+        .select('mensagem_id, aluno_id, reacao, aluno:profiles!reacoes_mensagem_canal_aluno_id_fkey(full_name)')
+        .in('mensagem_id', mensagemIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: F2_ALUNO_REACOES && !!canalId && mensagemIds.length > 0,
+    refetchOnWindowFocus: true,
+  });
+
+  // Agrega por mensagem + tipo no cliente; detecta a reacao do proprio usuario.
+  const reacoesPorMensagem = useMemo(() => {
+    const map = new Map<string, { agg: Map<ReacaoTipo, ReacaoAgregada>; minha: ReacaoTipo | null }>();
+    const nomeCurto = (nome: string) => {
+      const partes = (nome || 'Alguem').trim().split(/\s+/);
+      return partes.length <= 2 ? nome : `${partes[0]} ${partes[1]}`;
+    };
+    for (const r of reacoesRaw || []) {
+      const tipo = r.reacao as ReacaoTipo;
+      if (!REACOES_ORDEM.includes(tipo)) continue;
+      const mid = r.mensagem_id as string;
+      let entry = map.get(mid);
+      if (!entry) { entry = { agg: new Map(), minha: null }; map.set(mid, entry); }
+      let a = entry.agg.get(tipo);
+      if (!a) { a = { tipo, nomes: [], euReagi: false }; entry.agg.set(tipo, a); }
+      const autor = r.aluno as { full_name: string | null } | null;
+      a.nomes.push(nomeCurto(autor?.full_name || 'Alguem'));
+      if (r.aluno_id === profile?.id) { a.euReagi = true; entry.minha = tipo; }
+    }
+    return map;
+  }, [reacoesRaw, profile?.id]);
+
+  const getReacoes = (mensagemId: string): { reacoes: ReacaoAgregada[]; minha: ReacaoTipo | null } => {
+    const entry = reacoesPorMensagem.get(mensagemId);
+    if (!entry) return { reacoes: [], minha: null };
+    const reacoes = REACOES_ORDEM.filter(t => entry.agg.has(t)).map(t => entry.agg.get(t)!);
+    return { reacoes, minha: entry.minha };
+  };
+
+  const toggleReacao = async (mensagemId: string, tipo: ReacaoTipo) => {
+    if (!profile?.id || !profile?.institution_id) return;
+    const minha = reacoesPorMensagem.get(mensagemId)?.minha ?? null;
+    if (minha === tipo) {
+      // Tocar na propria reacao tira (un-react).
+      await supabase
+        .from('reacoes_mensagem_canal')
+        .delete()
+        .eq('mensagem_id', mensagemId)
+        .eq('aluno_id', profile.id);
+    } else {
+      // Adiciona ou troca (upsert na linha unica por mensagem+aluno).
+      await supabase
+        .from('reacoes_mensagem_canal')
+        .upsert(
+          { mensagem_id: mensagemId, aluno_id: profile.id, reacao: tipo, institution_id: profile.institution_id },
+          { onConflict: 'mensagem_id,aluno_id' }
+        );
+    }
+    queryClient.invalidateQueries({ queryKey: ['reacoes-canal', canalId] });
+  };
 
   const deveAgrupar = (atual: any, anterior: any) => {
     if (!anterior) return false;
@@ -215,15 +287,33 @@ const CanalChatPage = () => {
               const dataAtual = format(new Date(msg.created_at), 'yyyy-MM-dd');
               const dataAnterior = index > 0 ? format(new Date(mensagensNormais[index - 1].created_at), 'yyyy-MM-dd') : null;
               const mostrarData = dataAtual !== dataAnterior;
+              const bubble = (
+                <MensagemBubble
+                  mensagem={msg}
+                  isMe={msg.autor?.id === profile?.id}
+                  casaColor="#94a3b8"
+                  agruparComAnterior={!mostrarData && deveAgrupar(msg, mensagensNormais[index - 1] || null)}
+                />
+              );
               return (
                 <div key={msg.id}>
                   {mostrarData && <DateSeparator date={msg.created_at} />}
-                  <MensagemBubble
-                    mensagem={msg}
-                    isMe={msg.autor?.id === profile?.id}
-                    casaColor="#94a3b8"
-                    agruparComAnterior={!mostrarData && deveAgrupar(msg, mensagensNormais[index - 1] || null)}
-                  />
+                  {F2_ALUNO_REACOES ? (
+                    (() => {
+                      const { reacoes, minha } = getReacoes(msg.id);
+                      return (
+                        <ReacoesMensagem
+                          reacoes={reacoes}
+                          minhaReacao={minha}
+                          onToggle={(t) => toggleReacao(msg.id, t)}
+                        >
+                          {bubble}
+                        </ReacoesMensagem>
+                      );
+                    })()
+                  ) : (
+                    bubble
+                  )}
                 </div>
               );
             })
