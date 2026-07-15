@@ -86,6 +86,7 @@ const MissaoDetalhePage = lazy(() => import("./pages/aluno/MissaoDetalhePage"));
 const CasaPage = lazy(() => import("./pages/aluno/CasaPage"));
 const ChatPage = lazy(() => import("./pages/aluno/ChatPage"));
 const CanalChatPage = lazy(() => import("./pages/aluno/CanalChatPage"));
+const GrupoChatPage = lazy(() => import("./pages/aluno/GrupoChatPage"));
 const DmChatPage = lazy(() => import("./pages/aluno/DmChatPage"));
 const MembrosPage = lazy(() => import("./pages/aluno/MembrosPage"));
 const PerfilPage = lazy(() => import("./pages/aluno/PerfilPage"));
@@ -526,6 +527,13 @@ const App = () => (
               <StudentProtectedRoute>
                 <StudentLayout>
                   <CanalChatPage />
+                </StudentLayout>
+              </StudentProtectedRoute>
+            } />
+            <Route path="/aluno/chat/grupo/:canalId" element={
+              <StudentProtectedRoute>
+                <StudentLayout>
+                  <GrupoChatPage />
                 </StudentLayout>
               </StudentProtectedRoute>
             } />

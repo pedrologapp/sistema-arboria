@@ -20,6 +20,7 @@ import {
   Split,
   Merge,
   ArrowLeftRight,
+  MessageSquare,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,6 +37,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import LequeObservacao from '@/components/professor/LequeObservacao';
+import { GrupoConversaModal } from '@/components/professor/GrupoConversaModal';
 
 /**
  * ADMINISTRAR CAPÍTULO: Fundamental 2 (reforma, atrás do flag F2_REFORMA_ATIVA).
@@ -699,6 +701,49 @@ const F2CapituloPage = () => {
     return m;
   }, [alocacoes, membros, papeis, delegacoes]);
 
+  // ---- Canais de chat dos grupos (Arena) ----
+  // Garante 1 canal por grupo dividido (idempotente). O aluno NÃO pode criar o
+  // canal (RLS); o mentor tem policy ALL. Assim, dividiu em grupos -> os canais
+  // existem -> os alunos já enxergam a conversa do grupo. Roda quando o mentor
+  // abre a turma ou edita os grupos (cobre grupos criados antes desta feature).
+  useEffect(() => {
+    if (!capId || !turmaId || !capitulo?.institution_id || !profile?.id) return;
+    // Temas = papéis de categoria 'time'.
+    const temaIds = new Set(papeis.filter((p) => p.categoria === 'time').map((p) => p.id));
+    if (temaIds.size === 0) return;
+    // Pares (tema, grupo) que precisam de canal:
+    //  (a) todo grupo COM aluno alocado — cobre o time NÃO dividido (grupo 1);
+    //  (b) todo grupo definido em time_grupos — cobre grupo dividido ainda vazio.
+    const pares = new Set<string>();
+    alocacoes.forEach((a) => {
+      if (temaIds.has(a.papel_id)) pares.add(`${a.papel_id}::${a.grupo ?? 1}`);
+    });
+    Object.entries(turmaConfig?.time_grupos ?? {}).forEach(([papelId, gs]) => {
+      if (temaIds.has(papelId)) (gs as GrupoMeta[]).forEach((g) => pares.add(`${papelId}::${g.numero}`));
+    });
+    if (pares.size === 0) return;
+    const rows = [...pares].map((k) => {
+      const [papelId, grupoStr] = k.split('::');
+      return {
+        institution_id: capitulo.institution_id,
+        capitulo_id: capId,
+        turma_id: turmaId,
+        papel_id: papelId,
+        grupo: Number(grupoStr),
+        criado_por: profile.id,
+      };
+    });
+    sb.from('capitulo_grupo_canais').upsert(rows, {
+      onConflict: 'capitulo_id,turma_id,papel_id,grupo',
+      ignoreDuplicates: true,
+    });
+  }, [alocacoes, papeis, turmaConfig?.time_grupos, capId, turmaId, capitulo?.institution_id, profile?.id]);
+
+  // Modal de leitura da conversa de um grupo (supervisão do mentor, só leitura).
+  const [verConversa, setVerConversa] = useState<
+    { papelId: string; grupo: number; titulo: string; subtitulo?: string } | null
+  >(null);
+
   // ---- Mutations ----
   const [savingConfig, setSavingConfig] = useState(false);
 
@@ -1202,6 +1247,14 @@ const F2CapituloPage = () => {
                       onRemoverGrupo={(numero) => removerGrupo(p.id, numero)}
                       onSalvarSubtema={(numero, txt) => salvarSubtema(p.id, numero, txt)}
                       onJuntar={() => juntarTime(p.id)}
+                      onVerConversa={(numero) =>
+                        setVerConversa({
+                          papelId: p.id,
+                          grupo: numero,
+                          titulo: p.nome,
+                          subtitulo: `Grupo ${numero} · só leitura`,
+                        })
+                      }
                     />
                   ))}
                 </div>
@@ -1532,6 +1585,21 @@ const F2CapituloPage = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* ===== Modal: conversa do grupo (mentor, só leitura) ===== */}
+      <GrupoConversaModal
+        open={!!verConversa}
+        onClose={() => setVerConversa(null)}
+        capituloId={capId}
+        turmaId={turmaId ?? null}
+        papelId={verConversa?.papelId ?? null}
+        grupo={verConversa?.grupo ?? null}
+        titulo={verConversa?.titulo ?? ''}
+        subtitulo={verConversa?.subtitulo}
+        accent={accent}
+        bgDeep={bgDeep}
+        line={D.line}
+      />
     </>
   );
 };
@@ -1810,6 +1878,7 @@ const TimeCard = ({
   onRemoverGrupo,
   onSalvarSubtema,
   onJuntar,
+  onVerConversa,
 }: {
   papel: Papel;
   alocacoes: Alocacao[];
@@ -1826,6 +1895,7 @@ const TimeCard = ({
   onRemoverGrupo: (numero: number) => void;
   onSalvarSubtema: (numero: number, texto: string) => void;
   onJuntar: () => void;
+  onVerConversa: (numero: number) => void;
 }) => {
   const ilimitado = papel.vagas_por_turma > 30;
   const cheio = !ilimitado && alocacoes.length >= papel.vagas_por_turma;
@@ -1905,6 +1975,7 @@ const TimeCard = ({
                 onMover={onMoverGrupo}
                 onSalvarSubtema={(txt) => onSalvarSubtema(g.numero, txt)}
                 onRemoverGrupo={() => onRemoverGrupo(g.numero)}
+                onVerConversa={() => onVerConversa(g.numero)}
               />
             ))}
           </div>
@@ -1946,6 +2017,7 @@ const GrupoBloco = ({
   onMover,
   onSalvarSubtema,
   onRemoverGrupo,
+  onVerConversa,
 }: {
   grupo: GrupoMeta;
   membros: Alocacao[];
@@ -1960,6 +2032,7 @@ const GrupoBloco = ({
   onMover: (id: string, numero: number) => void;
   onSalvarSubtema: (texto: string) => void;
   onRemoverGrupo: () => void;
+  onVerConversa: () => void;
 }) => {
   const [subtema, setSubtema] = useState(grupo.subtema ?? '');
   useEffect(() => {
@@ -2039,6 +2112,15 @@ const GrupoBloco = ({
           </button>
         )}
       </div>
+
+      {/* Supervisão: abre a conversa do grupo em SÓ LEITURA (o mentor lê, não posta). */}
+      <button
+        onClick={onVerConversa}
+        className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-1"
+        style={{ color: accent, backgroundColor: `${accent}${A.a08}`, border: `1px solid ${accent}${A.a34}` }}
+      >
+        <MessageSquare size={12} strokeWidth={2.2} /> Ver conversa do grupo
+      </button>
     </div>
   );
 };

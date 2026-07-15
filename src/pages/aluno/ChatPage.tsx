@@ -12,7 +12,12 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ConselhoLideresLocked } from '@/components/chat/ConselhoLideresLocked';
 import { LiderancaCasaLocked } from '@/components/chat/LiderancaCasaLocked';
+import { useMeuCanalGrupo } from '@/hooks/useGrupoChat';
+import { corAcento } from '@/lib/corCasa';
 import '@/styles/missoes-scifi.css';
+
+// Rótulo PROVISÓRIO do canal do grupo, visível à criança (Conteúdo revisará).
+const rotuloGrupo = (capituloNome: string) => `${capituloNome} · seu grupo`;
 
 // "#a78bfa" -> "167, 139, 250" (alimenta --sf-accent-rgb com a cor da casa)
 const hexToRgb = (hex: string): string | null => {
@@ -23,7 +28,7 @@ const hexToRgb = (hex: string): string | null => {
 const ChatPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { profile, casa, casaColor } = useStudent();
+  const { profile, casa, casaColor, faseAtual } = useStudent();
   const [searchTerm, setSearchTerm] = useState('');
   const [showLockedModal, setShowLockedModal] = useState(false);
   const [showLiderancaLockedModal, setShowLiderancaLockedModal] = useState(false);
@@ -204,6 +209,14 @@ const ChatPage = () => {
     },
     enabled: !!profile?.id,
     staleTime: 10000,
+  });
+
+  // Canal do GRUPO do aluno (Arena): capítulo ativo da fase + alocação 'time'.
+  // Só aparece se ele tem grupo E o capítulo está ativo E o canal já existe.
+  const { data: meuCanalGrupo } = useMeuCanalGrupo({
+    faseId: faseAtual?.id,
+    alunoId: profile?.id,
+    institutionId: profile?.institution_id,
   });
 
   // Realtime (com fallback se WebSocket falhar no mobile)
@@ -622,6 +635,25 @@ const ChatPage = () => {
           />
         </div>
 
+        {/* Arena: canal do grupo do aluno (só com capítulo ativo e grupo definido) */}
+        {!buscando && meuCanalGrupo && meuCanalGrupo.capituloAtivo && (
+          <div className="space-y-2">
+            <p className="text-[10px] tracking-[0.28em] uppercase text-white/30 px-0.5">Arena</p>
+            <button
+              onClick={() => navigate(`/aluno/chat/grupo/${meuCanalGrupo.canalId}`)}
+              className="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-left border border-white/[0.08] bg-white/[0.035] hover:bg-white/[0.06] active:scale-[0.99] transition-all"
+            >
+              <div className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0" style={{ backgroundColor: accentTint, color: accentColor }}>
+                <Users className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold text-white truncate">{rotuloGrupo(meuCanalGrupo.capituloNome)}</p>
+                <p className="text-[11px] text-white/40 truncate">Combinem o trabalho do grupo</p>
+              </div>
+            </button>
+          </div>
+        )}
+
         {/* Canais da casa */}
         {!buscando && (
         <div className="space-y-2">
@@ -719,6 +751,27 @@ const ChatPage = () => {
           className="pl-10 bg-transparent border-0 text-white placeholder:text-white/30 h-10 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
         />
       </div>
+
+      {/* ── ARENA (canal do grupo do aluno) ── */}
+      {meuCanalGrupo && meuCanalGrupo.capituloAtivo && (
+        <div>
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <div className="w-1 h-3.5 rounded-full" style={{ backgroundColor: casaColor }} />
+            <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: corAcento(casaColor) }}>
+              Arena
+            </p>
+          </div>
+          <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-2">
+            <button
+              onClick={() => navigate(`/aluno/chat/grupo/${meuCanalGrupo.canalId}`)}
+              className="w-full flex items-center gap-2.5 py-2.5 px-3 rounded-lg text-left transition-all hover:bg-white/[0.08] active:scale-[0.98]"
+            >
+              <Users className="w-4 h-4 shrink-0" style={{ color: corAcento(casaColor) }} />
+              <span className="flex-1 text-sm text-white/70 truncate">{rotuloGrupo(meuCanalGrupo.capituloNome)}</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── MINHA CASA ── */}
       <div>
