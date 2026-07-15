@@ -16,13 +16,8 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } f
 import { hojeBrasil } from '@/utils/timezone';
 import { CROSS_IM_COMBINACOES, MECANISMOS_CASA } from '@/data/crossImData';
 import OnboardingModal from '@/components/aluno/OnboardingModal';
+import { corAcento, corSolida, hexParaRgb } from '@/lib/corCasa';
 import '@/styles/missoes-scifi.css';
-
-// "#a78bfa" -> "167, 139, 250" (alimenta --sf-accent-rgb com a cor da casa)
-const hexToRgb = (hex: string): string | null => {
-  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
-  return m ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}` : null;
-};
 
 const saudacoes = [
   'Bom te ver por aqui',
@@ -222,10 +217,15 @@ const HomePage = () => {
     return () => clearInterval(interval);
   }, [frasesDisponiveis.length]);
 
-  // Acento dos cards = cor da casa (fallback roxo)
-  const accentColor = casaColor || casa?.cor_hex || '#a78bfa';
-  const accentRgb = hexToRgb(accentColor) || '167, 139, 250';
-  const scifiVars = { '--sf-accent': accentColor, '--sf-accent-rgb': accentRgb } as CSSProperties;
+  // Cor da Casa, derivada pra LEGIBILIDADE (fonte: corCasa.ts):
+  //  - acento: TEXTO/ícone/borda (clara, lê no escuro);
+  //  - solida: preenchimento cheio com texto branco (CTA).
+  // A cor CRUA (casaBase) só entra em glow/tile/borda com alpha, nunca em texto.
+  const casaBase = casaColor || casa?.cor_hex || '#a78bfa';
+  const acento = corAcento(casaBase);
+  const solida = corSolida(casaBase);
+  const accentRgb = hexParaRgb(acento);
+  const scifiVars = { '--sf-accent': acento, '--sf-accent-rgb': accentRgb } as CSSProperties;
 
   // Texto coletivo da fase da turma (nunca a identidade do aluno): pela trilha
   // quando resolvida, senao pela fase por data. Reaproveita a regra do card atual.
@@ -246,6 +246,14 @@ const HomePage = () => {
 
     return (
       <div className="scifi p-4 space-y-3.5 pb-24" style={scifiVars}>
+        {/* Atmosfera única (Home = Capítulo): topo CLARO (acento) conserta o glow
+            morto das Casas escuras; base na matiz crua com alpha baixo. */}
+        <div
+          className="fixed inset-0 -z-10 pointer-events-none"
+          style={{
+            background: `radial-gradient(120% 55% at 50% -8%, ${acento}1F, transparent 58%), radial-gradient(90% 42% at 50% 110%, ${casaBase}14, transparent 55%)`,
+          }}
+        />
         <OnboardingModal
           isOpen={showOnboarding}
           onClose={fecharOnboarding}
@@ -274,9 +282,7 @@ const HomePage = () => {
                 navigate('/aluno/missoes');
               }
             }}
-            data-augmented-ui="tl-clip br-clip border"
-            className="sf-card w-full p-3 text-left active:scale-[0.98] transition-transform"
-            style={{ ['--aug-border-bg' as string]: 'rgba(245, 158, 11, 0.4)' }}
+            className="rounded-[14px] border border-amber-500/40 bg-amber-500/[0.06] w-full p-3 text-left active:scale-[0.98] transition-transform"
           >
             <div className="flex items-center gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
@@ -323,7 +329,7 @@ const HomePage = () => {
                   <CasaBrasao brasaoUrl={casa.brasao_url} emoji={casa.emoji} nome={casa.nome} size="small" className="w-10 h-10" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-serif text-[20px] font-semibold leading-tight" style={{ color: casaColor }}>
+                  <h3 className="font-serif text-[20px] font-semibold leading-tight" style={{ color: acento }}>
                     Casa {casa.nome}
                   </h3>
                   <p className="text-[12px] text-white/50 mt-0.5">
@@ -369,41 +375,29 @@ const HomePage = () => {
               <div className="text-[10px] tracking-[0.34em] uppercase text-white/30">Capítulo da vez</div>
               <h3 className="font-serif text-[24px] font-semibold text-white mt-2 leading-tight">{capituloHome.nome}</h3>
               {capituloHome.frase_ancora && (
-                <p className="font-serif italic text-[13px] mt-2 leading-[1.5]" style={{ color: casaColor }}>
+                <p className="font-serif italic text-[13px] mt-2 leading-[1.5]" style={{ color: acento }}>
                   {capituloHome.frase_ancora}
                 </p>
               )}
 
-              {(capituloHome.timeNome || capituloHome.dias !== null) && (
-                <div className="flex items-center justify-between gap-2.5 mt-[14px]">
-                  {capituloHome.timeNome ? (
-                    <span className="inline-flex items-center gap-[7px] text-[12px] text-white/50">
-                      Seu time
-                      <span
-                        className="px-[9px] py-[3px] rounded-full text-[10.5px] font-semibold"
-                        style={{ color: casaColor, backgroundColor: `${casaColor}24`, border: `1px solid ${casaColor}4d` }}
-                      >
-                        {capituloHome.timeNome}
-                      </span>
+              {capituloHome.timeNome && (
+                <div className="flex items-center gap-2.5 mt-[14px]">
+                  <span className="inline-flex items-center gap-[7px] text-[12px] text-white/50">
+                    Seu time
+                    <span
+                      className="px-[9px] py-[3px] rounded-full text-[10.5px] font-semibold"
+                      style={{ color: acento, backgroundColor: `${casaBase}24`, border: `1px solid ${acento}4d` }}
+                    >
+                      {capituloHome.timeNome}
                     </span>
-                  ) : (
-                    <span />
-                  )}
-                  {capituloHome.dias !== null && capituloHome.dias > 0 && (
-                    <span className="text-[11px] font-semibold text-amber-400">
-                      faltam {capituloHome.dias} {capituloHome.dias === 1 ? 'dia' : 'dias'}
-                    </span>
-                  )}
-                  {capituloHome.dias === 0 && (
-                    <span className="text-[11px] font-semibold text-amber-300 tracking-wider">É HOJE</span>
-                  )}
+                  </span>
                 </div>
               )}
 
               {/* botao preenchido (mockup .cta) */}
               <div
                 className="mt-[14px] flex items-center justify-center gap-2 rounded-[12px] py-3 text-white font-bold text-[13.5px]"
-                style={{ backgroundColor: casaColor }}
+                style={{ backgroundColor: solida }}
               >
                 <span>Entrar no capítulo</span>
                 <ArrowRight className="w-[18px] h-[18px]" />
@@ -418,8 +412,8 @@ const HomePage = () => {
           className="rounded-[18px] border border-white/[0.08] bg-white/[0.035] w-full text-left active:scale-[0.98] transition-transform animate-fade-in animate-fade-in-d2"
         >
           <div className="flex items-center gap-3 px-[15px] py-[13px]">
-            <div className="w-[38px] h-[38px] rounded-[11px] shrink-0 flex items-center justify-center" style={{ backgroundColor: `${casaColor}24` }}>
-              <Target className="w-[18px] h-[18px]" style={{ color: casaColor }} />
+            <div className="w-[38px] h-[38px] rounded-[11px] shrink-0 flex items-center justify-center" style={{ backgroundColor: `${casaBase}24` }}>
+              <Target className="w-[18px] h-[18px]" style={{ color: acento }} />
             </div>
             <div className="flex-1">
               <p className="text-white font-semibold text-[13.5px]">Missões da Fase</p>
@@ -458,7 +452,7 @@ const HomePage = () => {
             <p
               className="text-lg italic leading-relaxed transition-all duration-400 px-4"
               style={{
-                color: `${casaColor}90`,
+                color: acento,
                 opacity: fraseVisible ? 1 : 0,
                 transform: fraseVisible ? 'translateY(0)' : 'translateY(6px)',
               }}
@@ -481,12 +475,11 @@ const HomePage = () => {
               {isLiderOuCoord && resumoCasa && (
                 <button
                   onClick={() => { setUtilAberto(false); navigate('/aluno/dashboard'); }}
-                  data-augmented-ui="tl-clip br-clip border"
-                  className="sf-card w-full p-3.5 text-left active:scale-[0.98] transition-transform"
+                  className="rounded-[14px] border border-white/[0.07] bg-white/[0.03] w-full p-3.5 text-left active:scale-[0.98] transition-transform"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl" style={{ backgroundColor: `${casaColor}20` }}>
-                      <Shield className="w-5 h-5" style={{ color: casaColor }} />
+                    <div className="p-2 rounded-[11px]" style={{ backgroundColor: `${casaBase}24` }}>
+                      <Shield className="w-5 h-5" style={{ color: acento }} />
                     </div>
                     <div className="flex-1">
                       <p className="text-white font-medium text-sm">Painel de {cargo}</p>
@@ -494,7 +487,7 @@ const HomePage = () => {
                         {resumoCasa.comEntrega}/{resumoCasa.totalMembros} membros com entregas · {resumoCasa.pctEntrega}%
                       </p>
                     </div>
-                    <div className="text-lg font-bold" style={{ color: casaColor }}>{resumoCasa.pctEntrega}%</div>
+                    <div className="text-lg font-bold" style={{ color: acento }}>{resumoCasa.pctEntrega}%</div>
                   </div>
                 </button>
               )}
@@ -747,7 +740,7 @@ const HomePage = () => {
           <p
             className="text-lg italic leading-relaxed transition-all duration-400 px-4"
             style={{
-              color: `${casaColor}90`,
+              color: acento,
               opacity: fraseVisible ? 1 : 0,
               transform: fraseVisible ? 'translateY(0)' : 'translateY(6px)',
             }}
@@ -814,7 +807,7 @@ const CheckInEmocional = ({ userId, casaColor }: { userId?: string; casaColor: s
   if (jaRespondeu) return null;
 
   return (
-    <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel animate-fade-in animate-fade-in-d4 p-4">
+    <div className="rounded-[18px] border border-white/[0.08] bg-white/[0.035] animate-fade-in animate-fade-in-d4 p-4">
       <p className="text-sm text-white/60 mb-3">Como voce esta se sentindo hoje?</p>
       <div className="grid grid-cols-4 gap-2">
         {emojisCheckin.map(({ emoji, label }) => (
@@ -864,8 +857,9 @@ const CampoRelato = ({ userId, institutionId, faseId, semana, casaColor }: {
     setSalvando(false);
   };
 
+  const acento = corAcento(casaColor);
   return (
-    <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel animate-fade-in animate-fade-in-d4 p-4">
+    <div className="rounded-[18px] border border-white/[0.08] bg-white/[0.035] animate-fade-in animate-fade-in-d4 p-4">
       <p className="text-sm text-white/60 mb-2">Quer falar algo sobre essa fase? Ou sobre voce?</p>
       <textarea
         value={texto}
@@ -884,7 +878,7 @@ const CampoRelato = ({ userId, institutionId, faseId, semana, casaColor }: {
             onClick={enviar}
             disabled={!texto.trim() || salvando}
             className="px-4 py-1.5 rounded-full text-xs font-medium transition-all disabled:opacity-30"
-            style={{ backgroundColor: `${casaColor}30`, color: casaColor }}
+            style={{ backgroundColor: `${acento}26`, color: acento }}
           >
             {salvando ? 'Enviando...' : 'Enviar'}
           </button>
@@ -910,23 +904,21 @@ const CrossImHomeCard = ({ casaCodigo, faseCodigo, corCasa }: {
   if (!comb) return null;
 
   const mecanismo = !comb.fase_propria ? MECANISMOS_CASA[casaCodigo] : null;
+  const acento = corAcento(corCasa);
 
   return (
-    <div
-      data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
-      className="sf-panel animate-fade-in animate-fade-in-d2 overflow-hidden transition-all"
-    >
+    <div className="rounded-[18px] border border-white/[0.08] bg-white/[0.035] animate-fade-in animate-fade-in-d2 overflow-hidden transition-all">
       <button
         onClick={() => setExpandido(!expandido)}
         className="w-full p-3.5 text-left hover:bg-white/[0.02] transition-colors"
       >
-        <p className="text-[10px] font-bold uppercase tracking-[0.12em] mb-1.5" style={{ color: `${corCasa}90` }}>
+        <p className="text-[10px] font-bold uppercase tracking-[0.12em] mb-1.5" style={{ color: acento }}>
           {comb.fase_propria ? 'Sua fase, seu território' : 'Você nesta fase'}
         </p>
         <p className={`text-xs text-white/55 leading-relaxed ${expandido ? '' : 'line-clamp-2'}`}>
           {comb.texto_aluno}
         </p>
-        <p className="text-[10px] mt-2" style={{ color: `${corCasa}60` }}>
+        <p className="text-[10px] mt-2" style={{ color: `${acento}b3` }}>
           {expandido ? 'Fechar' : 'Ler mais'}
         </p>
       </button>
@@ -935,7 +927,7 @@ const CrossImHomeCard = ({ casaCodigo, faseCodigo, corCasa }: {
         <div className="px-3.5 pb-3.5 space-y-3" style={{ borderTop: `1px solid ${corCasa}10` }}>
           {/* Mecanismo da casa (só quando casa ≠ fase) */}
           {mecanismo && (
-            <div className="pt-2 rounded-lg p-2.5" style={{ backgroundColor: `${corCasa}06`, borderLeft: `2px solid ${corCasa}25` }}>
+            <div className="pt-2 rounded-lg p-2.5" style={{ backgroundColor: `${corCasa}06`, borderLeft: `2px solid ${acento}40` }}>
               <p className="text-white/35 text-xs italic leading-relaxed">
                 {mecanismo}
               </p>
@@ -945,13 +937,13 @@ const CrossImHomeCard = ({ casaCodigo, faseCodigo, corCasa }: {
           {/* Caminhos */}
           {comb.caminhos_possiveis.length > 0 && (
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.1em] mb-2" style={{ color: `${corCasa}70` }}>
+              <p className="text-[10px] font-bold uppercase tracking-[0.1em] mb-2" style={{ color: acento }}>
                 Onde isso pode te levar
               </p>
               <div className="space-y-1.5">
                 {comb.caminhos_possiveis.map((caminho, i) => (
                   <div key={i} className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: `${corCasa}40` }} />
+                    <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: `${acento}66` }} />
                     <span className="text-[11px] text-white/45 leading-relaxed">{caminho}</span>
                   </div>
                 ))}
@@ -998,16 +990,16 @@ const DesafioDiarioLembrete = ({ casaCodigo, casaColor }: { casaCodigo?: string;
     'O que você vai descobrir hoje?',
   ];
   const frase = frasesCuriosidade[new Date().getDate() % frasesCuriosidade.length];
+  const acento = corAcento(casaColor);
 
   return (
     <button
       onClick={() => navigate('/aluno/casa')}
-      data-augmented-ui="tl-clip br-clip border"
-      className="sf-card w-full p-3.5 text-left animate-fade-in animate-fade-in-d3 active:scale-[0.98] transition-transform"
+      className="rounded-[14px] border border-white/[0.07] bg-white/[0.03] w-full p-3.5 text-left animate-fade-in animate-fade-in-d3 active:scale-[0.98] transition-transform"
     >
       <div className="flex items-center gap-3">
-        <div className="p-2 rounded-xl" style={{ backgroundColor: `${casaColor}20` }}>
-          <Sparkles className="w-5 h-5" style={{ color: casaColor }} />
+        <div className="p-2 rounded-[11px]" style={{ backgroundColor: `${casaColor}24` }}>
+          <Sparkles className="w-5 h-5" style={{ color: acento }} />
         </div>
         <div className="flex-1">
           <p className="text-white font-medium text-sm">Desafio do dia</p>
@@ -1045,9 +1037,7 @@ const AvisosCard = () => {
       {visiveis.map((aviso: any) => (
         <div
           key={aviso.id}
-          data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
-          className="sf-panel p-3.5 relative"
-          style={{ ['--aug-border-bg' as string]: 'rgba(245, 158, 11, 0.45)' }}
+          className="rounded-[18px] border border-amber-500/40 bg-amber-500/[0.05] p-3.5 relative"
         >
           <button onClick={() => setFechados(prev => new Set(prev).add(aviso.id))}
             className="absolute top-2 right-2 text-amber-400/40 hover:text-amber-400/80 text-xs p-1">
@@ -1095,18 +1085,13 @@ const RelatarProblemaCard = ({ userId, institutionId }: { userId?: string; insti
   return (
     <div className="animate-fade-in">
       {enviado ? (
-        <div
-          data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
-          className="sf-panel p-3 text-center"
-          style={{ ['--aug-border-bg' as string]: 'rgba(52, 211, 153, 0.4)' }}
-        >
+        <div className="rounded-[18px] border border-emerald-400/40 bg-emerald-400/[0.05] p-3 text-center">
           <p className="text-xs text-green-400">Problema relatado! Vamos verificar.</p>
         </div>
       ) : !aberto ? (
         <button
           onClick={() => setAberto(true)}
-          data-augmented-ui="tl-clip br-clip border"
-          className="sf-card w-full p-3 text-left"
+          className="rounded-[14px] border border-white/[0.07] bg-white/[0.03] w-full p-3 text-left active:scale-[0.98] transition-transform"
         >
           <div className="flex items-center gap-3">
             <HelpCircle className="w-4 h-4 text-white/35 shrink-0" />
@@ -1114,7 +1099,7 @@ const RelatarProblemaCard = ({ userId, institutionId }: { userId?: string; insti
           </div>
         </button>
       ) : (
-        <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-3.5 space-y-2">
+        <div className="rounded-[18px] border border-white/[0.08] bg-white/[0.035] p-3.5 space-y-2">
           <p className="text-xs text-white/40">Descreva o problema:</p>
           <textarea value={texto} onChange={e => setTexto(e.target.value)}
             placeholder="O que está acontecendo?"

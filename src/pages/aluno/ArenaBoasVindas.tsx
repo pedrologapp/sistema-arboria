@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { corAcento, corSolida } from '@/lib/corCasa';
 
 /**
  * ARENA ARBORIA: tela imersiva de boas-vindas do capítulo no formato TIMES.
@@ -26,11 +27,24 @@ interface ArenaBoasVindasProps {
   timeDescricao: string | null;
   casaColor: string;
   onFechar: () => void;
+  // Copy parametrizável: defaults são da Arena; outros capítulos TIMES passam a
+  // sua (do banco). Passar '' esconde o bloco.
+  intro?: string;
+  fecho?: string;
+  ctaLabel?: string;
 }
 
 const ArenaBoasVindas = ({
-  capituloNome, timeNome, timeDescricao, casaColor, onFechar
+  capituloNome, timeNome, timeDescricao, casaColor, onFechar,
+  intro = 'Uma competição de projetos. Seu time cria uma ideia e prova, no dia, que ela funciona.',
+  fecho = 'O melhor projeto ganha. A ideia é de vocês. Agora é construir.',
+  ctaLabel = 'Entrar na Arena',
 }: ArenaBoasVindasProps) => {
+  // casaColor chega CRU; derivamos a cor legível (texto/traço = acento) e a
+  // rica pra preenchimento (CTA = solida). Cru só entra em glow/atmosfera.
+  const acento = corAcento(casaColor);
+  const solida = corSolida(casaColor);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onFechar();
@@ -44,10 +58,10 @@ const ArenaBoasVindas = ({
       className="fixed inset-0 z-[60] overflow-y-auto"
       role="dialog"
       aria-modal="true"
-      aria-label="Boas-vindas da Arena"
+      aria-label={`Boas-vindas: ${capituloNome}`}
       style={{
         backgroundColor: '#0F0F1E',
-        backgroundImage: `radial-gradient(ellipse at center top, ${casaColor}26 0%, #0F0F1E 70%)`,
+        backgroundImage: `radial-gradient(ellipse at center top, ${acento}22 0%, #0F0F1E 70%)`,
       }}
     >
       <div className="min-h-full flex flex-col max-w-sm mx-auto px-6 pt-14 pb-8 pb-safe">
@@ -68,7 +82,7 @@ const ArenaBoasVindas = ({
           </p>
           <div
             className="vf-draw mx-auto mt-3"
-            style={{ width: 48, height: 2, backgroundColor: `${casaColor}88`, animationDelay: '300ms' }}
+            style={{ width: 48, height: 2, backgroundColor: acento, animationDelay: '300ms' }}
           />
         </Casc>
 
@@ -78,21 +92,23 @@ const ArenaBoasVindas = ({
           </h2>
         </Casc>
 
-        <Casc i={2} className="mt-4">
-          <p className="text-sm text-center leading-relaxed text-white/75 max-w-[280px] mx-auto">
-            Uma competição de projetos. Seu time cria uma ideia e prova, no dia, que ela funciona.
-          </p>
-        </Casc>
+        {intro && (
+          <Casc i={2} className="mt-4">
+            <p className="text-sm text-center leading-relaxed text-white/75 max-w-[280px] mx-auto">
+              {intro}
+            </p>
+          </Casc>
+        )}
 
         {timeNome && (
           <Casc i={3} className="mt-8">
             <div
               className="rounded-2xl p-4"
-              style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: `1px solid ${casaColor}55` }}
+              style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: `1px solid ${acento}73` }}
             >
               <p
                 className="text-[10px] uppercase font-semibold text-center mb-1.5"
-                style={{ color: casaColor, letterSpacing: '0.3em' }}
+                style={{ color: acento, letterSpacing: '0.3em' }}
               >
                 Seu time
               </p>
@@ -108,20 +124,22 @@ const ArenaBoasVindas = ({
           </Casc>
         )}
 
-        <Casc i={4} className="mt-8 mb-8">
-          <p className="font-serif italic text-[16px] leading-relaxed text-center text-white/85 max-w-[270px] mx-auto">
-            O melhor projeto ganha. A ideia é de vocês. Agora é construir.
-          </p>
-        </Casc>
+        {fecho && (
+          <Casc i={4} className="mt-8 mb-8">
+            <p className="font-serif italic text-[16px] leading-relaxed text-center text-white/85 max-w-[270px] mx-auto">
+              {fecho}
+            </p>
+          </Casc>
+        )}
 
         <Casc i={5} className="mt-auto">
           <button
             onClick={onFechar}
             autoFocus
-            className="w-full rounded-2xl py-3.5 text-[15px] font-semibold text-white active:scale-[0.99] transition-transform"
-            style={{ backgroundColor: casaColor, boxShadow: `0 8px 30px ${casaColor}44` }}
+            className="w-full rounded-2xl py-3.5 text-[15px] font-bold text-white active:scale-[0.99] transition-transform"
+            style={{ backgroundColor: solida, boxShadow: `0 8px 30px ${casaColor}44` }}
           >
-            Entrar na Arena
+            {ctaLabel}
           </button>
         </Casc>
       </div>

@@ -14,15 +14,10 @@ import {
 import { cn } from '@/lib/utils';
 import { F2_ALUNO_CAPITULO_PREVIEW } from '@/config/f2AlunoCapituloPreview';
 import ArenaBoasVindas from './ArenaBoasVindas';
+import { corAcento, corSolida, hexParaRgb } from '@/lib/corCasa';
 import '@/styles/missoes-scifi.css';
 
 const sb = supabase as any;
-
-// "#a78bfa" -> "167, 139, 250" (alimenta --sf-accent-rgb com a cor da casa)
-const hexToRgb = (hex: string): string | null => {
-  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
-  return m ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}` : null;
-};
 
 type Categoria = 'mesa' | 'mediador' | 'observatorio' | 'delegacao' | 'time';
 
@@ -330,7 +325,7 @@ const CapituloPage = () => {
   if (loadingStudent || loadingCap) {
     return (
       <div className="flex justify-center pt-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-amber-200/40" />
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white/25" />
       </div>
     );
   }
@@ -347,10 +342,21 @@ const CapituloPage = () => {
     );
   }
 
-  // Acento dos cards = cor da casa (Hero NÃO usa: mantém estilo original)
-  const accentColor = casaColor || '#a78bfa';
-  const accentRgb = hexToRgb(accentColor) || '167, 139, 250';
-  const scifiVars = { '--sf-accent': accentColor, '--sf-accent-rgb': accentRgb } as CSSProperties;
+  // Cor da Casa, derivada pra LEGIBILIDADE (fonte: corCasa.ts):
+  //  - acento: cor de TEXTO/ícone/borda (clara e saturada, lê no escuro);
+  //  - solida: preenchimento cheio com texto branco (botão CTA).
+  // A cor CRUA (casaBase) só entra em glow/sombra/tile com alpha, nunca em texto.
+  const casaBase = casaColor || '#a78bfa';
+  const acento = corAcento(casaBase);
+  const solida = corSolida(casaBase);
+  const accentRgb = hexParaRgb(acento);
+  const scifiVars = { '--sf-accent': acento, '--sf-accent-rgb': accentRgb } as CSSProperties;
+
+  // Só o capítulo da ARENA mostra o conteúdo específico dela (bloco "A Arena",
+  // premiação, PDFs /materiais/arena/, copy de competição). Outros capítulos do
+  // formato TIMES (ex.: o Musical "O Não Tão Show") mostram o próprio texto do
+  // banco. Gate temporário por nome, até haver conteúdo "Sobre" por capítulo.
+  const ehArena = /arena/i.test(capitulo.nome);
 
   // GATE (só formato TIMES): sem alocação real e fora da prévia, o aluno vê a tela
   // de espera. A prévia do Fundador sobrepõe a destrava, para ele conseguir ver.
@@ -373,6 +379,16 @@ const CapituloPage = () => {
   return (
     <div className="scifi relative space-y-10 pb-8 -mx-4 px-4" style={scifiVars}>
 
+      {/* Atmosfera única (Home = Capítulo): topo CLARO (acento) conserta o glow
+          morto das Casas escuras; base na matiz crua com alpha baixo. Uma só
+          camada fixa por tela. */}
+      <div
+        className="fixed inset-0 -z-10 pointer-events-none"
+        style={{
+          background: `radial-gradient(120% 55% at 50% -8%, ${acento}1F, transparent 58%), radial-gradient(90% 42% at 50% 110%, ${casaBase}14, transparent 55%)`,
+        }}
+      />
+
       {/* Botão "?" · reabre a tela de boas-vindas da Arena (só no formato TIMES com time) */}
       {ehTimes && meuTime && (
         <button
@@ -388,24 +404,28 @@ const CapituloPage = () => {
       <Hero
         capitulo={capitulo}
         brasaoUrl={brasaoCapitulo}
-        casaColor={casaColor}
+        casaBase={casaBase}
+        acento={acento}
         dataEvento={turmaConfig?.data_evento ?? null}
         dias={dias}
         faseNome={faseAtual?.inteligencia?.nome ?? null}
       />
 
       {/* ============ STAGE 2 · A TRETA ============ */}
-      <Treta capitulo={capitulo} />
+      <Treta capitulo={capitulo} acento={acento} />
 
       {ehTimes ? (
         <>
-          {/* ============ SOBRE A ARENA ============ */}
-          <SobreArena />
+          {/* ============ SOBRE O PROJETO ============ */}
+          {ehArena ? <SobreArena acento={acento} casaBase={casaBase} /> : <SobreCapitulo capitulo={capitulo} />}
 
           {/* ============ STAGE 3 · SEU TIME ============ */}
           <SeuTime
             time={meuTime}
             ehPreview={ehPreviewTime}
+            ehArena={ehArena}
+            acento={acento}
+            casaBase={casaBase}
             onAbrirGuia={() => meuTime && setPapelAberto(meuTime)}
           />
 
@@ -415,6 +435,8 @@ const CapituloPage = () => {
             alocacoes={alocacoes}
             brasoes={brasoes}
             meuTimeId={meuTime?.id ?? null}
+            acento={acento}
+            casaBase={casaBase}
             onAbrirGuia={(p) => setPapelAberto(p)}
           />
         </>
@@ -424,7 +446,8 @@ const CapituloPage = () => {
           <SeuPapel
             papel={meuPapel}
             delegacao={minhaDelegacao}
-            casaColor={casaColor}
+            acento={acento}
+            casaBase={casaBase}
             onAbrirGuia={() => meuPapel && setPapelAberto(meuPapel)}
           />
 
@@ -435,6 +458,8 @@ const CapituloPage = () => {
             delegacoes={delegacoesAtivas}
             membrosDelegacoes={membrosDelegacoes}
             brasoes={brasoes}
+            acento={acento}
+            casaBase={casaBase}
             onAbrirGuia={(p) => setPapelAberto(p)}
             onAbrirDelegacao={(d) => setDelegacaoAberta(d)}
             meuId={user?.id ?? null}
@@ -443,7 +468,7 @@ const CapituloPage = () => {
       )}
 
       {/* ============ STAGE 5 · O DIA ============ */}
-      <ODia capitulo={capitulo} />
+      <ODia capitulo={capitulo} acento={acento} casaBase={casaBase} />
 
       {/* ============ DRAWER · GUIA DA FUNÇÃO ============ */}
       <Drawer open={!!papelAberto} onOpenChange={(o) => !o && setPapelAberto(null)}>
@@ -453,6 +478,9 @@ const CapituloPage = () => {
               papel={papelAberto}
               delegacoes={delegacoes}
               ehMeuTime={!!meuTime && papelAberto.id === meuTime.id}
+              ehArena={ehArena}
+              acento={acento}
+              solida={solida}
             />
           )}
         </DrawerContent>
@@ -461,7 +489,7 @@ const CapituloPage = () => {
       {/* ============ DRAWER · GUIA DA DELEGAÇÃO ============ */}
       <Drawer open={!!delegacaoAberta} onOpenChange={(o) => !o && setDelegacaoAberta(null)}>
         <DrawerContent className="bg-[#1A1A2E] border-white/10 text-white max-h-[92vh]">
-          {delegacaoAberta && <GuiaConteudoDelegacao delegacao={delegacaoAberta} />}
+          {delegacaoAberta && <GuiaConteudoDelegacao delegacao={delegacaoAberta} acento={acento} solida={solida} />}
         </DrawerContent>
       </Drawer>
 
@@ -471,8 +499,12 @@ const CapituloPage = () => {
           capituloNome={capitulo.nome}
           timeNome={meuTime.nome}
           timeDescricao={meuTime.descricao_curta}
-          casaColor={accentColor}
+          casaColor={casaBase}
           onFechar={fecharBoasVindas}
+          // Fora da Arena, a copy vem do próprio capítulo (sem "competição/premiação").
+          intro={ehArena ? undefined : capitulo.frase_ancora ?? capitulo.tema_curto ?? ''}
+          fecho={ehArena ? undefined : capitulo.tema_curto ?? ''}
+          ctaLabel={ehArena ? undefined : 'Entrar'}
         />
       )}
     </div>
@@ -483,11 +515,12 @@ const CapituloPage = () => {
 // HERO
 // ============================================
 const Hero = ({
-  capitulo, brasaoUrl, casaColor, dataEvento, dias, faseNome
+  capitulo, brasaoUrl, casaBase, acento, dataEvento, dias, faseNome
 }: {
   capitulo: Capitulo;
   brasaoUrl: string | null;
-  casaColor: string;
+  casaBase: string;
+  acento: string;
   dataEvento: string | null;
   dias: number | null;
   faseNome: string | null;
@@ -495,7 +528,7 @@ const Hero = ({
   <section
     className="relative overflow-hidden -mx-4 px-6 pt-10 pb-12"
     style={{
-      background: `radial-gradient(ellipse at center top, ${casaColor}22 0%, #0F0F1E 70%)`,
+      background: `radial-gradient(ellipse at center top, ${acento}1F 0%, #0F0F1E 70%)`,
     }}
   >
     {/* medalha brasão */}
@@ -503,8 +536,8 @@ const Hero = ({
       <div
         className="w-24 h-24 rounded-full flex items-center justify-center"
         style={{
-          background: `radial-gradient(circle, ${casaColor}33 0%, transparent 70%)`,
-          boxShadow: `inset 0 0 0 1px ${casaColor}55, 0 0 30px ${casaColor}33`,
+          background: `radial-gradient(circle, ${casaBase}33 0%, transparent 70%)`,
+          boxShadow: `inset 0 0 0 1px ${casaBase}55, 0 0 30px ${casaBase}33`,
         }}
       >
         {brasaoUrl ? (
@@ -529,32 +562,20 @@ const Hero = ({
     {capitulo.frase_ancora && (
       <p
         className="text-center font-serif italic text-base mt-4 mx-auto max-w-xs leading-relaxed"
-        style={{ color: casaColor }}
+        style={{ color: acento }}
       >
         {capitulo.frase_ancora}
       </p>
     )}
 
-    {/* contagem regressiva / data */}
-    {(dataEvento || dias !== null) && (
-      <div className="flex items-center justify-center gap-2 mt-6 text-xs text-white/60">
-        <Calendar className="w-3.5 h-3.5" />
-        {dias !== null && dias > 0 && (
-          <span>Faltam <span className="text-white font-semibold">{dias}</span> {dias === 1 ? 'dia' : 'dias'}</span>
-        )}
-        {dias === 0 && <span className="text-amber-300 font-semibold tracking-wider">É HOJE</span>}
-        {dias !== null && dias < 0 && <span>Encerrado</span>}
-        {dataEvento && <span className="text-white/30">·</span>}
-        {dataEvento && <span>{formatarData(dataEvento)}</span>}
-      </div>
-    )}
+    {/* Data/contagem removida do Hero (o professor não define mais data_evento). */}
   </section>
 );
 
 // ============================================
 // STAGE 2 · A TRETA
 // ============================================
-const Treta = ({ capitulo }: { capitulo: Capitulo }) => {
+const Treta = ({ capitulo, acento }: { capitulo: Capitulo; acento: string }) => {
   if (!capitulo.briefing_chamada && !capitulo.briefing_o_que_aconteceu) return null;
   return (
     <section>
@@ -571,28 +592,31 @@ const Treta = ({ capitulo }: { capitulo: Capitulo }) => {
         <BlocoBriefing
           tag={capitulo.tema_curto || 'O QUE ACONTECEU'}
           itens={capitulo.briefing_o_que_aconteceu}
+          acento={acento}
         />
       )}
       {capitulo.briefing_porque_importa && (
         <div className="mt-4">
-          <BlocoBriefing tag="E AÍ, POR QUÊ?" itens={capitulo.briefing_porque_importa} variante="alt" />
+          <BlocoBriefing tag="E AÍ, POR QUÊ?" itens={capitulo.briefing_porque_importa} acento={acento} variante="alt" />
         </div>
       )}
     </section>
   );
 };
 
-const BlocoBriefing = ({ tag, itens, variante }: { tag: string; itens: string[]; variante?: 'alt' }) => (
+const PANEL = 'rounded-[18px] border border-white/[0.08] bg-white/[0.035]';
+const PANEL_SHADOW = '0 8px 24px -14px rgba(0,0,0,.6)';
+
+const BlocoBriefing = ({ tag, itens, acento, variante }: { tag: string; itens: string[]; acento: string; variante?: 'alt' }) => (
   <div
-    data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
-    className="sf-panel p-4"
-    style={variante === 'alt' ? { ['--aug-border-bg' as string]: 'rgba(252, 211, 77, 0.35)' } : undefined}
+    className={cn(PANEL, 'p-4')}
+    style={{ boxShadow: PANEL_SHADOW, ...(variante === 'alt' ? { borderColor: `${acento}47` } : {}) }}
   >
-    <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/60 mb-3">{tag}</div>
+    <div className="text-[10px] tracking-[0.3em] uppercase mb-3" style={{ color: `${acento}b3` }}>{tag}</div>
     <ul className="space-y-2.5">
       {itens.map((it, i) => (
         <li key={i} className="text-sm text-white/85 flex gap-2 leading-relaxed">
-          <span className="text-amber-200/40 mt-0.5">▸</span>
+          <span className="mt-0.5" style={{ color: `${acento}99` }}>▸</span>
           <span>{it}</span>
         </li>
       ))}
@@ -604,18 +628,19 @@ const BlocoBriefing = ({ tag, itens, variante }: { tag: string; itens: string[];
 // STAGE 3 · VOCÊ
 // ============================================
 const SeuPapel = ({
-  papel, delegacao, casaColor, onAbrirGuia
+  papel, delegacao, acento, casaBase, onAbrirGuia
 }: {
   papel: Papel | null;
   delegacao: Delegacao | null;
-  casaColor: string;
+  acento: string;
+  casaBase: string;
   onAbrirGuia: () => void;
 }) => {
   if (!papel) {
     return (
       <section>
         <div className="text-[10px] tracking-[0.4em] uppercase text-white/40 mb-3">Você</div>
-        <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-5 text-center">
+        <div className={cn(PANEL, 'p-5 text-center')} style={{ boxShadow: PANEL_SHADOW }}>
           <p className="text-sm text-white/60">
             Você ainda não foi convocado.
           </p>
@@ -632,15 +657,15 @@ const SeuPapel = ({
       <div className="text-[10px] tracking-[0.4em] uppercase text-white/40 mb-3">Você</div>
       <button
         onClick={onAbrirGuia}
-        data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
-        className="sf-panel sf-accent-border w-full text-left p-5 transition"
+        className="rounded-[18px] border bg-white/[0.035] w-full text-left p-5 transition active:scale-[0.99]"
+        style={{ borderColor: `${acento}73`, boxShadow: `0 12px 30px -14px ${casaBase}59` }}
       >
         <div className="text-[10px] tracking-[0.3em] uppercase text-white/40 mb-2">
           {papel.time_label || 'Sua função'}
         </div>
         <div className="font-serif text-2xl text-white leading-tight">{papel.nome}</div>
         {delegacao && (
-          <div className="text-sm mt-1.5" style={{ color: casaColor }}>
+          <div className="text-sm mt-1.5" style={{ color: acento }}>
             Delegação {delegacao.nome}
           </div>
         )}
@@ -649,7 +674,7 @@ const SeuPapel = ({
             “{papel.descricao_curta}”
           </p>
         )}
-        <div className="flex items-center gap-1 mt-4 text-xs text-amber-200/70">
+        <div className="flex items-center gap-1 mt-4 text-xs" style={{ color: acento }}>
           <ScrollText className="w-3.5 h-3.5" />
           <span>Abrir guia da função</span>
           <ChevronRight className="w-3.5 h-3.5" />
@@ -663,13 +688,15 @@ const SeuPapel = ({
 // STAGE 4 · ELENCO
 // ============================================
 const Elenco = ({
-  papeis, alocacoes, delegacoes, membrosDelegacoes, brasoes, onAbrirGuia, onAbrirDelegacao, meuId
+  papeis, alocacoes, delegacoes, membrosDelegacoes, brasoes, acento, casaBase, onAbrirGuia, onAbrirDelegacao, meuId
 }: {
   papeis: Papel[];
   alocacoes: AlocacaoComAluno[];
   delegacoes: Delegacao[];
   membrosDelegacoes: MembroComAluno[];
   brasoes: Brasoes;
+  acento: string;
+  casaBase: string;
   onAbrirGuia: (p: Papel) => void;
   onAbrirDelegacao: (d: Delegacao) => void;
   meuId: string | null;
@@ -694,13 +721,12 @@ const Elenco = ({
       </div>
 
       <div
-        data-augmented-ui="tl-clip br-clip border"
-        className="sf-card px-3.5 py-2.5 mb-5 flex items-start gap-2.5"
-        style={{ ['--aug-border-bg' as string]: 'rgba(252, 211, 77, 0.35)' }}
+        className="rounded-[14px] border px-3.5 py-2.5 mb-5 flex items-start gap-2.5"
+        style={{ borderColor: `${acento}47`, background: 'rgba(255,255,255,0.03)' }}
       >
-        <BookOpen className="w-3.5 h-3.5 text-amber-200/80 mt-0.5 flex-shrink-0" />
+        <BookOpen className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: acento }} />
         <p className="text-[12px] text-white/75 leading-relaxed">
-          <span className="text-amber-200/90 font-semibold">Toque em qualquer função</span> para abrir o guia completo: o que você faz, como fazer e exemplos de fala.
+          <span className="font-semibold" style={{ color: acento }}>Toque em qualquer função</span> para abrir o guia completo: o que você faz, como fazer e exemplos de fala.
         </p>
       </div>
 
@@ -708,7 +734,7 @@ const Elenco = ({
       <SubHeader>Mesa Diretora</SubHeader>
       <GradeRetabulo>
         {time2Mesa.map(p => (
-          <CardElenco key={p.id} papel={p} alocacoes={alocPorPapel[p.id] || []} brasoes={brasoes} onClick={() => onAbrirGuia(p)} meuId={meuId} />
+          <CardElenco key={p.id} papel={p} alocacoes={alocPorPapel[p.id] || []} brasoes={brasoes} acento={acento} casaBase={casaBase} onClick={() => onAbrirGuia(p)} meuId={meuId} />
         ))}
       </GradeRetabulo>
 
@@ -717,7 +743,7 @@ const Elenco = ({
         <>
           <SubHeader>Mediadores</SubHeader>
           {time2Med.map(p => (
-            <SlotsLista key={p.id} papel={p} alocacoes={alocPorPapel[p.id] || []} brasoes={brasoes} onClick={() => onAbrirGuia(p)} meuId={meuId} />
+            <SlotsLista key={p.id} papel={p} alocacoes={alocPorPapel[p.id] || []} brasoes={brasoes} acento={acento} onClick={() => onAbrirGuia(p)} meuId={meuId} />
           ))}
         </>
       )}
@@ -727,7 +753,7 @@ const Elenco = ({
         <>
           <SubHeader>Observatório</SubHeader>
           {time2Obs.map(p => (
-            <SlotsLista key={p.id} papel={p} alocacoes={alocPorPapel[p.id] || []} brasoes={brasoes} onClick={() => onAbrirGuia(p)} meuId={meuId} />
+            <SlotsLista key={p.id} papel={p} alocacoes={alocPorPapel[p.id] || []} brasoes={brasoes} acento={acento} onClick={() => onAbrirGuia(p)} meuId={meuId} />
           ))}
         </>
       )}
@@ -746,16 +772,16 @@ const Elenco = ({
                 .sort((a, b) => a.ordem - b.ordem);
               const membrosDeleg = membrosDelegacoes.filter(m => m.delegacao_codigo === deleg.codigo);
               return (
-                <div key={deleg.id} data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-4">
+                <div key={deleg.id} className={cn(PANEL, 'p-4')} style={{ boxShadow: PANEL_SHADOW }}>
                   <button
                     onClick={() => onAbrirDelegacao(deleg)}
                     className="group flex items-center gap-1.5 text-left"
                   >
-                    <span className="text-sm font-serif text-amber-200/90 group-hover:text-amber-200 transition">
+                    <span className="text-sm font-serif transition" style={{ color: acento }}>
                       {deleg.nome}
                     </span>
-                    <BookOpen className="w-3 h-3 text-amber-200/50 group-hover:text-amber-200/80 transition" />
-                    <ChevronRight className="w-3 h-3 text-amber-200/40 group-hover:text-amber-200/70 group-hover:translate-x-0.5 transition" />
+                    <BookOpen className="w-3 h-3 transition" style={{ color: `${acento}99` }} />
+                    <ChevronRight className="w-3 h-3 transition group-hover:translate-x-0.5" style={{ color: `${acento}80` }} />
                   </button>
                   {deleg.objetivo && (
                     <div className="text-[11px] text-white/50 mt-1 leading-snug">{deleg.objetivo}</div>
@@ -773,15 +799,16 @@ const Elenco = ({
                           return (
                             <span
                               key={m.id}
-                              className={cn(
-                                'inline-flex items-center gap-1.5 pl-1 pr-2 py-0.5 rounded-full text-[11px]',
-                                eh_meu ? 'bg-amber-200/15 ring-1 ring-amber-200/30 text-white' : 'bg-white/[0.04] text-white/85'
-                              )}
+                              className="inline-flex items-center gap-1.5 pl-1 pr-2 py-0.5 rounded-full text-[11px]"
+                              style={eh_meu
+                                ? { background: `${acento}26`, boxShadow: `inset 0 0 0 1px ${acento}4d`, color: '#fff' }
+                                : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.85)' }}
                             >
                               <Avatar
                                 nome={nomeAluno(m.aluno)}
                                 url={m.aluno?.avatar_url ?? null}
                                 brasao={m.aluno?.casa_id ? brasoes[m.aluno.casa_id] : null}
+                                acento={acento}
                                 pequeno
                               />
                               {nomeESobrenome(m.aluno)}
@@ -801,31 +828,34 @@ const Elenco = ({
                       {papeisDeleg.map(p => {
                         const alocs = alocPorPapel[p.id] || [];
                         const al = alocs[0];
+                        const ehMeuPapel = al?.aluno_id === meuId;
                         return (
                           <button
                             key={p.id}
                             onClick={() => onAbrirGuia(p)}
-                            className={cn(
-                              'flex items-center gap-2 p-2 rounded-lg transition text-left',
-                              al?.aluno_id === meuId
-                                ? 'bg-amber-200/10 ring-1 ring-amber-200/30'
-                                : 'bg-white/[0.03] hover:bg-white/[0.07]'
-                            )}
+                            className="flex items-center gap-2 p-2 rounded-[11px] transition text-left"
+                            style={ehMeuPapel
+                              ? { background: `${acento}1a`, boxShadow: `inset 0 0 0 1px ${acento}4d` }
+                              : { background: 'rgba(255,255,255,0.03)' }}
                           >
                             <Avatar
                               nome={al ? nomeAluno(al.aluno) : '·'}
                               url={al?.aluno?.avatar_url ?? null}
                               brasao={al?.aluno?.casa_id ? brasoes[al.aluno.casa_id] : null}
+                              acento={acento}
                               vazio={!al}
                             />
                             <div className="min-w-0 flex-1">
                               <div className="text-[10px] tracking-wide uppercase text-white/40 leading-none mb-0.5">{p.nome}</div>
                               <div className="text-[12px] text-white/85 leading-tight break-words">
-                                {al ? nomeESobrenome(al.aluno) : <span className="text-white/30 italic">vaga aberta</span>}
+                                {al ? nomeESobrenome(al.aluno) : <span className="text-white/45 italic">vaga aberta</span>}
                               </div>
-                              <div className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-full bg-amber-200/15 ring-1 ring-amber-200/30">
-                                <Info className="w-2.5 h-2.5 text-amber-200/90" />
-                                <span className="text-[9px] font-semibold text-amber-100 tracking-wide">Saiba mais</span>
+                              <div
+                                className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-full"
+                                style={{ background: `${acento}26`, boxShadow: `inset 0 0 0 1px ${acento}4d` }}
+                              >
+                                <Info className="w-2.5 h-2.5" style={{ color: acento }} />
+                                <span className="text-[9px] font-semibold tracking-wide" style={{ color: acento }}>Saiba mais</span>
                               </div>
                             </div>
                           </button>
@@ -852,84 +882,91 @@ const GradeRetabulo = ({ children }: { children: React.ReactNode }) => (
 );
 
 const CardElenco = ({
-  papel, alocacoes, brasoes, onClick, meuId
+  papel, alocacoes, brasoes, acento, casaBase, onClick, meuId
 }: {
-  papel: Papel; alocacoes: AlocacaoComAluno[]; brasoes: Brasoes; onClick: () => void; meuId: string | null;
+  papel: Papel; alocacoes: AlocacaoComAluno[]; brasoes: Brasoes; acento: string; casaBase: string; onClick: () => void; meuId: string | null;
 }) => {
   const al = alocacoes[0];
   const eh_meu = al?.aluno_id === meuId;
   return (
     <button
       onClick={onClick}
-      data-augmented-ui="tl-clip br-clip border"
-      className={cn(
-        'sf-card flex flex-col items-center gap-2 p-3 transition text-center',
-        eh_meu && 'sf-accent-border'
-      )}
+      className="rounded-[14px] border flex flex-col items-center gap-2 p-3 transition text-center active:scale-[0.98]"
+      style={eh_meu
+        ? { borderColor: `${acento}73`, background: 'rgba(255,255,255,0.03)', boxShadow: `0 12px 30px -14px ${casaBase}59` }
+        : { borderColor: 'rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.03)' }}
     >
       <Avatar
         nome={al ? nomeAluno(al.aluno) : '·'}
         url={al?.aluno?.avatar_url ?? null}
         brasao={al?.aluno?.casa_id ? brasoes[al.aluno.casa_id] : null}
+        acento={acento}
         vazio={!al}
         grande
       />
       <div className="text-[10px] tracking-wide uppercase text-white/40 leading-none">{papel.nome}</div>
       <div className="text-[12px] text-white/85 leading-tight line-clamp-2 break-words">
-        {al ? nomeESobrenome(al.aluno) : <span className="text-white/30 italic">vaga aberta</span>}
+        {al ? nomeESobrenome(al.aluno) : <span className="text-white/45 italic">vaga aberta</span>}
       </div>
-      <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-amber-200/15 ring-1 ring-amber-200/30">
-        <Info className="w-2.5 h-2.5 text-amber-200/90" />
-        <span className="text-[9px] font-semibold text-amber-100 tracking-wide">Saiba mais</span>
+      <div
+        className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full"
+        style={{ background: `${acento}26`, boxShadow: `inset 0 0 0 1px ${acento}4d` }}
+      >
+        <Info className="w-2.5 h-2.5" style={{ color: acento }} />
+        <span className="text-[9px] font-semibold tracking-wide" style={{ color: acento }}>Saiba mais</span>
       </div>
     </button>
   );
 };
 
 const SlotsLista = ({
-  papel, alocacoes, brasoes, onClick, meuId
+  papel, alocacoes, brasoes, acento, onClick, meuId
 }: {
-  papel: Papel; alocacoes: AlocacaoComAluno[]; brasoes: Brasoes; onClick: () => void; meuId: string | null;
+  papel: Papel; alocacoes: AlocacaoComAluno[]; brasoes: Brasoes; acento: string; onClick: () => void; meuId: string | null;
 }) => {
   const ilimitado = papel.vagas_por_turma > 30;
   const slotsCount = ilimitado ? alocacoes.length : papel.vagas_por_turma;
   const slots = Array.from({ length: slotsCount }).map((_, i) => alocacoes[i] ?? null);
   return (
-    <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-3 mb-2">
+    <div className={cn(PANEL, 'p-3 mb-2')} style={{ boxShadow: PANEL_SHADOW }}>
       <button onClick={onClick} className="group w-full flex items-center justify-between mb-2.5">
-        <span className="flex items-center gap-1.5 text-[11px] tracking-[0.2em] uppercase text-amber-200/90 group-hover:text-amber-200 transition">
+        <span className="flex items-center gap-1.5 text-[11px] tracking-[0.2em] uppercase transition" style={{ color: acento }}>
           <ScrollText className="w-3 h-3" />
           {papel.nome}
           {ilimitado
             ? alocacoes.length > 0 && <span className="text-white/40 normal-case tracking-normal ml-0.5">· {alocacoes.length}</span>
             : <span className="text-white/40 normal-case tracking-normal ml-0.5">· {papel.vagas_por_turma} vagas</span>}
         </span>
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-200/15 ring-1 ring-amber-200/30 group-hover:bg-amber-200/25 transition">
-          <Info className="w-2.5 h-2.5 text-amber-200/90" />
-          <span className="text-[9px] font-semibold text-amber-100 tracking-wide normal-case">Saiba mais</span>
+        <span
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full transition"
+          style={{ background: `${acento}26`, boxShadow: `inset 0 0 0 1px ${acento}4d` }}
+        >
+          <Info className="w-2.5 h-2.5" style={{ color: acento }} />
+          <span className="text-[9px] font-semibold tracking-wide normal-case" style={{ color: acento }}>Saiba mais</span>
         </span>
       </button>
       {ilimitado && alocacoes.length === 0 && (
-        <div className="text-[11px] text-white/30 italic py-1">Ainda sem ninguém alocado.</div>
+        <div className="text-[11px] text-white/40 italic py-1">Ainda sem ninguém alocado.</div>
       )}
       <div className="grid grid-cols-4 gap-2">
         {slots.map((al, i) => (
           <div
             key={i}
-            className={cn(
-              'flex flex-col items-center p-1.5 rounded-md',
-              al?.aluno_id === meuId ? 'bg-amber-200/10 ring-1 ring-amber-200/30' : ''
-            )}
+            className="flex flex-col items-center p-1.5 rounded-[11px]"
+            style={al?.aluno_id === meuId
+              ? { background: `${acento}1a`, boxShadow: `inset 0 0 0 1px ${acento}4d` }
+              : undefined}
           >
             <Avatar
               nome={al ? nomeAluno(al.aluno) : '·'}
               url={al?.aluno?.avatar_url ?? null}
               brasao={al?.aluno?.casa_id ? brasoes[al.aluno.casa_id] : null}
+              acento={acento}
               vazio={!al}
               pequeno
             />
             <div className="text-[10px] text-white/70 mt-1 leading-tight w-full text-center break-words">
-              {al ? nomeESobrenome(al.aluno) : <span className="text-white/25 italic">vaga</span>}
+              {al ? nomeESobrenome(al.aluno) : <span className="text-white/45 italic">vaga</span>}
             </div>
           </div>
         ))}
@@ -939,17 +976,18 @@ const SlotsLista = ({
 };
 
 const Avatar = ({
-  nome, url, brasao, vazio, grande, pequeno
-}: { nome: string; url: string | null; brasao?: string | null; vazio?: boolean; grande?: boolean; pequeno?: boolean }) => {
+  nome, url, brasao, acento, vazio, grande, pequeno
+}: { nome: string; url: string | null; brasao?: string | null; acento?: string; vazio?: boolean; grande?: boolean; pequeno?: boolean }) => {
   const size = grande ? 'w-12 h-12 text-sm' : pequeno ? 'w-8 h-8 text-[10px]' : 'w-9 h-9 text-xs';
   return (
-    <div className={cn(
-      'rounded-full flex items-center justify-center overflow-hidden font-semibold',
-      size,
-      vazio
-        ? 'bg-white/[0.04] text-white/20 border border-dashed border-white/10'
-        : 'bg-amber-200/10 text-amber-200/80'
-    )}>
+    <div
+      className={cn(
+        'rounded-full flex items-center justify-center overflow-hidden font-semibold',
+        size,
+        vazio && 'bg-white/[0.04] text-white/20 border border-dashed border-white/10'
+      )}
+      style={!vazio ? { background: `${acento ?? '#a78bfa'}1a`, color: acento ?? '#a78bfa' } : undefined}
+    >
       {vazio ? (
         '+'
       ) : url ? (
@@ -964,12 +1002,32 @@ const Avatar = ({
 };
 
 // ============================================
+// SOBRE O PROJETO (genérico, para capítulos TIMES que NÃO são a Arena)
+// ============================================
+// Puxa o texto do próprio capítulo (descricao_convocacao / frase_ancora), já
+// aprovado no banco. Nada hard-coded, nada da Arena.
+const SobreCapitulo = ({ capitulo }: { capitulo: Capitulo }) => {
+  const corpo = capitulo.descricao_convocacao || capitulo.frase_ancora;
+  if (!corpo) return null;
+  return (
+    <section>
+      <div className="text-[10px] tracking-[0.4em] uppercase text-white/40 mb-3">
+        O projeto
+      </div>
+      <p className="text-sm text-white/80 leading-relaxed whitespace-pre-line">
+        {corpo}
+      </p>
+    </section>
+  );
+};
+
+// ============================================
 // SOBRE A ARENA (formato TIMES)
 // ============================================
-// ATENÇÃO: este conteúdo está hard-coded só para este rascunho da Arena Arboria.
-// Depois isto deve vir do banco por capítulo (campo próprio do capítulo TIMES);
-// NÃO é genérico para todo capítulo de TIMES, é específico da Arena.
-const SobreArena = () => (
+// ATENÇÃO: este conteúdo está hard-coded só para a Arena Arboria (gate `ehArena`
+// no CapituloPage). Depois isto deve vir do banco por capítulo; hoje é específico
+// da Arena e NÃO é genérico para todo capítulo de TIMES.
+const SobreArena = ({ acento, casaBase }: { acento: string; casaBase: string }) => (
   <section>
     <div className="text-[10px] tracking-[0.4em] uppercase text-white/40 mb-3">
       A Arena
@@ -979,8 +1037,8 @@ const SobreArena = () => (
       A Arena Arboria é uma competição de projetos. Seu time escolhe um tema, cria um projeto e, no dia da Arena, prova para todos que ele funciona.
     </p>
 
-    <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-4">
-      <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-3">
+    <div className={cn(PANEL, 'p-4')} style={{ boxShadow: PANEL_SHADOW }}>
+      <div className="text-[10px] tracking-[0.3em] uppercase mb-3" style={{ color: acento }}>
         Até o dia da apresentação
       </div>
       <ol className="space-y-2.5 list-none">
@@ -991,7 +1049,7 @@ const SobreArena = () => (
           'No dia, subam na Arena e apresentem.',
         ].map((passo, i) => (
           <li key={i} className="text-[13px] text-white/80 flex gap-2 leading-relaxed">
-            <span className="text-amber-200/50 font-mono text-[11px] mt-0.5">{i + 1}.</span>
+            <span className="font-mono text-[11px] mt-0.5" style={{ color: acento }}>{i + 1}.</span>
             <span>{passo}</span>
           </li>
         ))}
@@ -1000,11 +1058,10 @@ const SobreArena = () => (
 
     {/* Bloco DESTACADO · premiação (ponto que o Fundador quer ressaltar) */}
     <div
-      data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
-      className="sf-panel mt-4 p-4"
-      style={{ ['--aug-border-bg' as string]: 'rgba(252, 211, 77, 0.35)' }}
+      className="rounded-[18px] border bg-white/[0.035] mt-4 p-4"
+      style={{ borderColor: `${acento}47`, boxShadow: `0 12px 30px -14px ${casaBase}40` }}
     >
-      <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-2">
+      <div className="text-[10px] tracking-[0.3em] uppercase mb-2" style={{ color: acento }}>
         A premiação
       </div>
       <p className="text-sm text-white/85 leading-relaxed">
@@ -1024,17 +1081,20 @@ const SobreArena = () => (
 // STAGE 3 (TIMES) · SEU TIME
 // ============================================
 const SeuTime = ({
-  time, ehPreview, onAbrirGuia
+  time, ehPreview, ehArena, acento, casaBase, onAbrirGuia
 }: {
   time: Papel | null;
   ehPreview: boolean;
+  ehArena: boolean;
+  acento: string;
+  casaBase: string;
   onAbrirGuia: () => void;
 }) => {
   if (!time) {
     return (
       <section>
         <div className="text-[10px] tracking-[0.4em] uppercase text-white/40 mb-3">Você</div>
-        <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-5 text-center">
+        <div className={cn(PANEL, 'p-5 text-center')} style={{ boxShadow: PANEL_SHADOW }}>
           <p className="text-sm text-white/60">
             Você ainda não foi convocado.
           </p>
@@ -1046,22 +1106,26 @@ const SeuTime = ({
     );
   }
 
-  const pdf = pdfDoTime(time.ordem);
+  // PDFs de apoio só existem para a Arena (/materiais/arena/); fora dela, sem PDF.
+  const pdf = ehArena ? pdfDoTime(time.ordem) : null;
 
   return (
     <section>
       <div className="text-[10px] tracking-[0.4em] uppercase text-white/40 mb-3 flex items-center gap-2">
         <span>Seu time</span>
         {ehPreview && (
-          <span className="px-1.5 py-0.5 rounded-full bg-amber-200/15 ring-1 ring-amber-200/30 text-[9px] tracking-[0.2em] text-amber-100 normal-case">
+          <span
+            className="px-1.5 py-0.5 rounded-full text-[9px] tracking-[0.2em] normal-case"
+            style={{ background: `${acento}26`, boxShadow: `inset 0 0 0 1px ${acento}4d`, color: acento }}
+          >
             prévia
           </span>
         )}
       </div>
       <button
         onClick={onAbrirGuia}
-        data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
-        className="sf-panel sf-accent-border w-full text-left p-5 transition"
+        className="rounded-[18px] border bg-white/[0.035] w-full text-left p-5 transition active:scale-[0.99]"
+        style={{ borderColor: `${acento}73`, boxShadow: `0 12px 30px -14px ${casaBase}59` }}
       >
         <div className="text-[10px] tracking-[0.3em] uppercase text-white/40 mb-2">
           {time.time_label || 'Seu time'}
@@ -1072,7 +1136,7 @@ const SeuTime = ({
             {time.descricao_curta}
           </p>
         )}
-        <div className="flex items-center gap-1 mt-4 text-xs text-amber-200/70">
+        <div className="flex items-center gap-1 mt-4 text-xs" style={{ color: acento }}>
           <ScrollText className="w-3.5 h-3.5" />
           <span>Abrir guia do time</span>
           <ChevronRight className="w-3.5 h-3.5" />
@@ -1085,8 +1149,8 @@ const SeuTime = ({
           download
           target="_blank"
           rel="noopener noreferrer"
-          data-augmented-ui="tl-clip br-clip border"
-          className="sf-exec mt-3 flex items-center justify-center gap-2 px-4 py-3 transition"
+          className="rounded-[12px] border mt-3 flex items-center justify-center gap-2 px-4 py-3 transition"
+          style={{ borderColor: `${acento}59`, color: acento, background: 'transparent' }}
         >
           <Download className="w-4 h-4" />
           <span className="text-sm font-medium">Baixar guia do time</span>
@@ -1100,12 +1164,14 @@ const SeuTime = ({
 // STAGE 4 (TIMES) · OS TIMES
 // ============================================
 const OsTimes = ({
-  times, alocacoes, brasoes, meuTimeId, onAbrirGuia
+  times, alocacoes, brasoes, meuTimeId, acento, casaBase, onAbrirGuia
 }: {
   times: Papel[];
   alocacoes: AlocacaoComAluno[];
   brasoes: Brasoes;
   meuTimeId: string | null;
+  acento: string;
+  casaBase: string;
   onAbrirGuia: (p: Papel) => void;
 }) => {
   const alocPorPapel = useMemo(() => {
@@ -1124,13 +1190,12 @@ const OsTimes = ({
       </div>
 
       <div
-        data-augmented-ui="tl-clip br-clip border"
-        className="sf-card px-3.5 py-2.5 mb-5 flex items-start gap-2.5"
-        style={{ ['--aug-border-bg' as string]: 'rgba(252, 211, 77, 0.35)' }}
+        className="rounded-[14px] border px-3.5 py-2.5 mb-5 flex items-start gap-2.5"
+        style={{ borderColor: `${acento}47`, background: 'rgba(255,255,255,0.03)' }}
       >
-        <BookOpen className="w-3.5 h-3.5 text-amber-200/80 mt-0.5 flex-shrink-0" />
+        <BookOpen className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: acento }} />
         <p className="text-[12px] text-white/75 leading-relaxed">
-          <span className="text-amber-200/90 font-semibold">Toque no seu time</span> para abrir o guia.
+          <span className="font-semibold" style={{ color: acento }}>Toque no seu time</span> para abrir o guia.
         </p>
       </div>
 
@@ -1142,6 +1207,8 @@ const OsTimes = ({
             alocacoes={alocPorPapel[t.id] || []}
             brasoes={brasoes}
             ehMeu={t.id === meuTimeId}
+            acento={acento}
+            casaBase={casaBase}
             onClick={() => onAbrirGuia(t)}
           />
         ))}
@@ -1154,9 +1221,9 @@ const OsTimes = ({
 // a descrição/chevron. Os demais times aparecem apenas como nome + avatares +
 // contagem, sem ação (renderizados como <div>, não clicáveis).
 const CardTime = ({
-  time, alocacoes, brasoes, ehMeu, onClick
+  time, alocacoes, brasoes, ehMeu, acento, casaBase, onClick
 }: {
-  time: Papel; alocacoes: AlocacaoComAluno[]; brasoes: Brasoes; ehMeu: boolean; onClick: () => void;
+  time: Papel; alocacoes: AlocacaoComAluno[]; brasoes: Brasoes; ehMeu: boolean; acento: string; casaBase: string; onClick: () => void;
 }) => {
   const ilimitado = time.vagas_por_turma > 30;
   const total = time.vagas_por_turma;
@@ -1165,7 +1232,7 @@ const CardTime = ({
     <div className="mt-auto pt-3 flex flex-col items-center gap-2">
       <div className="flex items-center justify-center min-h-[2rem]">
         {alocacoes.length === 0 ? (
-          <span className="text-[11px] text-white/30">Vagas abertas</span>
+          <span className="text-[11px] text-white/45">Vagas abertas</span>
         ) : (
           <div className="flex items-center -space-x-1.5">
             {alocacoes.slice(0, 3).map(a => (
@@ -1174,6 +1241,7 @@ const CardTime = ({
                   nome={nomeAluno(a.aluno)}
                   url={a.aluno?.avatar_url ?? null}
                   brasao={a.aluno?.casa_id ? brasoes[a.aluno.casa_id] : null}
+                  acento={acento}
                   pequeno
                 />
               </div>
@@ -1194,7 +1262,7 @@ const CardTime = ({
             <><span className="text-white/80 font-semibold">{alocacoes.length}</span> / {total} vagas</>
           )}
         </div>
-        {ehMeu && <ChevronRight className="w-3.5 h-3.5 text-amber-200/50 flex-shrink-0" />}
+        {ehMeu && <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: acento }} />}
       </div>
     </div>
   );
@@ -1203,8 +1271,8 @@ const CardTime = ({
   if (!ehMeu) {
     return (
       <div
-        data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
-        className="sf-panel w-full h-full flex flex-col p-3.5 min-h-[128px]"
+        className={cn(PANEL, 'w-full h-full flex flex-col p-3.5 min-h-[128px]')}
+        style={{ boxShadow: PANEL_SHADOW }}
       >
         <h4 className="font-serif text-[15px] text-white text-center leading-snug line-clamp-2 min-h-[2.6em]">
           {time.nome}
@@ -1218,10 +1286,13 @@ const CardTime = ({
   return (
     <button
       onClick={onClick}
-      data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
-      className="sf-panel sf-accent-border w-full h-full flex flex-col p-3.5 min-h-[128px] transition"
+      className="rounded-[18px] border bg-white/[0.035] w-full h-full flex flex-col p-3.5 min-h-[128px] transition active:scale-[0.99]"
+      style={{ borderColor: `${acento}73`, boxShadow: `0 12px 30px -14px ${casaBase}59` }}
     >
-      <span className="self-center mb-2 px-1.5 py-0.5 rounded-full bg-amber-200/15 ring-1 ring-amber-200/30 text-[9px] font-semibold tracking-[0.15em] text-amber-100">
+      <span
+        className="self-center mb-2 px-1.5 py-0.5 rounded-full text-[9px] font-semibold tracking-[0.15em]"
+        style={{ background: `${acento}26`, boxShadow: `inset 0 0 0 1px ${acento}4d`, color: acento }}
+      >
         SEU TIME
       </span>
 
@@ -1241,19 +1312,22 @@ const CardTime = ({
 // ============================================
 // STAGE 5 · O DIA
 // ============================================
-const ODia = ({ capitulo }: { capitulo: Capitulo }) => {
+const ODia = ({ capitulo, acento, casaBase }: { capitulo: Capitulo; acento: string; casaBase: string }) => {
   if (!capitulo.fases_assembleia || capitulo.fases_assembleia.length === 0) return null;
   return (
     <section>
       <div className="text-[10px] tracking-[0.4em] uppercase text-white/40 mb-3">
         Parte 3 · O dia da Assembleia
       </div>
-      <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel p-4">
+      <div className={cn(PANEL, 'p-4')} style={{ boxShadow: PANEL_SHADOW }}>
         <div className="space-y-3">
           {capitulo.fases_assembleia.map((f) => (
             <div key={f.numero} className="flex gap-3">
               <div className="flex flex-col items-center pt-0.5">
-                <div className="w-6 h-6 rounded-full bg-amber-200/10 ring-1 ring-amber-200/30 flex items-center justify-center text-[10px] font-semibold text-amber-200/80">
+                <div
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold"
+                  style={{ background: `${acento}1a`, boxShadow: `inset 0 0 0 1px ${acento}4d`, color: acento }}
+                >
                   {f.numero}
                 </div>
                 {f.numero < capitulo.fases_assembleia!.length && (
@@ -1263,7 +1337,7 @@ const ODia = ({ capitulo }: { capitulo: Capitulo }) => {
               <div className="flex-1 pb-2">
                 <div className="flex items-baseline gap-2">
                   <h4 className="text-sm font-serif text-white">{f.nome}</h4>
-                  <span className="text-[10px] text-amber-200/60">{f.duracao_min} min</span>
+                  <span className="text-[10px]" style={{ color: acento }}>{f.duracao_min} min</span>
                 </div>
                 <p className="text-[12px] text-white/55 mt-0.5 leading-snug">{f.descricao}</p>
               </div>
@@ -1273,10 +1347,10 @@ const ODia = ({ capitulo }: { capitulo: Capitulo }) => {
       </div>
 
       {/* Traje do dia */}
-      <div data-augmented-ui="tl-clip tr-clip bl-clip br-clip border" className="sf-panel mt-4 p-4">
+      <div className={cn(PANEL, 'mt-4 p-4')} style={{ boxShadow: PANEL_SHADOW }}>
         <div className="flex items-center gap-2 mb-2">
-          <Shirt className="w-4 h-4 text-amber-200/80" />
-          <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70">O que vestir</div>
+          <Shirt className="w-4 h-4" style={{ color: acento }} />
+          <div className="text-[10px] tracking-[0.3em] uppercase" style={{ color: acento }}>O que vestir</div>
         </div>
         <p className="text-[13px] text-white/70 leading-relaxed">
           Veja o aviso com os trajes permitidos para o dia da Assembleia.
@@ -1284,8 +1358,8 @@ const ODia = ({ capitulo }: { capitulo: Capitulo }) => {
         <a
           href="/docs/aviso-traje-assembleia.pdf"
           download
-          data-augmented-ui="tl-clip br-clip border"
-          className="sf-exec mt-3 flex items-center justify-center gap-2 px-4 py-3 transition"
+          className="rounded-[12px] border mt-3 flex items-center justify-center gap-2 px-4 py-3 transition"
+          style={{ borderColor: `${acento}59`, color: acento, background: 'transparent' }}
         >
           <Download className="w-4 h-4" />
           <span className="text-sm font-medium">Baixar aviso de trajes</span>
@@ -1294,11 +1368,10 @@ const ODia = ({ capitulo }: { capitulo: Capitulo }) => {
 
       {capitulo.regra_de_ouro && (
         <div
-          data-augmented-ui="tl-clip tr-clip bl-clip br-clip border"
-          className="sf-panel mt-4 p-4"
-          style={{ ['--aug-border-bg' as string]: 'rgba(252, 211, 77, 0.35)' }}
+          className="rounded-[18px] border bg-white/[0.035] mt-4 p-4"
+          style={{ borderColor: `${acento}47`, boxShadow: `0 12px 30px -14px ${casaBase}40` }}
         >
-          <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-2">Regra de ouro</div>
+          <div className="text-[10px] tracking-[0.3em] uppercase mb-2" style={{ color: acento }}>Regra de ouro</div>
           <p className="text-sm text-white/85 italic font-serif leading-relaxed">{capitulo.regra_de_ouro}</p>
         </div>
       )}
@@ -1309,10 +1382,11 @@ const ODia = ({ capitulo }: { capitulo: Capitulo }) => {
 // ============================================
 // DRAWER · GUIA DA FUNÇÃO
 // ============================================
-const GuiaConteudo = ({ papel, delegacoes, ehMeuTime = false }: { papel: Papel; delegacoes: Delegacao[]; ehMeuTime?: boolean }) => {
+const GuiaConteudo = ({ papel, delegacoes, ehMeuTime = false, ehArena = false, acento, solida }: { papel: Papel; delegacoes: Delegacao[]; ehMeuTime?: boolean; ehArena?: boolean; acento: string; solida: string }) => {
   const deleg = papel.delegacao ? delegacoes.find(d => d.codigo === papel.delegacao) : null;
   // Regra "só o seu time": o PDF de apoio só aparece para o time do próprio aluno.
-  const pdfTime = papel.categoria === 'time' && ehMeuTime ? pdfDoTime(papel.ordem) : null;
+  // E só na Arena (os PDFs /materiais/arena/ são específicos dela).
+  const pdfTime = papel.categoria === 'time' && ehMeuTime && ehArena ? pdfDoTime(papel.ordem) : null;
   return (
     <>
       <DrawerHeader className="text-left border-b border-white/10">
@@ -1321,7 +1395,7 @@ const GuiaConteudo = ({ papel, delegacoes, ehMeuTime = false }: { papel: Papel; 
         </div>
         <DrawerTitle className="font-serif text-2xl text-white">{papel.nome}</DrawerTitle>
         {deleg && (
-          <DrawerDescription className="text-amber-200/70 text-sm">
+          <DrawerDescription className="text-sm" style={{ color: acento }}>
             Delegação {deleg.nome}
           </DrawerDescription>
         )}
@@ -1334,7 +1408,7 @@ const GuiaConteudo = ({ papel, delegacoes, ehMeuTime = false }: { papel: Papel; 
         {/* Seção 01. Seu papel */}
         {papel.roteiro_papel && (
           <div>
-            <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-2">Seção 01 · Seu papel</div>
+            <div className="text-[10px] tracking-[0.3em] uppercase mb-2" style={{ color: acento }}>Seção 01 · Seu papel</div>
             <div className="text-[14px] text-white/80 leading-relaxed whitespace-pre-line">
               {papel.roteiro_papel}
             </div>
@@ -1344,7 +1418,7 @@ const GuiaConteudo = ({ papel, delegacoes, ehMeuTime = false }: { papel: Papel; 
         {/* Seção 02, Como fazer */}
         {papel.roteiro_como_fazer && papel.roteiro_como_fazer.length > 0 && (
           <div>
-            <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-3">Seção 02 · Como fazer</div>
+            <div className="text-[10px] tracking-[0.3em] uppercase mb-3" style={{ color: acento }}>Seção 02 · Como fazer</div>
             <div className="space-y-4">
               {papel.roteiro_como_fazer.map((bloco, i) => (
                 <div key={i}>
@@ -1352,7 +1426,7 @@ const GuiaConteudo = ({ papel, delegacoes, ehMeuTime = false }: { papel: Papel; 
                   <ol className="space-y-1.5 list-none">
                     {bloco.passos.map((passo, j) => (
                       <li key={j} className="text-[13px] text-white/80 flex gap-2 leading-relaxed">
-                        <span className="text-amber-200/50 font-mono text-[11px] mt-0.5">{j + 1}.</span>
+                        <span className="font-mono text-[11px] mt-0.5" style={{ color: acento }}>{j + 1}.</span>
                         <span>{passo}</span>
                       </li>
                     ))}
@@ -1366,11 +1440,11 @@ const GuiaConteudo = ({ papel, delegacoes, ehMeuTime = false }: { papel: Papel; 
         {/* Seção 03. Exemplos de fala */}
         {papel.roteiro_exemplos && papel.roteiro_exemplos.length > 0 && (
           <div>
-            <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-3">Seção 03 · Exemplos de fala</div>
+            <div className="text-[10px] tracking-[0.3em] uppercase mb-3" style={{ color: acento }}>Seção 03 · Exemplos de fala</div>
             <div className="space-y-3">
               {papel.roteiro_exemplos.map((ex, i) => (
-                <div key={i} className="rounded-md bg-amber-950/30 border-l-2 border-amber-200/40 pl-3 pr-3 py-2.5">
-                  <div className="text-[10px] tracking-wider uppercase text-amber-200/70 mb-1">{ex.titulo}</div>
+                <div key={i} className="rounded-md pl-3 pr-3 py-2.5" style={{ background: `${acento}14`, borderLeft: `2px solid ${acento}` }}>
+                  <div className="text-[10px] tracking-wider uppercase mb-1" style={{ color: acento }}>{ex.titulo}</div>
                   <p className="text-[13px] text-white/85 italic font-serif leading-relaxed">“{ex.fala}”</p>
                 </div>
               ))}
@@ -1381,18 +1455,18 @@ const GuiaConteudo = ({ papel, delegacoes, ehMeuTime = false }: { papel: Papel; 
         {/* Seção 04. Roteiro de falas, momento a momento */}
         {papel.roteiro_falas_cronologico && papel.roteiro_falas_cronologico.length > 0 && (
           <div>
-            <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-3 flex items-center gap-1.5">
+            <div className="text-[10px] tracking-[0.3em] uppercase mb-3 flex items-center gap-1.5" style={{ color: acento }}>
               <Clock className="w-3 h-3" />
               Seção 04 · Roteiro de falas, momento a momento
             </div>
             <p className="text-[11px] text-white/50 leading-relaxed mb-4 italic">
-              O que falar e <span className="text-amber-200/80">quando</span> falar. Siga em ordem cronológica durante a Assembleia.
+              O que falar e <span style={{ color: acento }}>quando</span> falar. Siga em ordem cronológica durante a Assembleia.
             </p>
             <div className="space-y-5">
               {papel.roteiro_falas_cronologico.map((fase, fi) => (
                 <div key={fi} className="rounded-lg border border-white/10 bg-white/[0.02] p-3.5">
                   <div className="mb-3 pb-2.5 border-b border-white/10">
-                    <div className="text-[11px] font-semibold tracking-[0.15em] uppercase text-amber-200/90">
+                    <div className="text-[11px] font-semibold tracking-[0.15em] uppercase" style={{ color: acento }}>
                       {fase.fase_nome}
                     </div>
                     <div className="text-[10px] text-white/45 mt-0.5">{fase.fase_intervalo}</div>
@@ -1401,8 +1475,11 @@ const GuiaConteudo = ({ papel, delegacoes, ehMeuTime = false }: { papel: Papel; 
                     {fase.momentos.map((m, mi) => (
                       <div key={mi} className="flex gap-2.5">
                         <div className="flex-shrink-0 pt-0.5">
-                          <div className="inline-flex items-center justify-center min-w-[3.5rem] px-1.5 py-0.5 rounded-md bg-amber-200/10 ring-1 ring-amber-200/20">
-                            <span className="text-[10px] font-mono text-amber-200/90 tracking-tight">{m.tempo}</span>
+                          <div
+                            className="inline-flex items-center justify-center min-w-[3.5rem] px-1.5 py-0.5 rounded-md"
+                            style={{ background: `${acento}1a`, boxShadow: `inset 0 0 0 1px ${acento}33` }}
+                          >
+                            <span className="text-[10px] font-mono tracking-tight" style={{ color: acento }}>{m.tempo}</span>
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1414,7 +1491,7 @@ const GuiaConteudo = ({ papel, delegacoes, ehMeuTime = false }: { papel: Papel; 
                               {m.instrucao}
                             </p>
                           )}
-                          <div className="rounded-md bg-amber-950/30 border-l-2 border-amber-200/50 pl-2.5 pr-2.5 py-1.5">
+                          <div className="rounded-md pl-2.5 pr-2.5 py-1.5" style={{ background: `${acento}14`, borderLeft: `2px solid ${acento}` }}>
                             <p className="text-[12px] text-white/85 italic font-serif leading-relaxed">
                               “{m.fala}”
                             </p>
@@ -1437,10 +1514,11 @@ const GuiaConteudo = ({ papel, delegacoes, ehMeuTime = false }: { papel: Papel; 
               download
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 rounded-xl bg-amber-200/15 hover:bg-amber-200/25 ring-1 ring-amber-200/40 px-4 py-3.5 text-amber-100 transition"
+              className="flex items-center justify-center gap-2 rounded-[12px] px-4 py-3.5 text-white font-bold transition active:scale-[0.99]"
+              style={{ backgroundColor: solida }}
             >
               <Download className="w-4 h-4" />
-              <span className="text-sm font-medium">Baixar guia do time</span>
+              <span className="text-sm">Baixar guia do time</span>
             </a>
             <p className="text-[11px] text-white/40 text-center mt-2">
               PDF de apoio com o roteiro completo do time.
@@ -1455,7 +1533,7 @@ const GuiaConteudo = ({ papel, delegacoes, ehMeuTime = false }: { papel: Papel; 
 // ============================================
 // DRAWER · GUIA DA DELEGAÇÃO
 // ============================================
-const GuiaConteudoDelegacao = ({ delegacao }: { delegacao: Delegacao }) => {
+const GuiaConteudoDelegacao = ({ delegacao, acento, solida }: { delegacao: Delegacao; acento: string; solida: string }) => {
   const pdf = pdfDaDelegacao(delegacao.codigo);
   return (
     <>
@@ -1474,7 +1552,7 @@ const GuiaConteudoDelegacao = ({ delegacao }: { delegacao: Delegacao }) => {
       <div className="px-6 pb-10 pt-5 overflow-y-auto space-y-6">
         {delegacao.objetivo && (
           <div>
-            <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-2">O que defendem</div>
+            <div className="text-[10px] tracking-[0.3em] uppercase mb-2" style={{ color: acento }}>O que defendem</div>
             <p className="text-[14px] text-white/80 leading-relaxed">
               {delegacao.objetivo}
             </p>
@@ -1483,7 +1561,7 @@ const GuiaConteudoDelegacao = ({ delegacao }: { delegacao: Delegacao }) => {
 
         {delegacao.nao_cedem && (
           <div>
-            <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-2">Não cedem em</div>
+            <div className="text-[10px] tracking-[0.3em] uppercase mb-2" style={{ color: acento }}>Não cedem em</div>
             <p className="text-[14px] text-white/80 leading-relaxed">
               {delegacao.nao_cedem}
             </p>
@@ -1492,7 +1570,7 @@ const GuiaConteudoDelegacao = ({ delegacao }: { delegacao: Delegacao }) => {
 
         {delegacao.topam_negociar && (
           <div>
-            <div className="text-[10px] tracking-[0.3em] uppercase text-amber-200/70 mb-2">Topam negociar</div>
+            <div className="text-[10px] tracking-[0.3em] uppercase mb-2" style={{ color: acento }}>Topam negociar</div>
             <p className="text-[14px] text-white/80 leading-relaxed">
               {delegacao.topam_negociar}
             </p>
@@ -1504,10 +1582,11 @@ const GuiaConteudoDelegacao = ({ delegacao }: { delegacao: Delegacao }) => {
             <a
               href={pdf}
               download
-              className="flex items-center justify-center gap-2 rounded-xl bg-amber-200/15 hover:bg-amber-200/25 ring-1 ring-amber-200/40 px-4 py-3.5 text-amber-100 transition"
+              className="flex items-center justify-center gap-2 rounded-[12px] px-4 py-3.5 text-white font-bold transition active:scale-[0.99]"
+              style={{ backgroundColor: solida }}
             >
               <Download className="w-4 h-4" />
-              <span className="text-sm font-medium">Baixar guia completo da delegação</span>
+              <span className="text-sm">Baixar guia completo da delegação</span>
             </a>
             <p className="text-[11px] text-white/40 text-center mt-2">
               PDF com argumentos detalhados, dados e estratégia de negociação.

@@ -101,6 +101,7 @@ interface Papel {
   nome: string;
   categoria: Categoria;
   delegacao: string | null;
+  descricao_curta: string | null;
   vagas_por_turma: number;
   ordem: number;
   time_label: string | null;
@@ -130,13 +131,18 @@ interface Aluno {
   avatar_url: string | null;
   casa_id: number | null;
 }
+interface GrupoMeta {
+  numero: number;
+  subtema: string | null;
+}
 interface TurmaConfig {
   id?: string;
   data_evento: string | null;
   delegacoes_ativas: string[];
   missoes_liberadas_em?: string | null;
   missoes_data_prazo?: string | null;
-  times_divididos?: string[]; // papel_ids (times) que o mentor dividiu em 2 grupos nesta turma
+  times_divididos?: string[]; // legado: papel_ids que o mentor dividiu (formato antigo de 2 grupos)
+  time_grupos?: Record<string, GrupoMeta[]>; // por papel_id (tema): grupos {numero, subtema}. N grupos.
 }
 interface Missao {
   id: string;
@@ -485,7 +491,7 @@ const F2CapituloPage = () => {
     queryFn: async () => {
       const { data } = await sb
         .from('capitulo_papeis')
-        .select('id, nome, categoria, delegacao, vagas_por_turma, ordem, time_label')
+        .select('id, nome, categoria, delegacao, descricao_curta, vagas_por_turma, ordem, time_label')
         .eq('capitulo_id', capId!)
         .order('ordem');
       return (data as Papel[]) ?? [];
@@ -710,6 +716,10 @@ const F2CapituloPage = () => {
       ...(turmaConfig?.times_divididos !== undefined
         ? { times_divididos: turmaConfig.times_divididos }
         : {}),
+      // time_grupos: só carrega quando a coluna existe (pós-migration ...0003).
+      ...(turmaConfig?.time_grupos !== undefined
+        ? { time_grupos: turmaConfig.time_grupos }
+        : {}),
       ...patch,
     };
     const { error } = await sb.from('capitulo_turma_config').upsert(proxima, { onConflict: 'capitulo_id,turma_id' });
@@ -849,7 +859,7 @@ const F2CapituloPage = () => {
     refetchAloc();
   };
 
-  // Mover um aluno entre os 2 grupos de um time dividido.
+  // Mover um aluno para outro grupo do time (qualquer grupo >= 1).
   const moverGrupo = async (alocId: string, grupo: number) => {
     const { error } = await sb.from('capitulo_alocacoes').update({ grupo }).eq('id', alocId);
     if (error) {
@@ -859,15 +869,53 @@ const F2CapituloPage = () => {
     refetchAloc();
   };
 
-  // Marca um time como dividido em 2 grupos nesta turma.
-  const dividirTime = async (papelId: string) => {
-    const atuais = turmaConfig?.times_divididos ?? [];
-    if (atuais.includes(papelId)) return;
-    await upsertConfig({ times_divididos: [...atuais, papelId] });
+  // --- Grupos do tema (N grupos + subtema), guardados na config da turma ---
+  const gruposDoTema = (papelId: string): GrupoMeta[] =>
+    turmaConfig?.time_grupos?.[papelId] ?? [];
+
+  const setGruposDoTema = async (papelId: string, grupos: GrupoMeta[]) => {
+    const atual = turmaConfig?.time_grupos ?? {};
+    const proximo: Record<string, GrupoMeta[]> = { ...atual };
+    if (grupos.length === 0) delete proximo[papelId];
+    else proximo[papelId] = grupos;
+    await upsertConfig({ time_grupos: proximo });
   };
 
-  // Junta os 2 grupos de volta: todo mundo do grupo 2 volta pro 1 e o time
-  // sai da lista de divididos.
+  // Divide o tema: cria 2 grupos. Quem já estava alocado (grupo 1 por padrão)
+  // cai no Grupo 1 automaticamente.
+  const dividirTime = async (papelId: string) => {
+    if (gruposDoTema(papelId).length > 0) return;
+    await setGruposDoTema(papelId, [
+      { numero: 1, subtema: null },
+      { numero: 2, subtema: null },
+    ]);
+  };
+
+  // Cria mais um grupo no tema (numero = maior existente + 1).
+  const criarMaisUmGrupo = async (papelId: string) => {
+    const atuais = gruposDoTema(papelId);
+    const prox = atuais.length ? Math.max(...atuais.map((g) => g.numero)) + 1 : 1;
+    await setGruposDoTema(papelId, [...atuais, { numero: prox, subtema: null }]);
+  };
+
+  // Remove um grupo: quem estava nele volta pro Grupo 1.
+  const removerGrupo = async (papelId: string, numero: number) => {
+    if (!capId || !turmaId) return;
+    await sb
+      .from('capitulo_alocacoes')
+      .update({ grupo: 1 })
+      .eq('capitulo_id', capId)
+      .eq('turma_id', turmaId)
+      .eq('papel_id', papelId)
+      .eq('grupo', numero);
+    await setGruposDoTema(
+      papelId,
+      gruposDoTema(papelId).filter((g) => g.numero !== numero)
+    );
+    refetchAloc();
+  };
+
+  // Junta tudo: todos voltam pro Grupo 1 e o tema deixa de estar dividido.
   const juntarTime = async (papelId: string) => {
     if (!capId || !turmaId) return;
     await sb
@@ -876,10 +924,19 @@ const F2CapituloPage = () => {
       .eq('capitulo_id', capId)
       .eq('turma_id', turmaId)
       .eq('papel_id', papelId)
-      .eq('grupo', 2);
-    const atuais = turmaConfig?.times_divididos ?? [];
-    await upsertConfig({ times_divididos: atuais.filter((id) => id !== papelId) });
+      .neq('grupo', 1);
+    await setGruposDoTema(papelId, []);
     refetchAloc();
+  };
+
+  // Salva o subtema (recorte) de um grupo.
+  const salvarSubtema = async (papelId: string, numero: number, subtema: string) => {
+    await setGruposDoTema(
+      papelId,
+      gruposDoTema(papelId).map((g) =>
+        g.numero === numero ? { ...g, subtema: subtema.trim() || null } : g
+      )
+    );
   };
 
   // ---- Observação ao vivo ----
@@ -1037,7 +1094,6 @@ const F2CapituloPage = () => {
 
   // Formato TIMES (Arena/Musical): temas/frentes alocáveis diretamente.
   const papeisTime = papeis.filter((p) => p.categoria === 'time');
-  const timesDivididos = new Set(turmaConfig?.times_divididos ?? []);
   // Rótulo por Casa: Musical (id 4) fala em "Frentes"; demais, "Temas".
   const rotuloTime = casaMentor?.id === 4
     ? { plural: 'Frentes', singular: 'frente' }
@@ -1079,57 +1135,12 @@ const F2CapituloPage = () => {
           <p className="text-[12px] mt-1" style={{ color: D.sub }}>
             {turmaLabel ? `${turmaLabel} · ` : ''}Capítulo {String(cap.numero).padStart(2, '0')}
           </p>
-          {turmaConfig?.data_evento && (
-            <div
-              className="inline-flex items-center gap-1.5 mt-3.5 rounded-full px-3 py-1.5 text-[12px] font-bold"
-              style={{
-                color: accent,
-                backgroundColor: 'rgba(255,255,255,0.08)',
-                border: `1px solid ${accent}${A.a40}`,
-              }}
-            >
-              <CalendarDays size={13} strokeWidth={2} />
-              Capítulo: {dataLonga(turmaConfig.data_evento)}
-            </div>
-          )}
           {(cap.descricao || cap.frase_ancora) && (
             <p className="text-[13px] mt-4 leading-relaxed" style={{ color: D.soft }}>
               {cap.descricao || cap.frase_ancora}
             </p>
           )}
         </header>
-
-        {/* 2. DATA DO CAPÍTULO */}
-        <section className="vf-rise">
-          <SecaoTitulo icon={<CalendarDays size={16} strokeWidth={1.75} />} accent={accent}>
-            Data do capítulo
-          </SecaoTitulo>
-          <div className="rounded-2xl p-4" style={{ backgroundColor: D.card, border: `1px solid ${D.line}` }}>
-            <label
-              className="text-[11px] uppercase tracking-wide font-semibold block mb-1.5"
-              style={{ color: D.faint }}
-            >
-              Dia do encontro final desta turma
-            </label>
-            <input
-              type="date"
-              min="2025-01-01"
-              max="2035-12-31"
-              value={turmaConfig?.data_evento ?? ''}
-              onChange={(e) => upsertConfig({ data_evento: e.target.value || null })}
-              disabled={savingConfig}
-              className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
-              style={{
-                backgroundColor: D.sunken,
-                border: `1px solid ${D.line}`,
-                color: D.text,
-                colorScheme: 'dark',
-                // @ts-expect-error CSS var for focus ring
-                '--tw-ring-color': `${accent}${A.a40}`,
-              }}
-            />
-          </div>
-        </section>
 
         {/* 3. ETAPAS DO CAPÍTULO */}
         <section className="vf-rise">
@@ -1178,15 +1189,18 @@ const F2CapituloPage = () => {
                       key={p.id}
                       papel={p}
                       alocacoes={alocPorPapel[p.id] || []}
+                      grupos={turmaConfig?.time_grupos?.[p.id] ?? []}
                       alunosById={alunosById}
                       brasoes={brasoes}
                       accent={accent}
-                      dividido={timesDivididos.has(p.id)}
                       rotulo={rotuloTime}
-                      onAlocar={(grupo) => setTimeParaAlocar({ papel: p, grupo })}
+                      onAlocar={(numero) => setTimeParaAlocar({ papel: p, grupo: numero })}
                       onRemover={desalocar}
                       onMoverGrupo={moverGrupo}
                       onDividir={() => dividirTime(p.id)}
+                      onCriarGrupo={() => criarMaisUmGrupo(p.id)}
+                      onRemoverGrupo={(numero) => removerGrupo(p.id, numero)}
+                      onSalvarSubtema={(numero, txt) => salvarSubtema(p.id, numero, txt)}
                       onJuntar={() => juntarTime(p.id)}
                     />
                   ))}
@@ -1444,7 +1458,7 @@ const F2CapituloPage = () => {
         titulo={timeParaAlocar ? timeParaAlocar.papel.nome : ''}
         subtitulo={
           timeParaAlocar
-            ? timesDivididos.has(timeParaAlocar.papel.id)
+            ? (turmaConfig?.time_grupos?.[timeParaAlocar.papel.id]?.length ?? 0) > 0
               ? `Escolha quem entra no Grupo ${timeParaAlocar.grupo}`
               : `Escolha quem entra neste ${rotuloTime.singular}`
             : ''
@@ -1783,33 +1797,42 @@ const PapelLinha = ({
 const TimeCard = ({
   papel,
   alocacoes,
+  grupos,
   alunosById,
   brasoes,
   accent,
-  dividido,
   rotulo,
   onAlocar,
   onRemover,
   onMoverGrupo,
   onDividir,
+  onCriarGrupo,
+  onRemoverGrupo,
+  onSalvarSubtema,
   onJuntar,
 }: {
   papel: Papel;
   alocacoes: Alocacao[];
+  grupos: GrupoMeta[];
   alunosById: Record<string, Aluno>;
   brasoes: Brasoes;
   accent: string;
-  dividido: boolean;
   rotulo: { plural: string; singular: string };
-  onAlocar: (grupo: number) => void;
+  onAlocar: (numero: number) => void;
   onRemover: (id: string) => void;
-  onMoverGrupo: (id: string, grupo: number) => void;
+  onMoverGrupo: (id: string, numero: number) => void;
   onDividir: () => void;
+  onCriarGrupo: () => void;
+  onRemoverGrupo: (numero: number) => void;
+  onSalvarSubtema: (numero: number, texto: string) => void;
   onJuntar: () => void;
 }) => {
   const ilimitado = papel.vagas_por_turma > 30;
   const cheio = !ilimitado && alocacoes.length >= papel.vagas_por_turma;
-  const doGrupo = (g: number) => alocacoes.filter((a) => (a.grupo ?? 1) === g);
+  const dividido = grupos.length > 0;
+  const doGrupo = (n: number) => alocacoes.filter((a) => (a.grupo ?? 1) === n);
+  const gruposOrdenados = [...grupos].sort((a, b) => a.numero - b.numero);
+  const numeros = gruposOrdenados.map((g) => g.numero);
 
   const badge = ilimitado
     ? `${alocacoes.length}`
@@ -1860,64 +1883,162 @@ const TimeCard = ({
             className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-0.5"
             style={{ color: accent, backgroundColor: `${accent}${A.a08}`, border: `1px dashed ${accent}${A.a34}` }}
           >
-            <Split size={12} strokeWidth={2.2} /> Dividir em 2 grupos
+            <Split size={12} strokeWidth={2.2} /> Dividir em grupos
           </button>
         </>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-2 mt-2.5">
-            {[1, 2].map((g) => (
-              <div
-                key={g}
-                className="rounded-xl p-2"
-                style={{ backgroundColor: D.sunken, border: `1px solid ${D.line}` }}
-              >
-                <div className="text-[10px] uppercase tracking-wide font-bold mb-1.5" style={{ color: D.faint }}>
-                  Grupo {g}
-                </div>
-                <div className="space-y-1">
-                  {doGrupo(g).map((a) => (
-                    <div key={a.id} className="flex items-center gap-1">
-                      <span className="min-w-0 flex-1">
-                        <ChipAluno
-                          aluno={alunosById[a.aluno_id]}
-                          brasoes={brasoes}
-                          onRemove={() => onRemover(a.id)}
-                        />
-                      </span>
-                      <button
-                        onClick={() => onMoverGrupo(a.id, g === 1 ? 2 : 1)}
-                        className="flex-shrink-0 p-1 rounded-md"
-                        style={{ color: accent }}
-                        title={`Mover para o Grupo ${g === 1 ? 2 : 1}`}
-                        aria-label={`Mover para o Grupo ${g === 1 ? 2 : 1}`}
-                      >
-                        <ArrowLeftRight size={13} strokeWidth={2} />
-                      </button>
-                    </div>
-                  ))}
-                  {!cheio && (
-                    <button
-                      onClick={() => onAlocar(g)}
-                      className="flex items-center gap-1 pl-1.5 pr-2 py-0.5 rounded-full text-[11px] font-bold"
-                      style={{ border: `1px dashed ${accent}${A.a40}`, color: accent }}
-                    >
-                      <Plus size={11} strokeWidth={2.6} /> aluno
-                    </button>
-                  )}
-                </div>
-              </div>
+          <div className="space-y-2 mt-2.5">
+            {gruposOrdenados.map((g) => (
+              <GrupoBloco
+                key={g.numero}
+                grupo={g}
+                membros={doGrupo(g.numero)}
+                outrosNumeros={numeros.filter((n) => n !== g.numero)}
+                alunosById={alunosById}
+                brasoes={brasoes}
+                accent={accent}
+                podeAlocar={!cheio}
+                podeRemover={grupos.length > 1}
+                onAlocar={() => onAlocar(g.numero)}
+                onRemover={onRemover}
+                onMover={onMoverGrupo}
+                onSalvarSubtema={(txt) => onSalvarSubtema(g.numero, txt)}
+                onRemoverGrupo={() => onRemoverGrupo(g.numero)}
+              />
             ))}
           </div>
-          <button
-            onClick={onJuntar}
-            className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-0.5"
-            style={{ color: D.sub, backgroundColor: D.card, border: `1px solid ${D.line}` }}
-          >
-            <Merge size={12} strokeWidth={2.2} /> Juntar em um grupo
-          </button>
+          <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+            <button
+              onClick={onCriarGrupo}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-0.5"
+              style={{ color: accent, backgroundColor: `${accent}${A.a08}`, border: `1px dashed ${accent}${A.a34}` }}
+            >
+              <Plus size={12} strokeWidth={2.4} /> Criar mais um grupo
+            </button>
+            <button
+              onClick={onJuntar}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-0.5"
+              style={{ color: D.sub, backgroundColor: D.card, border: `1px solid ${D.line}` }}
+            >
+              <Merge size={12} strokeWidth={2.2} /> Juntar em um grupo
+            </button>
+          </div>
         </>
       )}
+    </div>
+  );
+};
+
+/** Um grupo dentro de um time dividido: subtema editável, membros (cada um com
+ *  "mover para" quando há outros grupos), botão de alocar e remover o grupo. */
+const GrupoBloco = ({
+  grupo,
+  membros,
+  outrosNumeros,
+  alunosById,
+  brasoes,
+  accent,
+  podeAlocar,
+  podeRemover,
+  onAlocar,
+  onRemover,
+  onMover,
+  onSalvarSubtema,
+  onRemoverGrupo,
+}: {
+  grupo: GrupoMeta;
+  membros: Alocacao[];
+  outrosNumeros: number[];
+  alunosById: Record<string, Aluno>;
+  brasoes: Brasoes;
+  accent: string;
+  podeAlocar: boolean;
+  podeRemover: boolean;
+  onAlocar: () => void;
+  onRemover: (id: string) => void;
+  onMover: (id: string, numero: number) => void;
+  onSalvarSubtema: (texto: string) => void;
+  onRemoverGrupo: () => void;
+}) => {
+  const [subtema, setSubtema] = useState(grupo.subtema ?? '');
+  useEffect(() => {
+    setSubtema(grupo.subtema ?? '');
+  }, [grupo.subtema]);
+
+  return (
+    <div className="rounded-xl p-2.5" style={{ backgroundColor: D.sunken, border: `1px solid ${D.line}` }}>
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <span className="text-[10px] uppercase tracking-wide font-bold" style={{ color: accent }}>
+          Grupo {grupo.numero}
+        </span>
+        {podeRemover && (
+          <button
+            onClick={onRemoverGrupo}
+            className="flex-shrink-0 p-0.5 rounded-md"
+            style={{ color: D.faint }}
+            title="Remover grupo (os alunos voltam pro Grupo 1)"
+            aria-label="Remover grupo"
+          >
+            <X size={13} />
+          </button>
+        )}
+      </div>
+
+      <input
+        type="text"
+        value={subtema}
+        onChange={(e) => setSubtema(e.target.value)}
+        onBlur={() => {
+          if ((subtema.trim() || null) !== (grupo.subtema ?? null)) onSalvarSubtema(subtema);
+        }}
+        placeholder="Subtema (o recorte que o grupo escolheu)"
+        className="w-full rounded-lg px-2.5 py-1.5 text-[12px] mb-2 focus:outline-none"
+        style={{ backgroundColor: D.card, border: `1px solid ${D.line}`, color: D.text }}
+      />
+
+      <div className="space-y-1">
+        {membros.map((a) => (
+          <div key={a.id} className="flex items-center gap-1">
+            <span className="min-w-0 flex-1">
+              <ChipAluno aluno={alunosById[a.aluno_id]} brasoes={brasoes} onRemove={() => onRemover(a.id)} />
+            </span>
+            {outrosNumeros.length > 0 && (
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) onMover(a.id, Number(e.target.value));
+                }}
+                className="flex-shrink-0 rounded-md px-1.5 py-0.5 text-[10px] focus:outline-none"
+                style={{ backgroundColor: D.card, border: `1px solid ${D.line}`, color: D.sub, colorScheme: 'dark' }}
+                title="Mover para outro grupo"
+                aria-label="Mover para outro grupo"
+              >
+                <option value="">mover</option>
+                {[...outrosNumeros].sort((x, y) => x - y).map((n) => (
+                  <option key={n} value={n}>
+                    Grupo {n}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        ))}
+        {membros.length === 0 && (
+          <p className="text-[11px] italic py-0.5" style={{ color: D.faint }}>
+            Sem ninguém neste grupo ainda.
+          </p>
+        )}
+        {podeAlocar && (
+          <button
+            onClick={onAlocar}
+            className="flex items-center gap-1 pl-1.5 pr-2 py-0.5 rounded-full text-[11px] font-bold mt-1"
+            style={{ border: `1px dashed ${accent}${A.a40}`, color: accent }}
+          >
+            <Plus size={11} strokeWidth={2.6} /> aluno
+          </button>
+        )}
+      </div>
     </div>
   );
 };
@@ -2073,11 +2194,6 @@ const EtapaEncontro = ({
           <span className="block text-sm font-semibold truncate" style={{ color: D.text }}>
             {encontro.titulo}
           </span>
-          {dataPrevista && (
-            <span className="text-[11px] flex items-center gap-1 mt-0.5" style={{ color: D.faint }}>
-              <Clock size={11} /> {new Date(`${dataPrevista}T12:00:00`).toLocaleDateString('pt-BR')}
-            </span>
-          )}
         </span>
         <ChevronDown
           size={16}
@@ -2086,21 +2202,7 @@ const EtapaEncontro = ({
       </button>
 
       {aberto && (
-        <div className="px-3 pb-3 space-y-2.5" style={{ borderTop: `1px solid ${D.line}` }}>
-          <div className="pt-2.5">
-            <label className="text-[10px] uppercase tracking-wide font-semibold block mb-1" style={{ color: D.faint }}>
-              Data prevista para esta turma
-            </label>
-            <input
-              type="date"
-              min="2025-01-01"
-              max="2035-12-31"
-              value={dataPrevista ?? ''}
-              onChange={(e) => onSalvarData(e.target.value)}
-              className="w-full max-w-[220px] rounded-lg px-2.5 py-1.5 text-sm focus:outline-none"
-              style={{ backgroundColor: D.sunken, border: `1px solid ${D.line}`, color: D.text, colorScheme: 'dark' }}
-            />
-          </div>
+        <div className="px-3 pb-3 pt-2.5 space-y-2.5" style={{ borderTop: `1px solid ${D.line}` }}>
           {encontro.objetivo && (
             <p className="text-xs leading-relaxed" style={{ color: D.soft }}>
               <span className="font-semibold" style={{ color: D.text }}>

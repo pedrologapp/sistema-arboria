@@ -1,5 +1,8 @@
-import { ReactNode, Suspense, useEffect, useRef } from 'react';
+import { ReactNode, Suspense, useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 import { CoordenadorProvider, useCoordenador } from '@/contexts/CoordenadorContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -42,7 +45,19 @@ const SEGMENTO_LABEL: Record<string, string> = {
 const CoordenadorLayoutContent = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { signOut } = useAuth();
   const { profile, institutionName, segmentos } = useCoordenador();
+  const [menuAberto, setMenuAberto] = useState(false);
+
+  const sair = async () => {
+    try {
+      await signOut();
+      toast.success('Você saiu.');
+      navigate('/login');
+    } catch {
+      toast.error('Erro ao sair. Tente de novo.');
+    }
+  };
 
   // Deslize direcional entre abas (mesma lógica do Infantil).
   const idx = tabIndex(location.pathname);
@@ -135,18 +150,68 @@ const CoordenadorLayoutContent = ({ children }: { children: ReactNode }) => {
             </div>
           </div>
 
-          {/* Avatar identitário. O menu pessoal (configurações/sair) do
-              coordenador é passo próprio; por ora é só a marca de quem está logado. */}
-          <div className="flex-shrink-0" title={nomeCoordenador}>
-            <Avatar className="h-9 w-9" style={{ border: `1px solid ${t.line2}` }}>
-              <AvatarImage src={profile?.avatar_url || undefined} className="object-cover" />
-              <AvatarFallback
-                className="text-xs font-semibold"
-                style={{ backgroundColor: t.accentDim, color: t.accent2 }}
-              >
-                {getIniciais(nomeCoordenador)}
-              </AvatarFallback>
-            </Avatar>
+          {/* Avatar = menu pessoal do coordenador (identidade + Sair). */}
+          <div className="relative flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setMenuAberto((v) => !v)}
+              className="block rounded-full transition-transform active:scale-95"
+              title={nomeCoordenador}
+              aria-haspopup="menu"
+              aria-expanded={menuAberto}
+              aria-label="Menu da conta"
+            >
+              <Avatar className="h-9 w-9" style={{ border: `1px solid ${t.line2}` }}>
+                <AvatarImage src={profile?.avatar_url || undefined} className="object-cover" />
+                <AvatarFallback
+                  className="text-xs font-semibold"
+                  style={{ backgroundColor: t.accentDim, color: t.accent2 }}
+                >
+                  {getIniciais(nomeCoordenador)}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+            {menuAberto && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setMenuAberto(false)}
+                  aria-hidden="true"
+                />
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full mt-2 z-50 min-w-[200px] rounded-2xl p-2"
+                  style={{
+                    backgroundColor: t.panel,
+                    border: `1px solid ${t.line}`,
+                    boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
+                  }}
+                >
+                  <div className="px-3 py-2">
+                    <p className="text-sm font-semibold truncate" style={{ color: t.ink }}>
+                      {nomeCoordenador}
+                    </p>
+                    <p className="text-[11px] truncate" style={{ color: t.mut2 }}>
+                      {rotuloSegmentos}
+                    </p>
+                  </div>
+                  <div className="my-1 h-px" style={{ backgroundColor: t.line }} />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuAberto(false);
+                      sair();
+                    }}
+                    className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition-colors"
+                    style={{ color: t.ink }}
+                  >
+                    <LogOut size={16} style={{ color: t.accent2 }} />
+                    Sair
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
         {/* Sublinha com o escopo do coordenador (segmentos concedidos) */}
