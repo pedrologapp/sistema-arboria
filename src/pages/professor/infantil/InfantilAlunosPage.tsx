@@ -253,7 +253,8 @@ const InfantilAlunosPage = () => {
                 </p>
                 {/* Sem registro = linha limpa (nenhum subtítulo marcando ausência) */}
                 {aluno.quantidadeObservacoes > 0 && (
-                  <p className="text-xs mt-0.5" style={{ color: t.textFaint }}>
+                  <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: t.accentText }}>
+                    <NotebookPen size={12} strokeWidth={2} />
                     {aluno.quantidadeObservacoes}{' '}
                     {aluno.quantidadeObservacoes === 1 ? 'momento registrado' : 'momentos registrados'}
                   </p>
@@ -281,15 +282,26 @@ const InfantilAlunosPage = () => {
               className="flex flex-col items-center gap-1.5 p-2 rounded-xl active:scale-[0.98] transition-transform"
               style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
             >
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={aluno.avatarUrl} className="object-cover" />
-                <AvatarFallback
-                  className="text-base font-semibold"
-                  style={{ backgroundColor: t.accentSoft, color: t.accentText }}
-                >
-                  {getIniciais(aluno.nome)}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={aluno.avatarUrl} className="object-cover" />
+                  <AvatarFallback
+                    className="text-base font-semibold"
+                    style={{ backgroundColor: t.accentSoft, color: t.accentText }}
+                  >
+                    {getIniciais(aluno.nome)}
+                  </AvatarFallback>
+                </Avatar>
+                {aluno.quantidadeObservacoes > 0 && (
+                  <span
+                    className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: t.accent, border: `2px solid ${t.surface}` }}
+                    title={`${aluno.quantidadeObservacoes} ${aluno.quantidadeObservacoes === 1 ? 'registro' : 'registros'}`}
+                  >
+                    <NotebookPen size={10} color="#FFFFFF" strokeWidth={2.5} />
+                  </span>
+                )}
+              </div>
               <p className="text-[11px] text-center leading-tight line-clamp-2" style={{ color: t.text }}>
                 {aluno.nome}
               </p>
