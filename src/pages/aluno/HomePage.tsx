@@ -146,6 +146,23 @@ const HomePage = () => {
     staleTime: 120000,
   });
 
+  // Posicao da CASA no ranking (coletivo). Substitui o rank INDIVIDUAL do aluno
+  // na Home: doutrina do Fundador, nada de comparar criancas; mostra o time.
+  const { data: casaRank } = useQuery({
+    queryKey: ['home-casa-rank', casa?.id, profile?.institution_id],
+    enabled: !!casa?.id && !!profile?.institution_id,
+    staleTime: 120000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('ranking_casas')
+        .select('posicao, total_pontos')
+        .eq('casa_id', casa!.id)
+        .eq('institution_id', profile!.institution_id)
+        .maybeSingle();
+      return (data as { posicao: number; total_pontos: number } | null) ?? null;
+    },
+  });
+
   // Missões urgentes (prazo em menos de 2 dias e não entregues)
   const { data: missoesUrgentes } = useQuery({
     queryKey: ['missoes-urgentes', profile?.id],
@@ -351,11 +368,18 @@ const HomePage = () => {
                 <p className="text-[12.5px] text-white/40">A turma ainda não iniciou uma fase.</p>
               )}
 
-              {/* placar discreto e apagado */}
+              {/* placar discreto: pontos do aluno + posicao E pontos da CASA
+                  (nunca rank individual: doutrina do Fundador, sem comparar criancas) */}
               <p className="mt-3 text-[11.5px] text-white/30 tabular-nums">
-                <span className="text-white/50 font-semibold">{ranking?.total_pontos || 0}</span> pontos
-                {' · '}
-                <span className="text-white/50 font-semibold">{ranking?.posicao_na_casa || '--'}º</span> na casa
+                <span className="text-white/50 font-semibold">{ranking?.total_pontos || 0}</span> seus pontos
+                {casaRank?.posicao ? (
+                  <>
+                    {' · Casa em '}
+                    <span className="text-white/50 font-semibold">{casaRank.posicao}º</span>
+                    {' · '}
+                    <span className="text-white/50 font-semibold">{(casaRank.total_pontos || 0).toLocaleString('pt-BR')}</span> pts da Casa
+                  </>
+                ) : null}
               </p>
             </div>
           </div>
@@ -611,9 +635,9 @@ const HomePage = () => {
               </div>
               <div className="w-px h-8 bg-white/10" />
               <div className="flex-1 text-center">
-                <span className="text-xl font-bold text-white">{ranking?.posicao_na_casa || '--'}</span>
+                <span className="text-xl font-bold text-white">{casaRank?.posicao || '--'}</span>
                 <span className="text-white/30 text-xs align-top">º</span>
-                <p className="text-[10px] text-white/30 mt-0.5">na casa</p>
+                <p className="text-[10px] text-white/30 mt-0.5">sua Casa</p>
               </div>
               <div className="w-px h-8 bg-white/10" />
               <div className="flex-1 text-center">

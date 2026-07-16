@@ -84,6 +84,9 @@ const MissoesSemanaPageAluno = lazy(() => import("./pages/aluno/MissoesSemanaPag
 const MissoesCasaPage = lazy(() => import("./pages/aluno/MissoesCasaPage"));
 const MissaoDetalhePage = lazy(() => import("./pages/aluno/MissaoDetalhePage"));
 const CasaPage = lazy(() => import("./pages/aluno/CasaPage"));
+const RankingCasasPage = lazy(() => import("./pages/aluno/RankingCasasPage"));
+const MissaoResultadoPage = lazy(() => import("./pages/aluno/MissaoResultadoPage"));
+const PercursoPage = lazy(() => import("./pages/aluno/PercursoPage"));
 const ChatPage = lazy(() => import("./pages/aluno/ChatPage"));
 const CanalChatPage = lazy(() => import("./pages/aluno/CanalChatPage"));
 const GrupoChatPage = lazy(() => import("./pages/aluno/GrupoChatPage"));
@@ -513,6 +516,27 @@ const App = () => (
               <StudentProtectedRoute>
                 <StudentLayout>
                   <CasaPage />
+                </StudentLayout>
+              </StudentProtectedRoute>
+            } />
+            <Route path="/aluno/casa/ranking" element={
+              <StudentProtectedRoute>
+                <StudentLayout>
+                  <RankingCasasPage />
+                </StudentLayout>
+              </StudentProtectedRoute>
+            } />
+            <Route path="/aluno/percurso" element={
+              <StudentProtectedRoute>
+                <StudentLayout>
+                  <PercursoPage />
+                </StudentLayout>
+              </StudentProtectedRoute>
+            } />
+            <Route path="/aluno/missao-resultado/:entregaId" element={
+              <StudentProtectedRoute>
+                <StudentLayout>
+                  <MissaoResultadoPage />
                 </StudentLayout>
               </StudentProtectedRoute>
             } />

@@ -652,9 +652,9 @@ const MissoesPage = () => {
     const faseAtualKey = faseAtual?.inteligencia?.id != null ? `f${faseAtual.inteligencia.id}` : null;
     const estadoAtivo = (s: string) => (s === 'enviada' ? 'analise' : s === 'refazer' ? 'refazer' : 'a-fazer');
     const itensJornada = [
-      ...concluidas.map(c => ({ id: c.id, titulo: c.titulo, grupoKey: c.grupoKey, estado: c.tipo === 'feita' ? 'feita' : 'perdida', data: c.data ?? null })),
-      ...questsFase.map(q => ({ id: `af-${q.id}`, titulo: q.titulo, grupoKey: faseAtualKey || 'fase', estado: estadoAtivo(q.status), data: null as string | null })),
-      ...questsCapitulo.map(q => ({ id: `ac-${q.id}`, titulo: q.titulo, grupoKey: 'capitulo', estado: estadoAtivo(q.status), data: null as string | null })),
+      ...concluidas.map(c => ({ id: c.id, titulo: c.titulo, grupoKey: c.grupoKey, estado: c.tipo === 'feita' ? 'feita' : 'perdida', data: c.data ?? null, pontos: c.pontos ?? null })),
+      ...questsFase.map(q => ({ id: `af-${q.id}`, titulo: q.titulo, grupoKey: faseAtualKey || 'fase', estado: estadoAtivo(q.status), data: null as string | null, pontos: null as number | null })),
+      ...questsCapitulo.map(q => ({ id: `ac-${q.id}`, titulo: q.titulo, grupoKey: 'capitulo', estado: estadoAtivo(q.status), data: null as string | null, pontos: null as number | null })),
     ];
     const grupoMeta = new Map<string, { key: string; label: string; cor: string }>();
     gruposConcluidas.forEach(g => grupoMeta.set(g.key, { key: g.key, label: g.label, cor: g.cor }));
@@ -694,7 +694,10 @@ const MissoesPage = () => {
         {/* Progresso pessoal, sempre visivel acima das abas (nunca ranking) */}
         {F2_ALUNO_CONCLUIDAS_JORNADA && (
           <div
-            className="rounded-2xl border border-white/[0.08] p-4 mb-4"
+            onClick={() => navigate('/aluno/percurso')}
+            role="button"
+            tabIndex={0}
+            className="rounded-2xl border border-white/[0.08] p-4 mb-4 cursor-pointer active:scale-[0.99] transition-transform"
             style={{ background: `linear-gradient(160deg, ${casaColor}1f, ${casaColor}05 70%)` }}
           >
             <div className="flex items-center gap-3">
@@ -704,7 +707,7 @@ const MissoesPage = () => {
               >
                 <span className="font-serif text-[20px] text-white tabular-nums">{totalFeitas}</span>
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="font-serif text-[16px] text-white leading-tight">Sua trilha este ano</div>
                 <div className="text-[11.5px] text-white/45 mt-0.5">
                   {totalFeitas > 0
@@ -712,6 +715,7 @@ const MissoesPage = () => {
                     : 'Sua primeira missão começa a trilha'}
                 </div>
               </div>
+              <ChevronRight className="w-4 h-4 text-white/30 shrink-0" />
             </div>
             {gruposComFeitas.length > 0 && (
               <>
@@ -882,34 +886,54 @@ const MissoesPage = () => {
                         </span>
                       </div>
                       <div className="space-y-1.5">
-                        {itens.map(it => (
-                          <div
-                            key={it.id}
-                            className={cn(
-                              'flex items-center gap-3 px-3 py-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.035]',
-                              it.estado === 'perdida' && 'opacity-50'
-                            )}
-                          >
-                            {it.estado === 'feita' ? (
-                              <span
-                                className="w-[22px] h-[22px] rounded-full flex items-center justify-center shrink-0"
-                                style={{ backgroundColor: g.cor }}
-                              >
-                                <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="#12122A" strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M5 13l4 4L19 7" />
-                                </svg>
-                              </span>
-                            ) : it.estado === 'perdida' ? (
-                              <span className="w-[22px] h-[22px] rounded-full shrink-0 border border-dashed border-white/25" />
-                            ) : (
-                              <span className="w-[22px] h-[22px] rounded-full shrink-0" style={{ border: `1.5px solid ${g.cor}80` }} />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <b className="text-[12.5px] font-semibold text-white block truncate">{it.titulo}</b>
-                              <span className="text-[10.5px] text-white/30">{legendaEstado(it)}</span>
+                        {itens.map(it => {
+                          const marcador = it.estado === 'feita' ? (
+                            <span
+                              className="w-[22px] h-[22px] rounded-full flex items-center justify-center shrink-0"
+                              style={{ backgroundColor: g.cor }}
+                            >
+                              <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="#12122A" strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M5 13l4 4L19 7" />
+                              </svg>
+                            </span>
+                          ) : it.estado === 'perdida' ? (
+                            <span className="w-[22px] h-[22px] rounded-full shrink-0 border border-dashed border-white/25" />
+                          ) : (
+                            <span className="w-[22px] h-[22px] rounded-full shrink-0" style={{ border: `1.5px solid ${g.cor}80` }} />
+                          );
+                          const corpo = (
+                            <>
+                              {marcador}
+                              <div className="flex-1 min-w-0">
+                                <b className="text-[12.5px] font-semibold text-white block truncate">{it.titulo}</b>
+                                <span className="text-[10.5px] text-white/30">{legendaEstado(it)}</span>
+                              </div>
+                              {it.estado === 'feita' && it.pontos != null && it.pontos > 0 && (
+                                <span className="text-[12px] font-bold shrink-0 tabular-nums" style={{ color: '#E0B64A' }}>+{it.pontos}</span>
+                              )}
+                              {it.estado === 'feita' && <ChevronRight className="w-3.5 h-3.5 text-white/25 shrink-0" />}
+                            </>
+                          );
+                          return it.estado === 'feita' ? (
+                            <button
+                              key={it.id}
+                              onClick={() => navigate(`/aluno/missao-resultado/${it.id}`)}
+                              className="flex items-center gap-3 px-3 py-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.035] w-full text-left active:scale-[0.99] transition-transform"
+                            >
+                              {corpo}
+                            </button>
+                          ) : (
+                            <div
+                              key={it.id}
+                              className={cn(
+                                'flex items-center gap-3 px-3 py-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.035]',
+                                it.estado === 'perdida' && 'opacity-50'
+                              )}
+                            >
+                              {corpo}
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   );

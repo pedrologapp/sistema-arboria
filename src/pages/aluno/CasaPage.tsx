@@ -397,6 +397,16 @@ const CasaPage = () => {
             </div>
           )}
 
+          {/* Abre o ranking completo das 8 Casas */}
+          <button
+            onClick={() => navigate('/aluno/casa/ranking')}
+            className="w-full flex items-center justify-center gap-1.5 rounded-xl mt-3 py-2.5 text-[13px] font-semibold active:scale-[0.99] transition-transform"
+            style={{ backgroundColor: `${accentColor}1f`, border: `1px solid ${accentColor}44`, color: accentColor }}
+          >
+            Ver o ranking das Casas
+            <ChevronRight className="w-4 h-4" />
+          </button>
+
           {/* Convite (a Casa chama, coletivo) */}
           <p
             className="text-center text-[12.5px] italic mt-4 pt-3.5 border-t border-white/[0.08]"
