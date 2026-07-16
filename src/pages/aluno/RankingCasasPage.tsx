@@ -24,6 +24,7 @@ interface CasaRank {
   casa_cor: string | null;
   posicao: number;
   total_pontos: number;
+  media_por_membro: number;
   brasao_url: string | null;
   emoji: string | null;
 }
@@ -40,9 +41,9 @@ const RankingCasasPage = () => {
       const [rkRes, intelRes] = await Promise.all([
         supabase
           .from('ranking_casas')
-          .select('casa_id, casa_nome, casa_cor, posicao, total_pontos')
+          .select('casa_id, casa_nome, casa_cor, posicao, total_pontos, media_por_membro')
           .eq('institution_id', profile!.institution_id)
-          .order('total_pontos', { ascending: false }),
+          .order('posicao', { ascending: true }),
         supabase.from('inteligencias').select('id, brasao_url, emoji'),
       ]);
       if (rkRes.error) throw rkRes.error;
@@ -55,6 +56,7 @@ const RankingCasasPage = () => {
         casa_cor: r.casa_cor,
         posicao: Number(r.posicao) || 0,
         total_pontos: Number(r.total_pontos) || 0,
+        media_por_membro: Number((r as { media_por_membro?: number }).media_por_membro) || 0,
         brasao_url: brasaoMap[Number(r.casa_id)]?.brasao_url ?? null,
         emoji: brasaoMap[Number(r.casa_id)]?.emoji ?? null,
       })) as CasaRank[];
@@ -150,11 +152,16 @@ const RankingCasasPage = () => {
                   </div>
                 </div>
 
-                {/* pontos */}
-                <span className="font-serif text-[16px] font-semibold text-white tabular-nums shrink-0">
-                  {c.total_pontos.toLocaleString('pt-BR')}
-                  <span className="font-sans text-[9.5px] uppercase tracking-wide text-white/35 ml-1">pts</span>
-                </span>
+                {/* média por membro (o que ranqueia, justo pro tamanho) + total no contexto */}
+                <div className="text-right shrink-0">
+                  <div className="font-serif text-[16px] font-semibold text-white tabular-nums leading-none">
+                    {c.media_por_membro.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                    <span className="font-sans text-[9px] uppercase tracking-wide text-white/35 ml-1">/ membro</span>
+                  </div>
+                  <div className="text-[9.5px] text-white/30 tabular-nums mt-1">
+                    {c.total_pontos.toLocaleString('pt-BR')} no total
+                  </div>
+                </div>
               </div>
             );
           })}

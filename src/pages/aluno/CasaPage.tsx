@@ -55,9 +55,11 @@ const CasaPage = () => {
   const { casa, casaColor, profile, ranking, isLoading: contextLoading, refreshData } = useStudent();
   const [membros, setMembros] = useState<MembroComCargo[]>([]);
   const [pontosTotaisCasa, setPontosTotaisCasa] = useState(0);
+  const [mediaCasa, setMediaCasa] = useState(0);
+  const [membrosCasa, setMembrosCasa] = useState(0);
   const [posicaoCasa, setPosicaoCasa] = useState(0);
   const [totalCasas, setTotalCasas] = useState(8);
-  const [rankingCasas, setRankingCasas] = useState<{ casa_id: number; casa_nome: string; posicao: number; total_pontos: number }[]>([]);
+  const [rankingCasas, setRankingCasas] = useState<{ casa_id: number; casa_nome: string; posicao: number; total_pontos: number; media_por_membro: number; total_membros: number }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [desafiosData, setDesafiosData] = useState<any[]>([]);
@@ -145,13 +147,13 @@ const CasaPage = () => {
       const [rankingCasaRes, rankingTodasRes, membrosRes, cargosRes] = await Promise.all([
         supabase
           .from('ranking_casas')
-          .select('total_pontos, posicao')
+          .select('total_pontos, posicao, media_por_membro, total_membros')
           .eq('casa_id', casa.id)
           .eq('institution_id', profile.institution_id)
           .maybeSingle(),
         supabase
           .from('ranking_casas')
-          .select('casa_id, casa_nome, posicao, total_pontos')
+          .select('casa_id, casa_nome, posicao, total_pontos, media_por_membro, total_membros')
           .eq('institution_id', profile.institution_id),
         supabase
           .from('ranking_alunos_por_casa')
@@ -172,6 +174,8 @@ const CasaPage = () => {
       if (membrosRes.error) throw membrosRes.error;
 
       setPontosTotaisCasa(rankingCasaRes.data?.total_pontos || 0);
+      setMediaCasa(Number((rankingCasaRes.data as { media_por_membro?: number } | null)?.media_por_membro) || 0);
+      setMembrosCasa(Number((rankingCasaRes.data as { total_membros?: number } | null)?.total_membros) || 0);
       setPosicaoCasa(rankingCasaRes.data?.posicao || 0);
       setTotalCasas(rankingTodasRes.data?.length || 8);
       setRankingCasas(
@@ -180,6 +184,8 @@ const CasaPage = () => {
           casa_nome: r.casa_nome || '',
           posicao: Number(r.posicao) || 0,
           total_pontos: Number(r.total_pontos) || 0,
+          media_por_membro: Number((r as { media_por_membro?: number }).media_por_membro) || 0,
+          total_membros: Number((r as { total_membros?: number }).total_membros) || 0,
         }))
       );
 
@@ -304,22 +310,28 @@ const CasaPage = () => {
     // Degrada de forma silenciosa se faltar dado pra computar o gap.
     const casaAcima = posicaoCasa > 1 ? rankingCasas.find(c => c.posicao === posicaoCasa - 1) : undefined;
     const casaAbaixo = rankingCasas.find(c => c.posicao === posicaoCasa + 1);
-    const gapAcima = casaAcima ? casaAcima.total_pontos - pontosTotaisCasa : null;
-    const gapAbaixo = casaAbaixo ? pontosTotaisCasa - casaAbaixo.total_pontos : null;
+    // Meta pela MÉDIA por membro (justo pro tamanho), traduzida em PONTOS que a
+    // Casa precisa somar: alcançar a média da Casa de cima = quantos pontos faltam.
+    const faltamPraAcima = casaAcima && membrosCasa > 0
+      ? Math.max(0, Math.ceil(casaAcima.media_por_membro * membrosCasa) - pontosTotaisCasa)
+      : null;
+    const faltamPraTeAlcancar = casaAbaixo && casaAbaixo.total_membros > 0
+      ? Math.max(0, Math.ceil(mediaCasa * casaAbaixo.total_membros) - casaAbaixo.total_pontos)
+      : null;
     const metaNode =
       posicaoCasa === 1
-        ? casaAbaixo && gapAbaixo != null && gapAbaixo > 0
+        ? casaAbaixo && faltamPraTeAlcancar != null && faltamPraTeAlcancar > 0
           ? (
             <>
-              A Casa está na frente. A <b style={{ color: accentColor }}>Casa {casaAbaixo.casa_nome}</b> está{' '}
-              <b className="tabular-nums" style={{ color: accentColor }}>{gapAbaixo.toLocaleString('pt-BR')}</b> pontos atrás, bora manter a distância.
+              A Casa está na frente. A <b style={{ color: accentColor }}>Casa {casaAbaixo.casa_nome}</b> precisa de{' '}
+              <b className="tabular-nums" style={{ color: accentColor }}>{faltamPraTeAlcancar.toLocaleString('pt-BR')}</b> pontos pra te alcançar, bora manter a distância.
             </>
           )
           : null
-        : posicaoCasa > 1 && casaAcima && gapAcima != null && gapAcima > 0
+        : posicaoCasa > 1 && casaAcima && faltamPraAcima != null && faltamPraAcima > 0
           ? (
             <>
-              Faltam <b className="tabular-nums" style={{ color: accentColor }}>{gapAcima.toLocaleString('pt-BR')}</b> pontos pra encostar na{' '}
+              Faltam <b className="tabular-nums" style={{ color: accentColor }}>{faltamPraAcima.toLocaleString('pt-BR')}</b> pontos pra sua Casa encostar na{' '}
               <b style={{ color: accentColor }}>Casa {casaAcima.casa_nome}</b>.
             </>
           )
@@ -386,6 +398,11 @@ const CasaPage = () => {
               <span className="text-white/35 font-normal text-xs ml-1">entre {totalCasas} Casas</span>
             </span>
           </div>
+          {mediaCasa > 0 && (
+            <p className="text-[11px] text-white/35 mt-1.5">
+              Ranking por <b className="text-white/60 tabular-nums">{mediaCasa.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</b> de média por membro, justo pra Casas de tamanhos diferentes.
+            </p>
+          )}
 
           {/* Meta: encostar na Casa de cima (ou manter distancia, se lider) */}
           {metaNode && (
@@ -422,7 +439,7 @@ const CasaPage = () => {
           <div className="mb-6">
             <h3 className={cn(lbl, 'mb-3')}>Mural</h3>
             {muralEventos.length > 0 ? (
-              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] overflow-hidden">
+              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] overflow-y-auto max-h-[340px]">
                 {muralEventos.map((ev, idx) => (
                   <div
                     key={ev.id}

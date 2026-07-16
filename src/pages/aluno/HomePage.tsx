@@ -156,11 +156,11 @@ const HomePage = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from('ranking_casas')
-        .select('posicao, total_pontos')
+        .select('posicao, total_pontos, media_por_membro')
         .eq('casa_id', casa!.id)
         .eq('institution_id', profile!.institution_id)
         .maybeSingle();
-      return (data as { posicao: number; total_pontos: number } | null) ?? null;
+      return (data as { posicao: number; total_pontos: number; media_por_membro: number } | null) ?? null;
     },
   });
 
@@ -379,7 +379,7 @@ const HomePage = () => {
                     {' · Casa em '}
                     <span className="text-white/50 font-semibold">{casaRank.posicao}º</span>
                     {' · '}
-                    <span className="text-white/50 font-semibold">{(casaRank.total_pontos || 0).toLocaleString('pt-BR')}</span> pts da Casa
+                    <span className="text-white/50 font-semibold">{(casaRank.media_por_membro || 0).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span> média/membro
                   </>
                 ) : null}
               </p>
