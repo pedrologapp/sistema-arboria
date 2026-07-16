@@ -70,6 +70,7 @@ interface AlocacaoComAluno {
   id: string;
   aluno_id: string;
   papel_id: string;
+  grupo: number | null;
   aluno: {
     id: string;
     nome: string | null;
@@ -93,9 +94,15 @@ interface MembroComAluno {
 
 type Brasoes = Record<number, string | null>;
 
+interface GrupoTime {
+  numero: number;
+  subtema: string | null;
+}
+
 interface TurmaConfig {
   data_evento: string | null;
   delegacoes_ativas: string[];
+  time_grupos: Record<string, GrupoTime[]> | null;
 }
 
 const calcularDias = (data: string | null): number | null => {
@@ -188,7 +195,7 @@ const CapituloPage = () => {
     enabled: !!capitulo?.id && !!turmaId,
     queryFn: async () => {
       const { data } = await sb.from('capitulo_turma_config')
-        .select('data_evento, delegacoes_ativas')
+        .select('data_evento, delegacoes_ativas, time_grupos')
         .eq('capitulo_id', capitulo!.id)
         .eq('turma_id', turmaId!)
         .maybeSingle();
@@ -221,7 +228,7 @@ const CapituloPage = () => {
     enabled: !!capitulo?.id && !!turmaId,
     queryFn: async () => {
       const { data } = await sb.from('capitulo_alocacoes').select(`
-        id, aluno_id, papel_id,
+        id, aluno_id, papel_id, grupo,
         aluno:profiles!capitulo_alocacoes_aluno_id_fkey ( id, nome, full_name, avatar_url, casa_id )
       `).eq('capitulo_id', capitulo!.id).eq('turma_id', turmaId!);
       return (data as AlocacaoComAluno[]) ?? [];
@@ -481,6 +488,9 @@ const CapituloPage = () => {
               ehArena={ehArena}
               acento={acento}
               solida={solida}
+              alocacoesTime={alocacoes.filter((a) => a.papel_id === papelAberto.id)}
+              grupos={turmaConfig?.time_grupos?.[papelAberto.id] ?? []}
+              brasoes={brasoes}
             />
           )}
         </DrawerContent>
@@ -1389,7 +1399,7 @@ const ODia = ({ capitulo, acento, casaBase }: { capitulo: Capitulo; acento: stri
 // ============================================
 // DRAWER · GUIA DA FUNÇÃO
 // ============================================
-const GuiaConteudo = ({ papel, delegacoes, ehMeuTime = false, ehArena = false, acento, solida }: { papel: Papel; delegacoes: Delegacao[]; ehMeuTime?: boolean; ehArena?: boolean; acento: string; solida: string }) => {
+const GuiaConteudo = ({ papel, delegacoes, ehMeuTime = false, ehArena = false, acento, solida, alocacoesTime = [], grupos = [], brasoes = {} }: { papel: Papel; delegacoes: Delegacao[]; ehMeuTime?: boolean; ehArena?: boolean; acento: string; solida: string; alocacoesTime?: AlocacaoComAluno[]; grupos?: GrupoTime[]; brasoes?: Brasoes }) => {
   const deleg = papel.delegacao ? delegacoes.find(d => d.codigo === papel.delegacao) : null;
   // Regra "só o seu time": o PDF de apoio só aparece para o time do próprio aluno.
   // E só na Arena (os PDFs /materiais/arena/ são específicos dela).
@@ -1412,6 +1422,53 @@ const GuiaConteudo = ({ papel, delegacoes, ehMeuTime = false, ehArena = false, a
       </DrawerHeader>
 
       <div className="px-6 pb-10 pt-5 overflow-y-auto space-y-6">
+        {/* Grupos do time (quando o time foi dividido em grupos) */}
+        {grupos.length > 0 && (
+          <div>
+            <div className="text-[10px] tracking-[0.3em] uppercase mb-3" style={{ color: acento }}>
+              Grupos do time
+            </div>
+            <div className="space-y-2.5">
+              {grupos.map((g) => {
+                const membrosG = alocacoesTime.filter((a) => a.grupo === g.numero);
+                return (
+                  <div key={g.numero} className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="text-[12px] font-semibold text-white">Grupo {g.numero}</span>
+                      {g.subtema && <span className="text-[11px] italic" style={{ color: acento }}>{g.subtema}</span>}
+                      <span className="text-[10px] text-white/35 ml-auto">
+                        {membrosG.length} {membrosG.length === 1 ? 'membro' : 'membros'}
+                      </span>
+                    </div>
+                    {membrosG.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {membrosG.map((a) => (
+                          <span
+                            key={a.id}
+                            className="inline-flex items-center gap-1.5 pl-1 pr-2 py-0.5 rounded-full text-[11px]"
+                            style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.85)' }}
+                          >
+                            <Avatar
+                              nome={nomeAluno(a.aluno)}
+                              url={a.aluno?.avatar_url ?? null}
+                              brasao={a.aluno?.casa_id ? brasoes[a.aluno.casa_id] : null}
+                              acento={acento}
+                              pequeno
+                            />
+                            {nomeESobrenome(a.aluno)}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-white/35">Ninguém neste grupo ainda.</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Seção 01. Seu papel */}
         {papel.roteiro_papel && (
           <div>
