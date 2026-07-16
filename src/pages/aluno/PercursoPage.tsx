@@ -71,7 +71,7 @@ const PercursoPage = () => {
         style={{ background: `linear-gradient(160deg, ${casaColor}22, ${casaColor}05 70%)` }}
       >
         <p className="font-serif text-[21px] text-white leading-snug">
-          Você já levou <span style={{ color: accent }}>{totalPontos.toLocaleString('pt-BR')} pontos</span> para a sua Casa.
+          Você já conquistou <span style={{ color: accent }}>{totalPontos.toLocaleString('pt-BR')} pontos</span> até aqui.
         </p>
         <p className="text-[12.5px] text-white/45 mt-1.5">
           {itens.length > 0 ? 'Cada missão te fez crescer um pouco. Olha o seu caminho até aqui.' : 'Sua primeira missão começa o caminho.'}
