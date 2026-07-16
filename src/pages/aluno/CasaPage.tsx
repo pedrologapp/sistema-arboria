@@ -55,6 +55,7 @@ const CasaPage = () => {
   const { casa, casaColor, profile, ranking, isLoading: contextLoading, refreshData } = useStudent();
   const [membros, setMembros] = useState<MembroComCargo[]>([]);
   const [pontosTotaisCasa, setPontosTotaisCasa] = useState(0);
+  const [pontosCasa, setPontosCasa] = useState(0);
   const [mediaCasa, setMediaCasa] = useState(0);
   const [membrosCasa, setMembrosCasa] = useState(0);
   const [posicaoCasa, setPosicaoCasa] = useState(0);
@@ -147,7 +148,7 @@ const CasaPage = () => {
       const [rankingCasaRes, rankingTodasRes, membrosRes, cargosRes] = await Promise.all([
         supabase
           .from('ranking_casas')
-          .select('total_pontos, posicao, media_por_membro, total_membros')
+          .select('total_pontos, posicao, media_por_membro, total_membros, pontos_casa')
           .eq('casa_id', casa.id)
           .eq('institution_id', profile.institution_id)
           .maybeSingle(),
@@ -174,6 +175,7 @@ const CasaPage = () => {
       if (membrosRes.error) throw membrosRes.error;
 
       setPontosTotaisCasa(rankingCasaRes.data?.total_pontos || 0);
+      setPontosCasa(Number((rankingCasaRes.data as { pontos_casa?: number } | null)?.pontos_casa) || 0);
       setMediaCasa(Number((rankingCasaRes.data as { media_por_membro?: number } | null)?.media_por_membro) || 0);
       setMembrosCasa(Number((rankingCasaRes.data as { total_membros?: number } | null)?.total_membros) || 0);
       setPosicaoCasa(rankingCasaRes.data?.posicao || 0);
@@ -310,29 +312,24 @@ const CasaPage = () => {
     // Degrada de forma silenciosa se faltar dado pra computar o gap.
     const casaAcima = posicaoCasa > 1 ? rankingCasas.find(c => c.posicao === posicaoCasa - 1) : undefined;
     const casaAbaixo = rankingCasas.find(c => c.posicao === posicaoCasa + 1);
-    // Meta pela MÉDIA por membro (justo pro tamanho), traduzida em PONTOS que a
-    // Casa precisa somar: alcançar a média da Casa de cima = quantos pontos faltam.
-    const faltamPraAcima = casaAcima && membrosCasa > 0
-      ? Math.max(0, Math.ceil(casaAcima.media_por_membro * membrosCasa) - pontosTotaisCasa)
-      : null;
-    const faltamPraTeAlcancar = casaAbaixo && casaAbaixo.total_membros > 0
-      ? Math.max(0, Math.ceil(mediaCasa * casaAbaixo.total_membros) - casaAbaixo.total_pontos)
-      : null;
+    // Meta SEM número de "pontos pra alcançar": como o ranking é por média, um
+    // número fixo confunde (o alvo se move e os pontos do aluno também sobem a
+    // própria média). Mensagem relativa e coletiva, honesta com a média.
     const metaNode =
       posicaoCasa === 1
-        ? casaAbaixo && faltamPraTeAlcancar != null && faltamPraTeAlcancar > 0
+        ? casaAbaixo
           ? (
             <>
-              A Casa está na frente. A <b style={{ color: accentColor }}>Casa {casaAbaixo.casa_nome}</b> precisa de{' '}
-              <b className="tabular-nums" style={{ color: accentColor }}>{faltamPraTeAlcancar.toLocaleString('pt-BR')}</b> pontos pra te alcançar, bora manter a distância.
+              A Casa está no topo. A <b style={{ color: accentColor }}>Casa {casaAbaixo.casa_nome}</b> vem logo atrás, cada missão da Casa segura a liderança.
             </>
           )
-          : null
-        : posicaoCasa > 1 && casaAcima && faltamPraAcima != null && faltamPraAcima > 0
+          : (
+            <>A Casa está no topo, cada missão da Casa segura a liderança.</>
+          )
+        : posicaoCasa > 1 && casaAcima
           ? (
             <>
-              Faltam <b className="tabular-nums" style={{ color: accentColor }}>{faltamPraAcima.toLocaleString('pt-BR')}</b> pontos pra sua Casa encostar na{' '}
-              <b style={{ color: accentColor }}>Casa {casaAcima.casa_nome}</b>.
+              A <b style={{ color: accentColor }}>Casa {casaAcima.casa_nome}</b> está logo à frente. Quanto mais gente da Casa entrega, a média sobe, bora encostar.
             </>
           )
           : null;
@@ -378,15 +375,15 @@ const CasaPage = () => {
 
         {/* Placar em torcida: a Casa como time, nunca o ranking do aluno */}
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] px-4 pt-4 pb-3.5 mb-6">
-          {/* Forca da Casa */}
+          {/* Pontos da Casa: já ponderado por membro (justo pra Casas de tamanhos diferentes) */}
           <div className="flex items-baseline justify-between gap-2.5">
-            <span className="text-[9.5px] tracking-[0.26em] uppercase text-white/30 shrink-0">Força da Casa</span>
+            <span className="text-[9.5px] tracking-[0.26em] uppercase text-white/30 shrink-0">Pontos da Casa</span>
             <span className="font-serif text-[30px] font-semibold text-white leading-none tabular-nums">
-              {pontosTotaisCasa.toLocaleString('pt-BR')}
+              {pontosCasa.toLocaleString('pt-BR')}
               <span className="font-sans text-[13px] font-semibold ml-1" style={{ color: accentColor }}>pts</span>
             </span>
           </div>
-          <p className="text-[11.5px] text-white/35 mt-1.5">Tudo que cada membro entrega soma aqui.</p>
+          <p className="text-[11.5px] text-white/35 mt-1.5">Cada missão da Casa faz esse número subir, e conta igual pra Casas grandes e pequenas.</p>
 
           <div className="h-px bg-white/[0.08] my-3.5" />
 
@@ -398,11 +395,6 @@ const CasaPage = () => {
               <span className="text-white/35 font-normal text-xs ml-1">entre {totalCasas} Casas</span>
             </span>
           </div>
-          {mediaCasa > 0 && (
-            <p className="text-[11px] text-white/35 mt-1.5">
-              Ranking por <b className="text-white/60 tabular-nums">{mediaCasa.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</b> de média por membro, justo pra Casas de tamanhos diferentes.
-            </p>
-          )}
 
           {/* Meta: encostar na Casa de cima (ou manter distancia, se lider) */}
           {metaNode && (

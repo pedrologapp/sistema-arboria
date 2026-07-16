@@ -23,8 +23,7 @@ interface CasaRank {
   casa_nome: string;
   casa_cor: string | null;
   posicao: number;
-  total_pontos: number;
-  media_por_membro: number;
+  pontos_casa: number;
   brasao_url: string | null;
   emoji: string | null;
 }
@@ -41,7 +40,7 @@ const RankingCasasPage = () => {
       const [rkRes, intelRes] = await Promise.all([
         supabase
           .from('ranking_casas')
-          .select('casa_id, casa_nome, casa_cor, posicao, total_pontos, media_por_membro')
+          .select('casa_id, casa_nome, casa_cor, posicao, pontos_casa')
           .eq('institution_id', profile!.institution_id)
           .order('posicao', { ascending: true }),
         supabase.from('inteligencias').select('id, brasao_url, emoji'),
@@ -55,8 +54,7 @@ const RankingCasasPage = () => {
         casa_nome: r.casa_nome || '',
         casa_cor: r.casa_cor,
         posicao: Number(r.posicao) || 0,
-        total_pontos: Number(r.total_pontos) || 0,
-        media_por_membro: Number((r as { media_por_membro?: number }).media_por_membro) || 0,
+        pontos_casa: Number((r as { pontos_casa?: number }).pontos_casa) || 0,
         brasao_url: brasaoMap[Number(r.casa_id)]?.brasao_url ?? null,
         emoji: brasaoMap[Number(r.casa_id)]?.emoji ?? null,
       })) as CasaRank[];
@@ -65,7 +63,8 @@ const RankingCasasPage = () => {
 
   const accent = corAcento(casaColor || '#a78bfa');
   const anoLetivo = new Date().getFullYear();
-  const temPontos = casas.some((c) => c.total_pontos > 0);
+  const temPontos = casas.some((c) => c.pontos_casa > 0);
+  const maxPontos = Math.max(...casas.map((c) => c.pontos_casa), 1);
 
   return (
     <div className="scifi min-h-screen px-5 py-6 pb-24">
@@ -134,7 +133,7 @@ const RankingCasasPage = () => {
                   className="w-9 h-9 shrink-0"
                 />
 
-                {/* nome */}
+                {/* nome + barra (enche pela pontuacao da Casa, justa por tamanho) */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <span className={cn('text-[14px] font-semibold truncate', isMine ? 'text-white' : 'text-white/85')}>
@@ -150,17 +149,20 @@ const RankingCasasPage = () => {
                       </span>
                     )}
                   </div>
+                  <div className="h-1.5 rounded-full bg-white/[0.08] mt-1.5 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${Math.max(6, (c.pontos_casa / maxPontos) * 100)}%`, backgroundColor: cor }}
+                    />
+                  </div>
                 </div>
 
-                {/* média por membro (o que ranqueia, justo pro tamanho) + total no contexto */}
+                {/* pontos da Casa: grande, bonito e justo por tamanho */}
                 <div className="text-right shrink-0">
-                  <div className="font-serif text-[16px] font-semibold text-white tabular-nums leading-none">
-                    {c.media_por_membro.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                    <span className="font-sans text-[9px] uppercase tracking-wide text-white/35 ml-1">/ membro</span>
+                  <div className="font-serif text-[18px] font-semibold text-white tabular-nums leading-none">
+                    {c.pontos_casa.toLocaleString('pt-BR')}
                   </div>
-                  <div className="text-[9.5px] text-white/30 tabular-nums mt-1">
-                    {c.total_pontos.toLocaleString('pt-BR')} no total
-                  </div>
+                  <div className="text-[9px] uppercase tracking-wide text-white/35 mt-0.5">pontos</div>
                 </div>
               </div>
             );

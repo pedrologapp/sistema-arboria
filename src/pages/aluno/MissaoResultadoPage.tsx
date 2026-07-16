@@ -29,7 +29,7 @@ interface MinhaAnalise {
 const MissaoResultadoPage = () => {
   const { entregaId } = useParams<{ entregaId: string }>();
   const navigate = useNavigate();
-  const { casa, casaColor } = useStudent();
+  const { casa, casaColor, profile } = useStudent();
   const accent = corAcento(casaColor || '#a78bfa');
 
   const { data, isLoading } = useQuery({
@@ -46,6 +46,25 @@ const MissaoResultadoPage = () => {
       return data as MinhaAnalise | null;
     },
   });
+
+  // Nº de membros da Casa, pra dizer quanto os pontos do aluno viraram na Casa
+  // (ponderado: ganho da Casa = pontos x 10 / membros). Transparencia total.
+  const { data: membrosCasa = 0 } = useQuery({
+    queryKey: ['casa-membros', casa?.id, profile?.institution_id],
+    enabled: !!casa?.id && !!profile?.institution_id,
+    staleTime: 300_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('ranking_casas')
+        .select('total_membros')
+        .eq('casa_id', casa!.id)
+        .eq('institution_id', profile!.institution_id)
+        .maybeSingle();
+      return Number((data as { total_membros?: number } | null)?.total_membros) || 0;
+    },
+  });
+
+  const ganhoCasa = data && membrosCasa > 0 ? Math.round((data.pontos * 10) / membrosCasa) : 0;
 
   // Abriu o recebimento = leu. Marca como vista pro pop-up da Home parar de avisar.
   useEffect(() => {
@@ -119,9 +138,15 @@ const MissaoResultadoPage = () => {
           </div>
 
           <h1 className="font-serif text-[22px] text-white leading-snug px-2 max-w-xs mb-1">
-            Você levou {data.pontos} pontos para a <span style={{ color: accent }}>Casa {casa?.nome}</span>.
+            Você pontuou <b style={{ color: accent }}>{data.pontos} pontos</b>!
           </h1>
-          {data.missao_titulo && <p className="text-[12px] text-white/40 mb-5">{data.missao_titulo}</p>}
+          {ganhoCasa > 0 && (
+            <p className="text-[13.5px] text-white/70 mb-1 px-3 leading-snug max-w-xs">
+              E a <span style={{ color: accent }}>Casa {casa?.nome}</span> ganhou{' '}
+              <b style={{ color: accent }}>+{ganhoCasa} pontos</b> com a sua missão.
+            </p>
+          )}
+          {data.missao_titulo && <p className="text-[12px] text-white/40 mt-1 mb-5">{data.missao_titulo}</p>}
 
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 text-left w-full">
             <div className="flex items-center gap-2 mb-2.5 text-[10.5px] tracking-[0.12em] uppercase font-bold" style={{ color: accent }}>

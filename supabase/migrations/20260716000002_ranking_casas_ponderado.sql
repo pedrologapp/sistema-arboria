@@ -39,6 +39,9 @@ SELECT
   COALESCE(p.total_alunos_ativos, 0)     AS total_alunos_ativos,
   COALESCE(m.total_membros, 0)           AS total_membros,
   ROUND(COALESCE(p.total_pontos, 0)::numeric / NULLIF(m.total_membros, 0), 1) AS media_por_membro,
+  -- Pontos da Casa (o numero bonito, justo por tamanho): media por membro x 10.
+  -- Mesma ordem da media; so reinflado pra ficar grande e gostoso pra crianca.
+  ROUND(COALESCE(p.total_pontos, 0)::numeric * 10 / NULLIF(m.total_membros, 0)) AS pontos_casa,
   RANK() OVER (
     PARTITION BY p.institution_id, p.ano_letivo
     ORDER BY (COALESCE(p.total_pontos, 0)::numeric / NULLIF(m.total_membros, 0)) DESC NULLS LAST
