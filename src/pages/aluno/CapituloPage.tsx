@@ -489,7 +489,14 @@ const CapituloPage = () => {
       {/* ============ DRAWER · GUIA DA DELEGAÇÃO ============ */}
       <Drawer open={!!delegacaoAberta} onOpenChange={(o) => !o && setDelegacaoAberta(null)}>
         <DrawerContent className="bg-[#1A1A2E] border-white/10 text-white max-h-[92vh]">
-          {delegacaoAberta && <GuiaConteudoDelegacao delegacao={delegacaoAberta} acento={acento} solida={solida} />}
+          {delegacaoAberta && (
+            <GuiaConteudoDelegacao
+              delegacao={delegacaoAberta}
+              acento={acento}
+              solida={solida}
+              membros={membrosDelegacoes.filter((m) => m.delegacao_codigo === delegacaoAberta.codigo)}
+            />
+          )}
         </DrawerContent>
       </Drawer>
 
@@ -1533,7 +1540,7 @@ const GuiaConteudo = ({ papel, delegacoes, ehMeuTime = false, ehArena = false, a
 // ============================================
 // DRAWER · GUIA DA DELEGAÇÃO
 // ============================================
-const GuiaConteudoDelegacao = ({ delegacao, acento, solida }: { delegacao: Delegacao; acento: string; solida: string }) => {
+const GuiaConteudoDelegacao = ({ delegacao, acento, solida, membros }: { delegacao: Delegacao; acento: string; solida: string; membros: MembroComAluno[] }) => {
   const pdf = pdfDaDelegacao(delegacao.codigo);
   return (
     <>
@@ -1574,6 +1581,32 @@ const GuiaConteudoDelegacao = ({ delegacao, acento, solida }: { delegacao: Deleg
             <p className="text-[14px] text-white/80 leading-relaxed">
               {delegacao.topam_negociar}
             </p>
+          </div>
+        )}
+
+        {membros.length > 0 && (
+          <div>
+            <div className="text-[10px] tracking-[0.3em] uppercase mb-2" style={{ color: acento }}>
+              Membros · {membros.length}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {membros.map((m) => (
+                <span
+                  key={m.id}
+                  className="inline-flex items-center gap-1.5 pl-1 pr-2 py-0.5 rounded-full text-[11px]"
+                  style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.85)' }}
+                >
+                  <Avatar
+                    nome={nomeAluno(m.aluno)}
+                    url={m.aluno?.avatar_url ?? null}
+                    brasao={null}
+                    acento={acento}
+                    pequeno
+                  />
+                  {nomeESobrenome(m.aluno)}
+                </span>
+              ))}
+            </div>
           </div>
         )}
 
