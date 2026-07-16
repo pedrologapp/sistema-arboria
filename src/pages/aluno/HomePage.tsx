@@ -16,6 +16,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } f
 import { hojeBrasil } from '@/utils/timezone';
 import { CROSS_IM_COMBINACOES, MECANISMOS_CASA } from '@/data/crossImData';
 import OnboardingModal from '@/components/aluno/OnboardingModal';
+import PopupLeiturasNovas from '@/components/aluno/PopupLeiturasNovas';
 import { corAcento, corSolida, hexParaRgb } from '@/lib/corCasa';
 import '@/styles/missoes-scifi.css';
 
@@ -263,6 +264,7 @@ const HomePage = () => {
 
     return (
       <div className="scifi p-4 space-y-3.5 pb-24" style={scifiVars}>
+        <PopupLeiturasNovas />
         {/* Atmosfera única (Home = Capítulo): topo CLARO (acento) conserta o glow
             morto das Casas escuras; base na matiz crua com alpha baixo. */}
         <div
@@ -531,6 +533,7 @@ const HomePage = () => {
 
   return (
     <div className="scifi p-4 space-y-4 pb-24" style={scifiVars}>
+      <PopupLeiturasNovas />
       {/* Onboarding primeiro acesso */}
       <OnboardingModal
         isOpen={showOnboarding}

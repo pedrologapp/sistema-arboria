@@ -74,10 +74,23 @@ const CoordenadorLayoutContent = ({ children }: { children: ReactNode }) => {
   }, [idx]);
 
   // Swipe entre abas: arrastar para a esquerda avança, para a direita volta.
-  const toqueRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  // Se o gesto começa dentro de um carrossel horizontal (ex.: as turmas na
+  // Gestão), a troca de aba SÓ dispara quando o carrossel já está na borda na
+  // direção do arrasto; caso contrário o carrossel consome o gesto. Isso mata a
+  // sensibilidade: deslizar as turmas não pula mais pra outra aba.
+  const toqueRef = useRef<{ x: number; y: number; t: number; scroller: HTMLElement | null } | null>(null);
+  const acharScrollerH = (alvo: EventTarget | null): HTMLElement | null => {
+    let n = alvo instanceof HTMLElement ? alvo : null;
+    while (n && n !== document.body) {
+      const ox = window.getComputedStyle(n).overflowX;
+      if ((ox === 'auto' || ox === 'scroll') && n.scrollWidth > n.clientWidth + 4) return n;
+      n = n.parentElement;
+    }
+    return null;
+  };
   const onTouchStart = (e: React.TouchEvent) => {
     const t0 = e.touches[0];
-    toqueRef.current = { x: t0.clientX, y: t0.clientY, t: Date.now() };
+    toqueRef.current = { x: t0.clientX, y: t0.clientY, t: Date.now(), scroller: acharScrollerH(e.target) };
   };
   const onTouchEnd = (e: React.TouchEvent) => {
     const ini = toqueRef.current;
@@ -90,6 +103,14 @@ const CoordenadorLayoutContent = ({ children }: { children: ReactNode }) => {
     const dy = fim.clientY - ini.y;
     const dt = Date.now() - ini.t;
     if (Math.abs(dx) < 64 || Math.abs(dx) < Math.abs(dy) * 1.8 || dt > 600) return;
+    // Carrossel horizontal sob o dedo: só troca de aba se ele já está na borda.
+    const sc = ini.scroller;
+    if (sc) {
+      const noComeco = sc.scrollLeft <= 2;
+      const noFim = sc.scrollLeft + sc.clientWidth >= sc.scrollWidth - 2;
+      if (dx < 0 && !noFim) return; // avançar de aba exige o carrossel no fim
+      if (dx > 0 && !noComeco) return; // voltar de aba exige o carrossel no começo
+    }
     const destino = dx < 0 ? pos + 1 : pos - 1;
     if (destino >= 0 && destino < TAB_PATHS.length) navigate(TAB_PATHS[destino]);
   };

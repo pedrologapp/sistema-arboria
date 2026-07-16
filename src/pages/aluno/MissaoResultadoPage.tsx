@@ -8,12 +8,14 @@
 // Textos aprovados pelo Fundador. Tema escuro do app, cor da Casa na atmosfera,
 // selo dourado no momento de pico. Sem emoji, sem travessão.
 // ============================================================
+import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, Leaf } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStudent } from '@/contexts/StudentContext';
 import { corAcento } from '@/lib/corCasa';
+import { marcarLeituraVista } from '@/lib/leiturasVistas';
 import '@/styles/missoes-scifi.css';
 
 interface MinhaAnalise {
@@ -44,6 +46,11 @@ const MissaoResultadoPage = () => {
       return data as MinhaAnalise | null;
     },
   });
+
+  // Abriu o recebimento = leu. Marca como vista pro pop-up da Home parar de avisar.
+  useEffect(() => {
+    if (data?.entrega_id) marcarLeituraVista(data.entrega_id);
+  }, [data?.entrega_id]);
 
   const ehAusencia = data?.caso_especial === 'nao_participou';
 
