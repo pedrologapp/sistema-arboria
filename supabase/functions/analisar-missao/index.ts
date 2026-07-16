@@ -142,6 +142,14 @@ function json(obj: unknown, status = 200): Response {
 
 Deno.serve(async (req: Request) => {
   try {
+    // Gate de seguranca: a funcao gasta dinheiro (API da IA). So aciona quem tem
+    // o segredo compartilhado com o cron (header x-cron-secret). Se CRON_SECRET
+    // nao estiver setado, a funcao fica aberta (util em dev; em prod, setar sempre).
+    const cronSecret = Deno.env.get('CRON_SECRET');
+    if (cronSecret && req.headers.get('x-cron-secret') !== cronSecret) {
+      return json({ error: 'nao autorizado' }, 401);
+    }
+
     const body = await req.json().catch(() => ({}));
     const limit: number = Math.min(Math.max(Number(body.limit ?? 5), 1), 50);
     const entregaIds: string[] | null = Array.isArray(body.entrega_ids) ? body.entrega_ids : null;
