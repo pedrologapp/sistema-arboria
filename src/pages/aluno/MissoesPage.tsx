@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback, type CSSProperties } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
 import {
   CheckCircle,
@@ -129,7 +129,11 @@ const MissoesPage = () => {
   const [capituloCor, setCapituloCor] = useState('#A78BFA');
   const [filtroConcluidas, setFiltroConcluidas] = useState<string>('todas');
   // Segmento da aba nova (atras do flag F2_ALUNO_VISOR_NOVO). Inerte com flag off.
-  const [segNovo, setSegNovo] = useState<'ativas' | 'concluidas'>('ativas');
+  // Abre em Concluidas quando vier de "?aba=concluidas" (ex.: pop-up da Home).
+  const [searchParams] = useSearchParams();
+  const [segNovo, setSegNovo] = useState<'ativas' | 'concluidas'>(
+    searchParams.get('aba') === 'concluidas' ? 'concluidas' : 'ativas'
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);

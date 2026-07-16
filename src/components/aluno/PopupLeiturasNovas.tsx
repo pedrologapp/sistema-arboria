@@ -56,7 +56,8 @@ const PopupLeiturasNovas = () => {
   };
   const verAgora = () => {
     dispensar();
-    navigate(`/aluno/missao-resultado/${novas[0].entrega_id}`);
+    // Direciona pras Missões Concluídas, onde ela vê as leituras e abre cada uma.
+    navigate('/aluno/missoes?aba=concluidas');
   };
 
   return (
