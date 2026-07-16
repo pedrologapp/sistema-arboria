@@ -42,6 +42,7 @@ const InfantilAlunosPage = () => {
     }
   };
   const [busca, setBusca] = useState('');
+  const [statusFiltro, setStatusFiltro] = useState<'todos' | 'com' | 'sem'>('todos');
   const [exemplosAbertos, setExemplosAbertos] = useState(false);
   // Preferência compartilhada com a Rajada (quem escolhe círculos lá, encontra círculos aqui)
   const [viewMode, setViewModeState] = useState<'lista' | 'circulos'>(getViewModePreferido());
@@ -54,10 +55,12 @@ const InfantilAlunosPage = () => {
     if (!alunos) return [];
     return alunos.filter((a) => {
       if (turmaFiltro && a.turmaId !== turmaFiltro) return false;
+      if (statusFiltro === 'com' && !(a.quantidadeObservacoes > 0)) return false;
+      if (statusFiltro === 'sem' && a.quantidadeObservacoes > 0) return false;
       if (busca && !normalizarBusca(a.nome).includes(normalizarBusca(busca))) return false;
       return true;
     });
-  }, [alunos, turmaFiltro, busca]);
+  }, [alunos, turmaFiltro, statusFiltro, busca]);
 
   return (
     <div className="pt-5 space-y-4">
@@ -162,6 +165,19 @@ const InfantilAlunosPage = () => {
           ))}
         </div>
       )}
+
+      {/* Filtro por observação: com / sem registro */}
+      <div className="flex gap-1.5 flex-wrap">
+        <FiltroChip ativo={statusFiltro === 'todos'} onClick={() => setStatusFiltro('todos')}>
+          Todos
+        </FiltroChip>
+        <FiltroChip ativo={statusFiltro === 'com'} onClick={() => setStatusFiltro('com')}>
+          Com observação
+        </FiltroChip>
+        <FiltroChip ativo={statusFiltro === 'sem'} onClick={() => setStatusFiltro('sem')}>
+          Sem observação
+        </FiltroChip>
+      </div>
 
       {/* Busca + alternador de visão (lista / círculos): mesmo padrão da Rajada */}
       <div className="flex items-center gap-2">
