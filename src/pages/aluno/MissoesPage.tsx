@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useNotificacoes } from '@/hooks/useNotificacoes';
 import {
   CheckCircle,
   RefreshCw,
@@ -115,11 +116,17 @@ const FiltroChip = ({ ativo, onClick, label, cor }: { ativo: boolean; onClick: (
 const MissoesPage = () => {
   const navigate = useNavigate();
   const { profile, casa, isLoading: contextLoading } = useStudent();
+  // Badge de direcao: reflete o "2" do nav DENTRO das abas (Ativas = a fazer,
+  // Concluidas = aprovadas/lidas), pro aluno saber de onde vem a notificacao.
+  const { missoesPendentes, aprovadasNaoVistas } = useNotificacoes();
 
   const [itens, setItens] = useState<ItemFase[]>([]);
   const [questsFase, setQuestsFase] = useState<Quest[]>([]);
   const [questsCapitulo, setQuestsCapitulo] = useState<Quest[]>([]);
   const [concluidas, setConcluidas] = useState<Concluida[]>([]);
+  // Cor do grupo "Capítulo" na jornada. O capítulo é da fase Interpessoal, então
+  // usa a cor dela (não o roxo genérico). Setada no fetch quando a intel carrega.
+  const [capituloCor, setCapituloCor] = useState('#A78BFA');
   const [filtroConcluidas, setFiltroConcluidas] = useState<string>('todas');
   // Segmento da aba nova (atras do flag F2_ALUNO_VISOR_NOVO). Inerte com flag off.
   const [segNovo, setSegNovo] = useState<'ativas' | 'concluidas'>('ativas');
@@ -152,6 +159,7 @@ const MissoesPage = () => {
 
       // Inteligência Interpessoal (fase dos capítulos como a Grande Assembleia): pro brasão
       const interpessoal = (inteligencias || []).find(i => i.codigo === 'interpessoal') || null;
+      if (interpessoal?.cor_hex) setCapituloCor(interpessoal.cor_hex);
 
       // ---------- Fases (a jornada) ----------
       let query = supabase
@@ -392,7 +400,7 @@ const MissoesPage = () => {
                   pontos: null,
                   grupoKey: 'capitulo',
                   grupoLabel: 'Capítulo',
-                  grupoCor: '#A78BFA',
+                  grupoCor: interpessoal?.cor_hex || '#A78BFA',
                   tipo: 'perdida',
                 });
                 continue;
@@ -449,7 +457,7 @@ const MissoesPage = () => {
         if (missao?.capitulo_id) {
           grupoKey = 'capitulo';
           grupoLabel = 'Capítulo';
-          grupoCor = '#A78BFA';
+          grupoCor = interpessoal?.cor_hex || '#A78BFA';
         } else if (missao?.fase_id && faseParaIntel.has(missao.fase_id)) {
           const intel = faseParaIntel.get(missao.fase_id)!;
           grupoKey = `f${intel.id}`;
@@ -662,7 +670,7 @@ const MissoesPage = () => {
       grupoMeta.set(faseAtualKey, { key: faseAtualKey, label: faseAtual.inteligencia.nome, cor: faseAtual.inteligencia.cor_hex || '#22C55E' });
     }
     if (itensJornada.some(i => i.grupoKey === 'capitulo') && !grupoMeta.has('capitulo')) {
-      grupoMeta.set('capitulo', { key: 'capitulo', label: 'Capítulo', cor: '#A78BFA' });
+      grupoMeta.set('capitulo', { key: 'capitulo', label: 'Capítulo', cor: capituloCor });
     }
     const gruposJornada = Array.from(grupoMeta.values())
       .filter(g => itensJornada.some(i => i.grupoKey === g.key))
@@ -742,22 +750,32 @@ const MissoesPage = () => {
           <button
             onClick={() => setSegNovo('ativas')}
             className={cn(
-              'pb-1 transition-colors',
+              'pb-1 transition-colors inline-flex items-center gap-1.5',
               segNovo === 'ativas' ? 'text-white font-semibold' : 'text-white/35'
             )}
             style={segNovo === 'ativas' ? { borderBottom: `2px solid ${casaColor}` } : undefined}
           >
             Ativas
+            {missoesPendentes > 0 && (
+              <span className="bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-1">
+                {missoesPendentes > 99 ? '99+' : missoesPendentes}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setSegNovo('concluidas')}
             className={cn(
-              'pb-1 transition-colors',
+              'pb-1 transition-colors inline-flex items-center gap-1.5',
               segNovo === 'concluidas' ? 'text-white font-semibold' : 'text-white/35'
             )}
             style={segNovo === 'concluidas' ? { borderBottom: `2px solid ${casaColor}` } : undefined}
           >
             Concluídas
+            {aprovadasNaoVistas > 0 && (
+              <span className="bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-1">
+                {aprovadasNaoVistas > 99 ? '99+' : aprovadasNaoVistas}
+              </span>
+            )}
           </button>
         </div>
 
