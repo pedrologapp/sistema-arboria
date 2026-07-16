@@ -156,11 +156,11 @@ const HomePage = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from('ranking_casas')
-        .select('posicao, pontos_casa')
+        .select('posicao, pontos_casa, total_membros')
         .eq('casa_id', casa!.id)
         .eq('institution_id', profile!.institution_id)
         .maybeSingle();
-      return (data as { posicao: number; pontos_casa: number } | null) ?? null;
+      return (data as { posicao: number; pontos_casa: number; total_membros: number } | null) ?? null;
     },
   });
 
@@ -216,6 +216,9 @@ const HomePage = () => {
   const firstName = profile?.nome?.split(' ')[0] || 'Aluno';
   const isPrimeiro = ranking?.posicao_na_casa === 1 && (ranking?.total_pontos || 0) > 0;
   const semanaAtual = faseAtual?.semana_atual || 1;
+  // Quanto os pontos do aluno viraram na Casa (ponderado): pontos x 10 / membros.
+  const membrosDaCasa = Number(casaRank?.total_membros) || 0;
+  const contribuicaoCasa = membrosDaCasa > 0 ? Math.round(((ranking?.total_pontos || 0) * 10) / membrosDaCasa) : 0;
 
   // Frase animada rotativa
   const casaCodigo = casa?.codigo || 'geral';
@@ -372,14 +375,17 @@ const HomePage = () => {
 
               {/* placar discreto: pontos do aluno + posicao E pontos da CASA
                   (nunca rank individual: doutrina do Fundador, sem comparar criancas) */}
-              <p className="mt-3 text-[11.5px] text-white/30 tabular-nums">
-                <span className="text-white/50 font-semibold">{ranking?.total_pontos || 0}</span> seus pontos
+              <p className="mt-3 text-[11.5px] text-white/40 leading-relaxed">
+                Você conquistou <span className="text-white/60 font-semibold tabular-nums">{ranking?.total_pontos || 0}</span> pontos
+                {contribuicaoCasa > 0 && (
+                  <> e <span className="text-white/60 font-semibold tabular-nums">{contribuicaoCasa}</span> pontos para sua Casa</>
+                )}.
                 {casaRank?.posicao ? (
                   <>
-                    {' · Casa em '}
-                    <span className="text-white/50 font-semibold">{casaRank.posicao}º</span>
+                    <br />
+                    Casa em <span className="text-white/60 font-semibold tabular-nums">{casaRank.posicao}º</span>
                     {' · '}
-                    <span className="text-white/50 font-semibold">{(casaRank.pontos_casa || 0).toLocaleString('pt-BR')}</span> pts da Casa
+                    <span className="text-white/60 font-semibold tabular-nums">{(casaRank.pontos_casa || 0).toLocaleString('pt-BR')}</span> pontos da Casa.
                   </>
                 ) : null}
               </p>
