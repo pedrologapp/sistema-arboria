@@ -268,14 +268,6 @@ const HomePage = () => {
     return (
       <div className="scifi p-4 space-y-3.5 pb-24" style={scifiVars}>
         <PopupLeiturasNovas />
-        {/* Atmosfera única (Home = Capítulo): topo CLARO (acento) conserta o glow
-            morto das Casas escuras; base na matiz crua com alpha baixo. */}
-        <div
-          className="fixed inset-0 -z-10 pointer-events-none"
-          style={{
-            background: `radial-gradient(120% 55% at 50% -8%, ${acento}1F, transparent 58%), radial-gradient(90% 42% at 50% 110%, ${casaBase}14, transparent 55%)`,
-          }}
-        />
         <OnboardingModal
           isOpen={showOnboarding}
           onClose={fecharOnboarding}
@@ -322,7 +314,7 @@ const HomePage = () => {
 
         {/* Aluno sem casa */}
         {!casa && (
-          <div className="rounded-[18px] border border-white/[0.08] bg-white/[0.035] animate-fade-in p-5 text-center">
+          <div className="rounded-[18px] border border-white/[0.08] bg-white/[0.04] animate-fade-in p-5 text-center">
             <p className="text-white font-medium">Bem-vindo ao Arboria!</p>
             <p className="text-white/40 text-sm mt-2">Você ainda não foi alocado a uma casa. Aguarde seu professor: em breve você vai descobrir a qual casa pertence!</p>
           </div>
@@ -330,14 +322,7 @@ const HomePage = () => {
 
         {/* 3. Cartao de JORNADA (mockup .journey) */}
         {casa && (
-          <div
-            className="relative overflow-hidden rounded-[18px] bg-white/[0.035] animate-fade-in animate-fade-in-d1"
-            style={{ border: `1px solid ${casaColor}47` }}
-          >
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{ background: `linear-gradient(155deg, ${casaColor}29 0%, transparent 55%)` }}
-            />
+          <div className="relative overflow-hidden rounded-[18px] border border-white/[0.08] bg-white/[0.04] animate-fade-in animate-fade-in-d1">
             <div className="relative z-10 p-4">
               {/* linha: crest + casa + cargo */}
               <div className="flex items-center gap-[14px]">
@@ -397,12 +382,8 @@ const HomePage = () => {
         {capituloHome && (
           <button
             onClick={() => navigate('/aluno/capitulo')}
-            className="relative overflow-hidden rounded-[18px] border border-white/[0.10] bg-white/[0.035] w-full text-left p-4 active:scale-[0.99] transition-transform animate-fade-in animate-fade-in-d2"
+            className="relative overflow-hidden rounded-[18px] border border-white/[0.08] bg-white/[0.04] w-full text-left p-4 active:scale-[0.99] transition-transform animate-fade-in animate-fade-in-d2"
           >
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{ background: `radial-gradient(120% 90% at 50% -20%, ${casaColor}2e 0%, transparent 60%)` }}
-            />
             <div className="relative z-10">
               <div className="text-[10px] tracking-[0.34em] uppercase text-white/30">Capítulo da vez</div>
               <h3 className="font-serif text-[24px] font-semibold text-white mt-2 leading-tight">{capituloHome.nome}</h3>
@@ -441,7 +422,7 @@ const HomePage = () => {
         {/* 5. Cartao de MISSOES (mockup .strip) */}
         <button
           onClick={() => navigate('/aluno/missoes')}
-          className="rounded-[18px] border border-white/[0.08] bg-white/[0.035] w-full text-left active:scale-[0.98] transition-transform animate-fade-in animate-fade-in-d2"
+          className="rounded-[18px] border border-white/[0.08] bg-white/[0.04] w-full text-left active:scale-[0.98] transition-transform animate-fade-in animate-fade-in-d2"
         >
           <div className="flex items-center gap-3 px-[15px] py-[13px]">
             <div className="w-[38px] h-[38px] rounded-[11px] shrink-0 flex items-center justify-center" style={{ backgroundColor: `${casaBase}24` }}>
@@ -464,7 +445,7 @@ const HomePage = () => {
         {/* 6. Cartao SECUNDARIO compacto (mockup .secondary): abre o drawer de utilidades */}
         <button
           onClick={() => setUtilAberto(true)}
-          className="rounded-[18px] border border-white/[0.08] bg-white/[0.035] w-full text-left opacity-90 active:scale-[0.98] transition-transform animate-fade-in animate-fade-in-d3"
+          className="rounded-[18px] border border-white/[0.08] bg-white/[0.04] w-full text-left opacity-90 active:scale-[0.98] transition-transform animate-fade-in animate-fade-in-d3"
         >
           <div className="flex items-center gap-[10px] px-[14px] py-[11px]">
             <div className="w-[30px] h-[30px] rounded-[9px] shrink-0 flex items-center justify-center bg-white/[0.05]">

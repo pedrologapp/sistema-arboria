@@ -170,7 +170,7 @@ const RankingCasasPage = () => {
         </div>
       )}
 
-      <p className="text-center text-[12px] italic mt-6" style={{ color: accent }}>
+      <p className="text-center text-[12px] italic mt-6 text-white/60">
         É pela sua Casa que você joga. Cada missão conta.
       </p>
     </div>

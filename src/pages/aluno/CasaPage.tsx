@@ -320,7 +320,7 @@ const CasaPage = () => {
         ? casaAbaixo
           ? (
             <>
-              A Casa está no topo. A <b style={{ color: accentColor }}>Casa {casaAbaixo.casa_nome}</b> vem logo atrás, cada missão da Casa segura a liderança.
+              A Casa está no topo. A <b className="text-white">Casa {casaAbaixo.casa_nome}</b> vem logo atrás, cada missão da Casa segura a liderança.
             </>
           )
           : (
@@ -329,7 +329,7 @@ const CasaPage = () => {
         : posicaoCasa > 1 && casaAcima
           ? (
             <>
-              A <b style={{ color: accentColor }}>Casa {casaAcima.casa_nome}</b> está logo à frente. Quanto mais gente da Casa entrega, a média sobe, bora encostar.
+              A <b className="text-white">Casa {casaAcima.casa_nome}</b> está logo à frente. Quanto mais gente da Casa entrega, a média sobe, bora encostar.
             </>
           )
           : null;
@@ -409,18 +409,15 @@ const CasaPage = () => {
           {/* Abre o ranking completo das 8 Casas */}
           <button
             onClick={() => navigate('/aluno/casa/ranking')}
-            className="w-full flex items-center justify-center gap-1.5 rounded-xl mt-3 py-2.5 text-[13px] font-semibold active:scale-[0.99] transition-transform"
-            style={{ backgroundColor: `${accentColor}1f`, border: `1px solid ${accentColor}44`, color: accentColor }}
+            className="w-full flex items-center justify-center gap-1.5 rounded-xl mt-3 py-2.5 text-[13px] font-semibold text-white active:scale-[0.99] transition-transform"
+            style={{ backgroundColor: `${accentColor}1f`, border: `1px solid ${accentColor}44` }}
           >
             Ver o ranking das Casas
             <ChevronRight className="w-4 h-4" />
           </button>
 
           {/* Convite (a Casa chama, coletivo) */}
-          <p
-            className="text-center text-[12.5px] italic mt-4 pt-3.5 border-t border-white/[0.08]"
-            style={{ color: accentColor }}
-          >
+          <p className="text-center text-[12.5px] italic mt-4 pt-3.5 border-t border-white/[0.08] text-white/70">
             Cada missão sua levanta a Casa.
           </p>
         </div>

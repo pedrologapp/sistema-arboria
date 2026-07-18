@@ -26,14 +26,22 @@ const StudentLayoutContent = ({ children }: StudentLayoutProps) => {
   // Show loading while context initializes
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#1A1A2E] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0E0E1C] flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-violet-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#1A1A2E] text-white">
+    <div
+      className="min-h-screen bg-[#0E0E1C] text-white"
+      style={{
+        // Pele nova (mock): fundo NEUTRO do shell, pra telas SEM .scifi (ex.: dentro
+        // do canal de chat) tambem herdarem o fundo do mock, e nao o roxo antigo.
+        background: 'radial-gradient(ellipse at 50% 0%, #191932 0%, #0E0E1C 55%)',
+        backgroundAttachment: 'fixed',
+      }}
+    >
       <StudentHeader />
       
       {/* Main content area with padding for header and nav (+ notch do iPhone) */}

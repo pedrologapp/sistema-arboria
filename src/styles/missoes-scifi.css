@@ -12,11 +12,10 @@
   --sf-text: #e8f4f8;
   --sf-text-dim: #94A3B8;
   position: relative;
-  /* Atmosfera: brilho sutil na cor da Casa vindo do topo e do rodapé,
-     pra que telas vazias/curtas não fiquem pretas e mortas. Fixo na viewport. */
-  background-image:
-    radial-gradient(120% 55% at 50% -10%, rgba(var(--sf-accent-rgb), 0.12), transparent 58%),
-    radial-gradient(95% 45% at 50% 112%, rgba(var(--sf-accent-rgb), 0.06), transparent 55%);
+  /* Pele nova (mock aprovado): fundo NEUTRO e IGUAL nas 8 Casas. A Casa nao pinta
+     mais o fundo; aparece so como luz (halo do brasao, nome, acentos/botoes). */
+  background-image: radial-gradient(ellipse at 50% 0%, #191932 0%, #0E0E1C 55%);
+  background-color: #0E0E1C;
   background-attachment: fixed;
   background-repeat: no-repeat;
 }
@@ -27,7 +26,8 @@
 /* ---- Painel chanfrado (cards principais) ---- */
 .sf-panel {
   --aug-border-all: 1px;
-  --aug-border-bg: rgba(var(--sf-accent-rgb), 0.35);
+  /* Pele nova: borda de card NEUTRA (nao mais na cor da Casa). Casa so como luz. */
+  --aug-border-bg: rgba(255, 255, 255, 0.10);
   --aug-tl: 10px;
   --aug-tr: 10px;
   --aug-bl: 10px;
@@ -44,7 +44,7 @@
 /* ---- Card menor (linhas, botões chanfrados) ---- */
 .sf-card {
   --aug-border-all: 1px;
-  --aug-border-bg: rgba(var(--sf-accent-rgb), 0.25);
+  --aug-border-bg: rgba(255, 255, 255, 0.08);
   --aug-tl: 6px;
   --aug-br: 6px;
   background: var(--sf-card-bg);
@@ -52,8 +52,8 @@
   transition: box-shadow 0.2s ease, --aug-border-bg 0.2s ease;
 }
 .sf-card:hover {
-  --aug-border-bg: rgba(var(--sf-accent-rgb), 0.6);
-  box-shadow: 0 4px 14px -6px rgba(var(--sf-accent-rgb), 0.22);
+  --aug-border-bg: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 4px 14px -6px rgba(0, 0, 0, 0.4);
 }
 
 /* container chanfrado pequeno (ícones/avatares) */
