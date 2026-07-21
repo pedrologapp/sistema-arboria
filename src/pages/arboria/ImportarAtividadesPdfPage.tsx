@@ -28,11 +28,15 @@ const AVISO_LABEL: Record<string, string> = {
   ja_existe: 'Já existe no banco',
 };
 
+// Casa "Maternal II" (romano) com "Maternal 2" (arabe) etc., pra dedup de series.
+const ROMANO: Record<string, string> = { i: '1', ii: '2', iii: '3', iv: '4', v: '5', vi: '6' };
+const faixaKey = (s: string) => s.toLowerCase().trim().split(/\s+/).map((tk) => ROMANO[tk] ?? tk).join('');
+
 interface Ativ {
   idx: number;
   inteligencia_id: number | null;
   segmento: string | null;
-  faixa: string;
+  faixas: string[];
   faixa_pdf: string;
   ordem: number;
   nome: string;
@@ -61,6 +65,9 @@ const ImportarAtividadesPdfPage = () => {
   const [salvando, setSalvando] = useState(false);
   const [atividades, setAtividades] = useState<Ativ[]>([]);
   const [step, setStep] = useState<'upload' | 'previa'>('upload');
+  // Series reais da escola por segmento (do banco de atividades + das turmas),
+  // pra oferecer como opcoes de multipla escolha, sem digitar.
+  const [faixasPorSeg, setFaixasPorSeg] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     supabase.from('institutions').select('id, name').order('name').then(({ data }) => {
@@ -68,6 +75,39 @@ const ImportarAtividadesPdfPage = () => {
       if (data && data.length) setInstSel(data[0].id);
     });
   }, []);
+
+  useEffect(() => {
+    if (!instSel) return;
+    let vivo = true;
+    (async () => {
+      const [{ data: ativs }, { data: turmas }] = await Promise.all([
+        supabase.from('atividades').select('segmento, faixa').eq('institution_id', instSel).not('faixa', 'is', null),
+        supabase.from('turmas').select('segmento, serie').eq('institution_id', instSel),
+      ]);
+      const porSeg: Record<string, { key: string; label: string }[]> = {};
+      const push = (seg: string | null | undefined, val: string | null | undefined) => {
+        if (!seg || !val) return;
+        const k = faixaKey(val);
+        (porSeg[seg] ??= []);
+        if (!porSeg[seg].some((x) => x.key === k)) porSeg[seg].push({ key: k, label: val });
+      };
+      // Banco primeiro (grafia canonica); turmas completam com series sem atividade ainda.
+      for (const a of (ativs ?? []) as { segmento: string | null; faixa: string | null }[]) push(a.segmento, a.faixa);
+      for (const tr of (turmas ?? []) as { segmento: string | null; serie: string | null }[]) push(tr.segmento, tr.serie);
+      const out: Record<string, string[]> = {};
+      for (const seg of Object.keys(porSeg)) out[seg] = porSeg[seg].map((x) => x.label).sort();
+      if (vivo) setFaixasPorSeg(out);
+    })();
+    return () => { vivo = false; };
+  }, [instSel]);
+
+  // Opcoes de serie pra uma atividade: as do segmento + as ja selecionadas que
+  // nao estejam na lista (ex.: faixa extraida do PDF que a escola ainda nao tem).
+  const opcoesFaixa = (a: Ativ): string[] => {
+    const base = (a.segmento && faixasPorSeg[a.segmento]) || [];
+    const extras = a.faixas.filter((f) => !base.includes(f));
+    return [...base, ...extras];
+  };
 
   const lerPdf = async (file: File) => {
     if (!instSel) { toast.error('Escolha a instituição primeiro'); return; }
@@ -81,8 +121,11 @@ const ImportarAtividadesPdfPage = () => {
       });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || 'Falha na leitura');
-      const lista: Ativ[] = (data.atividades || []).map((a: Omit<Ativ, 'incluir'>) => ({
-        ...a, incluir: !a.avisos?.includes('ja_existe'),
+      const lista: Ativ[] = (data.atividades || []).map((a: Omit<Ativ, 'incluir' | 'faixas'> & { faixa?: string }) => ({
+        ...a,
+        // A IA extrai UMA faixa por secao; aqui vira lista (o dono pode marcar +series).
+        faixas: a.faixa ? [a.faixa] : [],
+        incluir: !a.avisos?.includes('ja_existe'),
       }));
       if (lista.length === 0) { toast.error('A IA não encontrou atividades no PDF'); return; }
       setAtividades(lista);
@@ -100,23 +143,27 @@ const ImportarAtividadesPdfPage = () => {
   const salvar = async () => {
     const escolhidas = atividades.filter((a) => a.incluir);
     if (escolhidas.length === 0) { toast.error('Nenhuma atividade marcada'); return; }
-    const invalida = escolhidas.find((a) => !a.inteligencia_id || !a.segmento || !a.faixa.trim() || !a.nome.trim());
-    if (invalida) { toast.error('Tem atividade sem inteligência, segmento, faixa ou nome'); return; }
+    const invalida = escolhidas.find((a) => !a.inteligencia_id || !a.segmento || a.faixas.length === 0 || !a.nome.trim());
+    if (invalida) { toast.error('Cada atividade precisa de inteligência, segmento, ao menos uma série e nome'); return; }
     setSalvando(true);
     try {
-      const rows = escolhidas.map((a) => ({
-        institution_id: instSel,
-        inteligencia_id: a.inteligencia_id,
-        segmento: a.segmento,
-        faixa: a.faixa.trim(),
-        ordem: a.ordem,
-        nome: a.nome.trim(),
-        objetivo: a.objetivo,
-        materiais: a.materiais,
-        como_conduzir: a.como_conduzir,
-        o_que_observar: a.o_que_observar,
-        ativo: true,
-      }));
+      // Uma linha por (atividade x serie marcada): a mesma atividade vale pras
+      // series escolhidas de uma vez.
+      const rows = escolhidas.flatMap((a) =>
+        a.faixas.map((faixa) => ({
+          institution_id: instSel,
+          inteligencia_id: a.inteligencia_id,
+          segmento: a.segmento,
+          faixa: faixa.trim(),
+          ordem: a.ordem,
+          nome: a.nome.trim(),
+          objetivo: a.objetivo,
+          materiais: a.materiais,
+          como_conduzir: a.como_conduzir,
+          o_que_observar: a.o_que_observar,
+          ativo: true,
+        }))
+      );
       const { error } = await supabase.from('atividades').insert(rows);
       if (error) throw error;
       toast.success(`${rows.length} atividade(s) criada(s) no banco`);
@@ -204,7 +251,7 @@ const ImportarAtividadesPdfPage = () => {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+              <div className="grid grid-cols-3 gap-2 mb-3">
                 <label className="block">
                   <span className="text-[10.5px] font-semibold" style={{ color: t.textMuted }}>Inteligência</span>
                   <select value={a.inteligencia_id ?? ''} onChange={(e) => upd(i, { inteligencia_id: Number(e.target.value) || null })}
@@ -215,22 +262,49 @@ const ImportarAtividadesPdfPage = () => {
                 </label>
                 <label className="block">
                   <span className="text-[10.5px] font-semibold" style={{ color: t.textMuted }}>Segmento</span>
-                  <select value={a.segmento ?? ''} onChange={(e) => upd(i, { segmento: e.target.value || null })}
+                  <select value={a.segmento ?? ''} onChange={(e) => upd(i, { segmento: e.target.value || null, faixas: [] })}
                     className="w-full mt-1 rounded-lg px-2 py-1.5 text-[12px]" style={{ background: t.surfaceSunken, border: `1px solid ${t.border}`, color: t.text }}>
                     <option value="">—</option>
                     {SEGMENTOS.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </label>
                 <label className="block">
-                  <span className="text-[10.5px] font-semibold" style={{ color: t.textMuted }}>Faixa</span>
-                  <input value={a.faixa} onChange={(e) => upd(i, { faixa: e.target.value })}
-                    className="w-full mt-1 rounded-lg px-2 py-1.5 text-[12px]" style={{ background: t.surfaceSunken, border: `1px solid ${t.border}`, color: t.text }} />
-                </label>
-                <label className="block">
                   <span className="text-[10.5px] font-semibold" style={{ color: t.textMuted }}>Ordem</span>
                   <input type="number" value={a.ordem} onChange={(e) => upd(i, { ordem: Number(e.target.value) || 1 })}
                     className="w-full mt-1 rounded-lg px-2 py-1.5 text-[12px]" style={{ background: t.surfaceSunken, border: `1px solid ${t.border}`, color: t.text }} />
                 </label>
+              </div>
+
+              {/* Series (multipla escolha): a mesma atividade pode ir pra 1 ou +series. */}
+              <div className="mb-3">
+                <span className="text-[10.5px] font-semibold" style={{ color: t.textMuted }}>
+                  Séries {a.faixas.length > 0 && <span style={{ color: t.accentText }}>({a.faixas.length})</span>}
+                </span>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {opcoesFaixa(a).map((f) => {
+                    const marcada = a.faixas.includes(f);
+                    return (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => upd(i, { faixas: marcada ? a.faixas.filter((x) => x !== f) : [...a.faixas, f] })}
+                        className="px-2.5 py-1 rounded-full text-[11.5px] font-medium"
+                        style={
+                          marcada
+                            ? { background: t.accent, color: '#fff' }
+                            : { background: t.surfaceSunken, color: t.textMuted, border: `1px solid ${t.border}` }
+                        }
+                      >
+                        {f}
+                      </button>
+                    );
+                  })}
+                  {a.segmento && opcoesFaixa(a).length === 0 && (
+                    <span className="text-[11px]" style={{ color: t.textFaint }}>
+                      Nenhuma série cadastrada neste segmento.
+                    </span>
+                  )}
+                </div>
               </div>
 
               <label className="block mb-3">
