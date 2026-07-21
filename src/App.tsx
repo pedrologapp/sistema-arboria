@@ -57,6 +57,7 @@ const RecuperarAcesso = lazy(() => import("./pages/RecuperarAcesso"));
 // Admin pages (lazy)
 const MonitorPage = lazy(() => import("./pages/admin/MonitorPage"));
 const PessoasPage = lazy(() => import("./pages/admin/PessoasPage"));
+const ImportarAlunosPage = lazy(() => import("./pages/admin/ImportarAlunosPage"));
 const PerfilAlunoAdminPage = lazy(() => import("./pages/admin/PerfilAlunoAdminPage"));
 const PerfilProfessorAdminPage = lazy(() => import("./pages/admin/PerfilProfessorAdminPage"));
 const CasasPage = lazy(() => import("./pages/admin/CasasPage"));
@@ -125,6 +126,7 @@ const InfantilFormacaoPage = lazy(() => import("./pages/professor/infantil/Infan
 const ArboriaAdminLayout = lazy(() => import("./layouts/ArboriaAdminLayout"));
 const ArboriaVisaoPage = lazy(() => import("./pages/arboria/ArboriaVisaoPage"));
 const ArboriaAtividadesPage = lazy(() => import("./pages/arboria/ArboriaAtividadesPage"));
+const ImportarAtividadesPdfPage = lazy(() => import("./pages/arboria/ImportarAtividadesPdfPage"));
 const ArboriaCapitulosPage = lazy(() => import("./pages/arboria/ArboriaCapitulosPage"));
 const ArboriaTrilhaPage = lazy(() => import("./pages/arboria/ArboriaTrilhaPage"));
 const ArboriaCoordenadoresPage = lazy(() => import("./pages/arboria/ArboriaCoordenadoresPage"));
@@ -212,6 +214,13 @@ const App = () => (
                 </ArboriaAdminLayout>
               </ProtectedRoute>
             } />
+            <Route path="/arboria/atividades/importar" element={
+              <ProtectedRoute requireSuperAdmin>
+                <ArboriaAdminLayout>
+                  <ImportarAtividadesPdfPage />
+                </ArboriaAdminLayout>
+              </ProtectedRoute>
+            } />
             <Route path="/arboria/capitulos" element={
               <ProtectedRoute requireSuperAdmin>
                 <ArboriaAdminLayout>
@@ -255,6 +264,13 @@ const App = () => (
               <ProtectedRoute requireAdmin>
                 <AdminLayout>
                   <PessoasPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/pessoas/importar" element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <ImportarAlunosPage />
                 </AdminLayout>
               </ProtectedRoute>
             } />

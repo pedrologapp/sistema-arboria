@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, ChevronDown, ChevronUp, ChevronRight, Plus, RefreshCw, Users, Shield, X, UserPlus, Copy, Check, KeyRound } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, ChevronRight, Plus, RefreshCw, Users, Shield, X, UserPlus, Copy, Check, KeyRound, Upload } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -390,6 +390,11 @@ const PessoasPage = () => {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-blue-500/15 text-blue-300 border border-blue-500/25 hover:bg-blue-500/25 transition-colors disabled:opacity-50">
               <RefreshCw className={cn("w-3 h-3", sincronizando && "animate-spin")} />
               {sincronizando ? 'Sincronizando...' : 'Sincronizar'}
+            </button>
+            <button onClick={() => navigate('/admin/pessoas/importar')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-violet-500/15 text-violet-300 border border-violet-500/25 hover:bg-violet-500/25 transition-colors">
+              <Upload className="w-3 h-3" />
+              Importar planilha
             </button>
             <button onClick={() => setShowAddAluno(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 hover:bg-emerald-500/25 transition-colors">

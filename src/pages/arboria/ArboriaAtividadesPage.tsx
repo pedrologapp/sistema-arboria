@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { Plus, PenLine, FileText, X, Loader2, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, PenLine, FileText, X, Loader2, ChevronUp, ChevronDown, ChevronRight, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -73,6 +74,7 @@ const VAZIA = {
  * O + cadastra escolhendo inteligência e série no próprio formulário.
  */
 const ArboriaAtividadesPage = () => {
+  const navigate = useNavigate();
   const [instituicoes, setInstituicoes] = useState<Instituicao[]>([]);
   const [instSel, setInstSel] = useState<string | null>(null);
   const [atividades, setAtividades] = useState<Atividade[] | null>(null);
@@ -266,13 +268,22 @@ const ArboriaAtividadesPage = () => {
         <h1 className="font-serif text-[22px]" style={{ color: t.text }}>
           Banco de atividades
         </h1>
-        <button
-          onClick={() => abrirNova()}
-          className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold flex-shrink-0"
-          style={{ backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowSm }}
-        >
-          <Plus size={15} /> Nova atividade
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => navigate('/arboria/atividades/importar')}
+            className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold"
+            style={{ backgroundColor: t.accentSoft, color: t.accentText, border: `1px solid ${t.accentBorder}` }}
+          >
+            <Upload size={15} /> Importar PDF
+          </button>
+          <button
+            onClick={() => abrirNova()}
+            className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold"
+            style={{ backgroundColor: t.accent, color: '#FFFFFF', boxShadow: t.shadowSm }}
+          >
+            <Plus size={15} /> Nova atividade
+          </button>
+        </div>
       </div>
       <p className="text-sm mb-4" style={{ color: t.textMuted }}>
         Inteligência, depois a série, depois o caminho de atividades.
