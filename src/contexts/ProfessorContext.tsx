@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import { useUpdateActivity } from '@/hooks/useUpdateActivity';
 import { supabase } from '@/integrations/supabase/client';
 import { calcularSemanaAtualDaFase, hojeBrasil } from '@/utils/timezone';
 
@@ -108,6 +109,10 @@ interface ProfessorProviderProps {
 
 export const ProfessorProvider = ({ children }: ProfessorProviderProps) => {
   const { user } = useAuth();
+  // Registra a ultima_atividade ao abrir/usar (antes so o app do aluno fazia).
+  // Sem isso, o "ultimo acesso" do coordenador so via o last_sign_in_at, que nao
+  // se move quando o professor reabre a sessao sem re-login (5o C mostrava 10/07).
+  useUpdateActivity();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [casaMentor, setCasaMentor] = useState<Inteligencia | null>(null);
   const [institutionName, setInstitutionName] = useState<string | null>(null);
