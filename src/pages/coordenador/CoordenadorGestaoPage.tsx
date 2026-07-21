@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCoordenador } from '@/contexts/CoordenadorContext';
@@ -8,6 +8,7 @@ import { logCoordenadorLeituraLote } from '@/utils/logCoordenadorLeitura';
 import { coordenadorTheme as t } from '@/styles/coordenadorTheme';
 import { sinalUltimoAcesso, rotuloAcesso, corCobertura, tempoRelativo } from '@/lib/coordenador';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const SEG_LABEL: Record<string, string> = {
   infantil: 'Educação Infantil',
@@ -15,6 +16,54 @@ const SEG_LABEL: Record<string, string> = {
   fundamental2: 'Fundamental 2',
 };
 const SEG_ORDEM = ['infantil', 'fundamental1', 'fundamental2'];
+
+// Linha de turmas rolavel. No touch, desliza com o dedo. No DESKTOP, aparecem
+// setas ‹ › quando ha turma escondida (ex.: 5o ano A/B/C: a C ficava
+// inalcancavel no mouse porque a barra de scroll e' escondida).
+const LinhaTurmas = ({ children }: { children: ReactNode }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [canL, setCanL] = useState(false);
+  const [canR, setCanR] = useState(false);
+  const atualiza = () => {
+    const el = ref.current;
+    if (!el) return;
+    setCanL(el.scrollLeft > 2);
+    setCanR(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  };
+  useEffect(() => {
+    atualiza();
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(atualiza);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const rolar = (dir: number) => ref.current?.scrollBy({ left: dir * 280, behavior: 'smooth' });
+  const btnCls = 'hidden md:flex absolute top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full items-center justify-center';
+  const btnStyle = { backgroundColor: t.panel, border: `1px solid ${t.line}`, boxShadow: '0 2px 8px rgba(0,0,0,0.14)' } as const;
+  return (
+    <div className="relative">
+      {canL && (
+        <button aria-label="Turmas anteriores" onClick={() => rolar(-1)} className={`${btnCls} left-0`} style={btnStyle}>
+          <ChevronLeft size={18} style={{ color: t.ink }} />
+        </button>
+      )}
+      {canR && (
+        <button aria-label="Mais turmas" onClick={() => rolar(1)} className={`${btnCls} right-0`} style={btnStyle}>
+          <ChevronRight size={18} style={{ color: t.ink }} />
+        </button>
+      )}
+      <div
+        ref={ref}
+        onScroll={atualiza}
+        className="flex gap-2.5 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide"
+        style={{ scrollSnapType: 'x mandatory' }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+};
 
 const CardTurma = ({ turma, onOpen }: { turma: CoordenadorTurmaCard; onOpen: () => void }) => {
   const sinal = sinalUltimoAcesso(turma.ultimaAtividade);
@@ -493,10 +542,7 @@ const CoordenadorGestaoPage = () => {
                       </span>
                     )}
                   </div>
-                  <div
-                    className="flex gap-2.5 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide"
-                    style={{ scrollSnapType: 'x mandatory' }}
-                  >
+                  <LinhaTurmas>
                     {grupo.turmas.map((turma) => (
                       <CardTurma
                         key={turma.turmaId}
@@ -504,7 +550,7 @@ const CoordenadorGestaoPage = () => {
                         onOpen={() => navigate(`/coordenador/turma/${turma.turmaId}`)}
                       />
                     ))}
-                  </div>
+                  </LinhaTurmas>
                 </section>
               ))}
             </div>
