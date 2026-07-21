@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Send, ImagePlus, X, Trash2 } from 'lucide-react';
+import { ChevronLeft, Send, ImagePlus, X, Trash2, BookOpen } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -160,6 +160,77 @@ const ExcluirModal = ({
  * O "rio" do F1: cada observação é uma mensagem; agrupadas por módulo.
  * Campo livre embaixo = registro avulso (a qualquer hora).
  */
+// Modal da atividade referenciada por uma observacao de aula. Busca os detalhes
+// pela RLS normal de `atividades` (auto-protegido por instituicao). "Apertar pra
+// ver de qual aula veio o registro" (pedido do Fundador 21/07).
+const AtividadeRefModal = ({ atividadeId, nome, onClose }: { atividadeId: string; nome: string; onClose: () => void }) => {
+  const [det, setDet] = useState<{ objetivo?: string | null; o_que_observar?: string | null } | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  useEffect(() => {
+    let vivo = true;
+    supabase
+      .from('atividades')
+      .select('objetivo, o_que_observar')
+      .eq('id', atividadeId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!vivo) return;
+        setDet((data as { objetivo?: string | null; o_que_observar?: string | null } | null) ?? null);
+        setCarregando(false);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [atividadeId]);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(28,34,48,0.45)' }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl p-5 max-h-[80vh] overflow-y-auto"
+        style={{ backgroundColor: t.surface, boxShadow: t.shadowLg }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <p className="text-[10.5px] font-semibold uppercase tracking-wide" style={{ color: t.accentText }}>
+              Atividade da aula
+            </p>
+            <h3 className="font-serif text-[18px] font-semibold" style={{ color: t.text }}>{nome}</h3>
+          </div>
+          <button onClick={onClose} aria-label="Fechar" style={{ color: t.textMuted }}>
+            <X size={18} />
+          </button>
+        </div>
+        {carregando ? (
+          <p className="text-[13px]" style={{ color: t.textFaint }}>Carregando...</p>
+        ) : det ? (
+          <div className="space-y-3 text-[13px]" style={{ color: t.text }}>
+            {det.objetivo && (
+              <div>
+                <p className="text-[11px] font-semibold mb-0.5" style={{ color: t.textMuted }}>Objetivo</p>
+                <p className="whitespace-pre-wrap leading-relaxed">{det.objetivo}</p>
+              </div>
+            )}
+            {det.o_que_observar && (
+              <div>
+                <p className="text-[11px] font-semibold mb-0.5" style={{ color: t.textMuted }}>O que observar</p>
+                <p className="whitespace-pre-wrap leading-relaxed">{det.o_que_observar}</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-[13px]" style={{ color: t.textFaint }}>
+            Atividade não encontrada (pode ter sido removida do banco).
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const F1AlunoThreadPage = () => {
   const { id: alunoId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -178,6 +249,7 @@ const F1AlunoThreadPage = () => {
   const [imagem, setImagem] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [excluirObs, setExcluirObs] = useState<ObservacaoThread | null>(null);
+  const [verAtividade, setVerAtividade] = useState<{ id: string; nome: string } | null>(null);
   const [avisoFotoOpen, setAvisoFotoOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const fimRef = useRef<HTMLDivElement>(null);
@@ -272,6 +344,8 @@ const F1AlunoThreadPage = () => {
         institution_id: profile?.institution_id,
         observacao_texto: textoObs,
         anexo_url: anexoPath,
+        // Registro direto no Diario (nao veio de uma aula): so o canal de captura.
+        origem_captura: 'diario',
       } as any);
       if (error) throw error;
     },
@@ -482,6 +556,19 @@ const F1AlunoThreadPage = () => {
                             {obs.texto}
                           </p>
                         )}
+                        {obs.origemCaptura === 'aula' && (
+                          <button
+                            onClick={
+                              obs.atividadeId
+                                ? () => setVerAtividade({ id: obs.atividadeId!, nome: obs.atividadeNome || 'Atividade da aula' })
+                                : undefined
+                            }
+                            className="inline-flex items-center gap-1 mt-1.5 rounded-full px-2 py-0.5 text-[10.5px] font-medium"
+                            style={{ backgroundColor: t.accentSoft, color: t.accentText, border: `1px solid ${t.accentBorder}` }}
+                          >
+                            <BookOpen size={11} /> Na aula{obs.atividadeNome ? `: ${obs.atividadeNome}` : ''}
+                          </button>
+                        )}
                         {obs.anexoUrl && (
                           <img
                             src={obs.anexoUrl}
@@ -649,6 +736,13 @@ const F1AlunoThreadPage = () => {
         </div>
       </div>
 
+      {verAtividade && (
+        <AtividadeRefModal
+          atividadeId={verAtividade.id}
+          nome={verAtividade.nome}
+          onClose={() => setVerAtividade(null)}
+        />
+      )}
       {excluirObs && thread?.aluno && (
         <ExcluirModal
           alunoNome={thread.aluno.nome}

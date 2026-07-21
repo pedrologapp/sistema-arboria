@@ -386,6 +386,10 @@ const F1RajadaPage = () => {
         institution_id: profile?.institution_id,
         observacao_texto: textoLimpo,
         anexo_url: anexoPath,
+        // Contexto da aula (decisao 21/07): a atividade da vez + o canal de captura.
+        // atividadeExibir (nao correnteId): fica valido mesmo com tudo concluido.
+        atividade_id: atividadeExibir?.atividadeId ?? null,
+        origem_captura: 'aula',
       } as any);
       if (error) throw error;
     },
