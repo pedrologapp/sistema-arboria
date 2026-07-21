@@ -7,8 +7,9 @@ import { useCoordenadorCasas } from '@/hooks/useCoordenadorCasas';
 import { logCoordenadorLeituraLote } from '@/utils/logCoordenadorLeitura';
 import { coordenadorTheme as t } from '@/styles/coordenadorTheme';
 import { sinalUltimoAcesso, rotuloAcesso, corCobertura, tempoRelativo } from '@/lib/coordenador';
+import { gerarRelatorioSegmentoPDF } from '@/lib/relatorioCoordenador';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 
 const SEG_LABEL: Record<string, string> = {
   infantil: 'Educação Infantil',
@@ -389,6 +390,19 @@ const CoordenadorGestaoPage = () => {
                 })}
               </div>
             </div>
+          )}
+
+          {/* Tirar relatorio do segmento (PDF, so cobertura/contagem, sem texto de obs) */}
+          {!verCasas && seriesDoSegmento.length > 0 && (
+            <button
+              onClick={() =>
+                segSel && gerarRelatorioSegmentoPDF(SEG_LABEL[segSel] || segSel, primeiroNome, seriesDoSegmento)
+              }
+              className="mb-4 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12.5px] font-semibold"
+              style={{ backgroundColor: t.panel, color: t.ink2, border: `1px solid ${t.line}` }}
+            >
+              <Download size={15} /> Tirar relatório (PDF)
+            </button>
           )}
 
           {verCasas ? (
