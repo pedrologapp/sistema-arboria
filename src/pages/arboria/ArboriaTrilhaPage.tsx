@@ -448,8 +448,26 @@ const ArboriaTrilhaPage = () => {
   // fases + o plano de atividades por fase). Reusa o mesmo mecanismo das duas
   // funções de salvar acima: delete + insert de turma_fase_ordem e de
   // turma_atividade_plano. Lança em erro para o chamador tratar por turma.
+  // Remapeia uma atividade do plano da turma de ORIGEM para a EQUIVALENTE na faixa
+  // da turma ALVO (mesma inteligência + mesmo nome, faixa da turma alvo). Isto
+  // conserta o bug em que aplicar em lote empilhava atividades da faixa errada
+  // (ex.: 5o Ano recebia as do 4o Ano). Retorna null quando nao ha equivalente
+  // (a atividade nao existe pra faixa daquela turma), pra NUNCA gravar faixa errada.
+  const equivalenteNaFaixa = (ativId: string, serieAlvo: string | null): string | null => {
+    const orig = atividades.find((a) => a.id === ativId);
+    if (!orig) return null;
+    // Sem faixa = serve todas as series: mantem como esta.
+    if (!orig.faixa) return ativId;
+    if (orig.faixa === serieAlvo) return ativId;
+    const equiv = atividades.find(
+      (a) => a.ativo && a.inteligencia_id === orig.inteligencia_id && a.nome === orig.nome && a.faixa === serieAlvo
+    );
+    return equiv?.id ?? null;
+  };
+
   const gravarConfigNaTurma = async (alvoTurmaId: string) => {
     if (!instSel) throw new Error('Instituição não selecionada.');
+    const serieAlvo = turmaMap.get(alvoTurmaId)?.serie ?? null;
 
     // (a) Ordem das fases: apaga a trilha antiga da turma alvo e reinsere a atual.
     const delOrdem = await fromAny('turma_fase_ordem')
@@ -476,7 +494,12 @@ const ArboriaTrilhaPage = () => {
     if (delPlano.error) throw delPlano.error;
     const linhasPlano: Record<string, unknown>[] = [];
     ordem.forEach((intelId) => {
-      (plano[intelId] ?? []).forEach((ativId, i) => {
+      // Remapeia pela faixa da turma alvo; ordem recalculada só com o que existe
+      // pra aquela faixa (atividade sem equivalente e' pulada, nunca faixa errada).
+      const equivalentes = (plano[intelId] ?? [])
+        .map((ativId) => equivalenteNaFaixa(ativId, serieAlvo))
+        .filter((id): id is string => !!id);
+      equivalentes.forEach((ativId, i) => {
         linhasPlano.push({
           institution_id: instSel,
           turma_id: alvoTurmaId,
