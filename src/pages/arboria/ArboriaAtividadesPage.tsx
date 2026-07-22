@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, PenLine, FileText, X, Loader2, ChevronUp, ChevronDown, ChevronRight, Upload } from 'lucide-react';
+import { Plus, PenLine, FileText, X, Loader2, ChevronUp, ChevronDown, ChevronRight, Upload, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -88,6 +88,10 @@ const ArboriaAtividadesPage = () => {
   const [formFaixa, setFormFaixa] = useState<string>(TODAS);
   const [pdf, setPdf] = useState<File | null>(null);
   const [salvando, setSalvando] = useState(false);
+  // Copiar uma atividade pra outra(s) serie(s)
+  const [copiando, setCopiando] = useState<Atividade | null>(null);
+  const [copiarSeries, setCopiarSeries] = useState<Set<string>>(new Set());
+  const [copiandoBusy, setCopiandoBusy] = useState(false);
   const pdfRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -238,6 +242,68 @@ const ArboriaAtividadesPage = () => {
   const alternarAtiva = async (a: Atividade) => {
     await fromAny('atividades').update({ ativo: !a.ativo } as never).eq('id', a.id);
     carregar();
+  };
+
+  const abrirCopiar = (a: Atividade) => {
+    setCopiando(a);
+    setCopiarSeries(new Set());
+  };
+
+  // Duplica a atividade `copiando` para cada serie marcada: mesmo conteudo, so
+  // muda a faixa; ordem = ultima daquela serie + 1. Pula serie que ja tem uma
+  // atividade de mesmo nome (nao duplica).
+  const confirmarCopia = async () => {
+    if (!copiando || !instSel || copiarSeries.size === 0 || copiandoBusy) return;
+    setCopiandoBusy(true);
+    try {
+      const origem = copiando;
+      const alvos = [...copiarSeries];
+      const rows = alvos
+        .filter(
+          (serie) =>
+            !(atividades ?? []).some(
+              (x) =>
+                x.inteligencia_id === origem.inteligencia_id &&
+                (x.faixa ?? '') === serie &&
+                x.nome.trim().toLowerCase() === origem.nome.trim().toLowerCase()
+            )
+        )
+        .map((serie) => {
+          const maxOrdem = (atividades ?? [])
+            .filter((x) => x.inteligencia_id === origem.inteligencia_id && (x.faixa ?? '') === serie)
+            .reduce((mx, x) => Math.max(mx, x.ordem), 0);
+          return {
+            institution_id: instSel,
+            inteligencia_id: origem.inteligencia_id,
+            faixa: serie,
+            ordem: maxOrdem + 1,
+            nome: origem.nome,
+            objetivo: origem.objetivo,
+            materiais: origem.materiais,
+            como_conduzir: origem.como_conduzir,
+            o_que_observar: origem.o_que_observar,
+            pdf_url: origem.pdf_url,
+            ativo: true,
+          };
+        });
+      const pulados = alvos.length - rows.length;
+      if (rows.length === 0) {
+        toast.info('Essa atividade já existe nas séries escolhidas.');
+      } else {
+        const { error } = await fromAny('atividades').insert(rows as never);
+        if (error) throw error;
+        toast.success(
+          `Copiada para ${rows.length} série(s)${pulados > 0 ? ` (${pulados} já tinha)` : ''}.`
+        );
+      }
+      setCopiando(null);
+      setCopiarSeries(new Set());
+      carregar();
+    } catch (e) {
+      toast.error((e as Error).message || 'Erro ao copiar');
+    } finally {
+      setCopiandoBusy(false);
+    }
   };
 
   const campos: { chave: keyof typeof VAZIA; label: string; multi?: boolean; dica?: string }[] = useMemo(
@@ -470,6 +536,15 @@ const ArboriaAtividadesPage = () => {
                         <ChevronDown size={15} />
                       </button>
                       <button
+                        onClick={() => abrirCopiar(a)}
+                        className="p-2"
+                        style={{ color: t.textMuted }}
+                        aria-label="Copiar para outra série"
+                        title="Copiar para outra série"
+                      >
+                        <Copy size={15} />
+                      </button>
+                      <button
                         onClick={() => abrirEdicao(a)}
                         className="p-2"
                         style={{ color: t.accent }}
@@ -650,6 +725,79 @@ const ArboriaAtividadesPage = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: copiar atividade para outra(s) serie(s) */}
+      {copiando && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(28,34,48,0.45)' }}
+          onClick={() => !copiandoBusy && setCopiando(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl p-5"
+            style={{ backgroundColor: t.surface, boxShadow: t.shadowLg }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 mb-1">
+              <div>
+                <p className="text-[10.5px] font-semibold uppercase tracking-wide" style={{ color: t.accentText }}>
+                  Copiar atividade
+                </p>
+                <h3 className="font-serif text-[18px] font-semibold" style={{ color: t.text }}>{copiando.nome}</h3>
+              </div>
+              <button onClick={() => setCopiando(null)} aria-label="Fechar" style={{ color: t.textMuted }}>
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-[12px] mb-3" style={{ color: t.textFaint }}>
+              Escolha as séries que vão receber uma cópia desta atividade (mesma inteligência, mesmo conteúdo).
+            </p>
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {SERIES_ESCOLA.map((s) => {
+                const marcada = copiarSeries.has(s);
+                const jaTem = (atividades ?? []).some(
+                  (x) =>
+                    x.inteligencia_id === copiando.inteligencia_id &&
+                    (x.faixa ?? '') === s &&
+                    x.nome.trim().toLowerCase() === copiando.nome.trim().toLowerCase()
+                );
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={jaTem}
+                    onClick={() =>
+                      setCopiarSeries((prev) => {
+                        const nova = new Set(prev);
+                        if (nova.has(s)) nova.delete(s);
+                        else nova.add(s);
+                        return nova;
+                      })
+                    }
+                    className="px-2.5 py-1 rounded-full text-[11.5px] font-medium disabled:opacity-40"
+                    style={
+                      marcada
+                        ? { background: t.accent, color: '#fff' }
+                        : { background: t.surfaceSunken, color: t.textMuted, border: `1px solid ${t.border}` }
+                    }
+                    title={jaTem ? 'Já existe nesta série' : undefined}
+                  >
+                    {s}{jaTem ? ' ✓' : ''}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={confirmarCopia}
+              disabled={copiarSeries.size === 0 || copiandoBusy}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[13.5px] font-semibold text-white disabled:opacity-50"
+              style={{ background: t.accent }}
+            >
+              {copiandoBusy ? <><Loader2 className="w-4 h-4 animate-spin" /> Copiando</> : <><Check className="w-4 h-4" /> Copiar para {copiarSeries.size} série(s)</>}
+            </button>
           </div>
         </div>
       )}
