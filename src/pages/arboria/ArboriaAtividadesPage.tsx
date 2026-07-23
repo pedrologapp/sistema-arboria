@@ -19,6 +19,14 @@ const INTELIGENCIAS = [
 
 const TODAS = 'Todas as séries';
 
+// Segmento de cada série (a copia precisa gravar o segmento CERTO da série de
+// destino; senao a atividade nao aparece na trilha, que filtra por segmento).
+const SEGMENTO_DA_SERIE: Record<string, string> = {
+  'Maternal 2': 'infantil', 'Maternal 3': 'infantil', 'Grupo IV': 'infantil', 'Grupo V': 'infantil',
+  '1º Ano': 'fundamental1', '2º Ano': 'fundamental1', '3º Ano': 'fundamental1', '4º Ano': 'fundamental1', '5º Ano': 'fundamental1',
+  '6º Ano': 'fundamental2', '7º Ano': 'fundamental2', '8º Ano': 'fundamental2', '9º Ano': 'fundamental2',
+};
+
 // Do Maternal ao 9º ano (nomes idênticos aos das turmas no banco)
 const SERIES_ESCOLA = [
   'Maternal 2',
@@ -275,6 +283,9 @@ const ArboriaAtividadesPage = () => {
           return {
             institution_id: instSel,
             inteligencia_id: origem.inteligencia_id,
+            // segmento DERIVADO da serie de destino (nao herda o da origem), pra
+            // copiar entre segmentos diferentes sem sumir na trilha.
+            segmento: SEGMENTO_DA_SERIE[serie] ?? 'infantil',
             faixa: serie,
             ordem: maxOrdem + 1,
             nome: origem.nome,

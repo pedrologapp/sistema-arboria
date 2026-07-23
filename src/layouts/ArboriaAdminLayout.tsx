@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Library, KeyRound, Route, BookOpen, Users, LogOut } from 'lucide-react';
+import { LayoutDashboard, Library, KeyRound, Route, BookOpen, Users, LogOut, RotateCcw, KanbanSquare } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { infantilTheme as t } from '@/styles/infantilTheme';
 import { F2_COORDENADOR } from '@/config/f2Coordenador';
@@ -17,9 +17,11 @@ const ArboriaAdminLayout = ({ children }: { children: ReactNode }) => {
 
   const abas = [
     { label: 'Visão geral', path: '/arboria', icon: <LayoutDashboard size={16} strokeWidth={1.75} /> },
+    { label: 'Meu quadro', path: '/arboria/tarefas', icon: <KanbanSquare size={16} strokeWidth={1.75} /> },
     { label: 'Banco de atividades', path: '/arboria/atividades', icon: <Library size={16} strokeWidth={1.75} /> },
     { label: 'Capítulos', path: '/arboria/capitulos', icon: <BookOpen size={16} strokeWidth={1.75} /> },
     { label: 'Definição de Trilha', path: '/arboria/trilha', icon: <Route size={16} strokeWidth={1.75} /> },
+    { label: 'Andamento das turmas', path: '/arboria/andamento', icon: <RotateCcw size={16} strokeWidth={1.75} /> },
     { label: 'Logins de professores', path: '/arboria/logins-professores', icon: <KeyRound size={16} strokeWidth={1.75} /> },
     ...(F2_COORDENADOR
       ? [{ label: 'Coordenadores', path: '/arboria/coordenadores', icon: <Users size={16} strokeWidth={1.75} /> }]
