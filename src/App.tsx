@@ -129,6 +129,7 @@ const ArboriaAtividadesPage = lazy(() => import("./pages/arboria/ArboriaAtividad
 const ImportarAtividadesPdfPage = lazy(() => import("./pages/arboria/ImportarAtividadesPdfPage"));
 const ArboriaAndamentoPage = lazy(() => import("./pages/arboria/ArboriaAndamentoPage"));
 const ArboriaTarefasPage = lazy(() => import("./pages/arboria/ArboriaTarefasPage"));
+const ArboriaRepositorioPage = lazy(() => import("./pages/arboria/ArboriaRepositorioPage"));
 const ArboriaCapitulosPage = lazy(() => import("./pages/arboria/ArboriaCapitulosPage"));
 const ArboriaTrilhaPage = lazy(() => import("./pages/arboria/ArboriaTrilhaPage"));
 const ArboriaCoordenadoresPage = lazy(() => import("./pages/arboria/ArboriaCoordenadoresPage"));
@@ -234,6 +235,13 @@ const App = () => (
               <ProtectedRoute requireSuperAdmin>
                 <ArboriaAdminLayout>
                   <ArboriaTarefasPage />
+                </ArboriaAdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/arboria/repositorio" element={
+              <ProtectedRoute requireSuperAdmin>
+                <ArboriaAdminLayout>
+                  <ArboriaRepositorioPage />
                 </ArboriaAdminLayout>
               </ProtectedRoute>
             } />
