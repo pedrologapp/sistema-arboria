@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/dialog';
 import LequeObservacao from '@/components/professor/LequeObservacao';
 import { GrupoConversaModal } from '@/components/professor/GrupoConversaModal';
+import BlocoObservacaoAoVivo from '@/components/professor/f2/BlocoObservacaoAoVivo';
 
 /**
  * ADMINISTRAR CAPÍTULO: Fundamental 2 (reforma, atrás do flag F2_REFORMA_ATIVA).
@@ -743,6 +744,10 @@ const F2CapituloPage = () => {
   const [verConversa, setVerConversa] = useState<
     { papelId: string; grupo: number; titulo: string; subtitulo?: string } | null
   >(null);
+  // Bloco de observacao ao vivo (abre a partir de um grupo na apresentacao)
+  const [blocoGrupo, setBlocoGrupo] = useState<
+    { papelId: string; grupo: number; titulo: string } | null
+  >(null);
 
   // ---- Mutations ----
   const [savingConfig, setSavingConfig] = useState(false);
@@ -1238,6 +1243,7 @@ const F2CapituloPage = () => {
                       alunosById={alunosById}
                       brasoes={brasoes}
                       accent={accent}
+                      accentSolid={accentSolid}
                       rotulo={rotuloTime}
                       onAlocar={(numero) => setTimeParaAlocar({ papel: p, grupo: numero })}
                       onRemover={desalocar}
@@ -1254,6 +1260,9 @@ const F2CapituloPage = () => {
                           titulo: p.nome,
                           subtitulo: `Grupo ${numero} · só leitura`,
                         })
+                      }
+                      onObservar={(numero) =>
+                        setBlocoGrupo({ papelId: p.id, grupo: numero, titulo: p.nome })
                       }
                     />
                   ))}
@@ -1600,6 +1609,31 @@ const F2CapituloPage = () => {
         bgDeep={bgDeep}
         line={D.line}
       />
+
+      {/* ===== Bloco de observacao ao vivo (a partir de um grupo) ===== */}
+      {blocoGrupo && capitulo && turmaId && profile?.id && (
+        <BlocoObservacaoAoVivo
+          onFechar={() => setBlocoGrupo(null)}
+          capitulo={{
+            id: capitulo.id,
+            institution_id: capitulo.institution_id,
+            fase_id: capitulo.fase_id,
+            nome: (capitulo as { nome?: string }).nome,
+          }}
+          turmaId={turmaId}
+          papelId={blocoGrupo.papelId}
+          grupo={blocoGrupo.grupo}
+          tituloGrupo={`${blocoGrupo.titulo} · Grupo ${blocoGrupo.grupo}`}
+          membros={(alocPorPapel[blocoGrupo.papelId] || [])
+            .filter((a) => (a.grupo ?? 1) === blocoGrupo.grupo)
+            .map((a) => alunosById[a.aluno_id])
+            .filter(Boolean)
+            .map((al) => ({ id: al.id, nome: nomeCompleto(al), avatarUrl: al.avatar_url, corCasa: null }))}
+          professorId={profile.id}
+          accent={accent}
+          accentSolid={accentSolid}
+        />
+      )}
     </>
   );
 };
@@ -1869,6 +1903,7 @@ const TimeCard = ({
   alunosById,
   brasoes,
   accent,
+  accentSolid,
   rotulo,
   onAlocar,
   onRemover,
@@ -1879,6 +1914,7 @@ const TimeCard = ({
   onSalvarSubtema,
   onJuntar,
   onVerConversa,
+  onObservar,
 }: {
   papel: Papel;
   alocacoes: Alocacao[];
@@ -1886,6 +1922,7 @@ const TimeCard = ({
   alunosById: Record<string, Aluno>;
   brasoes: Brasoes;
   accent: string;
+  accentSolid: string;
   rotulo: { plural: string; singular: string };
   onAlocar: (numero: number) => void;
   onRemover: (id: string) => void;
@@ -1896,6 +1933,7 @@ const TimeCard = ({
   onSalvarSubtema: (numero: number, texto: string) => void;
   onJuntar: () => void;
   onVerConversa: (numero: number) => void;
+  onObservar: (numero: number) => void;
 }) => {
   const ilimitado = papel.vagas_por_turma > 30;
   const cheio = !ilimitado && alocacoes.length >= papel.vagas_por_turma;
@@ -1955,6 +1993,15 @@ const TimeCard = ({
           >
             <Split size={12} strokeWidth={2.2} /> Dividir em grupos
           </button>
+          {alocacoes.length > 0 && (
+            <button
+              onClick={() => onObservar(1)}
+              className="mt-2.5 ml-1.5 inline-flex items-center gap-1 text-[11px] font-bold rounded-full px-2.5 py-1"
+              style={{ color: '#FFFFFF', backgroundColor: accentSolid }}
+            >
+              <PenLine size={12} strokeWidth={2.4} /> Observar
+            </button>
+          )}
         </>
       ) : (
         <>
@@ -1968,6 +2015,7 @@ const TimeCard = ({
                 alunosById={alunosById}
                 brasoes={brasoes}
                 accent={accent}
+                accentSolid={accentSolid}
                 podeAlocar={!cheio}
                 podeRemover={grupos.length > 1}
                 onAlocar={() => onAlocar(g.numero)}
@@ -1976,6 +2024,7 @@ const TimeCard = ({
                 onSalvarSubtema={(txt) => onSalvarSubtema(g.numero, txt)}
                 onRemoverGrupo={() => onRemoverGrupo(g.numero)}
                 onVerConversa={() => onVerConversa(g.numero)}
+                onObservar={() => onObservar(g.numero)}
               />
             ))}
           </div>
@@ -2010,6 +2059,7 @@ const GrupoBloco = ({
   alunosById,
   brasoes,
   accent,
+  accentSolid,
   podeAlocar,
   podeRemover,
   onAlocar,
@@ -2018,6 +2068,7 @@ const GrupoBloco = ({
   onSalvarSubtema,
   onRemoverGrupo,
   onVerConversa,
+  onObservar,
 }: {
   grupo: GrupoMeta;
   membros: Alocacao[];
@@ -2025,6 +2076,7 @@ const GrupoBloco = ({
   alunosById: Record<string, Aluno>;
   brasoes: Brasoes;
   accent: string;
+  accentSolid: string;
   podeAlocar: boolean;
   podeRemover: boolean;
   onAlocar: () => void;
@@ -2033,6 +2085,7 @@ const GrupoBloco = ({
   onSalvarSubtema: (texto: string) => void;
   onRemoverGrupo: () => void;
   onVerConversa: () => void;
+  onObservar: () => void;
 }) => {
   const [subtema, setSubtema] = useState(grupo.subtema ?? '');
   useEffect(() => {
@@ -2113,14 +2166,23 @@ const GrupoBloco = ({
         )}
       </div>
 
-      {/* Supervisão: abre a conversa do grupo em SÓ LEITURA (o mentor lê, não posta). */}
-      <button
-        onClick={onVerConversa}
-        className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-1"
-        style={{ color: accent, backgroundColor: `${accent}${A.a08}`, border: `1px solid ${accent}${A.a34}` }}
-      >
-        <MessageSquare size={12} strokeWidth={2.2} /> Ver conversa do grupo
-      </button>
+      {/* Acoes do grupo: observar ao vivo + ver a conversa (so leitura). */}
+      <div className="mt-2.5 flex flex-wrap gap-1.5">
+        <button
+          onClick={onObservar}
+          className="inline-flex items-center gap-1 text-[11px] font-bold rounded-full px-2.5 py-1"
+          style={{ color: '#FFFFFF', backgroundColor: accentSolid }}
+        >
+          <PenLine size={12} strokeWidth={2.4} /> Observar
+        </button>
+        <button
+          onClick={onVerConversa}
+          className="inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-1"
+          style={{ color: accent, backgroundColor: `${accent}${A.a08}`, border: `1px solid ${accent}${A.a34}` }}
+        >
+          <MessageSquare size={12} strokeWidth={2.2} /> Ver conversa do grupo
+        </button>
+      </div>
     </div>
   );
 };

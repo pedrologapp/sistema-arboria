@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Send, ImagePlus, X, Trash2 } from 'lucide-react';
+import { ChevronLeft, Send, ImagePlus, X, Trash2, BookOpen } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -482,6 +482,14 @@ const F2AlunoThreadPage = () => {
                           <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: t.text }}>
                             {obs.texto}
                           </p>
+                        )}
+                        {obs.origemCaptura === 'capitulo' && (
+                          <span
+                            className="inline-flex items-center gap-1 mt-1.5 rounded-full px-2 py-0.5 text-[10.5px] font-medium"
+                            style={{ backgroundColor: t.accentSoft, color: t.accentText, border: `1px solid ${t.accentBorder}` }}
+                          >
+                            <BookOpen size={11} /> Na apresentação{obs.capituloNome ? `: ${obs.capituloNome}` : ''}
+                          </span>
                         )}
                         {obs.anexoUrl && (
                           <img

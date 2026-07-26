@@ -569,6 +569,14 @@ const F1AlunoThreadPage = () => {
                             <BookOpen size={11} /> Na aula{obs.atividadeNome ? `: ${obs.atividadeNome}` : ''}
                           </button>
                         )}
+                        {obs.origemCaptura === 'capitulo' && (
+                          <span
+                            className="inline-flex items-center gap-1 mt-1.5 rounded-full px-2 py-0.5 text-[10.5px] font-medium"
+                            style={{ backgroundColor: t.accentSoft, color: t.accentText, border: `1px solid ${t.accentBorder}` }}
+                          >
+                            <BookOpen size={11} /> Na apresentação{obs.capituloNome ? `: ${obs.capituloNome}` : ''}
+                          </span>
+                        )}
                         {obs.anexoUrl && (
                           <img
                             src={obs.anexoUrl}

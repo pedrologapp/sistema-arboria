@@ -14,6 +14,8 @@ export interface ObservacaoThread {
   origemCaptura?: string; // 'aula' | 'diario' | 'capitulo' | undefined (legado não rotulado)
   atividadeId?: string;   // atividade da aula (quando origemCaptura='aula')
   atividadeNome?: string; // nome da atividade, para a referência clicável no Diário
+  capituloId?: string;    // capítulo (quando origemCaptura='capitulo', F2)
+  capituloNome?: string;  // nome do capítulo, para a referência "Na apresentação"
 }
 
 export interface AlunoThreadData {
@@ -64,7 +66,7 @@ export const useAlunoThread = (alunoId?: string) => {
       // 3. Observações (ordem cronológica = conversa): excluídas (soft-delete) ficam fora
       const { data: obs } = await supabase
         .from('observacoes')
-        .select('id, observacao_texto, data_observacao, created_at, fase_id, origem, origem_captura, atividade_id, anexo_url, professor_id')
+        .select('id, observacao_texto, data_observacao, created_at, fase_id, origem, origem_captura, atividade_id, capitulo_id, anexo_url, professor_id')
         .eq('aluno_id', alunoId)
         .is('excluida_em' as never, null)
         .order('data_observacao', { ascending: true })
@@ -101,6 +103,18 @@ export const useAlunoThread = (alunoId?: string) => {
           .select('id, nome')
           .in('id', atividadeIds);
         for (const a of ativs || []) atividadeNomeMap.set(a.id, a.nome);
+      }
+
+      // 4a-bis. Mapa capitulo_id -> nome (referência "Na apresentação", F2).
+      const capituloIds = [
+        ...new Set((obs || []).map((o) => (o as { capitulo_id?: string }).capitulo_id).filter(Boolean)),
+      ] as string[];
+      const capituloNomeMap = new Map<string, string>();
+      if (capituloIds.length > 0) {
+        const { data: caps } = await (supabase.from as never as (t: string) => ReturnType<typeof supabase.from>)('capitulos')
+          .select('id, nome')
+          .in('id', capituloIds);
+        for (const c of caps || []) capituloNomeMap.set((c as { id: string }).id, (c as { nome: string }).nome);
       }
 
       // 4b. Nome de quem escreveu (o thread é compartilhado: titular + auxiliar
@@ -172,6 +186,10 @@ export const useAlunoThread = (alunoId?: string) => {
           atividadeId: (o as { atividade_id?: string }).atividade_id || undefined,
           atividadeNome: (o as { atividade_id?: string }).atividade_id
             ? atividadeNomeMap.get((o as { atividade_id?: string }).atividade_id!)
+            : undefined,
+          capituloId: (o as { capitulo_id?: string }).capitulo_id || undefined,
+          capituloNome: (o as { capitulo_id?: string }).capitulo_id
+            ? capituloNomeMap.get((o as { capitulo_id?: string }).capitulo_id!)
             : undefined,
         })),
       };
