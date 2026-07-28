@@ -21,6 +21,7 @@ import {
   Merge,
   ArrowLeftRight,
   MessageSquare,
+  Trophy,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -598,6 +599,26 @@ const F2CapituloPage = () => {
     },
   });
 
+  // ---- Arena: grupos que concorrem (só a Casa Lógico-Matemática tem Arena) ----
+  const ehArena = casaMentor?.id === 2;
+  const { data: arenaProjetos = [] } = useQuery<{ papel_id: string; grupo: number; concorre: boolean }[]>({
+    queryKey: ['f2cap-arena', capId, turmaId],
+    enabled: !!capId && !!turmaId && ehArena,
+    queryFn: async () => {
+      const { data } = await (sb as any)
+        .from('capitulo_arena_projeto')
+        .select('papel_id, grupo, concorre')
+        .eq('capitulo_id', capId!)
+        .eq('turma_id', turmaId!);
+      return (data ?? []) as { papel_id: string; grupo: number; concorre: boolean }[];
+    },
+  });
+  const concorrePorGrupo = useMemo(() => {
+    const m: Record<string, boolean> = {};
+    for (const r of arenaProjetos) if (r.concorre) m[`${r.papel_id}::${r.grupo}`] = true;
+    return m;
+  }, [arenaProjetos]);
+
   // ---- Missões do capítulo + entregas da turma (faltantes) ----
   const { data: missoes = [] } = useQuery<Missao[]>({
     queryKey: ['f2cap-missoes', capId],
@@ -828,6 +849,30 @@ const F2CapituloPage = () => {
     refetchAloc();
   };
 
+  // Marca/desmarca um grupo como concorrente na Arena (só na Casa Lógico-Matemática).
+  const toggleConcorre = async (papelId: string, grupo: number) => {
+    if (!capId || !turmaId || !capitulo?.institution_id || !profile?.id) return;
+    const novo = !concorrePorGrupo[`${papelId}::${grupo}`];
+    const { error } = await (sb as any).from('capitulo_arena_projeto').upsert(
+      {
+        institution_id: capitulo.institution_id,
+        capitulo_id: capId,
+        turma_id: turmaId,
+        papel_id: papelId,
+        grupo,
+        concorre: novo,
+        criado_por: profile.id,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'capitulo_id,turma_id,papel_id,grupo' }
+    );
+    if (error) {
+      toast.error('Não deu pra salvar. Tente de novo.');
+      return;
+    }
+    qc.invalidateQueries({ queryKey: ['f2cap-arena', capId, turmaId] });
+  };
+
   const addMembro = async (delegacaoCodigo: string, alunoId: string) => {
     if (!capId || !turmaId || !profile?.id) return;
     const { error } = await sb.from('capitulo_delegacao_membros').insert({
@@ -931,14 +976,14 @@ const F2CapituloPage = () => {
     await upsertConfig({ time_grupos: proximo });
   };
 
-  // Divide o tema: cria 2 grupos. Quem já estava alocado (grupo 1 por padrão)
-  // cai no Grupo 1 automaticamente.
+  // Divide o tema: garante 2 grupos. Quem já estava alocado (grupo 1 por padrão)
+  // cai no Grupo 1 automaticamente. Preserva o tema do Grupo 1 se já existir
+  // (o time não dividido pode ter só o Grupo 1 com um tema definido).
   const dividirTime = async (papelId: string) => {
-    if (gruposDoTema(papelId).length > 0) return;
-    await setGruposDoTema(papelId, [
-      { numero: 1, subtema: null },
-      { numero: 2, subtema: null },
-    ]);
+    const atuais = gruposDoTema(papelId);
+    if (atuais.length > 1) return;
+    const g1 = atuais.find((g) => g.numero === 1) ?? { numero: 1, subtema: null };
+    await setGruposDoTema(papelId, [g1, { numero: 2, subtema: null }]);
   };
 
   // Cria mais um grupo no tema (numero = maior existente + 1).
@@ -966,6 +1011,7 @@ const F2CapituloPage = () => {
   };
 
   // Junta tudo: todos voltam pro Grupo 1 e o tema deixa de estar dividido.
+  // Mantém o Grupo 1 (só ele) se tiver tema definido, pra não perder o recorte.
   const juntarTime = async (papelId: string) => {
     if (!capId || !turmaId) return;
     await sb
@@ -975,11 +1021,12 @@ const F2CapituloPage = () => {
       .eq('turma_id', turmaId)
       .eq('papel_id', papelId)
       .neq('grupo', 1);
-    await setGruposDoTema(papelId, []);
+    const g1 = gruposDoTema(papelId).find((g) => g.numero === 1);
+    await setGruposDoTema(papelId, g1?.subtema ? [{ numero: 1, subtema: g1.subtema }] : []);
     refetchAloc();
   };
 
-  // Salva o subtema (recorte) de um grupo.
+  // Salva o subtema (recorte) de um grupo já existente.
   const salvarSubtema = async (papelId: string, numero: number, subtema: string) => {
     await setGruposDoTema(
       papelId,
@@ -987,6 +1034,17 @@ const F2CapituloPage = () => {
         g.numero === numero ? { ...g, subtema: subtema.trim() || null } : g
       )
     );
+  };
+
+  // Define o tema do time NÃO dividido (Grupo 1), criando a entrada se preciso.
+  const definirTemaUnico = async (papelId: string, texto: string) => {
+    const val = texto.trim() || null;
+    const atuais = gruposDoTema(papelId);
+    if (atuais.some((g) => g.numero === 1)) {
+      await salvarSubtema(papelId, 1, texto);
+    } else if (val !== null) {
+      await setGruposDoTema(papelId, [{ numero: 1, subtema: val }]);
+    }
   };
 
   // ---- Observação ao vivo ----
@@ -1252,6 +1310,7 @@ const F2CapituloPage = () => {
                       onCriarGrupo={() => criarMaisUmGrupo(p.id)}
                       onRemoverGrupo={(numero) => removerGrupo(p.id, numero)}
                       onSalvarSubtema={(numero, txt) => salvarSubtema(p.id, numero, txt)}
+                      onDefinirTema={(txt) => definirTemaUnico(p.id, txt)}
                       onJuntar={() => juntarTime(p.id)}
                       onVerConversa={(numero) =>
                         setVerConversa({
@@ -1264,6 +1323,9 @@ const F2CapituloPage = () => {
                       onObservar={(numero) =>
                         setBlocoGrupo({ papelId: p.id, grupo: numero, titulo: p.nome })
                       }
+                      ehArena={ehArena}
+                      concorrePorGrupo={concorrePorGrupo}
+                      onToggleConcorre={toggleConcorre}
                     />
                   ))}
                 </div>
@@ -1520,7 +1582,7 @@ const F2CapituloPage = () => {
         titulo={timeParaAlocar ? timeParaAlocar.papel.nome : ''}
         subtitulo={
           timeParaAlocar
-            ? (turmaConfig?.time_grupos?.[timeParaAlocar.papel.id]?.length ?? 0) > 0
+            ? (turmaConfig?.time_grupos?.[timeParaAlocar.papel.id]?.length ?? 0) > 1
               ? `Escolha quem entra no Grupo ${timeParaAlocar.grupo}`
               : `Escolha quem entra neste ${rotuloTime.singular}`
             : ''
@@ -1632,6 +1694,17 @@ const F2CapituloPage = () => {
           professorId={profile.id}
           accent={accent}
           accentSolid={accentSolid}
+          ehArena={ehArena}
+          temaGrupo={
+            turmaConfig?.time_grupos?.[blocoGrupo.papelId]?.find(
+              (g) => g.numero === blocoGrupo.grupo
+            )?.subtema ?? ''
+          }
+          onDefinirTema={(txt) =>
+            blocoGrupo.grupo === 1
+              ? definirTemaUnico(blocoGrupo.papelId, txt)
+              : salvarSubtema(blocoGrupo.papelId, blocoGrupo.grupo, txt)
+          }
         />
       )}
     </>
@@ -1896,6 +1969,53 @@ const PapelLinha = ({
  * ser movido entre eles. A regra "1 tema por aluno" é imposta no backend
  * (trigger validar_capitulo_alocacao) e espelhada no bloqueio do diálogo.
  */
+// Cor-assinatura da Arena (mesma do site de votação), usada só nos controles da Arena.
+const COR_ARENA = '#5EE0D0';
+
+/** Campo de tema/recorte de um grupo (usado no time não dividido e no Observar). */
+const TemaInput = ({
+  value,
+  onSave,
+  placeholder = 'Tema do grupo (ex: games)',
+}: {
+  value: string;
+  onSave: (texto: string) => void;
+  placeholder?: string;
+}) => {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    setV(value);
+  }, [value]);
+  return (
+    <input
+      type="text"
+      value={v}
+      onChange={(e) => setV(e.target.value)}
+      onBlur={() => {
+        if ((v.trim() || null) !== (value.trim() || null)) onSave(v);
+      }}
+      placeholder={placeholder}
+      className="w-full rounded-lg px-2.5 py-1.5 text-[12px] focus:outline-none"
+      style={{ backgroundColor: D.sunken, border: `1px solid ${D.line}`, color: D.text }}
+    />
+  );
+};
+
+/** Botão de marcar/desmarcar um grupo como concorrente na Arena. */
+const ConcorreBotao = ({ on, onClick }: { on: boolean; onClick: () => void }) => (
+  <button
+    onClick={onClick}
+    className="mt-2.5 ml-1.5 inline-flex items-center gap-1 text-[11px] font-bold rounded-full px-2.5 py-1 transition-colors"
+    style={
+      on
+        ? { color: '#08201C', backgroundColor: COR_ARENA }
+        : { color: COR_ARENA, backgroundColor: `${COR_ARENA}14`, border: `1px solid ${COR_ARENA}55` }
+    }
+  >
+    <Trophy size={12} strokeWidth={2.4} /> {on ? 'Concorre na Arena' : 'Marcar p/ Arena'}
+  </button>
+);
+
 const TimeCard = ({
   papel,
   alocacoes,
@@ -1912,9 +2032,13 @@ const TimeCard = ({
   onCriarGrupo,
   onRemoverGrupo,
   onSalvarSubtema,
+  onDefinirTema,
   onJuntar,
   onVerConversa,
   onObservar,
+  ehArena,
+  concorrePorGrupo,
+  onToggleConcorre,
 }: {
   papel: Papel;
   alocacoes: Alocacao[];
@@ -1931,13 +2055,18 @@ const TimeCard = ({
   onCriarGrupo: () => void;
   onRemoverGrupo: (numero: number) => void;
   onSalvarSubtema: (numero: number, texto: string) => void;
+  onDefinirTema: (texto: string) => void;
   onJuntar: () => void;
   onVerConversa: (numero: number) => void;
   onObservar: (numero: number) => void;
+  ehArena: boolean;
+  concorrePorGrupo: Record<string, boolean>;
+  onToggleConcorre: (papelId: string, grupo: number) => void;
 }) => {
   const ilimitado = papel.vagas_por_turma > 30;
   const cheio = !ilimitado && alocacoes.length >= papel.vagas_por_turma;
-  const dividido = grupos.length > 0;
+  const dividido = grupos.length > 1;
+  const temaUnico = grupos.find((g) => g.numero === 1)?.subtema ?? '';
   const doGrupo = (n: number) => alocacoes.filter((a) => (a.grupo ?? 1) === n);
   const gruposOrdenados = [...grupos].sort((a, b) => a.numero - b.numero);
   const numeros = gruposOrdenados.map((g) => g.numero);
@@ -1975,6 +2104,9 @@ const TimeCard = ({
 
       {!dividido ? (
         <>
+          <div className="mt-2.5">
+            <TemaInput value={temaUnico} onSave={(txt) => onDefinirTema(txt)} />
+          </div>
           <div className="flex flex-wrap gap-1.5 mt-2.5">
             {alocacoes.map((a) => (
               <ChipAluno
@@ -2002,6 +2134,12 @@ const TimeCard = ({
               <PenLine size={12} strokeWidth={2.4} /> Observar
             </button>
           )}
+          {ehArena && alocacoes.length > 0 && (
+            <ConcorreBotao
+              on={!!concorrePorGrupo[`${papel.id}::1`]}
+              onClick={() => onToggleConcorre(papel.id, 1)}
+            />
+          )}
         </>
       ) : (
         <>
@@ -2025,6 +2163,9 @@ const TimeCard = ({
                 onRemoverGrupo={() => onRemoverGrupo(g.numero)}
                 onVerConversa={() => onVerConversa(g.numero)}
                 onObservar={() => onObservar(g.numero)}
+                ehArena={ehArena}
+                concorre={!!concorrePorGrupo[`${papel.id}::${g.numero}`]}
+                onToggleConcorre={() => onToggleConcorre(papel.id, g.numero)}
               />
             ))}
           </div>
@@ -2069,6 +2210,9 @@ const GrupoBloco = ({
   onRemoverGrupo,
   onVerConversa,
   onObservar,
+  ehArena,
+  concorre,
+  onToggleConcorre,
 }: {
   grupo: GrupoMeta;
   membros: Alocacao[];
@@ -2086,6 +2230,9 @@ const GrupoBloco = ({
   onRemoverGrupo: () => void;
   onVerConversa: () => void;
   onObservar: () => void;
+  ehArena: boolean;
+  concorre: boolean;
+  onToggleConcorre: () => void;
 }) => {
   const [subtema, setSubtema] = useState(grupo.subtema ?? '');
   useEffect(() => {
@@ -2182,6 +2329,19 @@ const GrupoBloco = ({
         >
           <MessageSquare size={12} strokeWidth={2.2} /> Ver conversa do grupo
         </button>
+        {ehArena && (
+          <button
+            onClick={onToggleConcorre}
+            className="inline-flex items-center gap-1 text-[11px] font-bold rounded-full px-2.5 py-1 transition-colors"
+            style={
+              concorre
+                ? { color: '#08201C', backgroundColor: COR_ARENA }
+                : { color: COR_ARENA, backgroundColor: `${COR_ARENA}14`, border: `1px solid ${COR_ARENA}55` }
+            }
+          >
+            <Trophy size={12} strokeWidth={2.4} /> {concorre ? 'Concorre na Arena' : 'Marcar p/ Arena'}
+          </button>
+        )}
       </div>
     </div>
   );

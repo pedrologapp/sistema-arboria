@@ -12,13 +12,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { X, Mic, Camera, Trash2, Loader2, Send } from 'lucide-react';
+import { X, Mic, Camera, Trash2, Loader2, Send, Check } from 'lucide-react';
 
 const sb = supabase as unknown as {
   from: (t: string) => {
     select: (c: string) => any; insert: (v: unknown) => any; update: (v: unknown) => any; delete: () => any;
   };
 };
+
+// Cor-assinatura da Arena (mesma do site) e os 4 requisitos do projeto.
+const COR_ARENA = '#5EE0D0';
+const ARENA_REQS = [
+  { key: 'resolve', label: 'O que resolve?' },
+  { key: 'funciona', label: 'Como funciona?' },
+  { key: 'usa', label: 'O que usa?' },
+  { key: 'quebra', label: 'Onde pode quebrar?' },
+] as const;
 
 export interface MembroBloco { id: string; nome: string; avatarUrl?: string | null; corCasa?: string | null }
 interface Props {
@@ -32,6 +41,9 @@ interface Props {
   professorId: string;
   accent: string;        // versao CLARA: texto/borda sobre o escuro
   accentSolid: string;   // versao RICA: preenchimento (chip selecionado, botao) com texto branco
+  ehArena: boolean;      // Casa Logico-Matematica: mostra os 4 requisitos do projeto
+  temaGrupo: string;     // tema/recorte atual do grupo (subtema)
+  onDefinirTema: (texto: string) => void; // salva o tema do grupo na config da turma
 }
 type Feed =
   | { kind: 'aluno'; id: string; alvo: string; texto: string; quando: string; anexo?: string | null }
@@ -40,9 +52,12 @@ type Feed =
 const inicial = (n: string) => (n || '?').trim().slice(0, 1).toUpperCase();
 const primeiroNome = (n: string) => (n || '').trim().split(/\s+/)[0] || n;
 
-const BlocoObservacaoAoVivo = ({ onFechar, capitulo, turmaId, papelId, grupo, tituloGrupo, membros, professorId, accent, accentSolid }: Props) => {
+const BlocoObservacaoAoVivo = ({ onFechar, capitulo, turmaId, papelId, grupo, tituloGrupo, membros, professorId, accent, accentSolid, ehArena, temaGrupo, onDefinirTema }: Props) => {
   const [alvo, setAlvo] = useState<'grupo' | 'avulso' | string>('grupo'); // 'grupo' | 'avulso' | aluno_id
   const [nomeAvulso, setNomeAvulso] = useState('');
+  const [tema, setTema] = useState(temaGrupo);
+  const [reqs, setReqs] = useState<Record<string, boolean>>({});      // marcação (atendido) por pergunta
+  const [reqTexto, setReqTexto] = useState<Record<string, string>>({}); // texto em digitação por pergunta
   const [texto, setTexto] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [feed, setFeed] = useState<Feed[]>([]);
@@ -107,6 +122,56 @@ const BlocoObservacaoAoVivo = ({ onFechar, capitulo, turmaId, papelId, grupo, ti
     } catch (e) {
       toast.error((e as { message?: string }).message || 'Erro ao salvar nota');
     } finally { setNotaBusy(false); }
+  };
+
+  // ---- Tema do grupo (recorte) ----
+  useEffect(() => { setTema(temaGrupo); }, [temaGrupo]);
+
+  // ---- Requisitos do projeto da Arena (4 perguntas) ----
+  // A MARCAÇÃO (atendido/não) fica em capitulo_arena_projeto.requisitos (avalia o
+  // projeto). A ANOTAÇÃO escrita vira uma nota do grupo (Salvar) e aparece em
+  // "Nesta apresentação", igual às outras notas.
+  useEffect(() => {
+    if (!ehArena || !papelId) return;
+    (supabase.from('capitulo_arena_projeto') as any)
+      .select('requisitos').eq('capitulo_id', capitulo.id).eq('turma_id', turmaId)
+      .eq('papel_id', papelId).eq('grupo', grupo ?? 1).maybeSingle()
+      .then(({ data }: any) => {
+        if (!data?.requisitos) return;
+        const raw = data.requisitos as Record<string, unknown>;
+        const norm: Record<string, boolean> = {};
+        for (const k of Object.keys(raw)) {
+          const v = raw[k];
+          norm[k] = typeof v === 'boolean' ? v : !!(v as { ok?: boolean })?.ok;
+        }
+        setReqs(norm);
+      });
+    // eslint-disable-next-line
+  }, []);
+
+  const toggleReq = async (k: string) => {
+    if (!papelId) return;
+    const next = { ...reqs, [k]: !reqs[k] };
+    setReqs(next);
+    const { error } = await (supabase.from('capitulo_arena_projeto') as any).upsert({
+      institution_id: capitulo.institution_id, capitulo_id: capitulo.id, turma_id: turmaId,
+      papel_id: papelId, grupo: grupo ?? 1, requisitos: next, updated_at: new Date().toISOString(),
+    }, { onConflict: 'capitulo_id,turma_id,papel_id,grupo' });
+    if (error) toast.error('Não deu pra salvar a marcação. Tente de novo.');
+  };
+
+  // Salva a anotação de uma pergunta como nota do grupo -> vai pro feed.
+  const salvarReqNota = async (k: string) => {
+    const t = (reqTexto[k] ?? '').trim();
+    if (!t) return;
+    const label = ARENA_REQS.find((q) => q.key === k)?.label ?? '';
+    const { error } = await sb.from('capitulo_grupo_notas').insert({
+      institution_id: capitulo.institution_id, capitulo_id: capitulo.id, turma_id: turmaId,
+      papel_id: papelId, grupo, texto: `${label} ${t}`, criado_por: professorId, aluno_nome_avulso: null,
+    });
+    if (error) { toast.error('Não deu pra salvar. Tente de novo.'); return; }
+    setReqTexto((s) => ({ ...s, [k]: '' }));
+    carregar();
   };
 
   // ---- Ditar por voz (navegador) ----
@@ -215,6 +280,60 @@ const BlocoObservacaoAoVivo = ({ onFechar, capitulo, turmaId, papelId, grupo, ti
               <button onClick={salvarNota} disabled={notaBusy} className="rounded-lg px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-40" style={{ background: accentSolid }}>
                 {notaBusy ? '...' : 'Salvar'}
               </button>
+            </div>
+          )}
+
+          {/* Tema do grupo (recorte) — vale pra qualquer capítulo */}
+          {papelId && (
+            <div className="mb-3">
+              <div className="text-[9px] tracking-[0.2em] uppercase mb-1.5" style={{ color: 'rgba(255,255,255,0.35)' }}>Tema do grupo</div>
+              <input
+                value={tema}
+                onChange={(e) => setTema(e.target.value)}
+                onBlur={() => { if ((tema.trim() || null) !== (temaGrupo.trim() || null)) onDefinirTema(tema); }}
+                placeholder="Ex: games"
+                className="w-full rounded-lg px-3 py-2 text-[13px] text-white bg-transparent outline-none placeholder:text-white/30"
+                style={{ border: '1px solid rgba(255,255,255,0.18)' }}
+              />
+            </div>
+          )}
+
+          {/* Requisitos do projeto (só na Arena / Casa Lógico-Matemática) */}
+          {ehArena && papelId && (
+            <div className="mb-3">
+              <div className="text-[9px] tracking-[0.2em] uppercase mb-2" style={{ color: 'rgba(255,255,255,0.35)' }}>Requisitos do projeto</div>
+              <div className="grid grid-cols-2 gap-2">
+                {ARENA_REQS.map((q) => {
+                  const ok = !!reqs[q.key];
+                  const txt = reqTexto[q.key] ?? '';
+                  return (
+                    <div key={q.key} className="rounded-xl p-2.5 flex flex-col" style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${ok ? COR_ARENA : 'rgba(255,255,255,0.12)'}` }}>
+                      <button onClick={() => toggleReq(q.key)} className="flex items-center gap-1.5 text-left w-full">
+                        <span className="w-4 h-4 rounded-[5px] flex items-center justify-center flex-none" style={ok ? { background: COR_ARENA } : { border: '1px solid rgba(255,255,255,0.3)' }}>
+                          {ok && <Check size={11} strokeWidth={3} color="#08201C" />}
+                        </span>
+                        <span className="text-[11.5px] font-semibold leading-tight" style={{ color: ok ? COR_ARENA : 'rgba(255,255,255,0.75)' }}>{q.label}</span>
+                      </button>
+                      <input
+                        value={txt}
+                        onChange={(e) => setReqTexto((s) => ({ ...s, [q.key]: e.target.value }))}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); salvarReqNota(q.key); } }}
+                        placeholder="anotar..."
+                        className="w-full mt-1.5 bg-transparent outline-none text-[11.5px] text-white placeholder:text-white/25"
+                      />
+                      {txt.trim() && (
+                        <button
+                          onClick={() => salvarReqNota(q.key)}
+                          className="self-end mt-1.5 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10.5px] font-bold"
+                          style={{ background: accentSolid, color: '#fff' }}
+                        >
+                          <Send size={10} /> Salvar
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
