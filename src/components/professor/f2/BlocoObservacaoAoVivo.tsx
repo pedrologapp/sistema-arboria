@@ -49,6 +49,8 @@ const BlocoObservacaoAoVivo = ({ onFechar, capitulo, turmaId, papelId, grupo, ti
   const [gravando, setGravando] = useState(false);
   const [foto, setFoto] = useState<File | null>(null);
   const [subindoFoto, setSubindoFoto] = useState(false);
+  const [nota, setNota] = useState<string>('');
+  const [notaBusy, setNotaBusy] = useState(false);
   const fotoRef = useRef<HTMLInputElement>(null);
   const recRef = useRef<any>(null);
 
@@ -79,6 +81,33 @@ const BlocoObservacaoAoVivo = ({ onFechar, capitulo, turmaId, papelId, grupo, ti
     setFeed([...obs, ...grp].sort((a, b) => (a.quando < b.quando ? 1 : -1)));
   };
   useEffect(() => { carregar(); /* eslint-disable-next-line */ }, []);
+
+  // ---- Nota do projeto do grupo (ponderador da votacao + trava de finalizacao) ----
+  useEffect(() => {
+    if (!papelId) return;
+    (supabase.from('capitulo_projeto_nota') as any)
+      .select('nota').eq('capitulo_id', capitulo.id).eq('turma_id', turmaId)
+      .eq('papel_id', papelId).eq('grupo', grupo ?? 1).maybeSingle()
+      .then(({ data }: any) => { if (data?.nota != null) setNota(String(data.nota)); });
+    // eslint-disable-next-line
+  }, []);
+
+  const salvarNota = async () => {
+    if (!papelId || nota.trim() === '' || notaBusy) return;
+    const n = Number(nota.replace(',', '.'));
+    if (isNaN(n) || n < 0 || n > 10) { toast.error('A nota vai de 0 a 10.'); return; }
+    setNotaBusy(true);
+    try {
+      const { error } = await (supabase.from('capitulo_projeto_nota') as any).upsert({
+        institution_id: capitulo.institution_id, capitulo_id: capitulo.id, turma_id: turmaId,
+        papel_id: papelId, grupo: grupo ?? 1, nota: n, criado_por: professorId, updated_at: new Date().toISOString(),
+      }, { onConflict: 'capitulo_id,turma_id,papel_id,grupo' });
+      if (error) throw error;
+      toast.success('Nota do projeto salva');
+    } catch (e) {
+      toast.error((e as { message?: string }).message || 'Erro ao salvar nota');
+    } finally { setNotaBusy(false); }
+  };
 
   // ---- Ditar por voz (navegador) ----
   const ditar = () => {
@@ -171,6 +200,24 @@ const BlocoObservacaoAoVivo = ({ onFechar, capitulo, turmaId, papelId, grupo, ti
         </div>
 
         <div className="px-4 py-3 overflow-y-auto">
+          {/* Nota do projeto (do grupo) */}
+          {papelId && (
+            <div className="mb-3 rounded-xl p-3 flex items-center gap-3" style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${accentSolid}` }}>
+              <div className="flex-1 min-w-0">
+                <div className="text-[11.5px] font-semibold" style={{ color: accent }}>Nota do projeto</div>
+                <div className="text-[10.5px]" style={{ color: 'rgba(255,255,255,0.45)' }}>Pesa na votação e libera finalizar a fase (0 a 10).</div>
+              </div>
+              <input
+                value={nota} onChange={(e) => setNota(e.target.value)} inputMode="decimal" placeholder="0-10"
+                className="w-14 text-center rounded-lg px-1 py-1.5 text-[15px] font-bold text-white bg-transparent outline-none"
+                style={{ border: '1px solid rgba(255,255,255,0.22)' }}
+              />
+              <button onClick={salvarNota} disabled={notaBusy} className="rounded-lg px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-40" style={{ background: accentSolid }}>
+                {notaBusy ? '...' : 'Salvar'}
+              </button>
+            </div>
+          )}
+
           {/* Alvos */}
           <div className="text-[9px] tracking-[0.2em] uppercase mb-2" style={{ color: 'rgba(255,255,255,0.35)' }}>Estou observando</div>
           <div className="flex flex-wrap gap-1.5 mb-3">
