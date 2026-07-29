@@ -247,7 +247,7 @@ const BlocoObservacaoAoVivo = ({ onFechar, capitulo, turmaId, papelId, grupo, ti
 
   const alvoNome = alvo === 'grupo' ? 'o grupo'
     : alvo === 'avulso' ? (nomeAvulso.trim() || 'a pessoa')
-    : primeiroNome(membrosById.get(alvo)?.nome || 'aluno');
+    : (membrosById.get(alvo)?.nome || 'aluno');
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3" style={{ backgroundColor: 'rgba(6,6,14,0.6)' }} onClick={onFechar}>
