@@ -82,10 +82,13 @@ const BlocoObservacaoAoVivo = ({ onFechar, capitulo, turmaId, papelId, grupo, ti
             .is('excluida_em', null).in('aluno_id', alunoIds)
             .order('created_at', { ascending: false })
         : Promise.resolve({ data: [] }),
-      sb.from('capitulo_grupo_notas')
-        .select('id, texto, created_at, aluno_nome_avulso')
-        .eq('capitulo_id', capitulo.id).eq('turma_id', turmaId)
-        .order('created_at', { ascending: false }),
+      papelId
+        ? sb.from('capitulo_grupo_notas')
+            .select('id, texto, created_at, aluno_nome_avulso')
+            .eq('capitulo_id', capitulo.id).eq('turma_id', turmaId)
+            .eq('papel_id', papelId).eq('grupo', grupo ?? 1)
+            .order('created_at', { ascending: false })
+        : Promise.resolve({ data: [] }),
     ]);
     const obs: Feed[] = ((obsRes as { data?: any[] }).data ?? []).map((o) => ({
       kind: 'aluno' as const, id: o.id, alvo: primeiroNome(membrosById.get(o.aluno_id)?.nome || 'Aluno'),
