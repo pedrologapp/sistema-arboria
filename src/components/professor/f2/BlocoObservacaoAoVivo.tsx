@@ -47,7 +47,7 @@ interface Props {
 }
 type Feed =
   | { kind: 'aluno'; id: string; alvo: string; texto: string; quando: string; anexo?: string | null }
-  | { kind: 'grupo'; id: string; texto: string; quando: string; nome?: string | null };
+  | { kind: 'grupo'; id: string; texto: string; quando: string; nome?: string | null; anexo?: string | null };
 
 const inicial = (n: string) => (n || '?').trim().slice(0, 1).toUpperCase();
 const primeiroNome = (n: string) => (n || '').trim().split(/\s+/)[0] || n;
@@ -84,7 +84,7 @@ const BlocoObservacaoAoVivo = ({ onFechar, capitulo, turmaId, papelId, grupo, ti
         : Promise.resolve({ data: [] }),
       papelId
         ? sb.from('capitulo_grupo_notas')
-            .select('id, texto, created_at, aluno_nome_avulso')
+            .select('id, texto, created_at, aluno_nome_avulso, anexo_url')
             .eq('capitulo_id', capitulo.id).eq('turma_id', turmaId)
             .eq('papel_id', papelId).eq('grupo', grupo ?? 1)
             .order('created_at', { ascending: false })
@@ -95,7 +95,7 @@ const BlocoObservacaoAoVivo = ({ onFechar, capitulo, turmaId, papelId, grupo, ti
       texto: o.observacao_texto || '', quando: o.created_at, anexo: o.anexo_url,
     }));
     const grp: Feed[] = ((grpRes as { data?: any[] }).data ?? [])
-      .map((g) => ({ kind: 'grupo' as const, id: g.id, texto: g.texto, quando: g.created_at, nome: g.aluno_nome_avulso }));
+      .map((g) => ({ kind: 'grupo' as const, id: g.id, texto: g.texto, quando: g.created_at, nome: g.aluno_nome_avulso, anexo: g.anexo_url }));
     setFeed([...obs, ...grp].sort((a, b) => (a.quando < b.quando ? 1 : -1)));
   };
   useEffect(() => { carregar(); /* eslint-disable-next-line */ }, []);
@@ -203,10 +203,11 @@ const BlocoObservacaoAoVivo = ({ onFechar, capitulo, turmaId, papelId, grupo, ti
     setSalvando(true);
     try {
       let anexoPath: string | null = null;
-      if (foto && !eColetivo) {
+      if (foto) {
         setSubindoFoto(true);
         const safe = foto.name.replace(/[^\w.\-]/g, '_');
-        const path = `${capitulo.id}/${alvo}/${Date.now()}-${safe}`;
+        const pasta = eColetivo ? `grupo-${papelId ?? 'x'}-${grupo ?? 1}` : alvo;
+        const path = `${capitulo.id}/${pasta}/${Date.now()}-${safe}`;
         const { error } = await supabase.storage.from('observacoes').upload(path, foto);
         setSubindoFoto(false);
         if (error) throw error;
@@ -216,7 +217,7 @@ const BlocoObservacaoAoVivo = ({ onFechar, capitulo, turmaId, papelId, grupo, ti
         const { error } = await sb.from('capitulo_grupo_notas').insert({
           institution_id: capitulo.institution_id, capitulo_id: capitulo.id, turma_id: turmaId,
           papel_id: papelId, grupo, texto: texto.trim(), criado_por: professorId,
-          aluno_nome_avulso: alvo === 'avulso' ? nomeAvulso.trim() : null,
+          aluno_nome_avulso: alvo === 'avulso' ? nomeAvulso.trim() : null, anexo_url: anexoPath,
         });
         if (error) throw error;
       } else {
@@ -400,10 +401,10 @@ const BlocoObservacaoAoVivo = ({ onFechar, capitulo, turmaId, papelId, grupo, ti
                   <Mic size={15} /> {gravando ? 'ouvindo...' : 'falar'}
                 </button>
                 <button
-                  onClick={() => fotoRef.current?.click()} disabled={eColetivo}
-                  className="inline-flex items-center gap-1.5 text-[12px] disabled:opacity-30"
+                  onClick={() => fotoRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 text-[12px]"
                   style={{ color: 'rgba(255,255,255,0.7)' }}
-                  title={eColetivo ? 'Foto só nas notas de aluno cadastrado' : 'Anexar foto'}
+                  title={eColetivo ? 'Foto do trabalho do grupo (ex: a maquete)' : 'Anexar foto'}
                 >
                   <Camera size={15} /> foto
                 </button>
@@ -427,7 +428,7 @@ const BlocoObservacaoAoVivo = ({ onFechar, capitulo, turmaId, papelId, grupo, ti
                         {it.kind === 'grupo' ? (it.nome || 'O grupo') : it.alvo}
                       </div>
                       <div className="text-[13px]" style={{ color: 'rgba(255,255,255,0.85)' }}>{it.texto}</div>
-                      {it.kind === 'aluno' && it.anexo && <div className="text-[10.5px] mt-0.5" style={{ color: accent }}>foto anexada</div>}
+                      {it.anexo && <div className="text-[10.5px] mt-0.5" style={{ color: accent }}>foto anexada</div>}
                     </div>
                     <button onClick={() => apagar(it)} className="p-1 opacity-40 hover:opacity-100" style={{ color: 'rgba(255,255,255,0.6)' }} aria-label="Apagar nota">
                       <Trash2 size={13} />
