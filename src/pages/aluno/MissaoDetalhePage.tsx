@@ -58,6 +58,8 @@ interface MissaoDetalhe {
   arquivo_pdf_nome: string | null;
   fase_id: string | null;
   semana: number | null;
+  capitulo_id: string | null;
+  entrega_coletiva: boolean;
 }
 
 interface ArquivoEntrega {
@@ -192,6 +194,20 @@ const isImage = (file: File | { tipo_arquivo: string | null }) => {
   return type?.startsWith('image/');
 };
 
+// Pergunta 5 (Cross-IM) da Missão Individual da Arena. O item marcado com
+// descricao '__CASA_CROSS_IM__' é trocado pela pergunta da Casa do aluno, no sabor
+// da Casa mas SEM anunciar "você é X" (velado). Casa = inteligencia_id (1..8).
+const CASA_Q5: Record<number, string> = {
+  1: 'Teve algum momento, na fala ou na escrita, em que você caprichou nas palavras ou faria diferente pra explicar melhor?',
+  2: 'Qual é a lógica por trás do seu projeto? Como uma coisa leva à outra?',
+  3: 'Teve um momento em que você precisou imaginar ou desenhar como as partes se encaixam?',
+  4: 'Teve algum ritmo, repetição ou padrão no seu projeto que você percebeu antes dos outros?',
+  5: 'Teve alguma parte que você só entendeu de verdade depois de montar ou mexer com as mãos?',
+  6: 'Teve alguma parte em que você precisou separar ou organizar as coisas em grupos que combinam?',
+  7: 'Como o seu grupo se organizou? Você ajudou a juntar o time de alguma forma?',
+  8: 'Teve um momento em que você parou, pensou sozinho e mudou de estratégia? Como foi?',
+};
+
 const MissaoDetalhePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -209,6 +225,8 @@ const MissaoDetalhePage = () => {
   // Estados do formulário
   const [textoResposta, setTextoResposta] = useState('');
   const [respostasItens, setRespostasItens] = useState<Record<number, string>>({});
+  const [grupoRef, setGrupoRef] = useState<string | null>(null);       // grupo do aluno (entrega coletiva)
+  const [entregaGrupoPor, setEntregaGrupoPor] = useState<string | null>(null); // nome de quem enviou pelo grupo
   const [reflexaoResposta, setReflexaoResposta] = useState('');
   const [arquivos, setArquivos] = useState<ArquivoParaUpload[]>([]);
   const [enviando, setEnviando] = useState(false);
@@ -283,6 +301,8 @@ const MissaoDetalhePage = () => {
           casa_id,
           fase_id,
           semana,
+          capitulo_id,
+          entrega_coletiva,
           arquivo_pdf_url,
           arquivo_pdf_nome,
           casa:inteligencias!missoes_casa_id_fkey (
@@ -299,8 +319,13 @@ const MissaoDetalhePage = () => {
 
       const inteligenciaData = missaoData.casa as { nome: string; cor_hex: string; emoji: string } | null;
       
-      // Parse itens from JSONB
+      // Parse itens from JSONB (troca a pergunta 5 Cross-IM pela pergunta da Casa do aluno)
       const parsedItens = missaoData.itens ? (missaoData.itens as any as { nome: string; descricao: string }[]) : null;
+      const itensFinal = parsedItens?.map((it) =>
+        it.descricao === '__CASA_CROSS_IM__'
+          ? { nome: (profile?.casa_id ? CASA_Q5[profile.casa_id] : null) || it.nome, descricao: '' }
+          : it
+      ) ?? null;
 
       setMissao({
         id: missaoData.id,
@@ -309,7 +334,7 @@ const MissaoDetalhePage = () => {
         instrucoes: missaoData.instrucoes,
         contexto: (missaoData as any).contexto || missaoData.descricao || null,
         lente_especial: (missaoData as any).lente_especial || null,
-        itens: parsedItens,
+        itens: itensFinal,
         reflexao: (missaoData as any).reflexao || null,
         tipo: missaoData.tipo as 'principal' | 'secundaria' | 'bonus',
         tipo_missao: (missaoData as any).tipo_missao || 'geral',
@@ -327,6 +352,8 @@ const MissaoDetalhePage = () => {
         arquivo_pdf_nome: missaoData.arquivo_pdf_nome ?? null,
         fase_id: missaoData.fase_id ?? null,
         semana: missaoData.semana ?? null,
+        capitulo_id: (missaoData as any).capitulo_id ?? null,
+        entrega_coletiva: (missaoData as any).entrega_coletiva ?? false,
       });
 
       // Buscar entrega existente
@@ -390,13 +417,52 @@ const MissaoDetalhePage = () => {
         }
       }
 
+      // --- Entrega COLETIVA (missão do grupo): trava por grupo_ref ---
+      // Descobre o grupo do aluno neste capítulo e checa se ALGUÉM do grupo já enviou.
+      // Se sim, essa entrega vale como a do aluno (esconde o formulário = trava do grupo).
+      if ((missaoData as any).entrega_coletiva && (missaoData as any).capitulo_id) {
+        const { data: aloc } = await supabase
+          .from('capitulo_alocacoes')
+          .select('papel_id, grupo')
+          .eq('capitulo_id', (missaoData as any).capitulo_id)
+          .eq('aluno_id', user.id)
+          .limit(1)
+          .maybeSingle();
+        if (aloc?.papel_id) {
+          const gref = `${aloc.papel_id}::${(aloc as any).grupo ?? 1}`;
+          setGrupoRef(gref);
+          const { data: entGrupo } = await (supabase.from('entregas') as any)
+            .select('id, status, texto_resposta, data_entrega, nota, pontos_concedidos, feedback_professor, numero_tentativa, visualizada_pelo_aluno, aluno_id')
+            .eq('missao_id', id)
+            .eq('grupo_ref', gref)
+            .order('numero_tentativa', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (entGrupo) {
+            const arqs = await supabase.from('entrega_arquivos').select('*').eq('entrega_id', entGrupo.id);
+            const arqsUrl = await Promise.all((arqs.data ?? []).map(async (a: any) => {
+              if (a.nome_storage) {
+                const { data: s } = await supabase.storage.from('entregas').createSignedUrl(a.nome_storage, 3600);
+                return { ...a, url: s?.signedUrl || a.url };
+              }
+              return a;
+            }));
+            setEntrega({ ...entGrupo, arquivos: arqsUrl } as any);
+            if (entGrupo.aluno_id && entGrupo.aluno_id !== user.id) {
+              const { data: quem } = await supabase.from('profiles').select('nome, full_name').eq('id', entGrupo.aluno_id).maybeSingle();
+              setEntregaGrupoPor(((quem as any)?.full_name || (quem as any)?.nome) ?? 'um colega do grupo');
+            }
+          }
+        }
+      }
+
     } catch (err: any) {
       console.error('Erro ao buscar missão:', err);
       setError(err.message || 'Erro ao carregar missão');
     } finally {
       setLoading(false);
     }
-  }, [id, user]);
+  }, [id, user, profile?.casa_id]);
 
   // Carregar rascunho do localStorage
   useEffect(() => {
@@ -561,7 +627,8 @@ const MissaoDetalhePage = () => {
           reflexao_resposta: reflexaoResposta.trim() || null,
           status: 'pendente',
           entregue_no_prazo: !isPast(new Date(missao.data_prazo)),
-          numero_tentativa: (entrega?.numero_tentativa || 0) + 1
+          numero_tentativa: (entrega?.numero_tentativa || 0) + 1,
+          grupo_ref: missao.entrega_coletiva ? grupoRef : null,
         } as any)
         .select()
         .single();
@@ -673,6 +740,11 @@ const MissaoDetalhePage = () => {
     // Missões GERAIS podem ser feitas por qualquer aluno da série
     // Missões INDIVIDUAIS só pela casa específica
     if (missao.tipo_missao === 'individual' && missao.casa_id !== null && missao.casa_id !== profile?.casa_id) {
+      return false;
+    }
+
+    // Missão coletiva: só quem está em um grupo pode enviar (a trava é por grupo)
+    if (missao.entrega_coletiva && !grupoRef) {
       return false;
     }
 
@@ -1301,6 +1373,18 @@ const MissaoDetalhePage = () => {
               </div>
             )}
           </motion.div>
+        )}
+
+        {/* Aviso de entrega coletiva (missão do grupo) */}
+        {missao.entrega_coletiva && entregaGrupoPor && (
+          <div className="rounded-2xl p-4 mb-4 text-sm" style={{ backgroundColor: `${casaColor}12`, border: `1px solid ${casaColor}40`, color: '#fff' }}>
+            Seu grupo já enviou esta missão. Enviado por <span className="font-semibold">{entregaGrupoPor}</span>. A resposta abaixo vale pelo time inteiro.
+          </div>
+        )}
+        {missao.entrega_coletiva && !grupoRef && !entrega && (
+          <div className="rounded-2xl p-4 mb-4 text-sm" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.8)' }}>
+            Você ainda não está em um grupo neste capítulo. Fale com o professor pra entrar em um e poder enviar a missão do grupo.
+          </div>
         )}
 
         {/* Formulário de entrega */}

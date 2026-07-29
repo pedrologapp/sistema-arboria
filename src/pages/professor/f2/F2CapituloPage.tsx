@@ -817,14 +817,12 @@ const F2CapituloPage = () => {
     refetchEncTurma();
   };
 
-  const liberarMissoes = async () => {
-    const agora = new Date();
-    const prazo = new Date(agora.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const liberarMissoes = async (prazoISO: string) => {
     await upsertConfig({
-      missoes_liberadas_em: agora.toISOString(),
-      missoes_data_prazo: prazo.toISOString(),
+      missoes_liberadas_em: new Date().toISOString(),
+      missoes_data_prazo: prazoISO,
     });
-    toast.success(`Missões liberadas. Prazo: ${prazo.toLocaleDateString('pt-BR')}`);
+    toast.success(`Missões liberadas. Prazo: ${new Date(prazoISO).toLocaleDateString('pt-BR')}`);
   };
 
   const alocar = async (papelId: string, alunoId: string) => {
@@ -2572,8 +2570,10 @@ const SecaoMissoes = ({
   prazo: string | null;
   savingConfig: boolean;
   accent: string;
-  onLiberar: () => void;
+  onLiberar: (prazoISO: string) => void;
 }) => {
+  const [prazoDate, setPrazoDate] = useState(() => new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10));
+  const hoje = new Date().toISOString().slice(0, 10);
   const entreguesPorMissao = useMemo(() => {
     const m: Record<string, Set<string>> = {};
     entregas.forEach((e) => {
@@ -2611,11 +2611,22 @@ const SecaoMissoes = ({
         ) : (
           <>
             <p className="text-sm leading-relaxed" style={{ color: D.soft }}>
-              Ao liberar, cada aluno passa a ver a missão do papel dele. O prazo é automático: 7 dias.
+              Ao liberar, cada aluno passa a ver as missões da Arena. Escolha até quando ficam ativas.
             </p>
+            <label className="block mt-3 mb-1 text-[12px] font-semibold" style={{ color: D.sub }}>
+              Prazo de entrega
+            </label>
+            <input
+              type="date"
+              value={prazoDate}
+              min={hoje}
+              onChange={(e) => setPrazoDate(e.target.value)}
+              className="w-full rounded-xl px-3 py-2 text-sm"
+              style={{ backgroundColor: D.sunken, border: `1px solid ${D.line}`, color: D.text }}
+            />
             <button
-              onClick={onLiberar}
-              disabled={savingConfig}
+              onClick={() => prazoDate && onLiberar(new Date(prazoDate + 'T23:59:59').toISOString())}
+              disabled={savingConfig || !prazoDate}
               className="w-full mt-3 rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 transition-transform active:scale-[0.99]"
               style={{ backgroundColor: accent, color: '#FFFFFF' }}
             >
