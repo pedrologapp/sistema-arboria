@@ -229,6 +229,7 @@ const MissaoDetalhePage = () => {
   const [nomeProjeto, setNomeProjeto] = useState('');                   // nome do projeto (Palco geral)
   const [grupoRef, setGrupoRef] = useState<string | null>(null);       // grupo do aluno (entrega coletiva)
   const [entregaGrupoPor, setEntregaGrupoPor] = useState<string | null>(null); // nome de quem enviou pelo grupo
+  const [membrosGrupo, setMembrosGrupo] = useState<{ id: string; nome: string; avatar: string | null }[]>([]); // "Quem assina"
   const [reflexaoResposta, setReflexaoResposta] = useState('');
   const [arquivos, setArquivos] = useState<ArquivoParaUpload[]>([]);
   const [enviando, setEnviando] = useState(false);
@@ -435,6 +436,18 @@ const MissaoDetalhePage = () => {
         if (aloc?.papel_id) {
           const gref = `${aloc.papel_id}::${(aloc as any).grupo ?? 1}`;
           setGrupoRef(gref);
+          // Componentes do grupo ("Quem assina" no Palco da geral)
+          const meuGrupo = (aloc as any).grupo ?? 1;
+          const { data: membrosData } = await supabase
+            .from('capitulo_alocacoes')
+            .select('aluno_id, grupo')
+            .eq('capitulo_id', (missaoData as any).capitulo_id)
+            .eq('papel_id', aloc.papel_id);
+          const idsGrupo = (membrosData ?? []).filter((m: any) => ((m.grupo ?? 1) === meuGrupo)).map((m: any) => m.aluno_id);
+          if (idsGrupo.length) {
+            const { data: profs } = await supabase.from('profiles').select('id, nome, full_name, avatar_url').in('id', idsGrupo);
+            setMembrosGrupo((profs ?? []).map((p: any) => ({ id: p.id, nome: p.full_name || p.nome || 'Aluno', avatar: p.avatar_url ?? null })));
+          }
           const { data: entGrupo } = await (supabase.from('entregas') as any)
             .select('id, status, texto_resposta, data_entrega, nota, pontos_concedidos, feedback_professor, numero_tentativa, visualizada_pelo_aluno, aluno_id')
             .eq('missao_id', id)
@@ -1020,6 +1033,22 @@ const MissaoDetalhePage = () => {
                     </div>
                   ))}
                 </div>
+
+                {isGeral && membrosGrupo.length > 0 && (
+                  <div className="mt-4 rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${acc}45` }}>
+                    <div className="text-[10px] font-bold uppercase" style={{ letterSpacing: '0.22em', color: acc }}>Quem assina</div>
+                    <div className="flex flex-wrap gap-2 mt-2.5">
+                      {membrosGrupo.map((m) => (
+                        <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full pr-3 pl-1 py-1" style={{ background: '#0F0F1B', border: '1px solid rgba(255,255,255,0.08)' }}>
+                          <span className="w-6 h-6 rounded-full grid place-items-center text-[9px] font-bold overflow-hidden flex-none" style={{ background: acc, color: '#0a0a14' }}>
+                            {m.avatar ? <img src={m.avatar} alt="" className="w-full h-full object-cover" /> : (m.nome[0] || '?').toUpperCase()}
+                          </span>
+                          <span className="text-[11.5px]">{m.nome.split(' ')[0]}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {errosValidacao.length > 0 && (
                   <div className="mt-3 text-[12.5px]" style={{ color: '#F0708A' }}>{errosValidacao[0]}</div>
