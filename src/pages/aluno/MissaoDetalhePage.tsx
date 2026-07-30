@@ -60,6 +60,7 @@ interface MissaoDetalhe {
   semana: number | null;
   capitulo_id: string | null;
   entrega_coletiva: boolean;
+  layout_palco: boolean;
 }
 
 interface ArquivoEntrega {
@@ -225,6 +226,7 @@ const MissaoDetalhePage = () => {
   // Estados do formulário
   const [textoResposta, setTextoResposta] = useState('');
   const [respostasItens, setRespostasItens] = useState<Record<number, string>>({});
+  const [nomeProjeto, setNomeProjeto] = useState('');                   // nome do projeto (Palco geral)
   const [grupoRef, setGrupoRef] = useState<string | null>(null);       // grupo do aluno (entrega coletiva)
   const [entregaGrupoPor, setEntregaGrupoPor] = useState<string | null>(null); // nome de quem enviou pelo grupo
   const [reflexaoResposta, setReflexaoResposta] = useState('');
@@ -303,6 +305,7 @@ const MissaoDetalhePage = () => {
           semana,
           capitulo_id,
           entrega_coletiva,
+          layout_palco,
           arquivo_pdf_url,
           arquivo_pdf_nome,
           casa:inteligencias!missoes_casa_id_fkey (
@@ -354,6 +357,7 @@ const MissaoDetalhePage = () => {
         semana: missaoData.semana ?? null,
         capitulo_id: (missaoData as any).capitulo_id ?? null,
         entrega_coletiva: (missaoData as any).entrega_coletiva ?? false,
+        layout_palco: (missaoData as any).layout_palco ?? false,
       });
 
       // Buscar entrega existente
@@ -622,7 +626,9 @@ const MissaoDetalhePage = () => {
         .insert({
           missao_id: missao.id,
           aluno_id: user.id,
-          texto_resposta: textoResposta.trim() || null,
+          texto_resposta: (missao.layout_palco && missao.entrega_coletiva && nomeProjeto.trim())
+            ? `${nomeProjeto.trim()}\n\n${textoResposta.trim()}`.trim()
+            : (textoResposta.trim() || null),
           respostas_itens: respostasItensArray,
           reflexao_resposta: reflexaoResposta.trim() || null,
           status: 'pendente',
@@ -900,6 +906,140 @@ const MissaoDetalhePage = () => {
     (missao.itens && missao.itens.length > 0) ? 'itens' : null,
     missao.reflexao ? 'reflexao' : null,
   ].filter(Boolean);
+
+  // ═══════════════════════════════════════
+  // LAYOUT PALCO (missões da Arena). Geral = palco do grupo; Individual = blocos.
+  // Cor de acento = a Casa do aluno (casaColor).
+  // ═══════════════════════════════════════
+  if (missao.layout_palco) {
+    const acc = casaColor || '#8B7CF0';
+    const isGeral = missao.entrega_coletiva;
+    const jaEnviou = !!entrega;
+    const FILE_ID = 'palco-file-input';
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-4 pb-32">
+        <button
+          onClick={() => navigate('/aluno/missoes')}
+          className="flex items-center gap-2 text-white/50 hover:text-white transition-colors mb-4"
+        >
+          <ArrowLeft className="w-4 h-4" /><span className="text-sm">Voltar</span>
+        </button>
+
+        <div className="relative overflow-hidden rounded-3xl" style={{ background: '#0C0C18', border: '1px solid rgba(255,255,255,0.10)' }}>
+          <div className="absolute inset-x-0 top-0 h-56 pointer-events-none" style={{ background: `radial-gradient(60% 100% at 50% 0%, ${acc}26, transparent 70%)` }} />
+          <div className="relative px-5 pt-6 pb-8">
+            <div className="text-[10.5px] font-bold uppercase" style={{ letterSpacing: '0.3em', color: acc }}>
+              {isGeral ? 'Missão da Arena' : 'Arena Arboria'}
+            </div>
+            <h1 className="font-serif text-[26px] mt-1.5" style={{ lineHeight: 1.1 }}>
+              {isGeral ? 'A missão do grupo' : 'Missão Individual'}
+            </h1>
+            <div className="h-[2px] w-12 rounded-full my-3" style={{ background: acc, boxShadow: `0 0 14px ${acc}` }} />
+            {missao.contexto && <p className="text-[13px] leading-relaxed" style={{ color: '#AFAEC2' }}>{missao.contexto}</p>}
+
+            {jaEnviou ? (
+              <div className="mt-5 rounded-2xl p-4" style={{ background: `${acc}12`, border: `1px solid ${acc}40` }}>
+                <p className="text-sm font-semibold" style={{ color: acc }}>Enviado</p>
+                <p className="text-[12.5px] mt-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.72)' }}>
+                  {isGeral
+                    ? (entregaGrupoPor ? `Seu grupo já enviou. Enviado por ${entregaGrupoPor}. Vale pelo time inteiro.` : 'Seu grupo já enviou esta missão. Vale pelo time inteiro.')
+                    : 'Sua resposta já foi enviada. Obrigado por contar do seu jeito.'}
+                </p>
+              </div>
+            ) : !mostrarFormulario ? (
+              <div className="mt-5 rounded-2xl p-4 text-[13px] leading-relaxed" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.8)' }}>
+                {isGeral && !grupoRef
+                  ? 'Você ainda não está em um grupo neste capítulo. Fale com o professor pra entrar em um e poder enviar a missão do grupo.'
+                  : 'Esta missão não está disponível para envio agora.'}
+              </div>
+            ) : (
+              <div className="mt-5">
+                {isGeral ? (
+                  <>
+                    <input
+                      value={nomeProjeto}
+                      onChange={(e) => setNomeProjeto(e.target.value)}
+                      placeholder="Deem um nome ao projeto de vocês"
+                      className="w-full bg-transparent outline-none font-serif text-[24px] placeholder:text-white/25"
+                      style={{ color: '#F1F0F8' }}
+                    />
+                    <div className="mt-4 rounded-2xl p-4" style={{ background: '#15152470', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <p className="font-serif italic text-[14px] leading-snug" style={{ color: '#DAD9EA' }}>
+                        Este é o palco do projeto de vocês. Contem o que criaram como se quem lê nunca tivesse ouvido falar dele.
+                      </p>
+                      <textarea
+                        value={textoResposta}
+                        onChange={(e) => setTextoResposta(e.target.value)}
+                        rows={6}
+                        placeholder="Comecem pelo começo. O que é o projeto de vocês?"
+                        className="w-full mt-3 bg-transparent outline-none resize-y text-[14px] leading-relaxed placeholder:text-white/30"
+                        style={{ color: '#F1F0F8' }}
+                      />
+                    </div>
+                    <p className="text-[11.5px] mt-2" style={{ color: '#AFAEC2' }}>Um envia, vale para o time inteiro. Quanto mais mostrarem, mais o projeto se defende na votação.</p>
+                  </>
+                ) : (
+                  <>
+                    {missao.itens?.map((item, index) => (
+                      <div key={index} className="mt-3 rounded-2xl p-3.5" style={{ background: '#15152470', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <div className="flex gap-2.5 items-baseline">
+                          <span className="font-serif text-[15px] flex-none" style={{ color: acc }}>{index + 1}</span>
+                          <span className="text-[14px] font-semibold" style={{ lineHeight: 1.35 }}>{item.nome}</span>
+                        </div>
+                        <textarea
+                          value={respostasItens[index] || ''}
+                          onChange={(e) => setRespostasItens((prev) => ({ ...prev, [index]: e.target.value }))}
+                          rows={2}
+                          placeholder="escrever..."
+                          className="w-full mt-2 bg-transparent outline-none resize-y text-[13.5px] leading-relaxed placeholder:text-white/25"
+                          style={{ color: '#F1F0F8' }}
+                        />
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {/* Anexo (PDF ou imagem) */}
+                <div className="mt-4">
+                  <label htmlFor={FILE_ID} className="flex items-center gap-3 rounded-2xl p-3.5 cursor-pointer" style={{ border: `1px dashed ${acc}66`, background: `${acc}0a` }}>
+                    <span className="w-9 h-9 rounded-xl grid place-items-center flex-none" style={{ background: `${acc}22`, color: acc }}>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.49-8.49" /></svg>
+                    </span>
+                    <span>
+                      <span className="block text-[13px] font-bold">{isGeral ? 'Anexem o trabalho de vocês' : 'Quer mostrar algo? (opcional)'}</span>
+                      <span className="block text-[11px]" style={{ color: '#6F6E85' }}>Apenas PDF ou imagem</span>
+                    </span>
+                  </label>
+                  <input id={FILE_ID} type="file" accept="application/pdf,image/*" multiple className="hidden" onChange={(e) => handleFileSelect(e.target.files)} />
+                  {arquivos.map((a) => (
+                    <div key={a.id} className="flex items-center gap-2 mt-2 rounded-xl p-2.5" style={{ background: '#0F0F1B', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <span className="text-[12.5px] font-semibold flex-1 truncate">{a.file.name}</span>
+                      <button onClick={() => removerArquivo(a.id)} className="text-white/50 hover:text-white flex-none">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {errosValidacao.length > 0 && (
+                  <div className="mt-3 text-[12.5px]" style={{ color: '#F0708A' }}>{errosValidacao[0]}</div>
+                )}
+
+                <button
+                  onClick={handleEnviar}
+                  disabled={enviando}
+                  className="w-full mt-5 rounded-2xl py-3.5 text-[15px] font-extrabold disabled:opacity-50"
+                  style={{ background: acc, color: '#0a0a14', boxShadow: `0 10px 30px -8px ${acc}88` }}
+                >
+                  {enviando ? 'Enviando...' : isGeral ? 'Enviar em nome do time' : 'Guardar'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
