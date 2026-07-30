@@ -154,6 +154,7 @@ interface Missao {
   papel_id: string | null;
   para_membros_delegacao: boolean | null;
   status: string | null;
+  entrega_coletiva: boolean | null;
 }
 type Brasoes = Record<number, string | null>;
 
@@ -626,7 +627,7 @@ const F2CapituloPage = () => {
     queryFn: async () => {
       const { data } = await sb
         .from('missoes')
-        .select('id, titulo, papel_id, para_membros_delegacao, status')
+        .select('id, titulo, papel_id, para_membros_delegacao, status, entrega_coletiva')
         .eq('capitulo_id', capId!);
       return (data as Missao[]) ?? [];
     },
@@ -635,16 +636,16 @@ const F2CapituloPage = () => {
   const missaoIds = useMemo(() => missoes.map((m) => m.id), [missoes]);
   const alunoIds = useMemo(() => alunosDaTurma.map((a) => a.id), [alunosDaTurma]);
 
-  const { data: entregas = [] } = useQuery<{ missao_id: string; aluno_id: string }[]>({
+  const { data: entregas = [] } = useQuery<{ missao_id: string; aluno_id: string; grupo_ref: string | null }[]>({
     queryKey: ['f2cap-entregas', missaoIds.length, alunoIds.length, turmaId],
     enabled: missaoIds.length > 0 && alunoIds.length > 0,
     queryFn: async () => {
       const { data } = await sb
         .from('entregas')
-        .select('missao_id, aluno_id')
+        .select('missao_id, aluno_id, grupo_ref')
         .in('missao_id', missaoIds)
         .in('aluno_id', alunoIds);
-      return (data ?? []) as { missao_id: string; aluno_id: string }[];
+      return (data ?? []) as { missao_id: string; aluno_id: string; grupo_ref: string | null }[];
     },
   });
 
@@ -1412,6 +1413,7 @@ const F2CapituloPage = () => {
           <SecaoMissoes
             missoes={missoes}
             entregas={entregas}
+            papeis={papeis}
             alunosDaTurma={alunosDaTurma}
             alunosById={alunosById}
             brasoes={brasoes}
@@ -2558,9 +2560,11 @@ const SecaoMissoes = ({
   savingConfig,
   accent,
   onLiberar,
+  papeis,
 }: {
   missoes: Missao[];
-  entregas: { missao_id: string; aluno_id: string }[];
+  entregas: { missao_id: string; aluno_id: string; grupo_ref: string | null }[];
+  papeis: Papel[];
   alunosDaTurma: Aluno[];
   alunosById: Record<string, Aluno>;
   brasoes: Brasoes;
@@ -2581,6 +2585,29 @@ const SecaoMissoes = ({
     });
     return m;
   }, [entregas]);
+
+  // Missões coletivas: contagem POR GRUPO (tema+numero), não por aluno.
+  const nomePapel = useMemo(() => {
+    const m: Record<string, string> = {};
+    papeis.forEach((pp) => { m[pp.id] = pp.nome; });
+    return m;
+  }, [papeis]);
+  const todosGrupos = useMemo(() => {
+    const s = new Set<string>();
+    Object.entries(alocPorPapel).forEach(([papelId, arr]) => {
+      (arr || []).forEach((a) => s.add(`${papelId}::${a.grupo ?? 1}`));
+    });
+    return [...s];
+  }, [alocPorPapel]);
+  const entreguesGruposPorMissao = useMemo(() => {
+    const m: Record<string, Set<string>> = {};
+    entregas.forEach((e) => { if (e.grupo_ref) (m[e.missao_id] ||= new Set()).add(e.grupo_ref); });
+    return m;
+  }, [entregas]);
+  const rotuloGrupo = (ref: string) => {
+    const [papelId, g] = ref.split('::');
+    return `${nomePapel[papelId] || 'Grupo'} · Grupo ${g}`;
+  };
 
   const elegiveisDe = (missao: Missao): Aluno[] => {
     if (missao.papel_id) {
@@ -2640,6 +2667,35 @@ const SecaoMissoes = ({
       {liberadas && missoes.length > 0 && (
         <div className="space-y-2">
           {missoes.map((missao) => {
+            if (missao.entrega_coletiva) {
+              const gEntregues = entreguesGruposPorMissao[missao.id] || new Set<string>();
+              const faltamG = todosGrupos.filter((g) => !gEntregues.has(g));
+              const entreguesN = todosGrupos.length - faltamG.length;
+              return (
+                <div key={missao.id} className="rounded-2xl p-3.5" style={{ backgroundColor: D.card, border: `1px solid ${D.line}` }}>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold min-w-0 truncate" style={{ color: D.text }}>{missao.titulo}</p>
+                    <span className="text-[11px] whitespace-nowrap font-bold" style={{ color: faltamG.length === 0 && todosGrupos.length > 0 ? D.presente : D.sub }}>
+                      {entreguesN}/{todosGrupos.length} grupos
+                    </span>
+                  </div>
+                  {todosGrupos.length === 0 ? (
+                    <p className="text-[11px] italic mt-1" style={{ color: D.faint }}>Nenhum grupo formado ainda.</p>
+                  ) : faltamG.length === 0 ? (
+                    <p className="text-[11px] mt-1 flex items-center gap-1" style={{ color: D.presente }}><CheckCircle2 size={12} /> Todos os grupos entregaram.</p>
+                  ) : (
+                    <div className="mt-2">
+                      <p className="text-[10px] uppercase tracking-wide font-semibold mb-1.5" style={{ color: D.faint }}>Grupos que faltam</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {faltamG.map((g) => (
+                          <span key={g} className="px-2.5 py-1 rounded-full text-xs" style={{ backgroundColor: D.sunken, color: D.sub }}>{rotuloGrupo(g)}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }
             const elegiveis = elegiveisDe(missao);
             const entregues = entreguesPorMissao[missao.id] || new Set<string>();
             const faltantes = elegiveis.filter((a) => !entregues.has(a.id));
