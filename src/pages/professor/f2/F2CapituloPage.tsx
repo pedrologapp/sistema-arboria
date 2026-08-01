@@ -2670,7 +2670,8 @@ const SecaoMissoes = ({
             if (missao.entrega_coletiva) {
               const gEntregues = entreguesGruposPorMissao[missao.id] || new Set<string>();
               const faltamG = todosGrupos.filter((g) => !gEntregues.has(g));
-              const entreguesN = todosGrupos.length - faltamG.length;
+              const entreguesGrupos = todosGrupos.filter((g) => gEntregues.has(g));
+              const entreguesN = entreguesGrupos.length;
               return (
                 <div key={missao.id} className="rounded-2xl p-3.5" style={{ backgroundColor: D.card, border: `1px solid ${D.line}` }}>
                   <div className="flex items-center justify-between gap-2">
@@ -2681,16 +2682,30 @@ const SecaoMissoes = ({
                   </div>
                   {todosGrupos.length === 0 ? (
                     <p className="text-[11px] italic mt-1" style={{ color: D.faint }}>Nenhum grupo formado ainda.</p>
-                  ) : faltamG.length === 0 ? (
-                    <p className="text-[11px] mt-1 flex items-center gap-1" style={{ color: D.presente }}><CheckCircle2 size={12} /> Todos os grupos entregaram.</p>
                   ) : (
-                    <div className="mt-2">
-                      <p className="text-[10px] uppercase tracking-wide font-semibold mb-1.5" style={{ color: D.faint }}>Grupos que faltam</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {faltamG.map((g) => (
-                          <span key={g} className="px-2.5 py-1 rounded-full text-xs" style={{ backgroundColor: D.sunken, color: D.sub }}>{rotuloGrupo(g)}</span>
-                        ))}
-                      </div>
+                    <div className="mt-2 space-y-2.5">
+                      {entreguesGrupos.length > 0 && (
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wide font-semibold mb-1.5" style={{ color: D.presente }}>Entregaram ({entreguesGrupos.length})</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {entreguesGrupos.map((g) => (
+                              <span key={g} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: `${D.presente}1f`, color: D.presente, border: `1px solid ${D.presente}66` }}>
+                                <CheckCircle2 size={12} strokeWidth={2.4} /> {rotuloGrupo(g)}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {faltamG.length > 0 && (
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wide font-semibold mb-1.5" style={{ color: D.faint }}>Faltam entregar</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {faltamG.map((g) => (
+                              <span key={g} className="px-2.5 py-1 rounded-full text-xs" style={{ backgroundColor: D.sunken, color: D.sub }}>{rotuloGrupo(g)}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
