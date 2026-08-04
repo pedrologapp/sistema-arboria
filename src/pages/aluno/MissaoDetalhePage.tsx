@@ -428,36 +428,42 @@ const MissaoDetalhePage = () => {
       if ((missaoData as any).entrega_coletiva && (missaoData as any).capitulo_id) {
         const { data: aloc } = await supabase
           .from('capitulo_alocacoes')
-          .select('papel_id, grupo')
+          .select('papel_id, grupo, turma_id')
           .eq('capitulo_id', (missaoData as any).capitulo_id)
           .eq('aluno_id', user.id)
           .limit(1)
           .maybeSingle();
         if (aloc?.papel_id) {
-          const gref = `${aloc.papel_id}::${(aloc as any).grupo ?? 1}`;
+          // grupo_ref PRECISA da turma: o número do grupo é contado por turma, então
+          // papel::grupo colidia entre turmas (o grupo 1 do 6ºA e o do 6ºB viravam a
+          // mesma chave e um travava a entrega do outro no índice único).
+          const gref = `${(aloc as any).turma_id}::${aloc.papel_id}::${(aloc as any).grupo ?? 1}`;
           setGrupoRef(gref);
-          // Componentes do grupo ("Quem assina" no Palco da geral)
+          // Componentes do grupo ("Quem assina" no Palco da geral) — só da MESMA turma.
           const meuGrupo = (aloc as any).grupo ?? 1;
           const { data: membrosData } = await supabase
             .from('capitulo_alocacoes')
             .select('aluno_id, grupo')
             .eq('capitulo_id', (missaoData as any).capitulo_id)
-            .eq('papel_id', aloc.papel_id);
+            .eq('papel_id', aloc.papel_id)
+            .eq('turma_id', (aloc as any).turma_id);
           const idsGrupo = (membrosData ?? []).filter((m: any) => ((m.grupo ?? 1) === meuGrupo)).map((m: any) => m.aluno_id);
           if (idsGrupo.length) {
             const { data: profs } = await supabase.from('profiles').select('id, nome, full_name, avatar_url').in('id', idsGrupo);
             setMembrosGrupo((profs ?? []).map((p: any) => ({ id: p.id, nome: p.full_name || p.nome || 'Aluno', avatar: p.avatar_url ?? null })));
           }
-          const { data: entGrupo } = await (supabase.from('entregas') as any)
-            .select('id, status, texto_resposta, data_entrega, nota, pontos_concedidos, feedback_professor, numero_tentativa, visualizada_pelo_aluno, aluno_id')
-            .eq('missao_id', id)
-            .eq('grupo_ref', gref)
-            .order('numero_tentativa', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+          // Via RPC: a RLS só deixa o aluno ler a PRÓPRIA entrega, então ninguém
+          // enxergava a entrega do colega e a trava de grupo nunca aparecia.
+          const { data: entGrupoRows } = await (supabase.rpc as any)('entrega_do_grupo', {
+            p_missao_id: id,
+            p_grupo_ref: gref,
+          });
+          const entGrupo = Array.isArray(entGrupoRows) ? entGrupoRows[0] : entGrupoRows;
           if (entGrupo) {
-            const arqs = await supabase.from('entrega_arquivos').select('*').eq('entrega_id', entGrupo.id);
-            const arqsUrl = await Promise.all((arqs.data ?? []).map(async (a: any) => {
+            const { data: arqsRows } = await (supabase.rpc as any)('arquivos_da_entrega_grupo', {
+              p_entrega_id: entGrupo.id,
+            });
+            const arqsUrl = await Promise.all((arqsRows ?? []).map(async (a: any) => {
               if (a.nome_storage) {
                 const { data: s } = await supabase.storage.from('entregas').createSignedUrl(a.nome_storage, 3600);
                 return { ...a, url: s?.signedUrl || a.url };
@@ -466,8 +472,7 @@ const MissaoDetalhePage = () => {
             }));
             setEntrega({ ...entGrupo, arquivos: arqsUrl } as any);
             if (entGrupo.aluno_id && entGrupo.aluno_id !== user.id) {
-              const { data: quem } = await supabase.from('profiles').select('nome, full_name').eq('id', entGrupo.aluno_id).maybeSingle();
-              setEntregaGrupoPor(((quem as any)?.full_name || (quem as any)?.nome) ?? 'um colega do grupo');
+              setEntregaGrupoPor(entGrupo.autor_nome ?? 'um colega do grupo');
             }
           }
         }
@@ -535,14 +540,20 @@ const MissaoDetalhePage = () => {
     if (!files) return;
 
     const novosArquivos: ArquivoParaUpload[] = [];
-    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    // 25MB: foto de celular em alta e PDF de app de scanner passam fácil dos 10MB
+    // antigos. O bucket 'entregas' precisa do mesmo limite (migração 20260804000002).
+    const MAX_SIZE = 25 * 1024 * 1024;
+    // Qualquer imagem: o iPhone entrega HEIC/HEIF e não dá pra listar tipo por tipo.
+    const tipoPermitido = (t: string) => t === 'application/pdf' || t.startsWith('image/');
 
     Array.from(files).forEach(file => {
-      if (file.type !== 'application/pdf') {
+      // A tela sempre prometeu "PDF ou imagem" e o seletor aceitava image/*, mas a
+      // validação só deixava passar PDF: quem fotografava o trabalho era barrado.
+      if (!tipoPermitido(file.type)) {
         toast({
           variant: "destructive",
           title: "Formato não permitido",
-          description: `${file.name}: anexe apenas PDF, ou escreva sua resposta no campo de texto.`
+          description: `${file.name}: anexe um PDF ou uma foto (JPG, PNG), ou escreva sua resposta no campo de texto.`
         });
         return;
       }
@@ -551,7 +562,7 @@ const MissaoDetalhePage = () => {
         toast({
           variant: "destructive",
           title: "Arquivo muito grande",
-          description: `${file.name} excede o limite de 10MB`
+          description: `${file.name} passa de 25MB. Tente uma foto em qualidade menor, ou escreva a resposta no campo de texto.`
         });
         return;
       }
@@ -634,64 +645,129 @@ const MissaoDetalhePage = () => {
         resposta: respostasItens[index] || ''
       })).filter(r => r.resposta.trim()) || null;
 
-      const { data: novaEntrega, error: entregaError } = await supabase
-        .from('entregas')
-        .insert({
-          missao_id: missao.id,
-          aluno_id: user.id,
-          texto_resposta: (missao.layout_palco && missao.entrega_coletiva && nomeProjeto.trim())
-            ? `${nomeProjeto.trim()}\n\n${textoResposta.trim()}`.trim()
-            : (textoResposta.trim() || null),
-          respostas_itens: respostasItensArray,
-          reflexao_resposta: reflexaoResposta.trim() || null,
-          status: 'pendente',
-          entregue_no_prazo: !isPast(new Date(missao.data_prazo)),
-          numero_tentativa: (entrega?.numero_tentativa || 0) + 1,
-          grupo_ref: missao.entrega_coletiva ? grupoRef : null,
-        } as any)
-        .select()
-        .single();
+      const textoFinal = (missao.layout_palco && missao.entrega_coletiva && nomeProjeto.trim())
+        ? `${nomeProjeto.trim()}\n\n${textoResposta.trim()}`.trim()
+        : (textoResposta.trim() || null);
+      const noPrazo = !isPast(new Date(missao.data_prazo));
 
-      if (entregaError) throw entregaError;
+      let entregaId: string;
 
-      // 2. Upload de arquivos
-      for (const arquivo of arquivos) {
-        const timestamp = Date.now();
-        const safeFileName = arquivo.file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const filePath = `${user.id}/${novaEntrega.id}/${timestamp}_${safeFileName}`;
+      if (missao.entrega_coletiva && grupoRef) {
+        // Envio do grupo: uma linha por grupo, criada OU atualizada no banco de
+        // forma atômica. Nunca mais duplicate key — se o grupo já entregou, o
+        // retorno é 'bloqueada' e a tela mostra quem enviou.
+        const { data: res, error: rpcError } = await (supabase.rpc as any)('enviar_entrega_grupo', {
+          p_missao_id: missao.id,
+          p_grupo_ref: grupoRef,
+          p_texto: textoFinal,
+          p_respostas_itens: respostasItensArray,
+          p_reflexao: reflexaoResposta.trim() || null,
+          p_entregue_no_prazo: noPrazo,
+        });
 
-        const { error: uploadError } = await supabase.storage
-          .from('entregas')
-          .upload(filePath, arquivo.file);
+        if (rpcError) throw rpcError;
 
-        if (uploadError) {
-          console.error('Erro no upload:', uploadError);
+        if (res?.acao === 'bloqueada') {
           toast({
-            variant: "destructive",
-            title: "Erro ao enviar arquivo",
-            description: `Não foi possível enviar "${arquivo.file.name}". Tente outro formato.`
+            title: "Seu grupo já entregou",
+            description: `${res.autor ?? 'Um colega do grupo'} enviou esta missão. A entrega vale pelo time inteiro.`
           });
-          continue;
+          await fetchMissao();
+          return;
         }
 
-        // Gerar URL assinada (bucket privado)
-        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-          .from('entregas')
-          .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 year
-
-        const fileUrl = signedUrlData?.signedUrl || '';
-
-        // 3. Registrar arquivo
-        await supabase
-          .from('entrega_arquivos')
-          .insert({
-            entrega_id: novaEntrega.id,
-            nome_original: arquivo.file.name,
-            nome_storage: filePath,
-            url: fileUrl,
-            tamanho_bytes: arquivo.file.size,
-            tipo_arquivo: arquivo.file.type
+        if (res?.acao === 'fora_do_grupo') {
+          toast({
+            variant: "destructive",
+            title: "Não deu para identificar seu grupo",
+            description: "Fale com seu mentor: sua alocação no capítulo precisa ser ajustada."
           });
+          return;
+        }
+
+        entregaId = res.entrega_id;
+      } else {
+        const { data: novaEntrega, error: entregaError } = await supabase
+          .from('entregas')
+          .insert({
+            missao_id: missao.id,
+            aluno_id: user.id,
+            texto_resposta: textoFinal,
+            respostas_itens: respostasItensArray,
+            reflexao_resposta: reflexaoResposta.trim() || null,
+            status: 'pendente',
+            entregue_no_prazo: noPrazo,
+            numero_tentativa: (entrega?.numero_tentativa || 0) + 1,
+            grupo_ref: null,
+          } as any)
+          .select()
+          .single();
+
+        if (entregaError) throw entregaError;
+        entregaId = novaEntrega.id;
+      }
+
+      // 2. Upload de arquivos. A entrega JÁ está salva neste ponto: falha de anexo
+      // não pode mais derrubar o envio inteiro (era o que fazia o aluno tentar de
+      // novo e bater no duplicate key).
+      const anexosComFalha: string[] = [];
+
+      for (const arquivo of arquivos) {
+        try {
+          const timestamp = Date.now();
+          const safeFileName = arquivo.file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+          const filePath = `${user.id}/${entregaId}/${timestamp}_${safeFileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('entregas')
+            .upload(filePath, arquivo.file);
+
+          if (uploadError) throw uploadError;
+
+          // Gerar URL assinada (bucket privado)
+          const { data: signedUrlData } = await supabase.storage
+            .from('entregas')
+            .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 year
+
+          const fileUrl = signedUrlData?.signedUrl || '';
+
+          // 3. Registrar arquivo (na coletiva a entrega pode ser de outro integrante,
+          //    então passa pela função que checa a participação no grupo)
+          if (missao.entrega_coletiva && grupoRef) {
+            const { error: regError } = await (supabase.rpc as any)('registrar_arquivo_entrega_grupo', {
+              p_entrega_id: entregaId,
+              p_nome_original: arquivo.file.name,
+              p_nome_storage: filePath,
+              p_url: fileUrl,
+              p_tamanho_bytes: arquivo.file.size,
+              p_tipo_arquivo: arquivo.file.type,
+            });
+            if (regError) throw regError;
+          } else {
+            const { error: regError } = await supabase
+              .from('entrega_arquivos')
+              .insert({
+                entrega_id: entregaId,
+                nome_original: arquivo.file.name,
+                nome_storage: filePath,
+                url: fileUrl,
+                tamanho_bytes: arquivo.file.size,
+                tipo_arquivo: arquivo.file.type
+              });
+            if (regError) throw regError;
+          }
+        } catch (anexoErr) {
+          console.error('Erro no anexo:', anexoErr);
+          anexosComFalha.push(arquivo.file.name);
+        }
+      }
+
+      if (anexosComFalha.length > 0) {
+        toast({
+          variant: "destructive",
+          title: "Sua resposta foi salva, mas um anexo falhou",
+          description: `Não subiu: ${anexosComFalha.join(', ')}. Sua resposta está registrada. Abra a missão de novo para anexar.`
+        });
       }
 
       // 4. Limpar rascunho
@@ -719,6 +795,18 @@ const MissaoDetalhePage = () => {
 
     } catch (err: any) {
       console.error('Erro ao enviar:', err);
+
+      // Rede de segurança: se ainda assim escapar uma colisão de entrega de grupo,
+      // o aluno lê uma frase e não o erro cru do banco.
+      if (err?.code === '23505') {
+        toast({
+          title: "Seu grupo já entregou",
+          description: "Alguém do seu time enviou esta missão. A entrega vale pelo time inteiro."
+        });
+        await fetchMissao();
+        return;
+      }
+
       toast({
         variant: "destructive",
         title: "Erro ao enviar",
@@ -1580,7 +1668,7 @@ const MissaoDetalhePage = () => {
 
               {/* Instrução */}
               <p className="text-white/50 text-sm">
-                Escreva sua resposta abaixo. Se preferir, anexe um PDF. Dica: dá pra digitar no computador ou tablet, ou escrever no celular e colar aqui.
+                Escreva sua resposta abaixo. Se preferir, anexe um PDF ou uma foto. Dica: dá pra digitar no computador ou tablet, ou escrever no celular e colar aqui.
               </p>
 
               {/* Botão de upload */}
@@ -1592,7 +1680,7 @@ const MissaoDetalhePage = () => {
                   className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg bg-white/5 border border-violet-500/10 hover:bg-white/10 transition-colors text-white/70"
                 >
                   <File className="w-5 h-5" />
-                  <span className="text-sm">Anexar PDF</span>
+                  <span className="text-sm">Anexar PDF ou foto</span>
                 </button>
               </div>
 
@@ -1601,7 +1689,7 @@ const MissaoDetalhePage = () => {
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept="application/pdf"
+                accept="application/pdf,image/*"
                 onChange={(e) => handleFileSelect(e.target.files)}
                 className="hidden"
                 disabled={enviando}

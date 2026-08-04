@@ -121,6 +121,7 @@ interface Alocacao {
   id: string;
   papel_id: string;
   aluno_id: string;
+  turma_id?: string | null; // entra na chave do grupo: o número do grupo é por turma
   grupo?: number | null; // subgrupo (1|2) do time; ausente = 1 (formato Assembleia / pré-migration)
 }
 interface MembroDelegacao {
@@ -2592,10 +2593,12 @@ const SecaoMissoes = ({
     papeis.forEach((pp) => { m[pp.id] = pp.nome; });
     return m;
   }, [papeis]);
+  // A chave do grupo inclui a TURMA: o número do grupo é contado por turma, então
+  // papel::grupo colidia entre turmas (e uma entrega travava a de outra turma).
   const todosGrupos = useMemo(() => {
     const s = new Set<string>();
     Object.entries(alocPorPapel).forEach(([papelId, arr]) => {
-      (arr || []).forEach((a) => s.add(`${papelId}::${a.grupo ?? 1}`));
+      (arr || []).forEach((a) => s.add(`${a.turma_id}::${papelId}::${a.grupo ?? 1}`));
     });
     return [...s];
   }, [alocPorPapel]);
@@ -2605,7 +2608,8 @@ const SecaoMissoes = ({
     return m;
   }, [entregas]);
   const rotuloGrupo = (ref: string) => {
-    const [papelId, g] = ref.split('::');
+    const partes = ref.split('::');
+    const [papelId, g] = partes.length === 3 ? [partes[1], partes[2]] : [partes[0], partes[1]];
     return `${nomePapel[papelId] || 'Grupo'} · Grupo ${g}`;
   };
 
