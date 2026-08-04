@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { F2_ALUNO_LOOP_V1 } from '@/config/f2AlunoLoopV1';
+import RelatarProblema from '@/components/aluno/RelatarProblema';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { 
@@ -236,6 +237,7 @@ const MissaoDetalhePage = () => {
   const [entregaEnviada, setEntregaEnviada] = useState(false);
   const [errosValidacao, setErrosValidacao] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [ultimoErro, setUltimoErro] = useState<string | null>(null); // viaja no relato de problema
 
   // Chave do rascunho
   const DRAFT_KEY = `missao_draft_${id}`;
@@ -795,6 +797,7 @@ const MissaoDetalhePage = () => {
 
     } catch (err: any) {
       console.error('Erro ao enviar:', err);
+      setUltimoErro(`${err?.code ? `[${err.code}] ` : ''}${err?.message ?? String(err)}`.slice(0, 300));
 
       // Rede de segurança: se ainda assim escapar uma colisão de entrega de grupo,
       // o aluno lê uma frase e não o erro cru do banco.
@@ -1150,6 +1153,21 @@ const MissaoDetalhePage = () => {
                 >
                   {enviando ? 'Enviando...' : isGeral ? 'Enviar em nome do time' : 'Guardar'}
                 </button>
+
+                <div className="mt-3 flex justify-center">
+                  <RelatarProblema
+                    variant="inline"
+                    userId={profile?.id}
+                    institutionId={profile?.institution_id}
+                    contexto={{
+                      missao_id: missao.id,
+                      missao_titulo: missao.titulo,
+                      grupo_ref: grupoRef,
+                      ultimo_erro: ultimoErro,
+                      tela: 'missao_palco',
+                    }}
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -1802,6 +1820,23 @@ const MissaoDetalhePage = () => {
             )}
           </Button>
         )}
+
+        {/* Aviso de problema: fica visível mesmo depois de entregar, porque o
+            problema costuma aparecer DEPOIS (anexo que não subiu, tela travada) */}
+        <div className="flex justify-center pt-1">
+          <RelatarProblema
+            variant="inline"
+            userId={profile?.id}
+            institutionId={profile?.institution_id}
+            contexto={{
+              missao_id: missao.id,
+              missao_titulo: missao.titulo,
+              grupo_ref: grupoRef,
+              ultimo_erro: ultimoErro,
+              tela: 'missao',
+            }}
+          />
+        </div>
       </div>
     </motion.div>
   );

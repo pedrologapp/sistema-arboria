@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect, type CSSProperties } from 'react';
-import { Target, MessageCircle, Shield, User, Star, AlertTriangle, Trophy, Sparkles, Bell, HelpCircle, Send, Loader2, LayoutDashboard, ArrowRight, ChevronRight, Smile } from 'lucide-react';
+import { Target, MessageCircle, Shield, User, Star, AlertTriangle, Trophy, Sparkles, Bell, HelpCircle, Send, Loader2, LayoutDashboard, ArrowRight, ChevronRight, Smile, CalendarDays } from 'lucide-react';
 import { useStudent } from '@/contexts/StudentContext';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
 import { useFaseAtualAluno } from '@/hooks/useFaseAtualAluno';
@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Progress } from '@/components/ui/progress';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { hojeBrasil } from '@/utils/timezone';
+import RelatarProblema from '@/components/aluno/RelatarProblema';
 import { CROSS_IM_COMBINACOES, MECANISMOS_CASA } from '@/data/crossImData';
 import OnboardingModal from '@/components/aluno/OnboardingModal';
 import PopupLeiturasNovas from '@/components/aluno/PopupLeiturasNovas';
@@ -184,6 +185,25 @@ const HomePage = () => {
     staleTime: 120000,
   });
 
+  // Até quando as missões do aluno ficam abertas. Sai do próprio prazo das missões
+  // dele (nunca de uma data escrita no código), então acompanha o que o mentor definir.
+  const { data: prazoMissoes } = useQuery({
+    queryKey: ['prazo-missoes-aluno', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return null;
+      const { data } = await supabase.rpc('get_missoes_do_aluno', { p_aluno_id: profile.id });
+      const pendentes = (data ?? []).filter((m: any) => !m.ja_entregou && m.data_prazo);
+      if (pendentes.length === 0) return null;
+      const maior = pendentes.reduce(
+        (acc: string, m: any) => (new Date(m.data_prazo) > new Date(acc) ? m.data_prazo : acc),
+        pendentes[0].data_prazo as string
+      );
+      return new Date(maior) > new Date() ? (maior as string) : null;
+    },
+    enabled: !!profile?.id,
+    staleTime: 120000,
+  });
+
   // Onboarding ANTIGO: mostra uma vez para cada aluno (chave versionada).
   // Substituido pelo tour novo (AlunoTour, no header) quando F2_ALUNO_TOUR liga:
   // nesse caso o modal antigo nunca dispara, evitando dois pop-ups de inicializacao.
@@ -285,6 +305,23 @@ const HomePage = () => {
           </h1>
           <p className="text-[12.5px] text-white/30 mt-1">{dataHoje}</p>
         </div>
+
+        {/* Prazo das missões */}
+        {prazoMissoes && (
+          <div className="rounded-[14px] border border-white/[0.09] bg-white/[0.035] p-3 animate-fade-in">
+            <div className="flex items-center gap-3">
+              <CalendarDays className="w-[18px] h-[18px] text-white/40 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-[13px] font-medium">
+                  Missões abertas até {new Date(prazoMissoes).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                </p>
+                <p className="text-white/35 text-[11px] mt-0.5">
+                  Dá para enviar ou corrigir sua entrega até essa data.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 2. Urgencia (mesmo cartao de hoje) */}
         {missoesUrgentes && missoesUrgentes.length > 0 && (
@@ -510,7 +547,7 @@ const HomePage = () => {
               <CrossImHomeCard casaCodigo={casa?.codigo} faseCodigo={faseAtual?.inteligencia?.codigo} corCasa={casaColor} />
               {casa?.codigo && <DesafioDiarioLembrete casaCodigo={casa.codigo} casaColor={casaColor} />}
               <CampoRelato userId={profile?.id} institutionId={profile?.institution_id} faseId={faseAtual?.id} semana={semanaAtual} casaColor={casaColor} />
-              <RelatarProblemaCard userId={profile?.id} institutionId={profile?.institution_id} />
+              <RelatarProblema userId={profile?.id} institutionId={profile?.institution_id} contexto={{ tela: 'home' }} />
             </div>
           </DrawerContent>
         </Drawer>
@@ -539,6 +576,23 @@ const HomePage = () => {
         </h1>
         <p className="text-sm text-white/35 mt-0.5">{getFraseMotivacional()}</p>
       </div>
+
+      {/* Prazo das missões */}
+      {prazoMissoes && (
+        <div className="rounded-[14px] border border-white/[0.09] bg-white/[0.035] p-3 animate-fade-in">
+          <div className="flex items-center gap-3">
+            <CalendarDays className="w-[18px] h-[18px] text-white/40 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-[13px] font-medium">
+                Missões abertas até {new Date(prazoMissoes).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+              </p>
+              <p className="text-white/35 text-[11px] mt-0.5">
+                Dá para enviar ou corrigir sua entrega até essa data.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Card de Urgência */}
       {missoesUrgentes && missoesUrgentes.length > 0 && (
@@ -746,7 +800,7 @@ const HomePage = () => {
       <CampoRelato userId={profile?.id} institutionId={profile?.institution_id} faseId={faseAtual?.id} semana={semanaAtual} casaColor={casaColor} />
 
       {/* Relatar problema */}
-      <RelatarProblemaCard userId={profile?.id} institutionId={profile?.institution_id} />
+      <RelatarProblema userId={profile?.id} institutionId={profile?.institution_id} contexto={{ tela: 'home' }} />
 
       {/* Frase viva: rotativa com fade */}
       {frasesDisponiveis.length > 0 && (
@@ -1072,66 +1126,5 @@ const AvisosCard = () => {
   );
 };
 
-// === Relatar Problema ===
-const RelatarProblemaCard = ({ userId, institutionId }: { userId?: string; institutionId?: string }) => {
-  const [aberto, setAberto] = useState(false);
-  const [texto, setTexto] = useState('');
-  const [enviando, setEnviando] = useState(false);
-  const [enviado, setEnviado] = useState(false);
-
-  const enviar = async () => {
-    if (!userId || !institutionId || !texto.trim() || enviando) return;
-    setEnviando(true);
-    const { error } = await supabase.from('problemas_alunos').insert({
-      aluno_id: userId,
-      institution_id: institutionId,
-      texto: texto.trim(),
-    });
-    if (!error) {
-      setTexto('');
-      setEnviado(true);
-      setAberto(false);
-      setTimeout(() => setEnviado(false), 3000);
-    }
-    setEnviando(false);
-  };
-
-  return (
-    <div className="animate-fade-in">
-      {enviado ? (
-        <div className="rounded-[18px] border border-emerald-400/40 bg-emerald-400/[0.05] p-3 text-center">
-          <p className="text-xs text-green-400">Problema relatado! Vamos verificar.</p>
-        </div>
-      ) : !aberto ? (
-        <button
-          onClick={() => setAberto(true)}
-          className="rounded-[14px] border border-white/[0.07] bg-white/[0.03] w-full p-3 text-left active:scale-[0.98] transition-transform"
-        >
-          <div className="flex items-center gap-3">
-            <HelpCircle className="w-4 h-4 text-white/35 shrink-0" />
-            <p className="text-xs text-white/40">Está com algum problema? Toque para nos contar</p>
-          </div>
-        </button>
-      ) : (
-        <div className="rounded-[18px] border border-white/[0.08] bg-white/[0.035] p-3.5 space-y-2">
-          <p className="text-xs text-white/40">Descreva o problema:</p>
-          <textarea value={texto} onChange={e => setTexto(e.target.value)}
-            placeholder="O que está acontecendo?"
-            maxLength={500} rows={3}
-            className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white placeholder:text-white/20 resize-none focus:outline-none focus:border-white/20"
-          />
-          <div className="flex items-center justify-between">
-            <button onClick={() => { setAberto(false); setTexto(''); }} className="text-xs text-white/30">Cancelar</button>
-            <button onClick={enviar} disabled={!texto.trim() || enviando}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-violet-500/20 text-violet-400 disabled:opacity-30">
-              {enviando ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-              Enviar
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
 export default HomePage;

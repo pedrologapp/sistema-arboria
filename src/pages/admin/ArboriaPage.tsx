@@ -182,7 +182,7 @@ const ArboriaPage = () => {
     queryKey: ['admin-problemas'],
     queryFn: async () => {
       const { data } = await supabase.from('problemas_alunos')
-        .select('id, aluno_id, texto, resolvido, created_at')
+        .select('id, aluno_id, texto, resolvido, created_at, contexto')
         .eq('resolvido', false)
         .order('created_at', { ascending: false })
         .limit(20);
@@ -811,6 +811,30 @@ const ArboriaPage = () => {
                         }} className="text-[8px] text-green-400/60 hover:text-green-400 shrink-0">Resolver</button>
                       </div>
                       <p className="text-xs text-white/50 leading-relaxed">"{p.texto}"</p>
+
+                      {/* Contexto técnico: o que permite rastrear a falha */}
+                      {p.contexto && (
+                        <div className="mt-2 pt-2 border-t border-white/[0.06] space-y-0.5">
+                          {p.contexto.missao_titulo && (
+                            <p className="text-[9px] text-white/35">
+                              Missão: <span className="text-white/55">{p.contexto.missao_titulo}</span>
+                            </p>
+                          )}
+                          {p.contexto.ultimo_erro && (
+                            <p className="text-[9px] text-red-400/60 break-all">Erro: {p.contexto.ultimo_erro}</p>
+                          )}
+                          {p.contexto.rota && (
+                            <p className="text-[9px] text-white/25 break-all">
+                              {p.contexto.rota}
+                              {p.contexto.grupo_ref ? ` · grupo ${String(p.contexto.grupo_ref).split('::').slice(-1)[0]}` : ''}
+                            </p>
+                          )}
+                          {p.contexto.user_agent && (
+                            <p className="text-[9px] text-white/15 break-all line-clamp-2">{p.contexto.user_agent}</p>
+                          )}
+                        </div>
+                      )}
+
                       <p className="text-[9px] text-white/20 mt-1">{new Date(p.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
                   );
