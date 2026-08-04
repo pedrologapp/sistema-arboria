@@ -191,14 +191,33 @@ const HomePage = () => {
     queryKey: ['prazo-missoes-aluno', profile?.id],
     queryFn: async () => {
       if (!profile?.id) return null;
-      const { data } = await supabase.rpc('get_missoes_do_aluno', { p_aluno_id: profile.id });
-      const pendentes = (data ?? []).filter((m: any) => !m.ja_entregou && m.data_prazo);
-      if (pendentes.length === 0) return null;
-      const maior = pendentes.reduce(
-        (acc: string, m: any) => (new Date(m.data_prazo) > new Date(acc) ? m.data_prazo : acc),
-        pendentes[0].data_prazo as string
-      );
-      return new Date(maior) > new Date() ? (maior as string) : null;
+      const prazos: string[] = [];
+
+      // Missões de CAPÍTULO (Arena): o prazo é por turma, definido quando o mentor
+      // libera. É aqui que ele mora, não em missoes.data_prazo.
+      const { data: turmas } = await supabase
+        .from('aluno_turma')
+        .select('turma_id')
+        .eq('aluno_id', profile.id)
+        .eq('ativo', true);
+      const turmaIds = (turmas ?? []).map((t: any) => t.turma_id).filter(Boolean);
+      if (turmaIds.length > 0) {
+        const { data: cfgs } = await supabase
+          .from('capitulo_turma_config')
+          .select('missoes_data_prazo, missoes_liberadas_em')
+          .in('turma_id', turmaIds)
+          .not('missoes_liberadas_em', 'is', null);
+        (cfgs ?? []).forEach((c: any) => { if (c.missoes_data_prazo) prazos.push(c.missoes_data_prazo); });
+      }
+
+      // Missões de CASA (fase/semana), que seguem outro caminho.
+      const { data: daCasa } = await supabase.rpc('get_missoes_do_aluno', { p_aluno_id: profile.id });
+      (daCasa ?? []).forEach((m: any) => { if (!m.ja_entregou && m.data_prazo) prazos.push(m.data_prazo); });
+
+      const agora = new Date();
+      const futuros = prazos.filter((p) => new Date(p) > agora);
+      if (futuros.length === 0) return null;
+      return futuros.reduce((a, b) => (new Date(b) > new Date(a) ? b : a));
     },
     enabled: !!profile?.id,
     staleTime: 120000,
