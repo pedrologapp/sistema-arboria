@@ -1651,9 +1651,15 @@ const MissaoDetalhePage = () => {
         )}
 
         {/* Aviso de entrega coletiva (missão do grupo) */}
-        {missao.entrega_coletiva && entregaGrupoPor && (
+        {/* Missão do grupo já entregue: avisa SEMPRE, tenha sido o próprio aluno ou
+            um colega. Sem isto, quem enviou pelo time não via confirmação aqui. */}
+        {missao.entrega_coletiva && entrega && entrega.status !== 'refazer' && (
           <div className="rounded-2xl p-4 mb-4 text-sm" style={{ backgroundColor: `${casaColor}12`, border: `1px solid ${casaColor}40`, color: '#fff' }}>
-            Seu grupo já enviou esta missão. Enviado por <span className="font-semibold">{entregaGrupoPor}</span>. A resposta abaixo vale pelo time inteiro.
+            {entregaGrupoPor ? (
+              <>Seu grupo já enviou esta missão. Enviado por <span className="font-semibold">{entregaGrupoPor}</span>. A resposta abaixo vale pelo time inteiro.</>
+            ) : (
+              <>A missão do grupo já foi entregue. A resposta abaixo vale pelo time inteiro.</>
+            )}
           </div>
         )}
         {missao.entrega_coletiva && !grupoRef && !entrega && (
