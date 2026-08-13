@@ -61,7 +61,7 @@ const T = {
 };
 
 type Item =
-  | { tipo: 'fala'; revelar?: boolean; linhas: string[]; enorme?: string; cta: string; ctaSuave?: string; rodape?: string }
+  | { tipo: 'fala'; linhas: string[]; enorme?: string; cta: string; ctaSuave?: string; rodape?: string }
   | { tipo: 'crianca'; cta: string }
   | { tipo: 'respondente'; chave: string; titulo: string; sub?: string; opcoes: string[]; livre?: string; cta: string }
   | { tipo: 'transicao'; enorme: string; linha?: string; cta: string }
@@ -73,7 +73,7 @@ const FLUXO_BRUTO: Item[] = [
   // recebe um desconhecido pedindo intimidade sobre o filho. Quem da confianca
   // aqui nao e' o Arboria: e' a escola. As linhas entram uma depois da outra,
   // como alguem falando, em vez de um bloco de texto de uma vez.
-  { tipo: 'fala', revelar: true, enorme: 'Olá!',
+  { tipo: 'fala', enorme: 'Olá!',
     linhas: [
       'Eu sou o Arboria, o jeito que o Centro Educacional Amadeus escolheu para conhecer cada criança de perto.',
       'E hoje eu queria conhecer melhor o seu filho(a).',
@@ -372,25 +372,43 @@ const QuestionarioPaisPreview = () => {
         )}
 
         {/* ---------- FALA ---------- */}
-        {item?.tipo === 'fala' && (
+        {item?.tipo === 'fala' && (() => {
+          // Toda tela de fala entra em tempos, e o botao so' aparece depois que
+          // a ultima linha terminou de entrar. Botao visivel antes do fim do
+          // texto e' um convite para pular a leitura, e essas telas sao
+          // justamente as que o pai precisa ler: quem esta falando, para que
+          // serve, e o que a escola faz com o que ele contar.
+          const PASSO = 1.5;              // intervalo entre uma linha e a proxima
+          const DURACAO = 1;              // o quanto cada linha leva para entrar
+          const INICIO = item.enorme ? 1.1 : 0.5;
+          const atraso = (k: number) => INICIO + k * PASSO;
+          const atrasoFim = atraso(item.linhas.length - 1) + DURACAO + 0.25;
+          return (
           <>
-            {item.enorme && <p style={{ fontFamily: T.serif, fontSize: item.enorme.length > 20 ? 35 : 47, lineHeight: 1.08, letterSpacing: '-.022em', margin: '0 0 26px' }}>{item.enorme}</p>}
+            {item.enorme && (
+              <p className="revela" style={{ fontFamily: T.serif, fontSize: item.enorme.length > 20 ? 35 : 47, lineHeight: 1.08, letterSpacing: '-.022em', margin: '0 0 26px', animationDelay: '.15s' }}>{item.enorme}</p>
+            )}
             {item.linhas.map((l, k) => (
-              <p key={k} className={item.revelar ? 'revela' : undefined}
+              <p key={k} className="revela"
                 style={{
                   fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px',
-                  animationDelay: item.revelar ? (0.8 + k * 1.7) + 's' : undefined,
+                  animationDelay: atraso(k) + 's',
                 }}>{l}</p>
             ))}
-            {item.rodape && <p className="text-[11.5px] mt-5" style={{ color: 'rgba(255,255,255,.66)', lineHeight: 1.5, maxWidth: '34ch' }}>{item.rodape}</p>}
-            <Rodape>
-              {/* "Saber mais" abre o texto completo. Antes ele avancava igual ao outro
-                  botao, o que fazia a saida de quem quer ler virar armadilha. */}
-              {item.ctaSuave && <Cta texto={item.ctaSuave} suave onClick={() => setVerMais(true)} />}
-              <Cta texto={item.cta} onClick={avanca} />
-            </Rodape>
+            {item.rodape && (
+              <p className="revela text-[11.5px] mt-5" style={{ color: 'rgba(255,255,255,.66)', lineHeight: 1.5, maxWidth: '34ch', animationDelay: atrasoFim + 's' }}>{item.rodape}</p>
+            )}
+            <div className="revela" style={{ animationDelay: atrasoFim + 's' }}>
+              <Rodape>
+                {/* "Saber mais" abre o texto completo. Antes ele avancava igual ao outro
+                    botao, o que fazia a saida de quem quer ler virar armadilha. */}
+                {item.ctaSuave && <Cta texto={item.ctaSuave} suave onClick={() => setVerMais(true)} />}
+                <Cta texto={item.cta} onClick={avanca} />
+              </Rodape>
+            </div>
           </>
-        )}
+          );
+        })()}
 
         {/* ---------- CRIANÇA ---------- */}
         {item?.tipo === 'crianca' && (
