@@ -21,6 +21,8 @@ const CEU = '/arboria/ceu.png';
 const NOME = 'Arthur';
 const TURMA = 'Maternal 2 B';
 const NAO_SEI = '__nao_sei__';
+const OUTRO_CUIDADOR = 'Outra pessoa que cuida dele(a)';
+const QUEM_RESPONDE = ['A mãe', 'O pai', 'Os dois juntos', 'A avó ou o avô', OUTRO_CUIDADOR];
 // ------------------------------------------------------------------ FLEXAO
 // O app sabe de quem se trata, entao o texto inteiro fala no genero da crianca
 // em vez de empurrar "(a)" para o pai ler. As frases sao escritas com a marca
@@ -166,6 +168,7 @@ const numeroDaPergunta = (i: number) => FLUXO.slice(0, i + 1).filter((x) => x.ti
 const QuestionarioPaisPreview = () => {
   const [i, setI] = useState(0);
   const [quemResponde, setQuemResponde] = useState<string | null>(null);
+  const [outroCuidador, setOutroCuidador] = useState('');
   const [marcadas, setMarcadas] = useState<Record<number, string[]>>({});
   const [abertos, setAbertos] = useState<Record<number, boolean>>({});
   const [textos, setTextos] = useState<Record<number, string>>({});
@@ -188,10 +191,28 @@ const QuestionarioPaisPreview = () => {
   // pergunta. Ate' la' ele pode voltar e trocar o que quiser sem virar bagunca,
   // porque nada foi para o banco ainda: o que grava e' um envio so', no fim.
   const ultimaPergunta = FLUXO.map((x) => x.tipo).lastIndexOf('pergunta');
+  const podeSeguir =
+    quemResponde !== null &&
+    (quemResponde !== flex(OUTRO_CUIDADOR) || outroCuidador.trim() !== '');
 
   // O botao mora a DIREITA e tem cara de botao. O Fundador viu gente nao achar
   // onde apertar quando ele era so' texto sublinhado: em publico amplo, elegancia
   // que esconde a acao custa a resposta inteira.
+  // A marca de escolhido. Vazia ela ja avisa que a linha se escolhe; cheia ela
+  // diz que foi escolhida sem pedir ao pai que compare dois tons de branco.
+  const Marca = ({ on }: { on: boolean }) => (
+    <span
+      className="flex items-center justify-center"
+      style={{
+        flex: 'none', width: 26, height: 26, borderRadius: 999,
+        background: on ? '#1F6141' : 'transparent',
+        border: on ? '2px solid #1F6141' : '1.5px solid rgba(255,255,255,.5)',
+      }}
+    >
+      {on && <Check size={15} strokeWidth={3.5} color="#fff" />}
+    </span>
+  );
+
   const Cta = ({ texto, suave, forte, onClick }: { texto: string; suave?: boolean; forte?: boolean; onClick: () => void }) => (
     <button
       onClick={onClick}
@@ -334,42 +355,49 @@ const QuestionarioPaisPreview = () => {
             <p style={{ fontFamily: T.serif, fontSize: 29, lineHeight: 1.24, fontWeight: 700, letterSpacing: '-.012em', margin: '0 0 6px' }}>E quem está me contando hoje?</p>
             <p className="text-[14px]" style={{ color: 'rgba(255,255,255,.8)', margin: '0 0 22px' }}>Pergunto porque cada um vê uma parte diferente do dia dele(a).</p>
 
-            <div className="flex flex-col gap-2.5">
-              {['A mãe', 'O pai', 'Os dois juntos', 'A avó ou o avô', 'Outra pessoa que cuida dele(a)'].map((quem) => {
+            <div>
+              {QUEM_RESPONDE.map((quem, k) => {
                 const rotulo = flex(quem);
                 const on = quemResponde === rotulo;
                 return (
                   <button
                     key={rotulo}
                     onClick={() => setQuemResponde(rotulo)}
-                    className="w-full flex items-center justify-between gap-3 text-left transition-colors"
+                    className="w-full flex items-center justify-between gap-3.5 text-left"
                     style={{
-                      minHeight: 58, padding: '13px 16px', borderRadius: 15,
-                      background: on ? '#fff' : 'rgba(255,255,255,.10)',
-                      border: on ? '2px solid #fff' : '2px solid rgba(255,255,255,.34)',
-                      boxShadow: on ? '0 6px 18px rgba(9,45,74,.28)' : undefined,
-                      fontFamily: T.serif, fontSize: 19.5, lineHeight: 1.32, fontWeight: 600,
-                      color: on ? '#0E3F66' : '#fff',
+                      minHeight: 58, padding: '15px 0',
+                      borderBottom: '1px solid rgba(255,255,255,.24)',
+                      borderTop: k === 0 ? '1px solid rgba(255,255,255,.24)' : undefined,
+                      fontFamily: T.serif, fontSize: 20, lineHeight: 1.35,
+                      fontWeight: on ? 700 : 600,
+                      color: on ? '#fff' : 'rgba(255,255,255,.86)',
+                      fontStyle: quem === OUTRO_CUIDADOR ? 'italic' : 'normal',
                     }}
                   >
                     <span>{rotulo}</span>
-                    <span
-                      className="flex items-center justify-center"
-                      style={{
-                        flex: 'none', width: 26, height: 26, borderRadius: 999,
-                        background: on ? '#1F6141' : 'transparent',
-                        border: on ? '2px solid #1F6141' : '2px solid rgba(255,255,255,.55)',
-                      }}
-                    >
-                      {on && <Check size={15} strokeWidth={3.5} color="#fff" />}
-                    </span>
+                    <Marca on={on} />
                   </button>
                 );
               })}
             </div>
 
+            {/* "Outra pessoa" sem dizer quem nao serve para nada na leitura:
+                tia, babá e madrasta veem dias muito diferentes da crianca. */}
+            {quemResponde === flex(OUTRO_CUIDADOR) && (
+              <div className="mt-6">
+                <p style={{ fontFamily: T.serif, fontSize: 20, fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Quem é?</p>
+                <input
+                  value={outroCuidador}
+                  onChange={(e) => setOutroCuidador(e.target.value)}
+                  placeholder="tia, avó, babá, madrasta..."
+                  className="w-full bg-transparent outline-none"
+                  style={{ borderBottom: '1px solid rgba(255,255,255,.5)', padding: '10px 0', fontFamily: T.serif, fontSize: 20, color: '#fff' }}
+                />
+              </div>
+            )}
+
             <Rodape>
-              <span style={{ opacity: quemResponde ? 1 : 0.35, pointerEvents: quemResponde ? 'auto' : 'none' }}>
+              <span style={{ opacity: podeSeguir ? 1 : 0.35, pointerEvents: podeSeguir ? 'auto' : 'none' }}>
                 <Cta texto={item.cta} onClick={avanca} />
               </span>
             </Rodape>
@@ -396,39 +424,31 @@ const QuestionarioPaisPreview = () => {
             <p style={{ fontFamily: T.serif, fontSize: 29, lineHeight: 1.24, fontWeight: 700, letterSpacing: '-.012em', margin: '0 0 6px' }}>{item.texto}</p>
             <p className="text-[14px]" style={{ color: 'rgba(255,255,255,.8)', margin: '0 0 22px' }}>{item.instr ?? 'Escolha uma'}</p>
 
-            {/* A marcacao vira o fundo inteiro, nao um risquinho. Testado com um
-                pai de verdade: texto branco mais branco nao e' sinal de nada.
-                Desmarcado ja mostra a bolinha vazia, para o pai entender antes
-                de tocar que aquilo se escolhe. */}
-            <div className="flex flex-col gap-2.5">
-              {opcoes.map((op) => {
+            {/* Lista de linhas, sem caixa: o peso visual fica no texto e nao no
+                container. Quem carrega a marcacao e' o circulo. Vazio ele ja diz
+                "isto se escolhe" antes de o pai tocar; verde com check ele diz
+                "escolhido" sem depender de o pai comparar dois tons de branco,
+                que foi onde o teste com um pai de verdade falhou. */}
+            <div>
+              {opcoes.map((op, k) => {
                 const on = marcadasAqui.includes(op);
                 return (
                   <button
                     key={op}
                     onClick={() => { alterna(op); if (op === rotuloOutra) setAbertos((a) => ({ ...a, [i]: true })); }}
-                    className="w-full flex items-center justify-between gap-3 text-left transition-colors"
+                    className="w-full flex items-center justify-between gap-3.5 text-left"
                     style={{
-                      minHeight: 58, padding: '13px 16px', borderRadius: 15,
-                      background: on ? '#fff' : 'rgba(255,255,255,.10)',
-                      border: on ? '2px solid #fff' : '2px solid rgba(255,255,255,.34)',
-                      boxShadow: on ? '0 6px 18px rgba(9,45,74,.28)' : undefined,
-                      fontFamily: T.serif, fontSize: 19.5, lineHeight: 1.32, fontWeight: 600,
-                      color: on ? '#0E3F66' : '#fff',
+                      minHeight: 58, padding: '15px 0',
+                      borderBottom: '1px solid rgba(255,255,255,.24)',
+                      borderTop: k === 0 ? '1px solid rgba(255,255,255,.24)' : undefined,
+                      fontFamily: T.serif, fontSize: 20, lineHeight: 1.35,
+                      fontWeight: on ? 700 : 600,
+                      color: on ? '#fff' : 'rgba(255,255,255,.86)',
                       fontStyle: op === rotuloOutra ? 'italic' : 'normal',
                     }}
                   >
                     <span>{op}</span>
-                    <span
-                      className="flex items-center justify-center"
-                      style={{
-                        flex: 'none', width: 26, height: 26, borderRadius: 999,
-                        background: on ? '#1F6141' : 'transparent',
-                        border: on ? '2px solid #1F6141' : '2px solid rgba(255,255,255,.55)',
-                      }}
-                    >
-                      {on && <Check size={15} strokeWidth={3.5} color="#fff" />}
-                    </span>
+                    <Marca on={on} />
                   </button>
                 );
               })}
