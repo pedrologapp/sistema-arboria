@@ -20,6 +20,7 @@ import { ChevronLeft, Check } from 'lucide-react';
 const CEU = '/arboria/ceu.png';
 const NOME = 'Arthur';
 const TURMA = 'Maternal 2 B';
+const NAO_SEI = '__nao_sei__';
 
 const T = {
   fundo: '#135E96',
@@ -30,7 +31,7 @@ type Item =
   | { tipo: 'fala'; linhas: string[]; enorme?: string; cta: string; ctaSuave?: string; rodape?: string }
   | { tipo: 'crianca'; cta: string }
   | { tipo: 'transicao'; enorme: string; linha?: string; cta: string }
-  | { tipo: 'pergunta'; bloco: string; texto: string; instr?: string; opcoes: string[] };
+  | { tipo: 'pergunta'; bloco: string; texto: string; instr?: string; opcoes: string[]; outra?: string };
 
 const FLUXO: Item[] = [
   // ---------------------------------------------------------------- entrada
@@ -65,13 +66,13 @@ const FLUXO: Item[] = [
 
   // ---------------------------------------------------------------- bloco 1
   { tipo: 'pergunta', bloco: 'O tempo dele(a)', texto: 'Pra começar leve: do que ele(a) mais gosta de brincar hoje em dia?', instr: 'Pode marcar mais de uma',
-    opcoes: ['De montar e encaixar', 'De correr, subir, pular', 'De faz de conta', 'De carrinho, boneca, bichinho', 'De música e dança', 'De desenhar e pintar', 'De água, terra, massinha'] },
+    opcoes: ['De montar e encaixar', 'De correr, subir, pular', 'De faz de conta', 'De carrinho, boneca, bichinho', 'De música e dança', 'De desenhar e pintar', 'De água, terra, massinha'], outra: 'Outra coisa' },
   { tipo: 'pergunta', bloco: 'O tempo dele(a)', texto: 'Pensa num sábado. Todo mundo em casa, ninguém pedindo nada pra ele(a). Pra onde ele(a) vai?', instr: 'Pode marcar mais de uma',
-    opcoes: ['Pega brinquedo de montar', 'Vai atrás de alguém pra brincar', 'Corre, sobe, pula', 'Pega um livro, pede história', 'Quer televisão ou celular', 'Mexe em terra, água, bicho', 'Desmonta o que não é brinquedo'] },
+    opcoes: ['Pega brinquedo de montar', 'Vai atrás de alguém pra brincar', 'Corre, sobe, pula', 'Pega um livro, pede história', 'Quer televisão ou celular', 'Mexe em terra, água, bicho', 'Desmonta o que não é brinquedo'], outra: 'Outra coisa' },
   { tipo: 'pergunta', bloco: 'O tempo dele(a)', texto: 'Tem alguma coisa que ele(a) começa e o tempo passa e ele(a) nem vê?', instr: 'Pode marcar mais de uma',
-    opcoes: ['Brinquedo de montar', 'Brincar com alguém', 'Correr, subir, pular', 'Livro, história', 'Televisão ou celular', 'Terra, água, bicho'] },
+    opcoes: ['Brinquedo de montar', 'Brincar com alguém', 'Correr, subir, pular', 'Livro, história', 'Televisão ou celular', 'Terra, água, bicho'], outra: 'Outra coisa' },
   { tipo: 'pergunta', bloco: 'O tempo dele(a)', texto: 'E o contrário: alguma coisa que ele(a) larga em cinco minutos?', instr: 'Pode marcar mais de uma',
-    opcoes: ['Brinquedo de montar', 'Brincar com alguém', 'Correr, subir, pular', 'Livro, história', 'Televisão ou celular', 'Terra, água, bicho'] },
+    opcoes: ['Brinquedo de montar', 'Brincar com alguém', 'Correr, subir, pular', 'Livro, história', 'Televisão ou celular', 'Terra, água, bicho'], outra: 'Outra coisa' },
 
   { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre o ${NOME}!`, cta: 'Continuar' },
 
@@ -91,7 +92,7 @@ const FLUXO: Item[] = [
   { tipo: 'pergunta', bloco: 'Casa e fora de casa', texto: 'Tem uma coisa que quase todo pai percebe: a criança em casa e a criança fora de casa às vezes parecem duas. Acontece com ele(a)?',
     opcoes: ['Fala muito mais em casa', 'É mais quieto em casa', 'É mais agitado em casa', 'É mais agitado fora', 'É bem parecido nos dois'] },
   { tipo: 'pergunta', bloco: 'Casa e fora de casa', texto: 'No corre-corre do dia, o que ele(a) já faz sozinho(a) sem ninguém mandar?', instr: 'Pode marcar mais de uma',
-    opcoes: ['Come sozinho', 'Se veste, ou tenta', 'Escolhe a roupa', 'Guarda os brinquedos', 'Escova os dentes', 'Ainda faz tudo com ajuda'] },
+    opcoes: ['Come sozinho', 'Se veste, ou tenta', 'Escolhe a roupa', 'Guarda os brinquedos', 'Escova os dentes', 'Ainda faz tudo com ajuda'], outra: 'Outra coisa' },
   { tipo: 'pergunta', bloco: 'Casa e fora de casa', texto: 'Aniversário, parquinho, um lugar cheio de criança que ele(a) não conhece. O que ele(a) faz nos primeiros minutos?',
     opcoes: ['Entra na brincadeira logo', 'Fica olhando antes de entrar', 'Fica perto de você', 'Chama alguém pra brincar', 'Brinca sozinho do lado'] },
 
@@ -168,7 +169,7 @@ const QuestionarioPaisPreview = () => {
       <div className="absolute pointer-events-none" style={{ left: '-14%', right: '-14%', bottom: '-110px', height: 210, borderRadius: '50%', background: '#3E8F63', opacity: 0.55, zIndex: 0 }} />
       <div className="absolute pointer-events-none" style={{ left: '-14%', right: '-14%', bottom: '-140px', height: 222, borderRadius: '50%', background: '#1F6141', zIndex: 0 }} />
 
-      <div className="absolute pointer-events-none passaros-voo" style={{ top: '11%', left: '7%', width: 70, opacity: 0.42, zIndex: 1 }} aria-hidden>
+      <div className="absolute pointer-events-none passaros-voo" style={{ top: '4.5%', left: '6%', width: 76, opacity: 0.42, zIndex: 1 }} aria-hidden>
         <svg viewBox="0 0 90 30" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" className="w-full block">
           <path d="M4 12c3-4 6-4 8 0 2-4 5-4 8 0" /><path d="M34 5c2.4-3.2 4.8-3.2 6.4 0 1.6-3.2 4-3.2 6.4 0" /><path d="M62 20c2-2.6 4-2.6 5.4 0 1.4-2.6 3.4-2.6 5.4 0" />
         </svg>
@@ -254,24 +255,36 @@ const QuestionarioPaisPreview = () => {
         )}
 
         {/* ---------- PERGUNTA ---------- */}
-        {item?.tipo === 'pergunta' && (
+        {item?.tipo === 'pergunta' && (() => {
+          const rotuloOutra = item.outra ?? 'De outro jeito';
+          const opcoes = [...item.opcoes, rotuloOutra];
+          const escolheuOutra = marcadasAqui.includes(rotuloOutra);
+          // So' avanca com opcao marcada: texto sozinho nao vira dado legivel.
+          // A saida honesta e' o "Nao sei dizer", que tambem e' uma resposta.
+          const podeAvancar = marcadasAqui.length > 0;
+          return (
           <>
             <p className="text-[10.5px] font-bold uppercase mb-2.5" style={{ letterSpacing: '.22em', color: 'rgba(255,255,255,.76)' }}>{item.bloco}</p>
             <p style={{ fontFamily: T.serif, fontSize: 29, lineHeight: 1.24, fontWeight: 700, letterSpacing: '-.012em', margin: '0 0 6px' }}>{item.texto}</p>
             <p className="text-[14px]" style={{ color: 'rgba(255,255,255,.8)', margin: '0 0 22px' }}>{item.instr ?? 'Escolha uma'}</p>
 
             <div>
-              {item.opcoes.map((op, k) => {
+              {opcoes.map((op, k) => {
                 const on = marcadasAqui.includes(op);
                 return (
-                  <button key={op} onClick={() => alterna(op)} className="w-full flex items-center justify-between gap-3.5 text-left"
+                  <button
+                    key={op}
+                    onClick={() => { alterna(op); if (op === rotuloOutra) setAbertos((a) => ({ ...a, [i]: true })); }}
+                    className="w-full flex items-center justify-between gap-3.5 text-left"
                     style={{
                       minHeight: 56, padding: '15px 0',
                       borderBottom: '1px solid rgba(255,255,255,.24)',
                       borderTop: k === 0 ? '1px solid rgba(255,255,255,.24)' : undefined,
                       fontFamily: T.serif, fontSize: 20, lineHeight: 1.35, fontWeight: 600,
                       color: on ? '#fff' : 'rgba(255,255,255,.86)',
-                    }}>
+                      fontStyle: op === rotuloOutra ? 'italic' : 'normal',
+                    }}
+                  >
                     <span>{op}</span>
                     <span style={{ flex: 'none', width: 22, height: 2, background: on ? '#fff' : 'transparent' }} />
                   </button>
@@ -279,35 +292,53 @@ const QuestionarioPaisPreview = () => {
               })}
             </div>
 
-            {abertos[i] ? (
-              <div className="mt-4">
-                <p className="text-[12.5px] mb-1" style={{ color: 'rgba(255,255,255,.78)', letterSpacing: '.04em' }}>Tem história aí? Me conta.</p>
-                <p className="text-[12px] mb-2" style={{ color: 'rgba(255,255,255,.6)', fontStyle: 'italic' }}>
+            {abertos[i] || escolheuOutra ? (
+              <div className="mt-6">
+                <p style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 700, color: '#fff', margin: '0 0 4px' }}>Tem história aí? Me conta.</p>
+                <p className="text-[13.5px] mb-3" style={{ color: 'rgba(255,255,255,.7)', fontStyle: 'italic' }}>
                   tipo: “no papel ele erra a conta, mas se eu pergunto de cabeça ele acerta na hora”
                 </p>
-                <textarea value={textos[i] ?? ''} onChange={(e) => setTextos((t) => ({ ...t, [i]: e.target.value }))}
-                  rows={2} placeholder="uma frase basta" className="w-full bg-transparent outline-none resize-none"
-                  style={{ borderBottom: '1px solid rgba(255,255,255,.42)', fontFamily: T.serif, fontSize: 17, color: '#fff', paddingBottom: 4 }} />
+                <textarea
+                  value={textos[i] ?? ''}
+                  onChange={(e) => setTextos((t) => ({ ...t, [i]: e.target.value }))}
+                  rows={3}
+                  placeholder="escreva o quanto quiser"
+                  className="w-full bg-transparent outline-none resize-y"
+                  style={{ borderBottom: '1px solid rgba(255,255,255,.42)', fontFamily: T.serif, fontSize: 19, color: '#fff', paddingBottom: 6 }}
+                />
               </div>
             ) : (
-              <button onClick={() => setAbertos((a) => ({ ...a, [i]: true }))} className="flex items-center gap-2.5 mt-4 text-[14.5px]" style={{ color: 'rgba(255,255,255,.86)' }}>
-                <span className="text-[17px] leading-none">+</span>
-                <span style={{ textDecoration: 'underline', textUnderlineOffset: 4 }}>Tem história aí? Me conta.</span>
+              <button onClick={() => setAbertos((a) => ({ ...a, [i]: true }))} className="flex items-center gap-3 mt-6" style={{ color: '#fff' }}>
+                <span className="flex items-center justify-center" style={{ width: 30, height: 30, borderRadius: 999, border: '2px solid rgba(255,255,255,.7)', fontSize: 19, lineHeight: 1, paddingBottom: 2 }}>+</span>
+                <span style={{ fontFamily: T.serif, fontSize: 20, fontWeight: 600 }}>Tem história aí? Me conta.</span>
               </button>
             )}
 
-            <button onClick={avanca} className="mt-4 text-[14.5px] self-start" style={{ color: 'rgba(255,255,255,.78)', textDecoration: 'underline', textUnderlineOffset: 4 }}>
-              Não sei dizer
-            </button>
-
-            <Rodape>
-              <button onClick={avanca} className="flex items-center gap-2 text-[13px] font-bold uppercase"
-                style={{ letterSpacing: '.16em', color: '#fff', borderBottom: '2px solid #fff', paddingBottom: 6 }}>
-                {marcadasAqui.length > 0 ? <>Próxima <Check size={14} /></> : 'Pular esta'}
+            <div className="pt-8 flex items-center justify-between gap-4 flex-wrap">
+              <button
+                onClick={() => { setMarcadas((m) => ({ ...m, [i]: [NAO_SEI] })); avanca(); }}
+                className="text-[15px]"
+                style={{ color: 'rgba(255,255,255,.82)', textDecoration: 'underline', textUnderlineOffset: 4 }}
+              >
+                Não sei dizer
               </button>
-            </Rodape>
+              <button
+                onClick={() => { if (podeAvancar) avanca(); }}
+                disabled={!podeAvancar}
+                className="inline-flex items-center gap-2.5 font-bold uppercase"
+                style={{
+                  fontSize: 15, letterSpacing: '.14em', padding: '13px 24px', borderRadius: 999,
+                  border: '2px solid #fff', color: '#fff',
+                  opacity: podeAvancar ? 1 : 0.35,
+                  cursor: podeAvancar ? 'pointer' : 'default',
+                }}
+              >
+                Próxima <span aria-hidden style={{ fontSize: 17, lineHeight: 1 }}>→</span>
+              </button>
+            </div>
           </>
-        )}
+          );
+        })()}
       </div>
 
       <div className="relative text-center pb-4 text-[11px]" style={{ color: 'rgba(255,255,255,.55)', zIndex: 2 }}>
