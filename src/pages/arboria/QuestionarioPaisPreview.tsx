@@ -335,25 +335,39 @@ const QuestionarioPaisPreview = () => {
             <p style={{ fontFamily: T.serif, fontSize: 29, lineHeight: 1.24, fontWeight: 700, letterSpacing: '-.012em', margin: '0 0 6px' }}>{item.texto}</p>
             <p className="text-[14px]" style={{ color: 'rgba(255,255,255,.8)', margin: '0 0 22px' }}>{item.instr ?? 'Escolha uma'}</p>
 
-            <div>
-              {opcoes.map((op, k) => {
+            {/* A marcacao vira o fundo inteiro, nao um risquinho. Testado com um
+                pai de verdade: texto branco mais branco nao e' sinal de nada.
+                Desmarcado ja mostra a bolinha vazia, para o pai entender antes
+                de tocar que aquilo se escolhe. */}
+            <div className="flex flex-col gap-2.5">
+              {opcoes.map((op) => {
                 const on = marcadasAqui.includes(op);
                 return (
                   <button
                     key={op}
                     onClick={() => { alterna(op); if (op === rotuloOutra) setAbertos((a) => ({ ...a, [i]: true })); }}
-                    className="w-full flex items-center justify-between gap-3.5 text-left"
+                    className="w-full flex items-center justify-between gap-3 text-left transition-colors"
                     style={{
-                      minHeight: 56, padding: '15px 0',
-                      borderBottom: '1px solid rgba(255,255,255,.24)',
-                      borderTop: k === 0 ? '1px solid rgba(255,255,255,.24)' : undefined,
-                      fontFamily: T.serif, fontSize: 20, lineHeight: 1.35, fontWeight: 600,
-                      color: on ? '#fff' : 'rgba(255,255,255,.86)',
+                      minHeight: 58, padding: '13px 16px', borderRadius: 15,
+                      background: on ? '#fff' : 'rgba(255,255,255,.10)',
+                      border: on ? '2px solid #fff' : '2px solid rgba(255,255,255,.34)',
+                      boxShadow: on ? '0 6px 18px rgba(9,45,74,.28)' : undefined,
+                      fontFamily: T.serif, fontSize: 19.5, lineHeight: 1.32, fontWeight: 600,
+                      color: on ? '#0E3F66' : '#fff',
                       fontStyle: op === rotuloOutra ? 'italic' : 'normal',
                     }}
                   >
                     <span>{op}</span>
-                    <span style={{ flex: 'none', width: 22, height: 2, background: on ? '#fff' : 'transparent' }} />
+                    <span
+                      className="flex items-center justify-center"
+                      style={{
+                        flex: 'none', width: 26, height: 26, borderRadius: 999,
+                        background: on ? '#1F6141' : 'transparent',
+                        border: on ? '2px solid #1F6141' : '2px solid rgba(255,255,255,.55)',
+                      }}
+                    >
+                      {on && <Check size={15} strokeWidth={3.5} color="#fff" />}
+                    </span>
                   </button>
                 );
               })}
