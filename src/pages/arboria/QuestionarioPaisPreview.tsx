@@ -165,14 +165,14 @@ const CENAS_M2: Item[] = [
     cena: `Pra começar, uma cena que tem em toda casa. Ontem, anteontem, esses dias: ${NOME} estava mexendo numa coisa que não abria, ou montando alguma coisa que caiu.`,
     texto: 'Qual foi a primeira coisa que ele(a) fez depois?',
     convite: 'Me conta como foi essa vez',
-    opcoes: ['Fez de novo do mesmo jeito', 'Virou a coisa e tentou por outro lado', 'Levou até você e pôs na sua mão', 'Foi pegar alguma coisa pra ajudar', 'Ficou olhando aquilo um tempo antes de mexer', 'Deixou pra lá e foi pra outra brincadeira'],
+    opcoes: ['Fez de novo do mesmo jeito, com mais força', 'Virou a coisa e tentou por outro lado', 'Levou até você e pôs na sua mão', 'Foi pegar algo pra ajudar: uma cadeira, um pauzinho', 'Ficou olhando aquilo um tempo antes de mexer', 'Deixou pra lá e foi pra outra brincadeira'],
     outra: 'De outro jeito' },
 
   { tipo: 'pergunta',
     cena: `Essa semana ${NOME} quis uma coisa que estava em cima, alta demais pra ele(a).`,
     texto: 'O que ele(a) tentou primeiro?',
     convite: 'Me conta essa cena',
-    opcoes: ['Foi com o corpo: esticou, pulou, subiu no que tinha perto', 'Trouxe uma coisa pra alcançar: cadeira, banquinho, ou puxou o pano', 'Pegou você pela mão e levou até lá', 'Ficou apontando e falando até alguém ir', 'Ficou olhando pra coisa, esperando alguém ver', 'Deixou pra lá e foi fazer outra coisa'],
+    opcoes: ['Esticou, pulou, subiu no que tinha perto', 'Arrastou uma cadeira, ou puxou o pano de cima', 'Pegou você pela mão e levou até lá', 'Ficou apontando e falando até alguém ir', 'Ficou olhando pra coisa, esperando alguém ver', 'Deixou pra lá e foi fazer outra coisa'],
     outra: 'De outro jeito' },
 
   { tipo: 'pergunta',
@@ -188,7 +188,7 @@ const CENAS_M2: Item[] = [
     // preocupacao sem dar onde pousar. Agora as opcoes estao escritas como cena
     // e duas delas (a analogia e o som) nao pertencem a triagem nenhuma, o que
     // quebra o padrao sem perder o que a pergunta lia.
-    opcoes: ['Foi puxando você até o lugar', 'Apontou de longe', 'Fez o som ou o gesto da coisa', 'Apontou e olhou pra você, esperando você entender', 'Trouxe uma coisa parecida pra você entender qual era', 'Repetiu a mesma palavra até você entender'],
+    opcoes: ['Foi puxando você até o lugar', 'Apontou de longe', 'Fez o barulho ou o gesto daquilo que queria', 'Apontou e olhou pra você, esperando você entender', 'Trouxe outra coisa parecida pra você ver', 'Repetiu a mesma palavra até você entender'],
     outra: 'De outro jeito' },
 
   { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre ${NOME}!`, cta: 'Continuar' },
@@ -197,14 +197,14 @@ const CENAS_M2: Item[] = [
     cena: 'Tem coisas que vocês fazem sempre na mesma ordem. Esses dias mudou sem querer: chegou visita, faltou tempo, alguém fez de outro jeito.',
     texto: `O que ${NOME} fez?`,
     convite: 'Me conta o que aconteceu',
-    opcoes: ['Refez do jeito de sempre, por conta dele(a)', 'Pôs a mão de quem estava fazendo de volta no lugar', 'Falou não e apontou o que estava errado', 'Riu e foi junto do jeito novo', 'Seguiu no que estava fazendo, sem mudar nada', 'Saiu de perto'],
+    opcoes: ['Refez do jeito de sempre, sozinho(a)', 'Pegou na mão de quem estava fazendo e botou no lugar certo', 'Falou não e apontou o que estava errado', 'Riu e foi junto do jeito novo', 'Seguiu no que estava fazendo, sem mudar nada', 'Saiu de perto'],
     outra: 'De outro jeito' },
 
   { tipo: 'pergunta',
     cena: `Essa semana ${NOME} estava no meio de alguma coisa e parou do nada, por conta própria. Ninguém chamou ele(a).`,
     texto: 'Da última vez que isso aconteceu, o que foi que fez ele(a) parar?',
     convite: 'Me conta essa vez',
-    opcoes: ['Um barulho que veio de fora', 'Um bicho, uma planta, alguma coisa viva', 'Alguém chegando ou saindo', 'Uma música, alguém cantando', 'Uma luz, uma sombra, alguma coisa se mexendo', 'Alguma coisa que estava diferente do normal ali'],
+    opcoes: ['Um barulho que veio de fora', 'Um bicho, uma planta, alguma coisa viva', 'Alguém chegando ou saindo', 'Uma música, alguém cantando', 'Uma luz, uma sombra, alguma coisa se mexendo', 'Alguma coisa que estava diferente ali'],
     outra: 'De outro jeito' },
 
   // A pausa que explica ao pai por que isto importa. Sem ela o questionario
@@ -218,15 +218,15 @@ const CENAS_M2: Item[] = [
     cena: `Esses dias teve outra criança por perto de ${NOME}. Na casa de alguém, no parque, na porta da escola.`,
     texto: 'O que ele(a) fez nos primeiros minutos?',
     convite: 'Me conta como foi',
-    opcoes: ['Ficou olhando de longe um tempo antes de chegar perto', 'Foi direto, sem pensar duas vezes', 'Ficou colado em você antes de ir', 'Pegou um brinquedo e levou até a outra criança', 'Começou a fazer o que a outra criança estava fazendo', 'Brincou do lado, cada um no seu'],
+    opcoes: ['Ficou olhando de longe um tempo antes de chegar perto', 'Foi direto, sem esperar', 'Ficou colado em você antes de ir', 'Pegou um brinquedo e levou até a outra criança', 'Começou a fazer o que a outra criança estava fazendo', 'Brincou do lado, cada um no seu'],
     outra: 'De outro jeito' },
 
   { tipo: 'pergunta',
-    cena: 'Criança dessa idade copia o que vê, e cada uma copia uma coisa diferente da mesma cena.',
-    texto: `A última vez que você viu ${NOME} copiando alguém, o que foi que ele(a) copiou?`,
+    cena: `Esses dias você viu ${NOME} fazendo alguma coisa igualzinha a alguém.`,
+    texto: 'O que foi que ele(a) copiou?',
     convite: 'Me conta o que ele(a) copiou',
     instr: 'Pode marcar mais de uma',
-    opcoes: ['Uma palavra, um jeito de falar', 'Um gesto, um jeito de mexer a mão', 'Uma tarefa, na ordem em que viu', 'O jeito de sentar, de andar', 'Onde a pessoa botou as coisas', 'O jeito de cuidar de alguém'],
+    opcoes: ['Uma palavra, um jeito de falar', 'Um gesto, um jeito de mexer a mão', 'Uma coisa inteira, na mesma ordem em que viu', 'O jeito de sentar, de andar', 'Onde a pessoa guardou as coisas', 'O jeito de cuidar: ninar, fazer carinho'],
     outra: 'De outro jeito' },
 
   { tipo: 'transicao', enorme: 'Está quase acabando!', cta: 'Continuar' },
@@ -236,7 +236,7 @@ const CENAS_M2: Item[] = [
     texto: 'Depois disso, em casa, ele(a) trouxe alguma coisa daquilo de volta?',
     convite: 'Me conta o que ele(a) trouxe de lá',
     instr: 'Pode marcar mais de uma',
-    opcoes: ['Fez o movimento que viu alguém fazendo lá', 'Repetiu o som ou a música que ouviu', 'Procurou em casa uma coisa parecida com a de lá', 'Brincou de ser aquilo', 'Falou uma palavra solta daquilo, dias depois', 'Não trouxe nada de lá dessa vez'],
+    opcoes: ['Repetiu um movimento que viu alguém fazer lá', 'Repetiu o som ou a música que ouviu', 'Procurou em casa uma coisa parecida com a de lá', 'Brincou de ser alguma coisa que viu lá: o bicho, o moço, o carro', 'Dias depois, do nada, falou uma palavra sobre aquele lugar', 'Não trouxe nada de lá dessa vez'],
     outra: 'De outro jeito' },
 ];
 
@@ -264,21 +264,21 @@ const CENAS_G4: Item[] = [
     cena: `Pra começar, uma cena que tem em toda casa. Ontem, anteontem, esses dias: ${NOME} estava tentando fazer alguma coisa sozinho(a) e aquilo não ia.`,
     texto: 'O que ele(a) fez antes de pedir ajuda?',
     convite: 'Me conta como foi essa vez',
-    opcoes: ['Foi tentando de novo até dar certo', 'Parou, olhou a coisa toda, e tentou por outro caminho', 'Foi buscar outra coisa pra usar como ferramenta', 'Foi falando em voz alta o que estava fazendo', 'Já disse que não ia dar certo antes de terminar', 'Tentou pouco e veio pedir logo'],
+    opcoes: ['Insistiu, tentou de novo várias vezes', 'Parou, olhou bem a coisa e tentou de outro jeito', 'Foi buscar algo pra ajudar: uma cadeira, um pauzinho', 'Ficou falando sozinho(a) enquanto tentava', 'Já foi dizendo que não ia conseguir', 'Tentou uma vez e já veio chamar'],
     outra: 'De outro jeito' },
 
   { tipo: 'pergunta',
     cena: `Esses dias ${NOME} começou alguma coisa que ia demorar: um desenho grande, uma construção, uma brincadeira de várias partes.`,
     texto: 'Como ele(a) começou?',
     convite: 'Me conta o que ele(a) estava fazendo',
-    opcoes: ['Foi fazendo, e o plano foi aparecendo no caminho', 'Falou antes o que ia fazer', 'Separou e organizou as coisas antes de começar', 'Foi buscar um modelo pra copiar: uma figura, outro já pronto', 'Chamou alguém pra fazer junto desde o começo', 'Começou pelo pedaço que achava mais fácil'],
+    opcoes: ['Já foi fazendo, sem parar pra pensar', 'Contou antes o que ia fazer', 'Separou tudo o que ia usar antes de começar', 'Foi procurar um pronto pra copiar: uma figura, um igual', 'Já chamou alguém pra fazer junto', 'Começou pela parte mais fácil'],
     outra: 'De outro jeito' },
 
   { tipo: 'pergunta',
     cena: `Esses dias alguma coisa que ${NOME} estava fazendo deu errado pela segunda vez.`,
     texto: 'O que ele(a) fez dessa vez?',
     convite: 'Me conta o que aconteceu',
-    opcoes: ['Refez do mesmo jeito, com mais capricho', 'Mudou uma coisa só e testou', 'Mudou o plano inteiro', 'Falou o que tinha dado errado', 'Foi pedir ajuda dizendo onde estava travando', 'Largou e foi fazer outra coisa'],
+    opcoes: ['Fez tudo de novo, do mesmo jeito', 'Mudou uma coisinha e tentou de novo', 'Deixou aquele jeito e foi tentar outro', 'Contou o que tinha dado errado', 'Chamou ajuda já mostrando onde travou', 'Largou e foi fazer outra coisa'],
     outra: 'De outro jeito' },
 
   { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre ${NOME}!`, cta: 'Continuar' },
@@ -289,21 +289,21 @@ const CENAS_G4: Item[] = [
     texto: 'O que ele(a) fez?',
     convite: 'Me conta o que era, e como você descobriu',
     instr: 'Pode marcar mais de uma',
-    opcoes: ['Falou de novo, com outras palavras', 'Disse o que não era: "não é esse, é o outro"', 'Comparou com uma coisa que você conhece', 'Levou você até o lugar, ou mostrou', 'Fez a cena, imitou o que aconteceu', 'Ficou bravo(a) e desistiu de explicar'],
+    opcoes: ['Falou de novo, trocando as palavras', 'Disse o que não era: não é esse, é o outro', 'Comparou com outra coisa que você conhece', 'Levou você até lá pra mostrar', 'Imitou a cena, mostrou como tinha sido', 'Ficou bravo(a) e largou de explicar'],
     outra: 'De outro jeito' },
 
   { tipo: 'pergunta',
     cena: `Esses dias ${NOME} quis que alguém fizesse alguma coisa do jeito dele(a). Um jogo, um desenho, uma brincadeira.`,
     texto: 'Como ele(a) conduziu?',
     convite: 'Me conta como foi',
-    opcoes: ['Explicou falando, passo a passo', 'Fez primeiro pra pessoa ver', 'Foi ajeitando a mão da pessoa', 'Combinou a vez: primeiro você, depois eu', 'Foi corrigindo enquanto a pessoa fazia', 'Acabou fazendo sozinho(a)'],
+    opcoes: ['Foi explicando por partes, falando', 'Fez uma vez pra pessoa ver como era', 'Pegou na mão da pessoa e foi ajeitando', 'Combinou a vez: agora você, depois eu', 'Foi corrigindo a pessoa enquanto ela fazia', 'Cansou de explicar e fez sozinho(a)'],
     outra: 'De outro jeito' },
 
   { tipo: 'pergunta',
     cena: 'Fim da tarde, você perguntou como tinha sido o dia.',
     texto: 'O que aconteceu?',
     convite: 'Me conta o que ele(a) falou',
-    opcoes: ['Contou sozinho(a), do começo ao fim', 'Contou um pedaço só, o que marcou', 'Contou porque você foi perguntando', 'Repetiu a fala de alguém, do jeitinho que a pessoa falou', 'Falou de como se sentiu, não do que aconteceu', 'Disse que não lembrava'],
+    opcoes: ['Contou tudo sozinho(a), do começo ao fim', 'Contou só uma coisa, a que marcou', 'Só contou porque você foi perguntando', 'Repetiu a fala de alguém, do jeitinho da pessoa', 'Falou de como se sentiu, não do que aconteceu', 'Disse que não lembrava'],
     outra: 'De outro jeito' },
 
   // ----------------------------------------- eixo 3: como decifra o que e' novo
@@ -311,7 +311,7 @@ const CENAS_G4: Item[] = [
     cena: `Uma brincadeira com regra que ${NOME} nunca tinha visto, e as outras crianças já sabiam como era.`,
     texto: 'O que ele(a) fez?',
     convite: 'Me conta como foi',
-    opcoes: ['Perguntou como era antes de entrar', 'Ficou olhando uma rodada inteira e depois entrou', 'Entrou junto e foi pegando no caminho', 'Copiou uma criança em especial', 'Perguntou se podia fazer de outro jeito', 'Chamou um adulto pra explicar'],
+    opcoes: ['Perguntou como era antes de entrar', 'Assistiu uma rodada inteira e só depois entrou', 'Entrou logo e foi aprendendo errando', 'Ficou fazendo igual a uma criança só', 'Perguntou se podia fazer de outro jeito', 'Chamou um adulto pra explicar'],
     outra: 'De outro jeito' },
 
   // A pausa que explica ao pai por que isto importa. Sem ela o questionario
@@ -325,7 +325,7 @@ const CENAS_G4: Item[] = [
     cena: `Chegou uma coisa nova, ou vocês viram alguma coisa funcionando que ${NOME} nunca tinha visto.`,
     texto: 'Qual foi a primeira pergunta dele(a)?',
     convite: 'Me conta o que era, e o que ele(a) perguntou',
-    opcoes: ['Pra que serve', 'Como funciona por dentro', 'Se ele(a) pode mexer', 'Quem fez, quem trouxe', 'Se tem outro igual em algum lugar', 'Por que é assim e não de outro jeito'],
+    opcoes: ['Pra que isso serve?', 'Como é por dentro?', 'Eu posso mexer?', 'Quem trouxe? De quem é?', 'Tem outro igual em algum lugar?', 'Por que é assim?'],
     outra: 'De outro jeito' },
 
   // ----------------------------------------------- eixo 4: o que sobra dela
@@ -334,7 +334,7 @@ const CENAS_G4: Item[] = [
     texto: `O que ${NOME} fez com esse tempo?`,
     convite: 'Me conta como foi',
     instr: 'Pode marcar mais de uma',
-    opcoes: ['Inventou uma história, falou sozinho(a)', 'Cantou, fez ritmo, bateu em alguma coisa', 'Ficou olhando as pessoas e comentando', 'Ficou reparando nas coisas: placas, carros, letras', 'Começou a contar, comparar, achar iguais', 'Não parou o corpo'],
+    opcoes: ['Inventou uma história e ficou falando sozinho(a)', 'Ficou cantando ou batendo em alguma coisa', 'Ficou olhando as pessoas e falando delas', 'Ficou reparando em tudo: placa, carro, letra', 'Ficou contando as coisas e vendo qual era maior', 'Não parou quieto(a) um minuto'],
     outra: 'De outro jeito' },
 
   { tipo: 'pergunta',
@@ -342,7 +342,7 @@ const CENAS_G4: Item[] = [
     texto: 'O que sobrou daquilo nele(a)?',
     convite: 'Me conta o que ficou',
     instr: 'Pode marcar mais de uma',
-    opcoes: ['Contou a mesma história várias vezes', 'Desenhou o que viu', 'Brincou de ser aquilo', 'Cantou ou repetiu um som de lá', 'Voltou ao assunto dias depois, com pergunta nova', 'Pediu pra voltar lá'],
+    opcoes: ['Ficou contando a mesma história várias vezes', 'Desenhou o que tinha visto', 'Brincou de ser o que viu lá: o bicho, o moço, o carro', 'Ficou repetindo uma música ou um som de lá', 'Dias depois voltou no assunto com uma pergunta nova', 'Ficou pedindo pra voltar lá'],
     outra: 'De outro jeito' },
 
   { tipo: 'pergunta',
@@ -350,7 +350,7 @@ const CENAS_G4: Item[] = [
     texto: 'O que ele(a) fez, na prática, nessas vezes?',
     convite: 'Me conta do que ele(a) brincou',
     instr: 'Pode marcar mais de uma',
-    opcoes: ['Deu nome e voz aos brinquedos, virou história', 'Separou e organizou antes de começar', 'Botou música ou ritmo no que estava fazendo', 'Virou disputa: quem ganha, quem chega primeiro', 'Falou o tempo todo, mesmo sem ninguém junto', 'Montou uma regra e ficou seguindo ela'],
+    opcoes: ['Ficou conversando pelos bonecos, fazendo a voz de cada um', 'Ficou falando sozinho(a) o tempo todo, mesmo sem ninguém', 'Ficou cantarolando ou fazendo barulhinho enquanto brincava', 'Antes de começar, separou e arrumou tudo do jeito dele(a)', 'Inventou uma regra e foi seguindo ela sozinho(a)', 'Não ficou parado(a): levantava, corria, voltava'],
     outra: 'De outro jeito' },
 
   { tipo: 'transicao', enorme: 'Está quase acabando!', cta: 'Continuar' },
@@ -360,21 +360,21 @@ const CENAS_G4: Item[] = [
     cena: `Esses dias ${NOME} reparou em alguma coisa que ninguém mais tinha visto.`,
     texto: 'O que foi?',
     convite: 'Me conta essa vez',
-    opcoes: ['Uma coisa que mudou de lugar em casa', 'Uma diferença pequena entre duas coisas quase iguais', 'Um som que ninguém mais tinha ouvido', 'A cara de alguém, que estava diferente', 'Uma letra, um número, uma placa', 'Que faltava alguma coisa, ou faltava alguém'],
+    opcoes: ['Uma coisa que tinha mudado de lugar em casa', 'Que duas coisas quase iguais tinham uma diferença', 'Um barulho que ninguém mais tinha ouvido', 'A cara de alguém, que estava diferente', 'Uma letra, um número, uma placa', 'Que estava faltando alguma coisa, ou alguém'],
     outra: 'De outro jeito' },
 
   { tipo: 'pergunta',
     cena: `${NOME} já te corrigiu numa coisa que você nem tinha percebido que errou.`,
     texto: 'Sobre o que foi?',
     convite: 'Me conta como foi',
-    opcoes: ['Uma palavra trocada numa história', 'O caminho: "não é por aqui"', 'Uma coisa que estava fora do lugar', 'A música, o jeito de cantar', 'Que você disse uma coisa e fez outra', 'Uma conta, uma quantidade'],
+    opcoes: ['Uma palavra que você trocou contando história', 'O caminho: não é por aqui', 'Uma coisa que estava fora do lugar', 'A música: você cantou errado', 'Que você disse uma coisa e fez outra', 'Uma conta, um número de coisas'],
     outra: 'De outro jeito' },
 
   { tipo: 'pergunta',
     cena: `${NOME} junta e guarda coisas dele(a): pedra, tampinha, papel, brinquedo pequeno.`,
     texto: 'Da última vez que você viu aquilo, como estava organizado?',
     convite: 'Me conta o que ele(a) junta',
-    opcoes: ['Junto por cor', 'Junto por tamanho', 'Junto por tipo: bicho com bicho, carro com carro', 'Numa ordem que ele(a) mantém, e reclama se mexem', 'Do jeito que ele(a) achou bonito, sem regra clara', 'Tudo misturado'],
+    opcoes: ['Tudo junto por cor', 'Tudo junto por tamanho', 'Bicho com bicho, carro com carro', 'Numa ordem dele(a), e reclama se alguém mexe', 'Do jeito que achou bonito, sem regra nenhuma', 'Tudo misturado, sem ordem'],
     outra: 'De outro jeito' },
 ];
 
