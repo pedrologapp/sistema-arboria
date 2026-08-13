@@ -32,3 +32,6 @@ n8n/
 *.njsproj
 *.sln
 *.sw?
+
+# Arquivos com nome de crianca ou avaliacao individual: nunca vao para o GitHub
+privado/

@@ -30,8 +30,11 @@
 
 | O quê | Estado | Nota |
 |---|---|---|
+| **Questionário do PROFESSOR e dos PAIS** | **MESA REUNIDA 12/08. Reunião com as professoras em 13/08** | Os 5 setores deram parecer. Desenho e roteiro da reunião no artefato publicado em 12/08. **Riscos vetou 3 pontos** (finalidade oculta nos pais; campo de predominância no Infantil; coleta fora do ambiente controlado) e liberou o instrumento do professor com condições. O mesmo questionário serve a Infantil e F1: espinha única, âncoras de cena por faixa, mais um bloco aditivo só no F1.2. **Dois bloqueantes dependem da reunião:** existir um segundo adulto que veja a criança, e existirem rotinas estáveis entre turmas |
+| Reunião com as professoras do Infantil | 13/08, amanhã | Regra de ouro: **não mostrar nenhuma pergunta do instrumento.** Perguntas prontas contaminam o vocabulário delas, que é o ativo que a reunião existe para colher |
+| Trilho protegido de necessidade educacional específica | **PRÉ-REQUISITO DO QUESTIONÁRIO** (era AGUARDA VOCÊ) | Enquanto não existir lugar legítimo para laudo e plano de apoio, esse dado continua caindo no texto livre. O questionário multiplica a superfície do problema |
 | Ajustar a tela do Infantil (a reforma da visão do professor foi fechada, a tela não acompanhou) | PRONTO PRA COMEÇAR | Decisões já tomadas na Assembleia de 26/06 |
-| Questionário para pais e para professor (pergunta indireta, cena/história) | AGUARDA VOCÊ | Rascunho dos dois pronto. Lapidar o dos PAIS primeiro (a Q1 ficou confusa). Gates de Conteúdo e Riscos antes de enviar |
+| Questionário para PAIS (pergunta indireta, cena/história) | AGUARDA VOCÊ | Rascunho pronto. Lapidar a Q1, que ficou confusa. Vem depois do questionário do professor |
 | Banco de atividades por fase/semana | FUNDO DA FILA | Fundação do pipeline de dados |
 
 ---
