@@ -88,7 +88,7 @@ const FLUXO_BRUTO: Item[] = [
 
   { tipo: 'fala',
     linhas: [
-      'E não tem resposta certa aqui.',
+      'E não tem resposta certa ou errada aqui.',
       'Eu não quero saber o que ele(a) já aprendeu: quero saber o jeito dele(a).',
       'E pode contar as coisas esquisitas também. Muita vez é ali que está o mais interessante.',
     ], cta: 'Continuar' },
