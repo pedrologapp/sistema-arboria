@@ -105,20 +105,21 @@ const FLUXO_BRUTO: Item[] = [
 
   { tipo: 'crianca', cta: 'É ele' },
 
+  // A reacao ao nome vem colada na confirmacao da crianca: o pai diz quem e' e
+  // o Arboria reage NA HORA, antes de qualquer outra pergunta. Reagir depois de
+  // mais uma pergunta de cadastro faria o Arboria parecer que estava reagindo
+  // ao formulario. Saiu daqui o "prontos para falarem de quem voces mais amam",
+  // porque a largada agora e' o botao da ultima tela de contexto.
+  { tipo: 'transicao',
+    enorme: `Ah, ${NOME}!`,
+    linha: `Estou animado para ${CONHECE_LO} melhor.`,
+    cta: 'Continuar' },
+
   { tipo: 'respondente', chave: 'responde',
     titulo: 'E quem está me contando hoje?',
     sub: 'Pergunto porque cada um vê uma parte diferente do dia dele(a).',
     opcoes: ['A mãe', 'O pai', 'Os dois juntos', 'A avó ou o avô', OUTRO_CUIDADOR],
     livre: OUTRO_CUIDADOR, cta: 'Continuar' },
-
-  // A reacao ao nome vem antes da pergunta de quem fica mais tempo: assim o
-  // Arboria responde a crianca, e nao ao formulario. Saiu daqui o "prontos
-  // para falarem de quem voces mais amam", porque a primeira cena ja abre com
-  // "pra comecar" e faz sozinha o trabalho de largada.
-  { tipo: 'transicao',
-    enorme: `Ah, ${NOME}!`,
-    linha: `Estou animado para ${CONHECE_LO} melhor.`,
-    cta: 'Continuar' },
 
   // Cerca de uma em cada seis respostas seria dada sobre horas que quem esta
   // respondendo nao viu, e dada com confianca. Esta tela corrige mais vies do
