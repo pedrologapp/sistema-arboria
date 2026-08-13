@@ -21,10 +21,37 @@ const CEU = '/arboria/ceu.png';
 const NOME = 'Arthur';
 const TURMA = 'Maternal 2 B';
 const NAO_SEI = '__nao_sei__';
-// O app sabe de quem se trata, entao escreve certo em vez de usar parenteses.
-const SEXO: 'M' | 'F' = 'M';
-const O_A = SEXO === 'M' ? 'o' : 'a';
-const CONHECE_LO = SEXO === 'M' ? 'conhecê-lo' : 'conhecê-la';
+// ------------------------------------------------------------------ FLEXAO
+// O app sabe de quem se trata, entao o texto inteiro fala no genero da crianca
+// em vez de empurrar "(a)" para o pai ler. As frases sao escritas com a marca
+// "ele(a)" e a flexao acontece aqui: no masculino o parenteses cai, no feminino
+// a ultima vogal vira "a". Quem escrever pergunta nova so precisa usar a marca.
+// No produto o sexo vem do cadastro da crianca; aqui o ?sexo=F testa o feminino.
+const SEXO: 'M' | 'F' =
+  new URLSearchParams(window.location.search).get('sexo')?.toUpperCase() === 'F' ? 'F' : 'M';
+const FEM = SEXO === 'F';
+
+function flex(s: string): string {
+  return s
+    // artigo e possessivo andam junto com o substantivo
+    .replace(/\bo seu filho\(a\)/g, FEM ? 'a sua filha' : 'o seu filho')
+    .replace(/\bseu filho\(a\)/g, FEM ? 'sua filha' : 'seu filho')
+    // ele(a) -> ela | dele(a) -> dela | sozinho(a) -> sozinha
+    .replace(/([A-Za-zÀ-ÿ]+?)([oe])\(a\)/g, (_m, raiz, vogal) => raiz + (FEM ? 'a' : vogal));
+}
+
+// A flexao roda uma vez sobre os dados, nao a cada render.
+function flexProfundo<T>(v: T): T {
+  if (typeof v === 'string') return flex(v) as unknown as T;
+  if (Array.isArray(v)) return v.map((x) => flexProfundo(x)) as unknown as T;
+  if (v && typeof v === 'object') {
+    return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, flexProfundo(x)])) as T;
+  }
+  return v;
+}
+
+const O_A = FEM ? 'a' : 'o';
+const CONHECE_LO = FEM ? 'conhecê-la' : 'conhecê-lo';
 
 const T = {
   fundo: '#135E96',
@@ -37,7 +64,7 @@ type Item =
   | { tipo: 'transicao'; enorme: string; linha?: string; cta: string }
   | { tipo: 'pergunta'; bloco: string; texto: string; instr?: string; opcoes: string[]; outra?: string; convite?: string };
 
-const FLUXO: Item[] = [
+const FLUXO_BRUTO: Item[] = [
   // ---------------------------------------------------------------- entrada
   // A primeira tela precisa dizer QUEM esta falando e DE ONDE vem, senao o pai
   // recebe um desconhecido pedindo intimidade sobre o filho. Quem da confianca
@@ -128,6 +155,8 @@ const FLUXO: Item[] = [
     opcoes: ['Dança no ritmo', 'Canta junto ou tenta', 'Para pra ouvir', 'Continua o que fazia', 'Bate em algo fazendo som', 'Pede pra desligar'] },
 ];
 
+const FLUXO: Item[] = flexProfundo(FLUXO_BRUTO);
+
 const TOTAL = FLUXO.filter((x) => x.tipo === 'pergunta').length;
 const numeroDaPergunta = (i: number) => FLUXO.slice(0, i + 1).filter((x) => x.tipo === 'pergunta').length;
 
@@ -201,10 +230,18 @@ const QuestionarioPaisPreview = () => {
         @keyframes surge { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
         
         .revela { animation: surge 1s cubic-bezier(.22,.61,.36,1) both; }
-        .pausa-frase { animation: surge .9s cubic-bezier(.22,.61,.36,1) both; }
-        .pausa-linha { animation: surge .9s cubic-bezier(.22,.61,.36,1) .35s both; }
-        .cta-forte { animation: surge .8s cubic-bezier(.22,.61,.36,1) .8s both; }
-        @media (prefers-reduced-motion: reduce) { .passaros-voo, .cta-forte, .pausa-frase, .pausa-linha, .revela { animation: none; opacity: 1; transform: none } }
+        .pausa-frase { animation: surge 1.1s cubic-bezier(.22,.61,.36,1) .4s both; }
+        .pausa-linha { animation: surge 1.1s cubic-bezier(.22,.61,.36,1) 1.6s both; }
+        .cta-forte { animation: surge .9s cubic-bezier(.22,.61,.36,1) 2.8s both; }
+        /* A tela do fim entra mais devagar que todas: e' a unica que o pai
+           nao precisa vencer, entao ela pode tomar o tempo dela. */
+        .fim-1 { animation: surge 1.2s cubic-bezier(.22,.61,.36,1) .4s both; }
+        .fim-2 { animation: surge 1.2s cubic-bezier(.22,.61,.36,1) 1.9s both; }
+        .fim-3 { animation: surge 1.2s cubic-bezier(.22,.61,.36,1) 3.4s both; }
+        .fim-4 { animation: surge 1.2s cubic-bezier(.22,.61,.36,1) 4.9s both; }
+        .fim-5 { animation: surge 1.2s cubic-bezier(.22,.61,.36,1) 6.2s both; }
+        @media (prefers-reduced-motion: reduce) { .passaros-voo, .cta-forte, .pausa-frase, .pausa-linha, .revela,
+          .fim-1, .fim-2, .fim-3, .fim-4, .fim-5 { animation: none; opacity: 1; transform: none } }
       `}</style>
 
       <div className="relative flex-1 flex flex-col w-full max-w-lg mx-auto px-6 pt-8 pb-7" style={{ zIndex: 2 }}>
@@ -222,10 +259,11 @@ const QuestionarioPaisPreview = () => {
         {/* ---------- FIM ---------- */}
         {noFim && (
           <>
-            <p style={{ fontFamily: T.serif, fontSize: 47, lineHeight: 1.02, letterSpacing: '-.022em', margin: '0 0 16px' }}>Obrigado!</p>
-            <p style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Recebi tudo. A professora do {NOME} já vai ficar com o que você me contou.</p>
-            <p style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>No fim do semestre eu te mando o que a gente foi vendo, e também o que ainda não apareceu.</p>
-            <p className="text-[13px]" style={{ color: 'rgba(255,255,255,.74)' }}>Se quiser mudar alguma resposta, é só entrar de novo pelo mesmo link.</p>
+            <p className="fim-1" style={{ fontFamily: T.serif, fontSize: 44, lineHeight: 1.04, letterSpacing: '-.022em', margin: '0 0 20px' }}>Muito obrigado!</p>
+            <p className="fim-2" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Vou ler com muito carinho tudo o que você me contou.</p>
+            <p className="fim-3" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>No fim do semestre eu te mando o que a gente foi vendo, e também o que ainda não apareceu.</p>
+            <p className="fim-4" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Nada se constrói de um dia para o outro. Fique de olho, porque em breve estaremos juntos de novo.</p>
+            <p className="fim-5 text-[13px]" style={{ color: 'rgba(255,255,255,.74)' }}>Se quiser mudar alguma resposta, é só entrar de novo pelo mesmo link.</p>
             <Rodape>
               <Cta texto="Recomeçar" suave onClick={() => { setI(0); setMarcadas({}); setTextos({}); setAbertos({}); }} />
             </Rodape>
@@ -270,7 +308,7 @@ const QuestionarioPaisPreview = () => {
               <p style={{ fontFamily: T.serif, fontSize: 29, fontWeight: 700, margin: '0 0 1px' }}>{NOME}</p>
               <p className="text-[14px] m-0" style={{ color: 'rgba(255,255,255,.78)' }}>{TURMA}</p>
             </div>
-            <p className="text-[13px] mt-6" style={{ color: 'rgba(255,255,255,.74)' }}>Data de nascimento dele(a)</p>
+            <p className="text-[13px] mt-6" style={{ color: 'rgba(255,255,255,.74)' }}>{flex('Data de nascimento dele(a)')}</p>
             <input inputMode="numeric" placeholder="__ / __ / ____" className="w-full bg-transparent outline-none"
               style={{ borderBottom: '1px solid rgba(255,255,255,.5)', padding: '12px 0', fontFamily: T.serif, fontSize: 22, color: '#fff', letterSpacing: '.1em', marginTop: 4 }} />
             <Rodape><Cta texto={item.cta} onClick={avanca} /></Rodape>
@@ -287,7 +325,8 @@ const QuestionarioPaisPreview = () => {
           const podeAvancar = marcadasAqui.length > 0;
           return (
           <>
-            <p className="text-[10.5px] font-bold uppercase mb-2.5" style={{ letterSpacing: '.22em', color: 'rgba(255,255,255,.76)' }}>{item.bloco}</p>
+            {/* Sem rotulo de bloco no topo: a pergunta ja e' uma cena e se explica
+                sozinha. O rotulo confundia mais do que orientava. */}
             <p style={{ fontFamily: T.serif, fontSize: 29, lineHeight: 1.24, fontWeight: 700, letterSpacing: '-.012em', margin: '0 0 6px' }}>{item.texto}</p>
             <p className="text-[14px]" style={{ color: 'rgba(255,255,255,.8)', margin: '0 0 22px' }}>{item.instr ?? 'Escolha uma'}</p>
 
@@ -331,9 +370,13 @@ const QuestionarioPaisPreview = () => {
                 />
               </div>
             ) : (
-              <button onClick={() => setAbertos((a) => ({ ...a, [i]: true }))} className="flex items-center gap-3 mt-6" style={{ color: '#fff' }}>
-                <span className="flex items-center justify-center" style={{ width: 30, height: 30, borderRadius: 999, border: '2px solid rgba(255,255,255,.7)', fontSize: 19, lineHeight: 1, paddingBottom: 2 }}>+</span>
-                <span style={{ fontFamily: T.serif, fontSize: 20, fontWeight: 600 }}>{item.convite ?? 'Tem história aí? Me conta.'}</span>
+              // O "+" sozinho nao dizia que ali se aperta. A segunda linha resolve.
+              <button onClick={() => setAbertos((a) => ({ ...a, [i]: true }))} className="flex items-start gap-3 mt-6 text-left" style={{ color: '#fff' }}>
+                <span className="flex items-center justify-center flex-none" style={{ width: 30, height: 30, borderRadius: 999, border: '2px solid rgba(255,255,255,.7)', fontSize: 19, lineHeight: 1, paddingBottom: 2, marginTop: 2 }}>+</span>
+                <span>
+                  <span className="block" style={{ fontFamily: T.serif, fontSize: 19, fontWeight: 600, lineHeight: 1.3 }}>{item.convite ?? 'Tem história aí? Me conta.'}</span>
+                  <span className="block text-[13px] mt-1" style={{ color: 'rgba(255,255,255,.72)', textDecoration: 'underline', textUnderlineOffset: 3 }}>clique aqui para escrever</span>
+                </span>
               </button>
             )}
 
@@ -397,7 +440,7 @@ const QuestionarioPaisPreview = () => {
             ].map(([titulo, texto]) => (
               <div key={titulo} className="mb-6">
                 <p className="text-[11px] font-bold uppercase mb-1.5" style={{ letterSpacing: '.2em', color: 'rgba(255,255,255,.7)' }}>{titulo}</p>
-                <p style={{ fontFamily: T.serif, fontSize: 20, lineHeight: 1.45, margin: 0, color: '#fff' }}>{texto}</p>
+                <p style={{ fontFamily: T.serif, fontSize: 20, lineHeight: 1.45, margin: 0, color: '#fff' }}>{flex(texto)}</p>
               </div>
             ))}
 
