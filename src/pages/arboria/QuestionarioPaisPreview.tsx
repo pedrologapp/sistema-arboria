@@ -133,7 +133,7 @@ const FLUXO_BRUTO: Item[] = [
   // e' so' um formulario; com ela, o pai entende o que esta ajudando a construir.
   { tipo: 'transicao',
     enorme: 'Quando eu faço essas perguntas, é porque entender cada um deles faz diferença.',
-    linha: `Eu não quero que ${O_A} ${NOME} seja apenas mais um na multidão: quero que ele brilhe do próprio jeito. E eu sei que temos um caminho longo pela frente, mas de pouquinho em pouquinho faremos essa árvore crescer juntos...`,
+    linha: `Eu não quero que ${O_A} ${NOME} seja apenas mais um na multidão: quero que ele(a) brilhe do jeito dele(a), que não é igual ao de mais ninguém. E eu sei que temos um caminho longo pela frente, mas de pouquinho em pouquinho faremos essa árvore crescer juntos...`,
     cta: 'Continuar' },
 
   // ---------------------------------------------------------------- bloco 3
@@ -322,7 +322,12 @@ const QuestionarioPaisPreview = () => {
           const escolheuOutra = marcadasAqui.includes(rotuloOutra);
           // So' avanca com opcao marcada: texto sozinho nao vira dado legivel.
           // A saida honesta e' o "Nao sei dizer", que tambem e' uma resposta.
-          const podeAvancar = marcadasAqui.length > 0;
+          // E quem marca "de outro jeito" precisa dizer qual: a opcao existe
+          // justamente para o caso que as nossas nao previram, e sem o texto
+          // ela devolve menos do que nada.
+          const escreveu = (textos[i] ?? '').trim() !== '';
+          const deveEscrever = escolheuOutra && !escreveu;
+          const podeAvancar = marcadasAqui.length > 0 && !deveEscrever;
           return (
           <>
             {/* Sem rotulo de bloco no topo: a pergunta ja e' uma cena e se explica
@@ -380,9 +385,15 @@ const QuestionarioPaisPreview = () => {
               </button>
             )}
 
-            {!podeAvancar && (textos[i] ?? '').trim() !== '' && (
+            {marcadasAqui.length === 0 && escreveu && (
               <p className="text-[14px] mt-5" style={{ color: '#FFE0B2', lineHeight: 1.5 }}>
                 É necessário escolher alguma opção para continuar, além do texto.
+              </p>
+            )}
+
+            {deveEscrever && (
+              <p className="text-[14px] mt-5" style={{ color: '#FFE0B2', lineHeight: 1.5 }}>
+                Você marcou {rotuloOutra.toLowerCase()}. Me conta qual é o jeito, aí a gente continua.
               </p>
             )}
 
