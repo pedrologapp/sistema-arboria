@@ -45,7 +45,7 @@ const FLUXO: Item[] = [
   // como alguem falando, em vez de um bloco de texto de uma vez.
   { tipo: 'fala', revelar: true, enorme: 'Olá!',
     linhas: [
-      'Eu sou o Arboria, o jeito que o Centro Educacional Amadeus tem de conhecer cada criança de perto.',
+      'Eu sou o Arboria, o jeito que o Centro Educacional Amadeus escolheu para conhecer cada criança de perto.',
       'E hoje eu queria conhecer melhor o seu filho(a).',
       'Posso contar com você?',
     ], cta: 'Vamos lá' },
@@ -223,8 +223,8 @@ const QuestionarioPaisPreview = () => {
         {noFim && (
           <>
             <p style={{ fontFamily: T.serif, fontSize: 47, lineHeight: 1.02, letterSpacing: '-.022em', margin: '0 0 16px' }}>Obrigado!</p>
-            <p style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.45, fontWeight: 600, margin: '0 0 15px' }}>Recebi tudo. A professora do {NOME} já vai ficar com o que você me contou.</p>
-            <p style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.45, fontWeight: 600, margin: '0 0 15px' }}>No fim do semestre eu te mando o que a gente foi vendo, e também o que ainda não apareceu.</p>
+            <p style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Recebi tudo. A professora do {NOME} já vai ficar com o que você me contou.</p>
+            <p style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>No fim do semestre eu te mando o que a gente foi vendo, e também o que ainda não apareceu.</p>
             <p className="text-[13px]" style={{ color: 'rgba(255,255,255,.74)' }}>Se quiser mudar alguma resposta, é só entrar de novo pelo mesmo link.</p>
             <Rodape>
               <Cta texto="Recomeçar" suave onClick={() => { setI(0); setMarcadas({}); setTextos({}); setAbertos({}); }} />
@@ -235,8 +235,8 @@ const QuestionarioPaisPreview = () => {
         {/* ---------- TRANSIÇÃO ---------- */}
         {item?.tipo === 'transicao' && (
           <>
-            <p className="pausa-frase" style={{ fontFamily: T.serif, fontSize: item.enorme.length > 34 ? 36 : 43, lineHeight: 1.08, letterSpacing: '-.024em', margin: '0 0 14px' }}>{item.enorme}</p>
-            {item.linha && <p className="pausa-linha" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.45, fontWeight: 600, margin: 0 }}>{item.linha}</p>}
+            <p className="pausa-frase" style={{ fontFamily: T.serif, fontSize: item.enorme.length > 34 ? 36 : 43, lineHeight: 1.12, letterSpacing: '-.024em', margin: '0 0 22px' }}>{item.enorme}</p>
+            {item.linha && <p className="pausa-linha" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: 0 }}>{item.linha}</p>}
             <Rodape><Cta texto={item.cta} forte onClick={avanca} /></Rodape>
           </>
         )}
@@ -244,12 +244,12 @@ const QuestionarioPaisPreview = () => {
         {/* ---------- FALA ---------- */}
         {item?.tipo === 'fala' && (
           <>
-            {item.enorme && <p style={{ fontFamily: T.serif, fontSize: item.enorme.length > 20 ? 35 : 47, lineHeight: 1.05, letterSpacing: '-.022em', margin: '0 0 16px' }}>{item.enorme}</p>}
+            {item.enorme && <p style={{ fontFamily: T.serif, fontSize: item.enorme.length > 20 ? 35 : 47, lineHeight: 1.08, letterSpacing: '-.022em', margin: '0 0 26px' }}>{item.enorme}</p>}
             {item.linhas.map((l, k) => (
               <p key={k} className={item.revelar ? 'revela' : undefined}
                 style={{
-                  fontFamily: T.serif, fontSize: 23, lineHeight: 1.45, fontWeight: 600, margin: '0 0 15px',
-                  animationDelay: item.revelar ? (0.8 + k * 1.5) + 's' : undefined,
+                  fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px',
+                  animationDelay: item.revelar ? (0.8 + k * 1.7) + 's' : undefined,
                 }}>{l}</p>
             ))}
             {item.rodape && <p className="text-[11.5px] mt-5" style={{ color: 'rgba(255,255,255,.66)', lineHeight: 1.5, maxWidth: '34ch' }}>{item.rodape}</p>}
@@ -265,7 +265,7 @@ const QuestionarioPaisPreview = () => {
         {/* ---------- CRIANÇA ---------- */}
         {item?.tipo === 'crianca' && (
           <>
-            <p style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.45, fontWeight: 600, margin: '0 0 15px' }}>Só para eu ter certeza de quem a gente está falando.</p>
+            <p style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Só para eu ter certeza de quem a gente está falando.</p>
             <div style={{ borderLeft: '2px solid rgba(255,255,255,.7)', padding: '4px 0 4px 16px', margin: '16px 0 4px' }}>
               <p style={{ fontFamily: T.serif, fontSize: 29, fontWeight: 700, margin: '0 0 1px' }}>{NOME}</p>
               <p className="text-[14px] m-0" style={{ color: 'rgba(255,255,255,.78)' }}>{TURMA}</p>
