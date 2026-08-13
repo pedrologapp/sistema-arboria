@@ -22,7 +22,6 @@ const NOME = 'Arthur';
 const TURMA = 'Maternal 2 B';
 const NAO_SEI = '__nao_sei__';
 const OUTRO_CUIDADOR = 'Outra pessoa que cuida dele(a)';
-const QUEM_RESPONDE = ['A mãe', 'O pai', 'Os dois juntos', 'A avó ou o avô', OUTRO_CUIDADOR];
 // ------------------------------------------------------------------ FLEXAO
 // O app sabe de quem se trata, entao o texto inteiro fala no genero da crianca
 // em vez de empurrar "(a)" para o pai ler. As frases sao escritas com a marca
@@ -52,7 +51,8 @@ function flexProfundo<T>(v: T): T {
   return v;
 }
 
-const O_A = FEM ? 'a' : 'o';
+// Aqui no Nordeste nao se poe artigo antes de nome proprio: e' "Arthur", nao
+// "o Arthur". Por isso nao existe mais constante de artigo neste arquivo.
 const CONHECE_LO = FEM ? 'conhecê-la' : 'conhecê-lo';
 
 const T = {
@@ -63,9 +63,9 @@ const T = {
 type Item =
   | { tipo: 'fala'; revelar?: boolean; linhas: string[]; enorme?: string; cta: string; ctaSuave?: string; rodape?: string }
   | { tipo: 'crianca'; cta: string }
-  | { tipo: 'respondente'; cta: string }
+  | { tipo: 'respondente'; chave: string; titulo: string; sub?: string; opcoes: string[]; livre?: string; cta: string }
   | { tipo: 'transicao'; enorme: string; linha?: string; cta: string }
-  | { tipo: 'pergunta'; bloco: string; texto: string; instr?: string; opcoes: string[]; outra?: string; convite?: string };
+  | { tipo: 'pergunta'; cena?: string; texto: string; instr?: string; opcoes: string[]; outra?: string; convite?: string };
 
 const FLUXO_BRUTO: Item[] = [
   // ---------------------------------------------------------------- entrada
@@ -105,59 +105,111 @@ const FLUXO_BRUTO: Item[] = [
 
   { tipo: 'crianca', cta: 'É ele' },
 
-  { tipo: 'respondente', cta: 'Continuar' },
+  { tipo: 'respondente', chave: 'responde',
+    titulo: 'E quem está me contando hoje?',
+    sub: 'Pergunto porque cada um vê uma parte diferente do dia dele(a).',
+    opcoes: ['A mãe', 'O pai', 'Os dois juntos', 'A avó ou o avô', OUTRO_CUIDADOR],
+    livre: OUTRO_CUIDADOR, cta: 'Continuar' },
+
+  // Cerca de uma em cada seis respostas seria dada sobre horas que quem esta
+  // respondendo nao viu, e dada com confianca. Esta tela corrige mais vies do
+  // que qualquer reescrita de item.
+  { tipo: 'respondente', chave: 'tempo',
+    titulo: `E durante a semana, quem fica mais tempo com ${NOME}?`,
+    sub: 'Pergunto porque quem passa mais horas junto vê coisas que os outros não veem.',
+    opcoes: ['Eu mesmo', 'A mãe', 'O pai', 'A avó ou o avô', 'Uma babá ou outra pessoa que cuida', 'Fica dividido, ninguém mais que os outros'],
+    cta: 'Continuar' },
 
   { tipo: 'transicao',
-    enorme: `Ah, ${O_A} ${NOME}!`,
+    enorme: `Ah, ${NOME}!`,
     linha: `Estou animado para ${CONHECE_LO} melhor. Prontos para falarem de quem vocês mais amam?`,
     cta: 'Prontos' },
 
-  // ---------------------------------------------------------------- bloco 1
-  { tipo: 'pergunta', bloco: 'O tempo dele(a)', texto: 'Pra começar leve: do que ele(a) mais gosta de brincar hoje em dia?', convite: 'Conta um pouco mais sobre essas brincadeiras', instr: 'Pode marcar mais de uma',
-    opcoes: ['De montar e encaixar', 'De correr, subir, pular', 'De faz de conta', 'De carrinho, boneca, bichinho', 'De música e dança', 'De desenhar e pintar', 'De água, terra, massinha'], outra: 'Outra coisa' },
-  { tipo: 'pergunta', bloco: 'O tempo dele(a)', texto: 'Pensa num sábado. Todo mundo em casa, ninguém pedindo nada pra ele(a). Pra onde ele(a) vai?', convite: 'Como costuma ser esse sábado? Me conta', instr: 'Pode marcar mais de uma',
-    opcoes: ['Pega brinquedo de montar', 'Vai atrás de alguém pra brincar', 'Corre, sobe, pula', 'Pega um livro, pede história', 'Quer televisão ou celular', 'Mexe em terra, água, bicho', 'Desmonta o que não é brinquedo'], outra: 'Outra coisa' },
-  { tipo: 'pergunta', bloco: 'O tempo dele(a)', texto: 'Tem alguma coisa que ele(a) começa e o tempo passa e ele(a) nem vê?', convite: 'O que acontece quando ele(a) está nisso? Me conta', instr: 'Pode marcar mais de uma',
-    opcoes: ['Brinquedo de montar', 'Brincar com alguém', 'Correr, subir, pular', 'Livro, história', 'Televisão ou celular', 'Terra, água, bicho'], outra: 'Outra coisa' },
-  { tipo: 'pergunta', bloco: 'O tempo dele(a)', texto: 'E o contrário: alguma coisa que ele(a) larga em cinco minutos?', convite: 'Por que você acha que ele(a) larga? Me conta', instr: 'Pode marcar mais de uma',
-    opcoes: ['Brinquedo de montar', 'Brincar com alguém', 'Correr, subir, pular', 'Livro, história', 'Televisão ou celular', 'Terra, água, bicho'], outra: 'Outra coisa' },
+  // ============================================================
+  // AS OITO CENAS (v2, 13/08/2026)
+  //
+  // Reescritas depois que a simulacao com pais estimou que ~57% das marcacoes
+  // da versao anterior nao teriam episodio por tras: o pai marcava descrevendo
+  // o filho que ele tem na cabeca. Tres regras saem disso e valem para as
+  // quatro faixas do Infantil:
+  //   1. Toda pergunta em preterito perfeito. Nada de "ele costuma".
+  //   2. Toda cena com ancora de tempo: ontem, essa semana, no ultimo lugar.
+  //   3. O nome da crianca dentro da cena.
+  //
+  // Aos 2 anos isto e' EXPLORACAO, nao leitura: nada volta para o pai sobre
+  // inteligencia e nada preenche cobertura de canal. O valor e' ser o
+  // denominador que permite ler a mudanca dois anos depois.
+  // ============================================================
 
-  { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre o ${NOME}!`, cta: 'Continuar' },
+  { tipo: 'pergunta',
+    cena: `Pra começar, uma cena que tem em toda casa. Ontem, anteontem, esses dias: ${NOME} estava mexendo numa coisa que não abria, ou montando alguma coisa que caiu.`,
+    texto: 'Qual foi a primeira coisa que ele(a) fez depois?',
+    convite: 'Me conta como foi essa vez',
+    opcoes: ['Fez de novo do mesmo jeito', 'Virou a coisa e tentou por outro lado', 'Levou até você e pôs na sua mão', 'Foi pegar alguma coisa pra ajudar', 'Ficou olhando aquilo um tempo antes de mexer', 'Deixou pra lá e foi pra outra brincadeira'],
+    outra: 'De outro jeito' },
 
-  // ---------------------------------------------------------------- bloco 2
-  { tipo: 'pergunta', bloco: 'Quando alguma coisa dá errado', texto: 'Lembra da última vez que ele(a) quis fazer alguma coisa sozinho(a) e não deu certo? O que aconteceu depois?', convite: 'Me conta como foi',
-    opcoes: ['Tentou de novo', 'Chorou', 'Ficou bravo, jogou longe', 'Chamou alguém', 'Largou e foi fazer outra coisa', 'Ficou olhando parado'] },
-  { tipo: 'pergunta', bloco: 'Quando alguma coisa dá errado', texto: 'Sabe quando ele(a) trava? Fica emburrado(a), chateado(a), e nada anda. Nessas horas, o que costuma funcionar pra ele(a) voltar ao normal?', convite: 'O que você faz nessas horas? Me conta', instr: 'Pode marcar mais de uma',
-    opcoes: ['Mostrar fazendo, sem falar muito', 'Explicar falando', 'Fazer junto, segurando a mão', 'Distrair com algo que gosta', 'Deixar sozinho um pouco', 'Colo'] },
-  { tipo: 'pergunta', bloco: 'Como ele(a) pede e como conta', texto: 'Quando ele(a) quer alguma coisa e você ainda não entendeu o quê, como ele(a) faz pra te mostrar?', convite: 'Tem algum jeito que é só dele(a)? Me conta',
-    opcoes: ['Fala', 'Aponta', 'Pega pela mão e leva', 'Traz o objeto e mostra', 'Pega sozinho', 'Fica manhoso até alguém perceber'] },
-  { tipo: 'pergunta', bloco: 'Como ele(a) pede e como conta', texto: 'Fim da tarde, ele(a) chega da escola e você pergunta como foi. O que costuma acontecer?', convite: 'O que ele(a) costuma contar? Me conta',
-    opcoes: ['Conta sem a gente perguntar', 'Conta se a gente perguntar', 'Conta um pedacinho só', 'Conta, mas é difícil de entender', 'Não conta'] },
+  { tipo: 'pergunta',
+    cena: `Essa semana ${NOME} quis uma coisa que estava em cima, alta demais pra ele(a).`,
+    texto: 'O que ele(a) tentou primeiro?',
+    convite: 'Me conta essa cena',
+    opcoes: ['Foi com o corpo: esticou, pulou, subiu no que tinha perto', 'Trouxe uma coisa pra alcançar: cadeira, banquinho, ou puxou o pano', 'Pegou você pela mão e levou até lá', 'Ficou apontando e falando até alguém ir', 'Ficou olhando pra coisa, esperando alguém ver', 'Deixou pra lá e foi fazer outra coisa'],
+    outra: 'De outro jeito' },
+
+  { tipo: 'pergunta',
+    cena: `Teve um dia esses dias em que ${NOME} quis alguma coisa e você não estava entendendo o que era. Ele(a) sabia bem o que queria.`,
+    texto: 'Como ele(a) te mostrou?',
+    convite: 'Me conta o que era, e como você descobriu',
+    instr: 'Pode marcar mais de uma',
+    opcoes: ['Apontou de longe', 'Apontou e ficou olhando pra você', 'Pegou você pela mão e levou até lá', 'Trouxe o objeto e pôs na sua mão', 'Fez o gesto da coisa, imitou o que ela faz', 'Repetiu a mesma palavra até você entender'],
+    outra: 'De outro jeito' },
+
+  { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre ${NOME}!`, cta: 'Continuar' },
+
+  { tipo: 'pergunta',
+    cena: 'Tem coisas que vocês fazem sempre na mesma ordem. Esses dias mudou sem querer: chegou visita, faltou tempo, alguém fez de outro jeito.',
+    texto: `O que ${NOME} fez?`,
+    convite: 'Me conta o que aconteceu',
+    opcoes: ['Refez do jeito de sempre, por conta dele(a)', 'Pôs a mão de quem estava fazendo de volta no lugar', 'Falou não e apontou o que estava errado', 'Riu e foi junto do jeito novo', 'Seguiu no que estava fazendo, sem mudar nada', 'Saiu de perto'],
+    outra: 'De outro jeito' },
+
+  { tipo: 'pergunta',
+    cena: `Essa semana ${NOME} estava no meio de alguma coisa e parou do nada, por conta própria. Ninguém chamou ele(a).`,
+    texto: 'Da última vez que isso aconteceu, o que foi que fez ele(a) parar?',
+    convite: 'Me conta essa vez',
+    opcoes: ['Um barulho que veio de fora', 'Um bicho, uma planta, alguma coisa viva', 'Alguém chegando ou saindo', 'Uma música, alguém cantando', 'Uma luz, uma sombra, alguma coisa se mexendo', 'Alguma coisa que estava diferente do normal ali'],
+    outra: 'De outro jeito' },
 
   // A pausa que explica ao pai por que isto importa. Sem ela o questionario
   // e' so' um formulario; com ela, o pai entende o que esta ajudando a construir.
   { tipo: 'transicao',
     enorme: 'Quando eu faço essas perguntas, é porque entender cada um deles faz diferença.',
-    linha: `Eu não quero que ${O_A} ${NOME} seja apenas mais um na multidão: quero que ele(a) brilhe do jeito dele(a), que não é igual ao de mais ninguém. E eu sei que temos um caminho longo pela frente, mas de pouquinho em pouquinho faremos essa árvore crescer juntos...`,
+    linha: `Eu não quero que ${NOME} seja apenas mais um na multidão: quero que ele(a) brilhe do jeito dele(a), que não é igual ao de mais ninguém. E eu sei que temos um caminho longo pela frente, mas de pouquinho em pouquinho faremos essa árvore crescer juntos...`,
     cta: 'Continuar' },
 
-  // ---------------------------------------------------------------- bloco 3
-  { tipo: 'pergunta', bloco: 'Casa e fora de casa', texto: 'Tem uma coisa que quase todo pai percebe: a criança em casa e a criança fora de casa às vezes parecem duas. Acontece com ele(a)?', convite: 'Como é essa diferença? Me conta',
-    opcoes: ['Fala muito mais em casa', 'É mais quieto em casa', 'É mais agitado em casa', 'É mais agitado fora', 'É bem parecido nos dois'] },
-  { tipo: 'pergunta', bloco: 'Casa e fora de casa', texto: 'No corre-corre do dia, o que ele(a) já faz sozinho(a) sem ninguém mandar?', convite: 'Tem alguma coisa que te surpreendeu? Me conta', instr: 'Pode marcar mais de uma',
-    opcoes: ['Come sozinho', 'Se veste, ou tenta', 'Escolhe a roupa', 'Guarda os brinquedos', 'Escova os dentes', 'Ainda faz tudo com ajuda'], outra: 'Outra coisa' },
-  { tipo: 'pergunta', bloco: 'Casa e fora de casa', texto: 'Aniversário, parquinho, um lugar cheio de criança que ele(a) não conhece. O que ele(a) faz nos primeiros minutos?', convite: 'Como costuma ser? Me conta',
-    opcoes: ['Entra na brincadeira logo', 'Fica olhando antes de entrar', 'Fica perto de você', 'Chama alguém pra brincar', 'Brinca sozinho do lado'] },
+  { tipo: 'pergunta',
+    cena: `Esses dias teve outra criança por perto de ${NOME}. Na casa de alguém, no parque, na porta da escola.`,
+    texto: 'O que ele(a) fez nos primeiros minutos?',
+    convite: 'Me conta como foi',
+    opcoes: ['Ficou olhando de longe um tempo antes de chegar perto', 'Foi direto, sem pensar duas vezes', 'Ficou colado em você antes de ir', 'Pegou um brinquedo e levou até a outra criança', 'Começou a fazer o que a outra criança estava fazendo', 'Brincou do lado, cada um no seu'],
+    outra: 'De outro jeito' },
+
+  { tipo: 'pergunta',
+    cena: 'Criança dessa idade copia o que vê, e cada uma copia uma coisa diferente da mesma cena.',
+    texto: `A última vez que você viu ${NOME} copiando alguém, o que foi que ele(a) copiou?`,
+    convite: 'Me conta o que ele(a) copiou',
+    instr: 'Pode marcar mais de uma',
+    opcoes: ['Uma palavra, um jeito de falar', 'Um gesto, um jeito de mexer a mão', 'Uma tarefa, na ordem em que viu', 'O jeito de sentar, de andar', 'Onde a pessoa botou as coisas', 'O jeito de cuidar de alguém'],
+    outra: 'De outro jeito' },
 
   { tipo: 'transicao', enorme: 'Está quase acabando!', cta: 'Continuar' },
 
-  // ---------------------------------------------------------------- bloco 4
-  { tipo: 'pergunta', bloco: 'O que ele(a) percebe', texto: 'Quando alguém da casa está triste ou bravo, mesmo sem falar nada, ele(a) percebe?', convite: 'Já teve uma vez marcante? Me conta',
-    opcoes: ['Vai perto', 'Pergunta o que houve', 'Fica quieto', 'Fica agitado também', 'Parece não perceber'] },
-  { tipo: 'pergunta', bloco: 'O que ele(a) percebe', texto: 'Você mudou um móvel de lugar, guardou um brinquedo em outro canto. Ele(a) nota?', convite: 'Me conta uma vez que isso aconteceu',
-    opcoes: ['Repara e fala', 'Repara e arruma', 'Fica incomodado até arrumarem', 'Só repara se alguém falar', 'Não repara'] },
-  { tipo: 'pergunta', bloco: 'O que ele(a) percebe', texto: 'Toca uma música em casa, do nada. O que ele(a) faz?', convite: 'Tem alguma música que mexe com ele(a)? Me conta', instr: 'Pode marcar mais de uma',
-    opcoes: ['Dança no ritmo', 'Canta junto ou tenta', 'Para pra ouvir', 'Continua o que fazia', 'Bate em algo fazendo som', 'Pede pra desligar'] },
+  { tipo: 'pergunta',
+    cena: 'No último lugar em que vocês foram juntos, mesmo que tenha sido o mercado ou a casa de alguém. Voltaram, e passaram uns dias.',
+    texto: 'Depois disso, em casa, ele(a) trouxe alguma coisa daquilo de volta?',
+    convite: 'Me conta o que ele(a) trouxe de lá',
+    instr: 'Pode marcar mais de uma',
+    opcoes: ['Fez o movimento que viu alguém fazendo lá', 'Repetiu o som ou a música que ouviu', 'Procurou em casa uma coisa parecida com a de lá', 'Brincou de ser aquilo', 'Falou uma palavra solta daquilo, dias depois', 'Não trouxe nada de lá dessa vez'],
+    outra: 'De outro jeito' },
 ];
 
 const FLUXO: Item[] = flexProfundo(FLUXO_BRUTO);
@@ -167,8 +219,9 @@ const numeroDaPergunta = (i: number) => FLUXO.slice(0, i + 1).filter((x) => x.ti
 
 const QuestionarioPaisPreview = () => {
   const [i, setI] = useState(0);
-  const [quemResponde, setQuemResponde] = useState<string | null>(null);
-  const [outroCuidador, setOutroCuidador] = useState('');
+  const [escolhas, setEscolhas] = useState<Record<string, string>>({});
+  const [escolhaTexto, setEscolhaTexto] = useState<Record<string, string>>({});
+  const [linkCopiado, setLinkCopiado] = useState(false);
   const [marcadas, setMarcadas] = useState<Record<number, string[]>>({});
   const [abertos, setAbertos] = useState<Record<number, boolean>>({});
   const [textos, setTextos] = useState<Record<number, string>>({});
@@ -191,9 +244,6 @@ const QuestionarioPaisPreview = () => {
   // pergunta. Ate' la' ele pode voltar e trocar o que quiser sem virar bagunca,
   // porque nada foi para o banco ainda: o que grava e' um envio so', no fim.
   const ultimaPergunta = FLUXO.map((x) => x.tipo).lastIndexOf('pergunta');
-  const podeSeguir =
-    quemResponde !== null &&
-    (quemResponde !== flex(OUTRO_CUIDADOR) || outroCuidador.trim() !== '');
 
   // O botao mora a DIREITA e tem cara de botao. O Fundador viu gente nao achar
   // onde apertar quando ele era so' texto sublinhado: em publico amplo, elegancia
@@ -350,19 +400,39 @@ const QuestionarioPaisPreview = () => {
             diferentes. Sem saber de quem e' o olhar, a resposta perde metade
             do valor. Fica aqui, colado na identificacao, para nao cortar a
             virada afetiva que vem logo depois. */}
-        {item?.tipo === 'respondente' && (
+        {/* ---------- QUEM FALA ----------
+            Duas telas usam este mesmo desenho: quem esta respondendo agora, e
+            quem fica mais tempo com a crianca durante a semana. A segunda
+            existe porque uma parte grande destas criancas passa mais horas com
+            a avo ou com a baba do que com quem recebe o link, e quem responde
+            responde assim mesmo, com confianca. Saber de qual olhar veio a
+            resposta corrige mais vies do que reescrever pergunta nenhuma. */}
+        {item?.tipo === 'respondente' && (() => {
+          const escolhido = escolhas[item.chave] ?? null;
+          const livre = item.livre ? flex(item.livre) : null;
+          const texto = escolhaTexto[item.chave] ?? '';
+          const podeSeguir = escolhido !== null && (escolhido !== livre || texto.trim() !== '');
+          // Se quem responde nao e' quem fica mais tempo, a outra pessoa tem o
+          // que contar. Oferecemos o link sem obrigar e sem travar o caminho.
+          const outroOlhar =
+            item.chave === 'tempo' &&
+            escolhido !== null &&
+            escolhido !== 'Eu mesmo' &&
+            escolhido !== 'Fica dividido, ninguém mais que os outros' &&
+            escolhido !== escolhas['responde'];
+          return (
           <>
-            <p style={{ fontFamily: T.serif, fontSize: 29, lineHeight: 1.24, fontWeight: 700, letterSpacing: '-.012em', margin: '0 0 6px' }}>E quem está me contando hoje?</p>
-            <p className="text-[14px]" style={{ color: 'rgba(255,255,255,.8)', margin: '0 0 22px' }}>Pergunto porque cada um vê uma parte diferente do dia dele(a).</p>
+            <p style={{ fontFamily: T.serif, fontSize: 26, lineHeight: 1.28, fontWeight: 700, letterSpacing: '-.012em', margin: '0 0 6px' }}>{item.titulo}</p>
+            {item.sub && <p className="text-[14px]" style={{ color: 'rgba(255,255,255,.8)', margin: '0 0 22px' }}>{item.sub}</p>}
 
             <div>
-              {QUEM_RESPONDE.map((quem, k) => {
+              {item.opcoes.map((quem, k) => {
                 const rotulo = flex(quem);
-                const on = quemResponde === rotulo;
+                const on = escolhido === rotulo;
                 return (
                   <button
                     key={rotulo}
-                    onClick={() => setQuemResponde(rotulo)}
+                    onClick={() => { setEscolhas((e) => ({ ...e, [item.chave]: rotulo })); setLinkCopiado(false); }}
                     className="w-full flex items-center justify-between gap-3.5 text-left"
                     style={{
                       minHeight: 58, padding: '15px 0',
@@ -371,7 +441,7 @@ const QuestionarioPaisPreview = () => {
                       fontFamily: T.serif, fontSize: 20, lineHeight: 1.35,
                       fontWeight: on ? 700 : 600,
                       color: on ? '#fff' : 'rgba(255,255,255,.86)',
-                      fontStyle: quem === OUTRO_CUIDADOR ? 'italic' : 'normal',
+                      fontStyle: rotulo === livre ? 'italic' : 'normal',
                     }}
                   >
                     <span>{rotulo}</span>
@@ -383,16 +453,35 @@ const QuestionarioPaisPreview = () => {
 
             {/* "Outra pessoa" sem dizer quem nao serve para nada na leitura:
                 tia, babá e madrasta veem dias muito diferentes da crianca. */}
-            {quemResponde === flex(OUTRO_CUIDADOR) && (
+            {escolhido === livre && livre !== null && (
               <div className="mt-6">
                 <p style={{ fontFamily: T.serif, fontSize: 20, fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Quem é?</p>
                 <input
-                  value={outroCuidador}
-                  onChange={(e) => setOutroCuidador(e.target.value)}
+                  value={texto}
+                  onChange={(e) => setEscolhaTexto((t) => ({ ...t, [item.chave]: e.target.value }))}
                   placeholder="tia, avó, babá, madrasta..."
                   className="w-full bg-transparent outline-none"
                   style={{ borderBottom: '1px solid rgba(255,255,255,.5)', padding: '10px 0', fontFamily: T.serif, fontSize: 20, color: '#fff' }}
                 />
+              </div>
+            )}
+
+            {outroOlhar && (
+              <div className="mt-7" style={{ borderLeft: '2px solid rgba(255,255,255,.55)', padding: '2px 0 2px 16px' }}>
+                <p style={{ fontFamily: T.serif, fontSize: 19, lineHeight: 1.45, fontWeight: 600, color: '#fff', margin: '0 0 12px' }}>
+                  Então tem coisa que só essa pessoa viu. Se quiser, manda o link pra ela contar também.
+                </p>
+                <button
+                  onClick={() => { navigator.clipboard?.writeText(window.location.href); setLinkCopiado(true); }}
+                  className="inline-flex items-center gap-2 font-bold uppercase"
+                  style={{ fontSize: 13, letterSpacing: '.12em', padding: '11px 20px', borderRadius: 999, border: '2px solid rgba(255,255,255,.75)', color: '#fff' }}
+                >
+                  {linkCopiado ? 'Link copiado' : 'Copiar o link'}
+                  {linkCopiado && <Check size={14} strokeWidth={3} />}
+                </button>
+                <p className="text-[12.5px] mt-3" style={{ color: 'rgba(255,255,255,.7)', margin: 0 }}>
+                  Você pode seguir daqui do mesmo jeito. As duas respostas contam.
+                </p>
               </div>
             )}
 
@@ -402,7 +491,8 @@ const QuestionarioPaisPreview = () => {
               </span>
             </Rodape>
           </>
-        )}
+          );
+        })()}
 
         {/* ---------- PERGUNTA ---------- */}
         {item?.tipo === 'pergunta' && (() => {
@@ -421,7 +511,12 @@ const QuestionarioPaisPreview = () => {
           <>
             {/* Sem rotulo de bloco no topo: a pergunta ja e' uma cena e se explica
                 sozinha. O rotulo confundia mais do que orientava. */}
-            <p style={{ fontFamily: T.serif, fontSize: 29, lineHeight: 1.24, fontWeight: 700, letterSpacing: '-.012em', margin: '0 0 6px' }}>{item.texto}</p>
+            {/* Cena e pergunta na mesma cor, fonte e peso: e' a mesma voz
+                falando, so' que a linha corta entre uma e outra. */}
+            {item.cena && (
+              <p style={{ fontFamily: T.serif, fontSize: 24, lineHeight: 1.32, fontWeight: 700, letterSpacing: '-.01em', margin: '0 0 12px' }}>{item.cena}</p>
+            )}
+            <p style={{ fontFamily: T.serif, fontSize: 24, lineHeight: 1.32, fontWeight: 700, letterSpacing: '-.01em', margin: '0 0 6px' }}>{item.texto}</p>
             <p className="text-[14px]" style={{ color: 'rgba(255,255,255,.8)', margin: '0 0 22px' }}>{item.instr ?? 'Escolha uma'}</p>
 
             {/* Lista de linhas, sem caixa: o peso visual fica no texto e nao no
