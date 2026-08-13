@@ -32,15 +32,23 @@ const T = {
 };
 
 type Item =
-  | { tipo: 'fala'; linhas: string[]; enorme?: string; cta: string; ctaSuave?: string; rodape?: string }
+  | { tipo: 'fala'; revelar?: boolean; linhas: string[]; enorme?: string; cta: string; ctaSuave?: string; rodape?: string }
   | { tipo: 'crianca'; cta: string }
   | { tipo: 'transicao'; enorme: string; linha?: string; cta: string }
   | { tipo: 'pergunta'; bloco: string; texto: string; instr?: string; opcoes: string[]; outra?: string; convite?: string };
 
 const FLUXO: Item[] = [
   // ---------------------------------------------------------------- entrada
-  { tipo: 'fala', enorme: 'Olá!',
-    linhas: ['Eu sou o Arboria.', 'E hoje quero conhecer melhor o seu filho(a)!'], cta: 'Vamos lá' },
+  // A primeira tela precisa dizer QUEM esta falando e DE ONDE vem, senao o pai
+  // recebe um desconhecido pedindo intimidade sobre o filho. Quem da confianca
+  // aqui nao e' o Arboria: e' a escola. As linhas entram uma depois da outra,
+  // como alguem falando, em vez de um bloco de texto de uma vez.
+  { tipo: 'fala', revelar: true, enorme: 'Olá!',
+    linhas: [
+      'Eu sou o Arboria, o jeito que o Centro Educacional Amadeus tem de conhecer cada criança de perto.',
+      'E hoje eu queria conhecer melhor o seu filho(a).',
+      'Posso contar com você?',
+    ], cta: 'Vamos lá' },
 
   { tipo: 'fala', linhas: [
       'Você conhece ele(a) de um jeito que mais ninguém conhece.',
@@ -192,10 +200,11 @@ const QuestionarioPaisPreview = () => {
         .passaros-voo { animation: voo 46s linear infinite alternate; }
         @keyframes surge { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
         
+        .revela { animation: surge 1s cubic-bezier(.22,.61,.36,1) both; }
         .pausa-frase { animation: surge .9s cubic-bezier(.22,.61,.36,1) both; }
         .pausa-linha { animation: surge .9s cubic-bezier(.22,.61,.36,1) .35s both; }
         .cta-forte { animation: surge .8s cubic-bezier(.22,.61,.36,1) .8s both; }
-        @media (prefers-reduced-motion: reduce) { .passaros-voo, .cta-forte, .pausa-frase, .pausa-linha { animation: none; opacity: 1; transform: none } }
+        @media (prefers-reduced-motion: reduce) { .passaros-voo, .cta-forte, .pausa-frase, .pausa-linha, .revela { animation: none; opacity: 1; transform: none } }
       `}</style>
 
       <div className="relative flex-1 flex flex-col w-full max-w-lg mx-auto px-6 pt-8 pb-7" style={{ zIndex: 2 }}>
@@ -236,7 +245,13 @@ const QuestionarioPaisPreview = () => {
         {item?.tipo === 'fala' && (
           <>
             {item.enorme && <p style={{ fontFamily: T.serif, fontSize: item.enorme.length > 20 ? 35 : 47, lineHeight: 1.05, letterSpacing: '-.022em', margin: '0 0 16px' }}>{item.enorme}</p>}
-            {item.linhas.map((l, k) => <p key={k} style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.45, fontWeight: 600, margin: '0 0 15px' }}>{l}</p>)}
+            {item.linhas.map((l, k) => (
+              <p key={k} className={item.revelar ? 'revela' : undefined}
+                style={{
+                  fontFamily: T.serif, fontSize: 23, lineHeight: 1.45, fontWeight: 600, margin: '0 0 15px',
+                  animationDelay: item.revelar ? (0.8 + k * 1.5) + 's' : undefined,
+                }}>{l}</p>
+            ))}
             {item.rodape && <p className="text-[11.5px] mt-5" style={{ color: 'rgba(255,255,255,.66)', lineHeight: 1.5, maxWidth: '34ch' }}>{item.rodape}</p>}
             <Rodape>
               {/* "Saber mais" abre o texto completo. Antes ele avancava igual ao outro
