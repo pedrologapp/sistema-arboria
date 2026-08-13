@@ -36,7 +36,7 @@ type Item =
 const FLUXO: Item[] = [
   // ---------------------------------------------------------------- entrada
   { tipo: 'fala', enorme: 'Olá!',
-    linhas: ['Eu sou o Arboria.', 'E hoje quero conhecer melhor o seu filho(a)!'], cta: 'Vamos lá' },
+    linhas: ['Eu sou o Arboria.', 'E estou muito animado para conhecer melhor o seu filho(a)!'], cta: 'Vamos lá' },
 
   { tipo: 'fala', linhas: [
       'Você conhece ele(a) de um jeito que mais ninguém conhece.',
@@ -44,9 +44,10 @@ const FLUXO: Item[] = [
       'É disso que eu preciso.',
     ], cta: 'Continuar' },
 
-  { tipo: 'fala', enorme: 'Estou muito animado para conhecer ele(a) melhor.',
+  { tipo: 'fala',
     linhas: [
-      'Aqui não tem resposta certa. Eu não quero saber o que ele(a) já aprendeu: quero saber o jeito dele(a).',
+      'E não tem resposta certa aqui.',
+      'Eu não quero saber o que ele(a) já aprendeu: quero saber o jeito dele(a).',
       'E pode contar as coisas esquisitas também. Muita vez é ali que está o mais interessante.',
     ], cta: 'Continuar' },
 
@@ -314,7 +315,13 @@ const QuestionarioPaisPreview = () => {
               </button>
             )}
 
-            <div className="pt-8 flex items-center justify-between gap-4 flex-wrap">
+            {!podeAvancar && (textos[i] ?? '').trim() !== '' && (
+              <p className="text-[14px] mt-5" style={{ color: '#FFE0B2', lineHeight: 1.5 }}>
+                É necessário escolher alguma opção para continuar, além do texto.
+              </p>
+            )}
+
+            <div className="pt-6 flex items-center justify-between gap-4 flex-wrap">
               <button
                 onClick={() => { setMarcadas((m) => ({ ...m, [i]: [NAO_SEI] })); avanca(); }}
                 className="text-[15px]"
