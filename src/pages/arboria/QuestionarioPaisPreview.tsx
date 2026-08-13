@@ -111,6 +111,15 @@ const FLUXO_BRUTO: Item[] = [
     opcoes: ['A mãe', 'O pai', 'Os dois juntos', 'A avó ou o avô', OUTRO_CUIDADOR],
     livre: OUTRO_CUIDADOR, cta: 'Continuar' },
 
+  // A reacao ao nome vem antes da pergunta de quem fica mais tempo: assim o
+  // Arboria responde a crianca, e nao ao formulario. Saiu daqui o "prontos
+  // para falarem de quem voces mais amam", porque a primeira cena ja abre com
+  // "pra comecar" e faz sozinha o trabalho de largada.
+  { tipo: 'transicao',
+    enorme: `Ah, ${NOME}!`,
+    linha: `Estou animado para ${CONHECE_LO} melhor.`,
+    cta: 'Continuar' },
+
   // Cerca de uma em cada seis respostas seria dada sobre horas que quem esta
   // respondendo nao viu, e dada com confianca. Esta tela corrige mais vies do
   // que qualquer reescrita de item.
@@ -118,11 +127,6 @@ const FLUXO_BRUTO: Item[] = [
     titulo: `E durante a semana, quem fica mais tempo com ${NOME}?`,
     sub: 'Pergunto porque quem passa mais horas junto vê coisas que os outros não veem.',
     opcoes: ['Eu mesmo', 'A mãe', 'O pai', 'A avó ou o avô', 'Uma babá ou outra pessoa que cuida', 'Fica dividido, ninguém mais que os outros'],
-    cta: 'Continuar' },
-
-  { tipo: 'transicao',
-    enorme: `Ah, ${NOME}!`,
-    linha: `Estou animado para ${CONHECE_LO} melhor. Prontos para falarem de quem vocês mais amam?`,
     cta: 'Prontos' },
 
   // ============================================================
