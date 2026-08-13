@@ -600,12 +600,22 @@ const QuestionarioPaisPreview = () => {
           const podeSeguir = escolhido !== null && (escolhido !== livre || texto.trim() !== '');
           // Se quem responde nao e' quem fica mais tempo, a outra pessoa tem o
           // que contar. Oferecemos o link sem obrigar e sem travar o caminho.
+          // Quem ja' esta' respondendo nao precisa receber link nenhum, e uma
+          // resposta cobre mais de uma pessoa: "os dois juntos" cobre a mae E o
+          // pai, e "outra pessoa que cuida" cobre a baba. Sem isso o Arboria
+          // oferece o link para quem esta' com o celular na mao.
+          const respondendo = escolhas['responde'];
+          const jaEstaAqui =
+            respondendo === 'Os dois juntos' ? ['A mãe', 'O pai']
+            : respondendo === flex(OUTRO_CUIDADOR) ? ['Uma babá ou outra pessoa que cuida']
+            : respondendo ? [respondendo]
+            : [];
           const outroOlhar =
             item.chave === 'tempo' &&
             escolhido !== null &&
             escolhido !== 'Eu mesmo' &&
             escolhido !== 'Fica dividido, ninguém mais que os outros' &&
-            escolhido !== escolhas['responde'];
+            !jaEstaAqui.includes(escolhido);
           return (
           <>
             <p style={{ fontFamily: T.serif, fontSize: 26, lineHeight: 1.28, fontWeight: 700, letterSpacing: '-.012em', margin: '0 0 6px' }}>{item.titulo}</p>
