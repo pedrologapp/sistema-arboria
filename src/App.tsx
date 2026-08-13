@@ -134,6 +134,7 @@ const ArboriaCapitulosPage = lazy(() => import("./pages/arboria/ArboriaCapitulos
 const ArboriaTrilhaPage = lazy(() => import("./pages/arboria/ArboriaTrilhaPage"));
 const ArboriaCoordenadoresPage = lazy(() => import("./pages/arboria/ArboriaCoordenadoresPage"));
 const ArboriaColetaPage = lazy(() => import("./pages/arboria/ArboriaColetaPage"));
+const QuestionarioPaisPreview = lazy(() => import("./pages/arboria/QuestionarioPaisPreview"));
 const MissoesSeriePage = lazy(() => import("./pages/professor/MissoesSeriePage"));
 const MissoesSemanaPage = lazy(() => import("./pages/professor/MissoesSemanaPage"));
 const MissoesListaPage = lazy(() => import("./pages/professor/MissoesListaPage"));
@@ -244,6 +245,13 @@ const App = () => (
                 <ArboriaAdminLayout>
                   <ArboriaColetaPage />
                 </ArboriaAdminLayout>
+              </ProtectedRoute>
+            } />
+            {/* prototipo do questionario dos pais: tela cheia, SEM o layout do admin,
+                para ver exatamente como o pai veria no celular */}
+            <Route path="/arboria/coleta/pais/preview" element={
+              <ProtectedRoute requireSuperAdmin>
+                <QuestionarioPaisPreview />
               </ProtectedRoute>
             } />
             <Route path="/arboria/repositorio" element={

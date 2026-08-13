@@ -17,7 +17,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { infantilTheme as t } from '@/styles/infantilTheme';
-import { Loader2, Check, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Loader2, Check, ChevronRight, ArrowLeft, ExternalLink } from 'lucide-react';
 
 const fromAny = (tb: string) =>
   (supabase.from as never as (tb: string) => ReturnType<typeof supabase.from>)(tb);
@@ -135,10 +135,31 @@ const SEGMENTOS = [
   { id: 'fundamental2', label: 'Fundamental 2' },
 ];
 
+// Dois instrumentos diferentes vivem nesta aba.
+type Instrumento = 'conhecimento' | 'pais';
+
+const INSTRUMENTOS: { id: Instrumento; label: string; nota: string }[] = [
+  { id: 'conhecimento', label: 'Conhecimento das turmas', nota: 'A conversa com as professoras, uma ficha por série, para entender como é uma criança de cada idade.' },
+  { id: 'pais', label: 'Questionário dos pais', nota: 'O que a família responde sobre o próprio filho, um link por criança. Ainda em protótipo, sem vínculo com turma.' },
+];
+
+// Turmas do Infantil. O prototipo fica pendurado numa delas so' para teste.
+const TURMAS_PAIS = [
+  { turma: 'Maternal 2 A', idade: '2 anos', proto: false },
+  { turma: 'Maternal 2 B', idade: '2 anos', proto: true },
+  { turma: 'Maternal 3 A', idade: '3 anos', proto: false },
+  { turma: 'Maternal 3 B', idade: '3 anos', proto: false },
+  { turma: 'Grupo IV A', idade: '4 anos', proto: false },
+  { turma: 'Grupo IV B', idade: '4 anos', proto: false },
+  { turma: 'Grupo V A', idade: '5 anos', proto: false },
+  { turma: 'Grupo V B', idade: '5 anos', proto: false },
+];
+
 // ============================================================
 
 const ArboriaColetaPage = () => {
   const [fichas, setFichas] = useState<Ficha[] | null>(null);
+  const [instrumento, setInstrumento] = useState<Instrumento>('conhecimento');
   const [segmento, setSegmento] = useState('infantil');
   const [abertaId, setAbertaId] = useState<string | null>(null);
   const [salvando, setSalvando] = useState<string | null>(null);
@@ -208,14 +229,86 @@ const ArboriaColetaPage = () => {
 
   if (!aberta) {
     const feitas = doSegmento.filter((f) => f.status === 'concluida').length;
+    const inst = INSTRUMENTOS.find((x) => x.id === instrumento)!;
     return (
       <div>
-        <h1 className="text-xl font-bold mb-1" style={{ color: t.text }}>Coleta</h1>
-        <p className="text-[13px] mb-5 max-w-2xl" style={{ color: t.textMuted }}>
-          Conversas de descoberta com as professoras. Uma ficha por série, para entender como é uma
-          criança de cada idade antes de escrever os questionários. Salva sozinho a cada resposta.
-        </p>
+        <h1 className="text-xl font-bold mb-3" style={{ color: t.text }}>Coleta</h1>
 
+        {/* seletor de instrumento */}
+        <div className="flex gap-2 flex-wrap mb-3">
+          {INSTRUMENTOS.map((x) => {
+            const on = instrumento === x.id;
+            return (
+              <button
+                key={x.id}
+                onClick={() => setInstrumento(x.id)}
+                className="text-[13px] font-bold px-4 py-2 rounded-xl transition-colors"
+                style={on
+                  ? { backgroundColor: t.accent, color: '#fff', boxShadow: t.shadowSm }
+                  : { backgroundColor: t.surface, color: t.textMuted, border: `1px solid ${t.border}` }}
+              >
+                {x.label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[13px] mb-5 max-w-2xl" style={{ color: t.textMuted }}>{inst.nota}</p>
+
+        {instrumento === 'pais' ? (
+          <>
+            <div
+              className="rounded-2xl px-4 py-3.5 mb-4"
+              style={{ backgroundColor: t.accentSoft, border: `1px solid ${t.accentBorder}` }}
+            >
+              <p className="text-[12.5px] m-0" style={{ color: t.textMuted }}>
+                <b style={{ color: t.accentText }}>Ainda não vinculado.</b> O protótipo abaixo abre a versão do
+                Maternal 2, como o pai veria no celular. Nada é gravado, e nenhuma família recebeu link.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {TURMAS_PAIS.map((x) => (
+                <div
+                  key={x.turma}
+                  className="rounded-2xl px-4 py-3 flex items-center gap-3"
+                  style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
+                >
+                  <span
+                    className="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center text-[11px] font-bold"
+                    style={x.proto
+                      ? { backgroundColor: t.accentSoft, color: t.accentText }
+                      : { backgroundColor: t.surfaceSunken, color: t.textFaint }}
+                  >
+                    {x.idade.replace(' anos', 'a')}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <b className="block text-sm font-semibold" style={{ color: t.text }}>{x.turma}</b>
+                    <span className="text-[11.5px]" style={{ color: t.textFaint }}>
+                      {x.proto ? 'protótipo disponível' : 'sem link gerado'}
+                    </span>
+                  </span>
+                  {x.proto ? (
+                    <a
+                      href="/arboria/coleta/pais/preview"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[12px] font-bold px-3 py-2 rounded-xl flex items-center gap-1.5"
+                      style={{ backgroundColor: t.accent, color: '#fff', boxShadow: t.shadowSm }}
+                    >
+                      Abrir <ExternalLink size={13} />
+                    </a>
+                  ) : (
+                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full"
+                      style={{ backgroundColor: t.surfaceSunken, color: t.textFaint }}>
+                      não iniciada
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+        <>
         <div className="flex gap-2 flex-wrap mb-5">
           {SEGMENTOS.map((s) => {
             const tem = (fichas ?? []).some((f) => f.segmento === s.id);
@@ -303,6 +396,8 @@ const ArboriaColetaPage = () => {
               })}
             </div>
           </>
+        )}
+        </>
         )}
       </div>
     );
