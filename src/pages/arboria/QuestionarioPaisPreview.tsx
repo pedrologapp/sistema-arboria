@@ -180,6 +180,10 @@ const QuestionarioPaisPreview = () => {
     });
 
   const avanca = () => setI((v) => v + 1);
+  // O questionario so' e' gravado quando o pai aperta "Finalizar" na ultima
+  // pergunta. Ate' la' ele pode voltar e trocar o que quiser sem virar bagunca,
+  // porque nada foi para o banco ainda: o que grava e' um envio so', no fim.
+  const ultimaPergunta = FLUXO.map((x) => x.tipo).lastIndexOf('pergunta');
 
   // O botao mora a DIREITA e tem cara de botao. O Fundador viu gente nao achar
   // onde apertar quando ele era so' texto sublinhado: em publico amplo, elegancia
@@ -265,7 +269,7 @@ const QuestionarioPaisPreview = () => {
             <p className="fim-4" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Nada se constrói de um dia para o outro. Fique de olho, porque em breve estaremos juntos de novo.</p>
             <p className="fim-5 text-[13px]" style={{ color: 'rgba(255,255,255,.74)' }}>Se quiser mudar alguma resposta, é só entrar de novo pelo mesmo link.</p>
             <Rodape>
-              <Cta texto="Recomeçar" suave onClick={() => { setI(0); setMarcadas({}); setTextos({}); setAbertos({}); }} />
+              <span className="fim-5"><Cta texto="Voltar ao início" suave onClick={() => setI(0)} /></span>
             </Rodape>
           </>
         )}
@@ -425,12 +429,15 @@ const QuestionarioPaisPreview = () => {
                 className="inline-flex items-center gap-2.5 font-bold uppercase"
                 style={{
                   fontSize: 15, letterSpacing: '.14em', padding: '13px 24px', borderRadius: 999,
-                  border: '2px solid #fff', color: '#fff',
+                  border: '2px solid #fff',
+                  background: i === ultimaPergunta ? '#fff' : 'transparent',
+                  color: i === ultimaPergunta ? '#0E3F66' : '#fff',
                   opacity: podeAvancar ? 1 : 0.35,
                   cursor: podeAvancar ? 'pointer' : 'default',
                 }}
               >
-                Próxima <span aria-hidden style={{ fontSize: 17, lineHeight: 1 }}>→</span>
+                {i === ultimaPergunta ? 'Finalizar' : 'Próxima'}
+                {i === ultimaPergunta ? <Check size={16} strokeWidth={3} /> : <span aria-hidden style={{ fontSize: 17, lineHeight: 1 }}>→</span>}
               </button>
             </div>
           </>
