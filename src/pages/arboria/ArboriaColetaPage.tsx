@@ -143,16 +143,19 @@ const INSTRUMENTOS: { id: Instrumento; label: string; nota: string }[] = [
   { id: 'pais', label: 'Questionário dos pais', nota: 'O que a família responde sobre o próprio filho, um link por criança. Ainda em protótipo, sem vínculo com turma.' },
 ];
 
-// Turmas do Infantil. O prototipo fica pendurado numa delas so' para teste.
-const TURMAS_PAIS = [
-  { turma: 'Maternal 2 A', idade: '2 anos', proto: false },
-  { turma: 'Maternal 2 B', idade: '2 anos', proto: true },
-  { turma: 'Maternal 3 A', idade: '3 anos', proto: false },
-  { turma: 'Maternal 3 B', idade: '3 anos', proto: false },
-  { turma: 'Grupo IV A', idade: '4 anos', proto: false },
-  { turma: 'Grupo IV B', idade: '4 anos', proto: false },
-  { turma: 'Grupo V A', idade: '5 anos', proto: false },
-  { turma: 'Grupo V B', idade: '5 anos', proto: false },
+// Turmas do Infantil. Cada faixa tem o seu proprio conjunto de cenas, porque o
+// que uma crianca de 2 anos pode ter feito e o que uma de 4 pode ter feito sao
+// coisas diferentes. Por isso o prototipo abre POR FAIXA, e nao um so' para
+// todas: 'link' diz qual versao aquela turma abriria.
+const TURMAS_PAIS: { turma: string; idade: string; link: string | null }[] = [
+  { turma: 'Maternal 2 A', idade: '2 anos', link: null },
+  { turma: 'Maternal 2 B', idade: '2 anos', link: '/arboria/coleta/pais/preview' },
+  { turma: 'Maternal 3 A', idade: '3 anos', link: null },
+  { turma: 'Maternal 3 B', idade: '3 anos', link: null },
+  { turma: 'Grupo IV A', idade: '4 anos', link: '/arboria/coleta/pais/preview?faixa=g4' },
+  { turma: 'Grupo IV B', idade: '4 anos', link: null },
+  { turma: 'Grupo V A', idade: '5 anos', link: null },
+  { turma: 'Grupo V B', idade: '5 anos', link: null },
 ];
 
 // ============================================================
@@ -275,7 +278,7 @@ const ArboriaColetaPage = () => {
                 >
                   <span
                     className="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center text-[11px] font-bold"
-                    style={x.proto
+                    style={x.link
                       ? { backgroundColor: t.accentSoft, color: t.accentText }
                       : { backgroundColor: t.surfaceSunken, color: t.textFaint }}
                   >
@@ -284,12 +287,12 @@ const ArboriaColetaPage = () => {
                   <span className="flex-1 min-w-0">
                     <b className="block text-sm font-semibold" style={{ color: t.text }}>{x.turma}</b>
                     <span className="text-[11.5px]" style={{ color: t.textFaint }}>
-                      {x.proto ? 'protótipo disponível' : 'sem link gerado'}
+                      {x.link ? 'protótipo desta faixa' : 'sem link gerado'}
                     </span>
                   </span>
-                  {x.proto ? (
+                  {x.link ? (
                     <a
-                      href="/arboria/coleta/pais/preview"
+                      href={x.link}
                       target="_blank"
                       rel="noreferrer"
                       className="text-[12px] font-bold px-3 py-2 rounded-xl flex items-center gap-1.5"
