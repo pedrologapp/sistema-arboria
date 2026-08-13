@@ -27,31 +27,29 @@ const T = {
 };
 
 type Item =
-  | { tipo: 'fala'; bloco?: string; linhas: string[]; enorme?: string; cta: string; ctaSuave?: string; rodape?: string; selo?: boolean }
+  | { tipo: 'fala'; linhas: string[]; enorme?: string; cta: string; ctaSuave?: string; rodape?: string }
   | { tipo: 'crianca'; cta: string }
   | { tipo: 'transicao'; enorme: string; linha?: string; cta: string }
   | { tipo: 'pergunta'; bloco: string; texto: string; instr?: string; opcoes: string[] };
 
 const FLUXO: Item[] = [
   // ---------------------------------------------------------------- entrada
-  { tipo: 'fala', selo: true, enorme: 'Olá!',
+  { tipo: 'fala', enorme: 'Olá!',
     linhas: ['Eu sou o Arboria.', 'E hoje quero conhecer melhor o seu filho(a)!'], cta: 'Vamos lá' },
 
-  { tipo: 'fala', bloco: 'Um momento',
-    linhas: [
+  { tipo: 'fala', linhas: [
       'Você conhece ele(a) de um jeito que mais ninguém conhece.',
       'Do que ele(a) brinca quando ninguém manda nada. O que ele(a) faz quando alguma coisa dá errado. Aquilo que ele(a) fica olhando sem parar.',
       'É disso que eu preciso.',
     ], cta: 'Continuar' },
 
-  { tipo: 'fala', bloco: 'Um momento',
-    enorme: 'Estou muito animado para conhecer ele(a) melhor.',
+  { tipo: 'fala', enorme: 'Estou muito animado para conhecer ele(a) melhor.',
     linhas: [
       'Aqui não tem resposta certa. Eu não quero saber o que ele(a) já aprendeu: quero saber o jeito dele(a).',
       'E pode contar as coisas esquisitas também. Muita vez é ali que está o mais interessante.',
     ], cta: 'Continuar' },
 
-  { tipo: 'fala', bloco: 'Antes de começar', enorme: 'Uma coisa rápida.',
+  { tipo: 'fala', enorme: 'Uma coisa rápida.',
     linhas: [
       'Isto não é prova e não vira nota.',
       `Quem lê o que você escrever é a professora dele(a) e a coordenação. Ele(a) nunca vê.`,
@@ -116,6 +114,7 @@ const QuestionarioPaisPreview = () => {
   const [marcadas, setMarcadas] = useState<Record<number, string[]>>({});
   const [abertos, setAbertos] = useState<Record<number, boolean>>({});
   const [textos, setTextos] = useState<Record<number, string>>({});
+  const [verMais, setVerMais] = useState(false);
 
   const noFim = i >= FLUXO.length;
   const item = noFim ? null : FLUXO[i];
@@ -130,21 +129,34 @@ const QuestionarioPaisPreview = () => {
     });
 
   const avanca = () => setI((v) => v + 1);
-  const Cta = ({ texto, suave, onClick }: { texto: string; suave?: boolean; onClick: () => void }) => (
-    <button onClick={onClick} className="text-[13px] font-bold uppercase" style={{
-      letterSpacing: '.16em', paddingBottom: 6, marginRight: suave ? 24 : 0,
-      color: suave ? 'rgba(255,255,255,.72)' : '#fff',
-      borderBottom: `2px solid ${suave ? 'rgba(255,255,255,.4)' : '#fff'}`,
-    }}>{texto}</button>
+
+  // O botao mora a DIREITA e tem cara de botao. O Fundador viu gente nao achar
+  // onde apertar quando ele era so' texto sublinhado: em publico amplo, elegancia
+  // que esconde a acao custa a resposta inteira.
+  const Cta = ({ texto, suave, forte, onClick }: { texto: string; suave?: boolean; forte?: boolean; onClick: () => void }) => (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-2.5 font-bold uppercase ${forte ? 'cta-forte' : ''}`}
+      style={{
+        fontSize: suave ? 13 : forte ? 16 : 15,
+        letterSpacing: '.14em',
+        padding: suave ? '10px 4px' : forte ? '15px 30px' : '13px 24px',
+        borderRadius: 999,
+        color: suave ? 'rgba(255,255,255,.72)' : forte ? '#0E3F66' : '#fff',
+        border: suave ? 'none' : '2px solid #fff',
+        background: forte ? '#fff' : 'transparent',
+        textDecoration: suave ? 'underline' : 'none',
+        textUnderlineOffset: 5,
+      }}
+    >
+      {texto}
+      {!suave && <span aria-hidden style={{ fontSize: 17, lineHeight: 1 }}>→</span>}
+    </button>
   );
-  const Selo = () => (
-    <div className="flex items-center gap-2 mb-6">
-      <svg viewBox="0 0 100 100" className="w-5 h-5" style={{ color: '#fff' }} aria-hidden>
-        <path d="M30 79 L50 27 L70 79" stroke="currentColor" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-        <path d="M50 27 C50 16 58 9 68 8 C69 19 61 26 50 27 Z" fill="currentColor" />
-      </svg>
-      <span className="text-[10.5px] font-bold uppercase" style={{ letterSpacing: '.24em', color: 'rgba(255,255,255,.82)' }}>Arboria</span>
-    </div>
+
+  // Rodape das telas: o secundario a esquerda, o principal a direita.
+  const Rodape = ({ children }: { children: React.ReactNode }) => (
+    <div className="pt-8 flex items-center justify-end gap-4 flex-wrap">{children}</div>
   );
 
   return (
@@ -164,7 +176,10 @@ const QuestionarioPaisPreview = () => {
       <style>{`
         @keyframes voo { from { transform: translate(0,0) } to { transform: translate(200px,-30px) } }
         .passaros-voo { animation: voo 46s linear infinite alternate; }
-        @media (prefers-reduced-motion: reduce) { .passaros-voo { animation: none } }
+        @keyframes pop { 0% { transform: scale(.88); opacity: 0 } 60% { transform: scale(1.04); opacity: 1 } 100% { transform: scale(1) } }
+        @keyframes respira { 0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,.5) } 50% { box-shadow: 0 0 0 12px rgba(255,255,255,0) } }
+        .cta-forte { animation: pop .42s cubic-bezier(.22,.61,.36,1) both, respira 2.4s ease-out .5s 3; }
+        @media (prefers-reduced-motion: reduce) { .passaros-voo, .cta-forte { animation: none } }
       `}</style>
 
       <div className="relative flex-1 flex flex-col w-full max-w-lg mx-auto px-6 pt-8 pb-7" style={{ zIndex: 2 }}>
@@ -189,55 +204,52 @@ const QuestionarioPaisPreview = () => {
         {/* ---------- FIM ---------- */}
         {noFim && (
           <>
-            <Selo />
-            <p style={{ fontFamily: T.serif, fontSize: 44, lineHeight: 1.02, letterSpacing: '-.022em', margin: '0 0 16px' }}>Obrigado!</p>
-            <p style={{ fontFamily: T.serif, fontSize: 21, lineHeight: 1.45, margin: '0 0 15px' }}>Recebi tudo. A professora do {NOME} já vai ficar com o que você me contou.</p>
-            <p style={{ fontFamily: T.serif, fontSize: 21, lineHeight: 1.45, margin: '0 0 15px' }}>No fim do semestre eu te mando o que a gente foi vendo, e também o que ainda não apareceu.</p>
+            <p style={{ fontFamily: T.serif, fontSize: 47, lineHeight: 1.02, letterSpacing: '-.022em', margin: '0 0 16px' }}>Obrigado!</p>
+            <p style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.45, fontWeight: 600, margin: '0 0 15px' }}>Recebi tudo. A professora do {NOME} já vai ficar com o que você me contou.</p>
+            <p style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.45, fontWeight: 600, margin: '0 0 15px' }}>No fim do semestre eu te mando o que a gente foi vendo, e também o que ainda não apareceu.</p>
             <p className="text-[13px]" style={{ color: 'rgba(255,255,255,.74)' }}>Se quiser mudar alguma resposta, é só entrar de novo pelo mesmo link.</p>
-            <div className="mt-auto pt-7">
+            <Rodape>
               <Cta texto="Recomeçar" suave onClick={() => { setI(0); setMarcadas({}); setTextos({}); setAbertos({}); }} />
-            </div>
+            </Rodape>
           </>
         )}
 
         {/* ---------- TRANSIÇÃO ---------- */}
         {item?.tipo === 'transicao' && (
           <>
-            <Selo />
-            <p style={{ fontFamily: T.serif, fontSize: item.enorme.length > 34 ? 34 : 40, lineHeight: 1.08, letterSpacing: '-.024em', margin: '0 0 14px' }}>{item.enorme}</p>
-            {item.linha && <p style={{ fontFamily: T.serif, fontSize: 21, lineHeight: 1.45, margin: 0 }}>{item.linha}</p>}
-            <div className="mt-auto pt-7"><Cta texto={item.cta} onClick={avanca} /></div>
+            <p style={{ fontFamily: T.serif, fontSize: item.enorme.length > 34 ? 36 : 43, lineHeight: 1.08, letterSpacing: '-.024em', margin: '0 0 14px' }}>{item.enorme}</p>
+            {item.linha && <p style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.45, fontWeight: 600, margin: 0 }}>{item.linha}</p>}
+            <Rodape><Cta texto={item.cta} forte onClick={avanca} /></Rodape>
           </>
         )}
 
         {/* ---------- FALA ---------- */}
         {item?.tipo === 'fala' && (
           <>
-            {item.selo && <Selo />}
-            {item.bloco && <p className="text-[10.5px] font-bold uppercase mb-5" style={{ letterSpacing: '.22em', color: 'rgba(255,255,255,.76)' }}>{item.bloco}</p>}
-            {item.enorme && <p style={{ fontFamily: T.serif, fontSize: item.enorme.length > 20 ? 32 : 44, lineHeight: 1.05, letterSpacing: '-.022em', margin: '0 0 16px' }}>{item.enorme}</p>}
-            {item.linhas.map((l, k) => <p key={k} style={{ fontFamily: T.serif, fontSize: 21, lineHeight: 1.45, margin: '0 0 15px' }}>{l}</p>)}
+            {item.enorme && <p style={{ fontFamily: T.serif, fontSize: item.enorme.length > 20 ? 35 : 47, lineHeight: 1.05, letterSpacing: '-.022em', margin: '0 0 16px' }}>{item.enorme}</p>}
+            {item.linhas.map((l, k) => <p key={k} style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.45, fontWeight: 600, margin: '0 0 15px' }}>{l}</p>)}
             {item.rodape && <p className="text-[11.5px] mt-5" style={{ color: 'rgba(255,255,255,.66)', lineHeight: 1.5, maxWidth: '34ch' }}>{item.rodape}</p>}
-            <div className="mt-auto pt-7">
-              {item.ctaSuave && <Cta texto={item.ctaSuave} suave onClick={avanca} />}
+            <Rodape>
+              {/* "Saber mais" abre o texto completo. Antes ele avancava igual ao outro
+                  botao, o que fazia a saida de quem quer ler virar armadilha. */}
+              {item.ctaSuave && <Cta texto={item.ctaSuave} suave onClick={() => setVerMais(true)} />}
               <Cta texto={item.cta} onClick={avanca} />
-            </div>
+            </Rodape>
           </>
         )}
 
         {/* ---------- CRIANÇA ---------- */}
         {item?.tipo === 'crianca' && (
           <>
-            <p className="text-[10.5px] font-bold uppercase mb-5" style={{ letterSpacing: '.22em', color: 'rgba(255,255,255,.76)' }}>Quem é ele(a)</p>
-            <p style={{ fontFamily: T.serif, fontSize: 21, lineHeight: 1.45, margin: '0 0 15px' }}>Só para eu ter certeza de quem a gente está falando.</p>
+            <p style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.45, fontWeight: 600, margin: '0 0 15px' }}>Só para eu ter certeza de quem a gente está falando.</p>
             <div style={{ borderLeft: '2px solid rgba(255,255,255,.7)', padding: '4px 0 4px 16px', margin: '16px 0 4px' }}>
-              <p style={{ fontFamily: T.serif, fontSize: 27, margin: '0 0 1px' }}>{NOME}</p>
+              <p style={{ fontFamily: T.serif, fontSize: 29, fontWeight: 700, margin: '0 0 1px' }}>{NOME}</p>
               <p className="text-[14px] m-0" style={{ color: 'rgba(255,255,255,.78)' }}>{TURMA}</p>
             </div>
             <p className="text-[13px] mt-6" style={{ color: 'rgba(255,255,255,.74)' }}>Data de nascimento dele(a)</p>
             <input inputMode="numeric" placeholder="__ / __ / ____" className="w-full bg-transparent outline-none"
               style={{ borderBottom: '1px solid rgba(255,255,255,.5)', padding: '12px 0', fontFamily: T.serif, fontSize: 22, color: '#fff', letterSpacing: '.1em', marginTop: 4 }} />
-            <div className="mt-auto pt-7"><Cta texto={item.cta} onClick={avanca} /></div>
+            <Rodape><Cta texto={item.cta} onClick={avanca} /></Rodape>
           </>
         )}
 
@@ -245,8 +257,8 @@ const QuestionarioPaisPreview = () => {
         {item?.tipo === 'pergunta' && (
           <>
             <p className="text-[10.5px] font-bold uppercase mb-2.5" style={{ letterSpacing: '.22em', color: 'rgba(255,255,255,.76)' }}>{item.bloco}</p>
-            <p style={{ fontFamily: T.serif, fontSize: 26, lineHeight: 1.26, letterSpacing: '-.012em', margin: '0 0 6px' }}>{item.texto}</p>
-            <p className="text-[13px]" style={{ color: 'rgba(255,255,255,.74)', margin: '0 0 20px' }}>{item.instr ?? 'Escolha uma'}</p>
+            <p style={{ fontFamily: T.serif, fontSize: 29, lineHeight: 1.24, fontWeight: 700, letterSpacing: '-.012em', margin: '0 0 6px' }}>{item.texto}</p>
+            <p className="text-[14px]" style={{ color: 'rgba(255,255,255,.8)', margin: '0 0 22px' }}>{item.instr ?? 'Escolha uma'}</p>
 
             <div>
               {item.opcoes.map((op, k) => {
@@ -257,7 +269,7 @@ const QuestionarioPaisPreview = () => {
                       minHeight: 56, padding: '15px 0',
                       borderBottom: '1px solid rgba(255,255,255,.24)',
                       borderTop: k === 0 ? '1px solid rgba(255,255,255,.24)' : undefined,
-                      fontFamily: T.serif, fontSize: 18.5, lineHeight: 1.35,
+                      fontFamily: T.serif, fontSize: 20, lineHeight: 1.35, fontWeight: 600,
                       color: on ? '#fff' : 'rgba(255,255,255,.86)',
                     }}>
                     <span>{op}</span>
@@ -288,12 +300,12 @@ const QuestionarioPaisPreview = () => {
               Não sei dizer
             </button>
 
-            <div className="mt-auto pt-7">
+            <Rodape>
               <button onClick={avanca} className="flex items-center gap-2 text-[13px] font-bold uppercase"
                 style={{ letterSpacing: '.16em', color: '#fff', borderBottom: '2px solid #fff', paddingBottom: 6 }}>
                 {marcadasAqui.length > 0 ? <>Próxima <Check size={14} /></> : 'Pular esta'}
               </button>
-            </div>
+            </Rodape>
           </>
         )}
       </div>
@@ -301,6 +313,40 @@ const QuestionarioPaisPreview = () => {
       <div className="relative text-center pb-4 text-[11px]" style={{ color: 'rgba(255,255,255,.55)', zIndex: 2 }}>
         protótipo · nada é gravado
       </div>
+
+      {/* folha do "Saber mais": a finalidade inteira, sem juridiques */}
+      {verMais && (
+        <div className="fixed inset-0 overflow-y-auto" style={{ zIndex: 40, background: '#0E3F66' }}>
+          <div className="w-full max-w-lg mx-auto px-6 pt-8 pb-12">
+            <button onClick={() => setVerMais(false)} className="flex items-center gap-1.5 text-[13px] font-bold uppercase mb-7"
+              style={{ letterSpacing: '.14em', color: 'rgba(255,255,255,.8)' }}>
+              <ChevronLeft size={17} /> Voltar
+            </button>
+
+            <p style={{ fontFamily: T.serif, fontSize: 34, fontWeight: 700, lineHeight: 1.1, letterSpacing: '-.02em', margin: '0 0 26px', color: '#fff' }}>
+              Sobre estas perguntas
+            </p>
+
+            {[
+              ['Quem está pedindo', 'O Centro Educacional Amadeus, junto com o sistema Arboria.'],
+              ['Para quê', `Para entender o jeito do ${NOME} de fazer as coisas: por onde ele(a) começa, o que faz quando algo dá errado. Não é para medir o que ele(a) já sabe.`],
+              ['O que não é', 'Não é prova, não vira nota, não vira diagnóstico, não define turma nem grupo e não vai para o boletim. Ele(a) nunca vê o que você escreveu.'],
+              ['Quem lê', 'A professora dele(a) e a coordenação da escola. Mais ninguém.'],
+              ['Por quanto tempo fica', 'Enquanto ele(a) estudar aqui. Você pode pedir para ver, corrigir ou apagar o que respondeu a qualquer momento, falando com a secretaria.'],
+              ['Responder é opcional', 'Se você não responder, não muda nada para ele(a).'],
+            ].map(([titulo, texto]) => (
+              <div key={titulo} className="mb-6">
+                <p className="text-[11px] font-bold uppercase mb-1.5" style={{ letterSpacing: '.2em', color: 'rgba(255,255,255,.7)' }}>{titulo}</p>
+                <p style={{ fontFamily: T.serif, fontSize: 20, lineHeight: 1.45, margin: 0, color: '#fff' }}>{texto}</p>
+              </div>
+            ))}
+
+            <div className="pt-4 flex justify-end">
+              <Cta texto="Entendi" onClick={() => setVerMais(false)} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
