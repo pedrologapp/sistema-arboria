@@ -21,6 +21,10 @@ const CEU = '/arboria/ceu.png';
 const NOME = 'Arthur';
 const TURMA = 'Maternal 2 B';
 const NAO_SEI = '__nao_sei__';
+// O app sabe de quem se trata, entao escreve certo em vez de usar parenteses.
+const SEXO: 'M' | 'F' = 'M';
+const O_A = SEXO === 'M' ? 'o' : 'a';
+const CONHECE_LO = SEXO === 'M' ? 'conhecê-lo' : 'conhecê-la';
 
 const T = {
   fundo: '#135E96',
@@ -31,12 +35,12 @@ type Item =
   | { tipo: 'fala'; linhas: string[]; enorme?: string; cta: string; ctaSuave?: string; rodape?: string }
   | { tipo: 'crianca'; cta: string }
   | { tipo: 'transicao'; enorme: string; linha?: string; cta: string }
-  | { tipo: 'pergunta'; bloco: string; texto: string; instr?: string; opcoes: string[]; outra?: string };
+  | { tipo: 'pergunta'; bloco: string; texto: string; instr?: string; opcoes: string[]; outra?: string; convite?: string };
 
 const FLUXO: Item[] = [
   // ---------------------------------------------------------------- entrada
   { tipo: 'fala', enorme: 'Olá!',
-    linhas: ['Eu sou o Arboria.', 'E estou muito animado para conhecer melhor o seu filho(a)!'], cta: 'Vamos lá' },
+    linhas: ['Eu sou o Arboria.', 'E hoje quero conhecer melhor o seu filho(a)!'], cta: 'Vamos lá' },
 
   { tipo: 'fala', linhas: [
       'Você conhece ele(a) de um jeito que mais ninguém conhece.',
@@ -63,48 +67,56 @@ const FLUXO: Item[] = [
 
   { tipo: 'crianca', cta: 'É ele' },
 
-  { tipo: 'transicao', enorme: 'Prontos para falarem de quem vocês mais amam?', cta: 'Prontos' },
+  { tipo: 'transicao',
+    enorme: `Ah, ${O_A} ${NOME}!`,
+    linha: `Estou animado para ${CONHECE_LO} melhor. Prontos para falarem de quem vocês mais amam?`,
+    cta: 'Prontos' },
 
   // ---------------------------------------------------------------- bloco 1
-  { tipo: 'pergunta', bloco: 'O tempo dele(a)', texto: 'Pra começar leve: do que ele(a) mais gosta de brincar hoje em dia?', instr: 'Pode marcar mais de uma',
+  { tipo: 'pergunta', bloco: 'O tempo dele(a)', texto: 'Pra começar leve: do que ele(a) mais gosta de brincar hoje em dia?', convite: 'Conta um pouco mais sobre essas brincadeiras', instr: 'Pode marcar mais de uma',
     opcoes: ['De montar e encaixar', 'De correr, subir, pular', 'De faz de conta', 'De carrinho, boneca, bichinho', 'De música e dança', 'De desenhar e pintar', 'De água, terra, massinha'], outra: 'Outra coisa' },
-  { tipo: 'pergunta', bloco: 'O tempo dele(a)', texto: 'Pensa num sábado. Todo mundo em casa, ninguém pedindo nada pra ele(a). Pra onde ele(a) vai?', instr: 'Pode marcar mais de uma',
+  { tipo: 'pergunta', bloco: 'O tempo dele(a)', texto: 'Pensa num sábado. Todo mundo em casa, ninguém pedindo nada pra ele(a). Pra onde ele(a) vai?', convite: 'Como costuma ser esse sábado? Me conta', instr: 'Pode marcar mais de uma',
     opcoes: ['Pega brinquedo de montar', 'Vai atrás de alguém pra brincar', 'Corre, sobe, pula', 'Pega um livro, pede história', 'Quer televisão ou celular', 'Mexe em terra, água, bicho', 'Desmonta o que não é brinquedo'], outra: 'Outra coisa' },
-  { tipo: 'pergunta', bloco: 'O tempo dele(a)', texto: 'Tem alguma coisa que ele(a) começa e o tempo passa e ele(a) nem vê?', instr: 'Pode marcar mais de uma',
+  { tipo: 'pergunta', bloco: 'O tempo dele(a)', texto: 'Tem alguma coisa que ele(a) começa e o tempo passa e ele(a) nem vê?', convite: 'O que acontece quando ele(a) está nisso? Me conta', instr: 'Pode marcar mais de uma',
     opcoes: ['Brinquedo de montar', 'Brincar com alguém', 'Correr, subir, pular', 'Livro, história', 'Televisão ou celular', 'Terra, água, bicho'], outra: 'Outra coisa' },
-  { tipo: 'pergunta', bloco: 'O tempo dele(a)', texto: 'E o contrário: alguma coisa que ele(a) larga em cinco minutos?', instr: 'Pode marcar mais de uma',
+  { tipo: 'pergunta', bloco: 'O tempo dele(a)', texto: 'E o contrário: alguma coisa que ele(a) larga em cinco minutos?', convite: 'Por que você acha que ele(a) larga? Me conta', instr: 'Pode marcar mais de uma',
     opcoes: ['Brinquedo de montar', 'Brincar com alguém', 'Correr, subir, pular', 'Livro, história', 'Televisão ou celular', 'Terra, água, bicho'], outra: 'Outra coisa' },
 
   { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre o ${NOME}!`, cta: 'Continuar' },
 
   // ---------------------------------------------------------------- bloco 2
-  { tipo: 'pergunta', bloco: 'Quando alguma coisa dá errado', texto: 'Lembra da última vez que ele(a) quis fazer alguma coisa sozinho(a) e não deu certo? O que aconteceu depois?',
+  { tipo: 'pergunta', bloco: 'Quando alguma coisa dá errado', texto: 'Lembra da última vez que ele(a) quis fazer alguma coisa sozinho(a) e não deu certo? O que aconteceu depois?', convite: 'Me conta como foi',
     opcoes: ['Tentou de novo', 'Chorou', 'Ficou bravo, jogou longe', 'Chamou alguém', 'Largou e foi fazer outra coisa', 'Ficou olhando parado'] },
-  { tipo: 'pergunta', bloco: 'Quando alguma coisa dá errado', texto: 'Sabe quando ele(a) trava? Fica emburrado(a), chateado(a), e nada anda. Nessas horas, o que costuma funcionar pra ele(a) voltar ao normal?', instr: 'Pode marcar mais de uma',
+  { tipo: 'pergunta', bloco: 'Quando alguma coisa dá errado', texto: 'Sabe quando ele(a) trava? Fica emburrado(a), chateado(a), e nada anda. Nessas horas, o que costuma funcionar pra ele(a) voltar ao normal?', convite: 'O que você faz nessas horas? Me conta', instr: 'Pode marcar mais de uma',
     opcoes: ['Mostrar fazendo, sem falar muito', 'Explicar falando', 'Fazer junto, segurando a mão', 'Distrair com algo que gosta', 'Deixar sozinho um pouco', 'Colo'] },
-  { tipo: 'pergunta', bloco: 'Como ele(a) pede e como conta', texto: 'Quando ele(a) quer alguma coisa e você ainda não entendeu o quê, como ele(a) faz pra te mostrar?',
+  { tipo: 'pergunta', bloco: 'Como ele(a) pede e como conta', texto: 'Quando ele(a) quer alguma coisa e você ainda não entendeu o quê, como ele(a) faz pra te mostrar?', convite: 'Tem algum jeito que é só dele(a)? Me conta',
     opcoes: ['Fala', 'Aponta', 'Pega pela mão e leva', 'Traz o objeto e mostra', 'Pega sozinho', 'Fica manhoso até alguém perceber'] },
-  { tipo: 'pergunta', bloco: 'Como ele(a) pede e como conta', texto: 'Fim da tarde, ele(a) chega da escola e você pergunta como foi. O que costuma acontecer?',
+  { tipo: 'pergunta', bloco: 'Como ele(a) pede e como conta', texto: 'Fim da tarde, ele(a) chega da escola e você pergunta como foi. O que costuma acontecer?', convite: 'O que ele(a) costuma contar? Me conta',
     opcoes: ['Conta sem a gente perguntar', 'Conta se a gente perguntar', 'Conta um pedacinho só', 'Conta, mas é difícil de entender', 'Não conta'] },
 
-  { tipo: 'transicao', enorme: 'Eu sei que temos um caminho longo pela frente, mas de pouquinho em pouquinho faremos essa árvore crescer juntos...', cta: 'Continuar' },
+  // A pausa que explica ao pai por que isto importa. Sem ela o questionario
+  // e' so' um formulario; com ela, o pai entende o que esta ajudando a construir.
+  { tipo: 'transicao',
+    enorme: 'Quando eu faço essas perguntas, é porque entender cada um deles faz diferença.',
+    linha: `Eu não quero que ${O_A} ${NOME} seja apenas mais um na multidão: quero que ele brilhe do próprio jeito. E eu sei que temos um caminho longo pela frente, mas de pouquinho em pouquinho faremos essa árvore crescer juntos...`,
+    cta: 'Continuar' },
 
   // ---------------------------------------------------------------- bloco 3
-  { tipo: 'pergunta', bloco: 'Casa e fora de casa', texto: 'Tem uma coisa que quase todo pai percebe: a criança em casa e a criança fora de casa às vezes parecem duas. Acontece com ele(a)?',
+  { tipo: 'pergunta', bloco: 'Casa e fora de casa', texto: 'Tem uma coisa que quase todo pai percebe: a criança em casa e a criança fora de casa às vezes parecem duas. Acontece com ele(a)?', convite: 'Como é essa diferença? Me conta',
     opcoes: ['Fala muito mais em casa', 'É mais quieto em casa', 'É mais agitado em casa', 'É mais agitado fora', 'É bem parecido nos dois'] },
-  { tipo: 'pergunta', bloco: 'Casa e fora de casa', texto: 'No corre-corre do dia, o que ele(a) já faz sozinho(a) sem ninguém mandar?', instr: 'Pode marcar mais de uma',
+  { tipo: 'pergunta', bloco: 'Casa e fora de casa', texto: 'No corre-corre do dia, o que ele(a) já faz sozinho(a) sem ninguém mandar?', convite: 'Tem alguma coisa que te surpreendeu? Me conta', instr: 'Pode marcar mais de uma',
     opcoes: ['Come sozinho', 'Se veste, ou tenta', 'Escolhe a roupa', 'Guarda os brinquedos', 'Escova os dentes', 'Ainda faz tudo com ajuda'], outra: 'Outra coisa' },
-  { tipo: 'pergunta', bloco: 'Casa e fora de casa', texto: 'Aniversário, parquinho, um lugar cheio de criança que ele(a) não conhece. O que ele(a) faz nos primeiros minutos?',
+  { tipo: 'pergunta', bloco: 'Casa e fora de casa', texto: 'Aniversário, parquinho, um lugar cheio de criança que ele(a) não conhece. O que ele(a) faz nos primeiros minutos?', convite: 'Como costuma ser? Me conta',
     opcoes: ['Entra na brincadeira logo', 'Fica olhando antes de entrar', 'Fica perto de você', 'Chama alguém pra brincar', 'Brinca sozinho do lado'] },
 
   { tipo: 'transicao', enorme: 'Está quase acabando!', cta: 'Continuar' },
 
   // ---------------------------------------------------------------- bloco 4
-  { tipo: 'pergunta', bloco: 'O que ele(a) percebe', texto: 'Quando alguém da casa está triste ou bravo, mesmo sem falar nada, ele(a) percebe?',
+  { tipo: 'pergunta', bloco: 'O que ele(a) percebe', texto: 'Quando alguém da casa está triste ou bravo, mesmo sem falar nada, ele(a) percebe?', convite: 'Já teve uma vez marcante? Me conta',
     opcoes: ['Vai perto', 'Pergunta o que houve', 'Fica quieto', 'Fica agitado também', 'Parece não perceber'] },
-  { tipo: 'pergunta', bloco: 'O que ele(a) percebe', texto: 'Você mudou um móvel de lugar, guardou um brinquedo em outro canto. Ele(a) nota?',
+  { tipo: 'pergunta', bloco: 'O que ele(a) percebe', texto: 'Você mudou um móvel de lugar, guardou um brinquedo em outro canto. Ele(a) nota?', convite: 'Me conta uma vez que isso aconteceu',
     opcoes: ['Repara e fala', 'Repara e arruma', 'Fica incomodado até arrumarem', 'Só repara se alguém falar', 'Não repara'] },
-  { tipo: 'pergunta', bloco: 'O que ele(a) percebe', texto: 'Toca uma música em casa, do nada. O que ele(a) faz?', instr: 'Pode marcar mais de uma',
+  { tipo: 'pergunta', bloco: 'O que ele(a) percebe', texto: 'Toca uma música em casa, do nada. O que ele(a) faz?', convite: 'Tem alguma música que mexe com ele(a)? Me conta', instr: 'Pode marcar mais de uma',
     opcoes: ['Dança no ritmo', 'Canta junto ou tenta', 'Para pra ouvir', 'Continua o que fazia', 'Bate em algo fazendo som', 'Pede pra desligar'] },
 ];
 
@@ -178,10 +190,12 @@ const QuestionarioPaisPreview = () => {
       <style>{`
         @keyframes voo { from { transform: translate(0,0) } to { transform: translate(200px,-30px) } }
         .passaros-voo { animation: voo 46s linear infinite alternate; }
-        @keyframes pop { 0% { transform: scale(.88); opacity: 0 } 60% { transform: scale(1.04); opacity: 1 } 100% { transform: scale(1) } }
-        @keyframes respira { 0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,.5) } 50% { box-shadow: 0 0 0 12px rgba(255,255,255,0) } }
-        .cta-forte { animation: pop .42s cubic-bezier(.22,.61,.36,1) both, respira 2.4s ease-out .5s 3; }
-        @media (prefers-reduced-motion: reduce) { .passaros-voo, .cta-forte { animation: none } }
+        @keyframes surge { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
+        
+        .pausa-frase { animation: surge .9s cubic-bezier(.22,.61,.36,1) both; }
+        .pausa-linha { animation: surge .9s cubic-bezier(.22,.61,.36,1) .35s both; }
+        .cta-forte { animation: surge .8s cubic-bezier(.22,.61,.36,1) .8s both; }
+        @media (prefers-reduced-motion: reduce) { .passaros-voo, .cta-forte, .pausa-frase, .pausa-linha { animation: none; opacity: 1; transform: none } }
       `}</style>
 
       <div className="relative flex-1 flex flex-col w-full max-w-lg mx-auto px-6 pt-8 pb-7" style={{ zIndex: 2 }}>
@@ -190,18 +204,11 @@ const QuestionarioPaisPreview = () => {
           {i > 0 ? (
             <button onClick={() => setI((v) => v - 1)} className="p-1 -ml-1" style={{ color: 'rgba(255,255,255,.88)' }} aria-label="Voltar"><ChevronLeft size={19} /></button>
           ) : <span />}
-          {ehPergunta && (
-            <span className="text-[12px] tabular-nums" style={{ color: 'rgba(255,255,255,.76)', letterSpacing: '.06em' }}>
-              {String(num).padStart(2, '0')} / {TOTAL}
-            </span>
-          )}
+          {/* Sem contador e sem barra: o pai nao deve medir quanto falta.
+              Quem marca o caminho sao as pausas do Arboria, que dizem onde
+              estamos com afeto em vez de com numero. */}
+          <span />
         </div>
-
-        {ehPergunta && (
-          <div className="mb-6" style={{ height: 1, background: 'rgba(255,255,255,.28)', position: 'relative' }}>
-            <div style={{ position: 'absolute', left: 0, top: -0.5, height: 2, background: '#fff', width: `${(num / TOTAL) * 100}%`, transition: 'width .5s cubic-bezier(.22,.61,.36,1)' }} />
-          </div>
-        )}
 
         {/* ---------- FIM ---------- */}
         {noFim && (
@@ -219,8 +226,8 @@ const QuestionarioPaisPreview = () => {
         {/* ---------- TRANSIÇÃO ---------- */}
         {item?.tipo === 'transicao' && (
           <>
-            <p style={{ fontFamily: T.serif, fontSize: item.enorme.length > 34 ? 36 : 43, lineHeight: 1.08, letterSpacing: '-.024em', margin: '0 0 14px' }}>{item.enorme}</p>
-            {item.linha && <p style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.45, fontWeight: 600, margin: 0 }}>{item.linha}</p>}
+            <p className="pausa-frase" style={{ fontFamily: T.serif, fontSize: item.enorme.length > 34 ? 36 : 43, lineHeight: 1.08, letterSpacing: '-.024em', margin: '0 0 14px' }}>{item.enorme}</p>
+            {item.linha && <p className="pausa-linha" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.45, fontWeight: 600, margin: 0 }}>{item.linha}</p>}
             <Rodape><Cta texto={item.cta} forte onClick={avanca} /></Rodape>
           </>
         )}
@@ -295,7 +302,7 @@ const QuestionarioPaisPreview = () => {
 
             {abertos[i] || escolheuOutra ? (
               <div className="mt-6">
-                <p style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 700, color: '#fff', margin: '0 0 4px' }}>Tem história aí? Me conta.</p>
+                <p style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 700, color: '#fff', margin: '0 0 4px' }}>{item.convite ?? 'Tem história aí? Me conta.'}</p>
                 <p className="text-[13.5px] mb-3" style={{ color: 'rgba(255,255,255,.7)', fontStyle: 'italic' }}>
                   tipo: “no papel ele erra a conta, mas se eu pergunto de cabeça ele acerta na hora”
                 </p>
@@ -311,7 +318,7 @@ const QuestionarioPaisPreview = () => {
             ) : (
               <button onClick={() => setAbertos((a) => ({ ...a, [i]: true }))} className="flex items-center gap-3 mt-6" style={{ color: '#fff' }}>
                 <span className="flex items-center justify-center" style={{ width: 30, height: 30, borderRadius: 999, border: '2px solid rgba(255,255,255,.7)', fontSize: 19, lineHeight: 1, paddingBottom: 2 }}>+</span>
-                <span style={{ fontFamily: T.serif, fontSize: 20, fontWeight: 600 }}>Tem história aí? Me conta.</span>
+                <span style={{ fontFamily: T.serif, fontSize: 20, fontWeight: 600 }}>{item.convite ?? 'Tem história aí? Me conta.'}</span>
               </button>
             )}
 
