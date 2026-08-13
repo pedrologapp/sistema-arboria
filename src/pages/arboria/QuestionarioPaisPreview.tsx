@@ -30,6 +30,9 @@ const FAIXA: 'm2' | 'g4' = PARAMS.get('faixa') === 'g4' ? 'g4' : 'm2';
 const NOME = FAIXA === 'g4' ? 'Helena' : 'Arthur';
 const TURMA = FAIXA === 'g4' ? 'Grupo IV A' : 'Maternal 2 B';
 const NAO_SEI = '__nao_sei__';
+// Segundos entre a pergunta aparecer e as opcoes aparecerem. A cena entra
+// sozinha primeiro para o pai le-la sem uma lista competindo pelo olho.
+const ATRASO_OPCOES = 3;
 const OUTRO_CUIDADOR = 'Outra pessoa que cuida dele(a)';
 // ------------------------------------------------------------------ FLEXAO
 // O app sabe de quem se trata, entao o texto inteiro fala no genero da crianca
@@ -103,7 +106,7 @@ const ENTRADA: Item[] = [
     linhas: [
       'E não tem resposta certa ou errada aqui.',
       'Eu não quero saber o que ele(a) já aprendeu: quero saber o jeito dele(a).',
-      'E pode contar as coisas esquisitas também. Muita vez é ali que está o mais interessante.',
+      'E pode contar as coisas esquisitas também. Muitas vezes é ali que está o mais interessante.',
     ], cta: 'Continuar' },
 
   { tipo: 'fala', enorme: 'Uma coisa rápida.',
@@ -510,9 +513,38 @@ const QuestionarioPaisPreview = () => {
             <p className="fim-2" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Vou ler com muito carinho tudo o que você me contou.</p>
             <p className="fim-3" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>No fim do semestre eu te mando o que a gente foi vendo, e também o que ainda não apareceu.</p>
             <p className="fim-4" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Nada se constrói de um dia para o outro. Fique de olho, porque em breve estaremos juntos de novo.</p>
-            <p className="fim-5 text-[13px]" style={{ color: 'rgba(255,255,255,.74)' }}>Se quiser mudar alguma resposta, é só entrar de novo pelo mesmo link.</p>
+            {/* O convite para uma segunda voz vem DEPOIS de responder, e nao
+                antes: agora o pai ja' sabe o que sao as perguntas, entao ele
+                consegue pensar em quem mais teria o que contar. Antes de
+                responder ele nao tinha como saber. */}
+            <div className="fim-5 mt-2" style={{ borderLeft: '2px solid rgba(255,255,255,.55)', padding: '2px 0 2px 16px' }}>
+              <p style={{ fontFamily: T.serif, fontSize: 21, lineHeight: 1.42, fontWeight: 700, color: '#fff', margin: '0 0 6px' }}>
+                Tem mais alguém que você gostaria que me contasse sobre {NOME}?
+              </p>
+              <p className="text-[13.5px]" style={{ color: 'rgba(255,255,255,.75)', margin: '0 0 14px', lineHeight: 1.5 }}>
+                A avó, a babá, quem fica com {flex('ele(a)')} quando você não está. Cada um vê uma parte diferente.
+              </p>
+              <button
+                onClick={() => { navigator.clipboard?.writeText(window.location.href); setLinkCopiado(true); }}
+                className="inline-flex items-center gap-2 font-bold uppercase"
+                style={{ fontSize: 13, letterSpacing: '.12em', padding: '11px 20px', borderRadius: 999, border: '2px solid rgba(255,255,255,.75)', color: '#fff' }}
+              >
+                {linkCopiado ? 'Link copiado' : 'Copiar o link'}
+                {linkCopiado && <Check size={14} strokeWidth={3} />}
+              </button>
+            </div>
+
+            <p className="fim-5 text-[13px] mt-7" style={{ color: 'rgba(255,255,255,.74)' }}>Se quiser mudar alguma resposta, é só entrar de novo pelo mesmo link.</p>
             <Rodape>
-              <span className="fim-5"><Cta texto="Voltar ao início" suave onClick={() => setI(0)} /></span>
+              {/* Limpa tudo: quem comeca agora e' outra pessoa, e ver as
+                  respostas de quem respondeu antes contaminaria as dela. */}
+              <span className="fim-5">
+                <Cta
+                  texto="Passar para outra pessoa"
+                  suave
+                  onClick={() => { setI(0); setMarcadas({}); setTextos({}); setAbertos({}); setEscolhas({}); setEscolhaTexto({}); setLinkCopiado(false); }}
+                />
+              </span>
             </Rodape>
           </>
         )}
@@ -544,7 +576,7 @@ const QuestionarioPaisPreview = () => {
               <p className="revela" style={{ fontFamily: T.serif, fontSize: item.enorme.length > 20 ? 35 : 47, lineHeight: 1.08, letterSpacing: '-.022em', margin: '0 0 26px', animationDelay: '.15s' }}>{item.enorme}</p>
             )}
             {item.linhas.map((l, k) => (
-              <p key={k} className="revela"
+              <p key={`${i}-${k}`} className="revela"
                 style={{
                   fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px',
                   animationDelay: atraso(k) + 's',
@@ -553,7 +585,7 @@ const QuestionarioPaisPreview = () => {
             {item.rodape && (
               <p className="revela text-[11.5px] mt-5" style={{ color: 'rgba(255,255,255,.66)', lineHeight: 1.5, maxWidth: '34ch', animationDelay: atrasoFim + 's' }}>{item.rodape}</p>
             )}
-            <div className="revela" style={{ animationDelay: atrasoFim + 's' }}>
+            <div key={`cta-${i}`} className="revela" style={{ animationDelay: atrasoFim + 's' }}>
               <Rodape>
                 {/* "Saber mais" abre o texto completo. Antes ele avancava igual ao outro
                     botao, o que fazia a saida de quem quer ler virar armadilha. */}
@@ -709,18 +741,25 @@ const QuestionarioPaisPreview = () => {
                 sozinha. O rotulo confundia mais do que orientava. */}
             {/* Cena e pergunta na mesma cor, fonte e peso: e' a mesma voz
                 falando, so' que a linha corta entre uma e outra. */}
-            {item.cena && (
-              <p style={{ fontFamily: T.serif, fontSize: 24, lineHeight: 1.32, fontWeight: 700, letterSpacing: '-.01em', margin: '0 0 12px' }}>{item.cena}</p>
-            )}
-            <p style={{ fontFamily: T.serif, fontSize: 24, lineHeight: 1.32, fontWeight: 700, letterSpacing: '-.01em', margin: '0 0 6px' }}>{item.texto}</p>
-            <p className="text-[14px]" style={{ color: 'rgba(255,255,255,.8)', margin: '0 0 22px' }}>{item.instr ?? 'Escolha uma'}</p>
+            {/* A cena e a pergunta entram primeiro, sozinhas. As opcoes so'
+                aparecem depois de ATRASO_OPCOES, para o pai ler a cena antes de
+                ter uma lista competindo pelo olho. A chave carrega o indice: sem
+                ela o React reaproveita o no' e a animacao nao recomeca na tela
+                seguinte. */}
+            <div key={`cena-${i}`} className="revela">
+              {item.cena && (
+                <p style={{ fontFamily: T.serif, fontSize: 24, lineHeight: 1.32, fontWeight: 700, letterSpacing: '-.01em', margin: '0 0 12px' }}>{item.cena}</p>
+              )}
+              <p style={{ fontFamily: T.serif, fontSize: 24, lineHeight: 1.32, fontWeight: 700, letterSpacing: '-.01em', margin: '0 0 6px' }}>{item.texto}</p>
+            </div>
+            <p key={`instr-${i}`} className="revela text-[14px]" style={{ color: 'rgba(255,255,255,.8)', margin: '0 0 22px', animationDelay: ATRASO_OPCOES + 's' }}>{item.instr ?? 'Escolha uma'}</p>
 
             {/* Lista de linhas, sem caixa: o peso visual fica no texto e nao no
                 container. Quem carrega a marcacao e' o circulo. Vazio ele ja diz
                 "isto se escolhe" antes de o pai tocar; verde com check ele diz
                 "escolhido" sem depender de o pai comparar dois tons de branco,
                 que foi onde o teste com um pai de verdade falhou. */}
-            <div>
+            <div key={`ops-${i}`} className="revela" style={{ animationDelay: ATRASO_OPCOES + 's' }}>
               {opcoes.map((op, k) => {
                 const on = marcadasAqui.includes(op);
                 return (
@@ -783,7 +822,7 @@ const QuestionarioPaisPreview = () => {
               </p>
             )}
 
-            <div className="pt-6 flex items-center justify-between gap-4 flex-wrap">
+            <div key={`rodape-${i}`} className="revela pt-6 flex items-center justify-between gap-4 flex-wrap" style={{ animationDelay: ATRASO_OPCOES + 's' }}>
               <button
                 onClick={() => { setMarcadas((m) => ({ ...m, [i]: [NAO_SEI] })); avanca(); }}
                 className="text-[15px]"
