@@ -61,6 +61,7 @@ const T = {
 type Item =
   | { tipo: 'fala'; revelar?: boolean; linhas: string[]; enorme?: string; cta: string; ctaSuave?: string; rodape?: string }
   | { tipo: 'crianca'; cta: string }
+  | { tipo: 'respondente'; cta: string }
   | { tipo: 'transicao'; enorme: string; linha?: string; cta: string }
   | { tipo: 'pergunta'; bloco: string; texto: string; instr?: string; opcoes: string[]; outra?: string; convite?: string };
 
@@ -101,6 +102,8 @@ const FLUXO_BRUTO: Item[] = [
     cta: 'Pode perguntar', ctaSuave: 'Saber mais' },
 
   { tipo: 'crianca', cta: 'É ele' },
+
+  { tipo: 'respondente', cta: 'Continuar' },
 
   { tipo: 'transicao',
     enorme: `Ah, ${O_A} ${NOME}!`,
@@ -162,6 +165,7 @@ const numeroDaPergunta = (i: number) => FLUXO.slice(0, i + 1).filter((x) => x.ti
 
 const QuestionarioPaisPreview = () => {
   const [i, setI] = useState(0);
+  const [quemResponde, setQuemResponde] = useState<string | null>(null);
   const [marcadas, setMarcadas] = useState<Record<number, string[]>>({});
   const [abertos, setAbertos] = useState<Record<number, boolean>>({});
   const [textos, setTextos] = useState<Record<number, string>>({});
@@ -316,6 +320,59 @@ const QuestionarioPaisPreview = () => {
             <input inputMode="numeric" placeholder="__ / __ / ____" className="w-full bg-transparent outline-none"
               style={{ borderBottom: '1px solid rgba(255,255,255,.5)', padding: '12px 0', fontFamily: T.serif, fontSize: 22, color: '#fff', letterSpacing: '.1em', marginTop: 4 }} />
             <Rodape><Cta texto={item.cta} onClick={avanca} /></Rodape>
+          </>
+        )}
+
+        {/* ---------- QUEM RESPONDE ----------
+            A mesma cena contada pela mae, pelo pai ou pela avo nao e' a mesma
+            cena: cada um esta em casa em horas diferentes e repara em coisas
+            diferentes. Sem saber de quem e' o olhar, a resposta perde metade
+            do valor. Fica aqui, colado na identificacao, para nao cortar a
+            virada afetiva que vem logo depois. */}
+        {item?.tipo === 'respondente' && (
+          <>
+            <p style={{ fontFamily: T.serif, fontSize: 29, lineHeight: 1.24, fontWeight: 700, letterSpacing: '-.012em', margin: '0 0 6px' }}>E quem está me contando hoje?</p>
+            <p className="text-[14px]" style={{ color: 'rgba(255,255,255,.8)', margin: '0 0 22px' }}>Pergunto porque cada um vê uma parte diferente do dia dele(a).</p>
+
+            <div className="flex flex-col gap-2.5">
+              {['A mãe', 'O pai', 'Os dois juntos', 'A avó ou o avô', 'Outra pessoa que cuida dele(a)'].map((quem) => {
+                const rotulo = flex(quem);
+                const on = quemResponde === rotulo;
+                return (
+                  <button
+                    key={rotulo}
+                    onClick={() => setQuemResponde(rotulo)}
+                    className="w-full flex items-center justify-between gap-3 text-left transition-colors"
+                    style={{
+                      minHeight: 58, padding: '13px 16px', borderRadius: 15,
+                      background: on ? '#fff' : 'rgba(255,255,255,.10)',
+                      border: on ? '2px solid #fff' : '2px solid rgba(255,255,255,.34)',
+                      boxShadow: on ? '0 6px 18px rgba(9,45,74,.28)' : undefined,
+                      fontFamily: T.serif, fontSize: 19.5, lineHeight: 1.32, fontWeight: 600,
+                      color: on ? '#0E3F66' : '#fff',
+                    }}
+                  >
+                    <span>{rotulo}</span>
+                    <span
+                      className="flex items-center justify-center"
+                      style={{
+                        flex: 'none', width: 26, height: 26, borderRadius: 999,
+                        background: on ? '#1F6141' : 'transparent',
+                        border: on ? '2px solid #1F6141' : '2px solid rgba(255,255,255,.55)',
+                      }}
+                    >
+                      {on && <Check size={15} strokeWidth={3.5} color="#fff" />}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <Rodape>
+              <span style={{ opacity: quemResponde ? 1 : 0.35, pointerEvents: quemResponde ? 'auto' : 'none' }}>
+                <Cta texto={item.cta} onClick={avanca} />
+              </span>
+            </Rodape>
           </>
         )}
 
