@@ -160,7 +160,15 @@ const FLUXO_BRUTO: Item[] = [
     texto: 'Como ele(a) te mostrou?',
     convite: 'Me conta o que era, e como você descobriu',
     instr: 'Pode marcar mais de uma',
-    opcoes: ['Apontou de longe', 'Apontou e ficou olhando pra você', 'Pegou você pela mão e levou até lá', 'Trouxe o objeto e pôs na sua mão', 'Fez o gesto da coisa, imitou o que ela faz', 'Repetiu a mesma palavra até você entender'],
+    // O leque foi refeito de proposito (Fundador, opcao A). A lista anterior
+    // era apontar / levar pela mao / por a mao do adulto no objeto / alternancia
+    // de olhar, que e' exatamente a combinacao usada em triagem de
+    // desenvolvimento aos 2 anos. Um pai atento reconheceria a bateria, sairia
+    // preocupado, e o Arboria nao devolve nada no Infantil: acenderia a
+    // preocupacao sem dar onde pousar. Agora as opcoes estao escritas como cena
+    // e duas delas (a analogia e o som) nao pertencem a triagem nenhuma, o que
+    // quebra o padrao sem perder o que a pergunta lia.
+    opcoes: ['Foi puxando você até o lugar', 'Apontou de longe', 'Fez o som ou o gesto da coisa', 'Apontou e olhou pra você, esperando você entender', 'Trouxe uma coisa parecida pra você entender qual era', 'Repetiu a mesma palavra até você entender'],
     outra: 'De outro jeito' },
 
   { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre ${NOME}!`, cta: 'Continuar' },
