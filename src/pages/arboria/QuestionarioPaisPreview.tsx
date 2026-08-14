@@ -35,6 +35,9 @@ const NAO_SEI = '__nao_sei__';
 // a pausa era boa uma vez e virava espera repetida a partir da terceira tela.
 // A tela inteira entra junto, com a mesma revelacao suave.
 const ATRASO_OPCOES = 0;
+// Onde o rascunho mora. No produto a chave leva o id da crianca, senao dois
+// filhos na mesma casa dividiriam o mesmo rascunho.
+const CHAVE_RASCUNHO = 'arboria:questionario-pais:' + FAIXA;
 const OUTRO_CUIDADOR = 'Outra pessoa que cuida dele(a)';
 // ------------------------------------------------------------------ FLEXAO
 // O app sabe de quem se trata, entao o texto inteiro fala no genero da crianca
@@ -414,6 +417,7 @@ const QuestionarioPaisPreview = () => {
     window.scrollTo(0, 0);
     document.documentElement.scrollTop = 0;
   }, [i]);
+
   const [escolhas, setEscolhas] = useState<Record<string, string>>({});
   const [escolhaTexto, setEscolhaTexto] = useState<Record<string, string>>({});
   const [linkCopiado, setLinkCopiado] = useState(false);
@@ -421,6 +425,39 @@ const QuestionarioPaisPreview = () => {
   const [abertos, setAbertos] = useState<Record<number, boolean>>({});
   const [textos, setTextos] = useState<Record<number, string>>({});
   const [verMais, setVerMais] = useState(false);
+
+  // ------------------------------------------------------------- RASCUNHO
+  // O pai escreve no celular, e no celular ele e' interrompido: chega ligacao,
+  // a crianca chama, ele troca de aplicativo. Sem rascunho, voltar significa
+  // reescrever, e ninguem reescreve: fecha e desiste. Entao cada tecla vai para
+  // o proprio aparelho, e ao voltar ele cai onde parou com tudo no lugar.
+  //
+  // Fica no aparelho e nao no servidor de proposito: enquanto o pai nao aperta
+  // Finalizar, aquilo ainda e' rascunho dele e a escola nao viu nada.
+  const [restaurado, setRestaurado] = useState(false);
+
+  useEffect(() => {
+    try {
+      const cru = localStorage.getItem(CHAVE_RASCUNHO);
+      if (!cru) return;
+      const d = JSON.parse(cru);
+      if (d.textos) setTextos(d.textos);
+      if (d.marcadas) setMarcadas(d.marcadas);
+      if (d.escolhas) setEscolhas(d.escolhas);
+      if (d.escolhaTexto) setEscolhaTexto(d.escolhaTexto);
+      if (typeof d.i === 'number' && d.i > 0) { setI(d.i); setRestaurado(true); }
+    } catch {
+      // Rascunho corrompido nao pode impedir o pai de responder.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CHAVE_RASCUNHO, JSON.stringify({ i, textos, marcadas, escolhas, escolhaTexto }));
+    } catch {
+      // Aba anonima ou memoria cheia: segue sem rascunho, sem avisar nada.
+    }
+  }, [i, textos, marcadas, escolhas, escolhaTexto]);
 
   const noFim = i >= FLUXO.length;
   const item = noFim ? null : FLUXO[i];
@@ -434,7 +471,7 @@ const QuestionarioPaisPreview = () => {
       return { ...m, [i]: atual.includes(op) ? atual.filter((x) => x !== op) : [...atual, op] };
     });
 
-  const avanca = () => setI((v) => v + 1);
+  const avanca = () => { setRestaurado(false); setI((v) => v + 1); };
   // O questionario so' e' gravado quando o pai aperta "Finalizar" na ultima
   // pergunta. Ate' la' ele pode voltar e trocar o que quiser sem virar bagunca,
   // porque nada foi para o banco ainda: o que grava e' um envio so', no fim.
@@ -600,7 +637,7 @@ const QuestionarioPaisPreview = () => {
                 <Cta
                   texto="Passar para outra pessoa"
                   suave
-                  onClick={() => { setI(0); setMarcadas({}); setTextos({}); setAbertos({}); setEscolhas({}); setEscolhaTexto({}); setLinkCopiado(false); }}
+                  onClick={() => { try { localStorage.removeItem(CHAVE_RASCUNHO); } catch { /* sem rascunho, nada a limpar */ } setI(0); setMarcadas({}); setTextos({}); setAbertos({}); setEscolhas({}); setEscolhaTexto({}); setLinkCopiado(false); setRestaurado(false); }}
                 />
               </span>
             </Rodape>
@@ -801,6 +838,15 @@ const QuestionarioPaisPreview = () => {
                 ter uma lista competindo pelo olho. A chave carrega o indice: sem
                 ela o React reaproveita o no' e a animacao nao recomeca na tela
                 seguinte. */}
+            {/* Quem voltou precisa saber que nada se perdeu, senao ele desconfia
+                e comeca de novo do zero. Aparece uma vez so', e some no primeiro
+                avanco. */}
+            {restaurado && (
+              <p className="revela mb-5" style={{ fontFamily: T.serif, fontSize: 18, lineHeight: 1.4, fontWeight: 600, color: 'rgba(255,255,255,.82)' }}>
+                Guardei o que você já tinha escrito. Continuamos daqui.
+              </p>
+            )}
+
             <div key={`cena-${i}`} className="revela">
               {/* A linha de puxar conversa. Ela e' o que faz o pai sentir que
                   tem alguem do outro lado e nao um formulario, e por isso nao
