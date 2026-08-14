@@ -540,9 +540,9 @@ const QuestionarioPaisPreview = () => {
         {noFim && (
           <>
             <p className="fim-1" style={{ fontFamily: T.serif, fontSize: 44, lineHeight: 1.04, letterSpacing: '-.022em', margin: '0 0 20px' }}>Muito obrigado!</p>
-            <p className="fim-2" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Anotei tudo o que você me contou.</p>
-            <p className="fim-3" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Na semana que vem eu vou procurar essas coisas aqui dentro: se ela faz o mesmo na sala, com quem, em que hora do dia.</p>
-            <p className="fim-4" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>O que acontece em casa eu não tenho como ver. Por isso eu perguntei.</p>
+            <p className="fim-2" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Anotei tudo com muito carinho o que você me contou.</p>
+            <p className="fim-3" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>O que acontece em casa eu não tenho como ver. Por isso eu perguntei.</p>
+            <p className="fim-4" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Nada se constrói de um dia para o outro. Fique de olho, porque em breve estaremos juntos de novo.</p>
             {/* O convite para uma segunda voz vem DEPOIS de responder, e nao
                 antes: agora o pai ja' sabe o que sao as perguntas, entao ele
                 consegue pensar em quem mais teria o que contar. Antes de
