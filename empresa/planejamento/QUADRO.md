@@ -7,17 +7,18 @@
 **Regras do quadro:** toda demanda tem um dono de decisão, um segmento e um estado. Nada entra sem data ou sem gatilho. O que está travado aparece com o que destrava.
 **Estados:** `EM CURSO` · `PRONTO PRA COMEÇAR` · `AGUARDA VOCÊ` (decisão do Fundador) · `TRAVADO` (depende de terceiro) · `FUNDO DA FILA`
 
-Última atualização: 12/08/2026.
+Última atualização: 14/08/2026.
 
 ---
 
-## 1. ESTA SEMANA (12 a 17/08)
+## 1. ESTA SEMANA (12 a 17/08) — hoje é sexta, 14/08
 
 | # | O quê | Segmento | Estado | Prazo |
 |---|---|---|---|---|
 | 1 | **IA de fim de fase do F1.** A última missão da fase Linguística ainda acontece esta semana, então a fase só fecha no fim dela. | F1 | PRONTO PRA COMEÇAR | **Segunda, 17/08** (definido pelo Fundador em 12/08) |
 | 2 | **Preparar as aulas da fase Linguística do F2** (consciência + prática, níveis do 6º ao 9º, núcleo + habilidades suporte) | F2 | AGUARDA VOCÊ (falta a data de início) | O Fundador quer começar agora |
 | 3 | Fechar a Arena: marcar concorrentes, lançar notas, página da Competição, site | F2 | EM CURSO (seleção proposta em 12/08, aguarda aval) | Termina no formato atual |
+| 5 | **Missões reabertas até domingo 16/08** a pedido dos alunos (41 missões, migração `20260814000001`). Segunda tem entrega nova para a IA analisar e ranking para refazer | F2 | FEITO 14/08 | Consequência na segunda |
 | 4 | Esconder nota e aprovação na missão coletiva na tela do professor | F2 | AGUARDA VOCÊ | Curto |
 
 **O item 1 é o único com data externa.** A fase fecha independente de nós. Se ele escorregar, a professora termina a Linguística sem devolutiva e o registro esfria.
@@ -34,7 +35,7 @@
 | Reunião com as professoras do Infantil | 13/08, amanhã | Regra de ouro: **não mostrar nenhuma pergunta do instrumento.** Perguntas prontas contaminam o vocabulário delas, que é o ativo que a reunião existe para colher |
 | Trilho protegido de necessidade educacional específica | **PRÉ-REQUISITO DO QUESTIONÁRIO** (era AGUARDA VOCÊ) | Enquanto não existir lugar legítimo para laudo e plano de apoio, esse dado continua caindo no texto livre. O questionário multiplica a superfície do problema |
 | Ajustar a tela do Infantil (a reforma da visão do professor foi fechada, a tela não acompanhou) | PRONTO PRA COMEÇAR | Decisões já tomadas na Assembleia de 26/06 |
-| Questionário para PAIS (pergunta indireta, cena/história) | AGUARDA VOCÊ | Rascunho pronto. Lapidar a Q1, que ficou confusa. Vem depois do questionário do professor |
+| **Questionário para PAIS** | **NO AR EM PROTÓTIPO (Grupo IV), aprovado pela coordenadora do Infantil em 14/08** | Mudou de princípio em 14/08: a opção deixou de tentar LER o mecanismo e virou ISCA DE MEMÓRIA. Quem lê passa a ser a IA, no relato escrito. 7 iscas por rodada, 5 guardadas para a rodada do início do ano. Auditoria conceitual mostrou que a versão anterior lia rota e temperamento em 8 dos 14 itens. **Falta: Maternal 2 no formato novo, o termo virar aceite de verdade, e o app salvar as respostas** |
 | Banco de atividades por fase/semana | FUNDO DA FILA | Fundação do pipeline de dados |
 
 ---
@@ -139,3 +140,9 @@ Estas travam trabalho meu agora. Em ordem de quanto destravam:
 - 05/08: aviso de missão do grupo já entregue; reversão de fase do Infantil.
 - 04/08: incidente da entrega coletiva resolvido (grupo_ref sem turma travava ~45 grupos); prazo esticado; anexos até 25MB com imagem.
 - 31/07 a 30/07: reforma completa da Arena em produção (missões, Palco, contador por grupo, deck "fazer funcionar").
+
+---
+
+## PEDIDO ENTREGUE (13 e 14/08)
+
+**A chave dos questionários foi entregue e mudou o instrumento.** O Fundador pediu para entender em quais perguntas se identifica o mecanismo. A resposta honesta foi que na maioria delas não se identificava: a auditoria conceitual apontou que 8 dos 14 itens do Grupo IV liam rota, estilo ou temperamento. Disso saiu a virada de 14/08 (isca de memória no lugar de classificação) e a regra que fica valendo: **o que não apareceu no questionário dos pais não é ausência na criança, é canal que não foi perguntado naquela rodada.**
