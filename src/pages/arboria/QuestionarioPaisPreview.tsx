@@ -487,6 +487,8 @@ const QuestionarioPaisPreview = () => {
         .passaros-voo { animation: voo 46s linear infinite alternate; }
         @keyframes surge { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
         
+        .campo-relato::placeholder { color: rgba(255,255,255,.62); font-style: italic; }
+        .campo-relato:focus { border-color: #fff; background: rgba(255,255,255,.18); }
         .revela { animation: surge 1s cubic-bezier(.22,.61,.36,1) both; }
         /* As pausas curtas ("Está quase acabando!") estavam demorando o mesmo
            que as longas, porque o atraso do botao era fixo. Encurtado: numa
@@ -801,13 +803,23 @@ const QuestionarioPaisPreview = () => {
             <div key={`escrever-${i}`} className="revela mb-7">
               <p style={FALA}>{item.convite ?? 'Tem história aí? Me conta.'}</p>
               <p style={{ ...FALA, margin: '0 0 14px' }}>{item.ajuda ?? 'O que você lembrar, do jeito que aconteceu.'}</p>
+              {/* O campo e' a resposta principal, entao ele parece um campo.
+                  Como um filete embaixo do texto, ele se confundia com a propria
+                  fala do Arboria e o pai passava direto. Solto do texto, com
+                  fundo e borda propria, ele diz sozinho "e' aqui que se escreve",
+                  e na mesma letra do resto para nao virar letra miuda de novo. */}
               <textarea
                 value={textos[i] ?? ''}
                 onChange={(e) => setTextos((t) => ({ ...t, [i]: e.target.value }))}
-                rows={3}
+                rows={4}
                 placeholder="escreva aqui"
-                className="w-full bg-transparent outline-none resize-y"
-                style={{ borderBottom: '1px solid rgba(255,255,255,.42)', fontFamily: T.serif, fontSize: 21, lineHeight: 1.4, color: '#fff', paddingBottom: 6 }}
+                className="campo-relato w-full outline-none resize-y"
+                style={{
+                  marginTop: 18, padding: '15px 17px', borderRadius: 16,
+                  background: 'rgba(255,255,255,.13)',
+                  border: '2px solid rgba(255,255,255,.5)',
+                  fontFamily: T.serif, fontSize: 23, lineHeight: 1.38, color: '#fff',
+                }}
               />
             </div>
 
