@@ -30,9 +30,10 @@ const FAIXA: 'm2' | 'g4' = PARAMS.get('faixa') === 'g4' ? 'g4' : 'm2';
 const NOME = FAIXA === 'g4' ? 'Helena' : 'Arthur';
 const TURMA = FAIXA === 'g4' ? 'Grupo IV A' : 'Maternal 2 B';
 const NAO_SEI = '__nao_sei__';
-// Segundos entre a pergunta aparecer e as opcoes aparecerem. A cena entra
-// sozinha primeiro para o pai le-la sem uma lista competindo pelo olho.
-const ATRASO_OPCOES = 3;
+// Segundos entre a pergunta aparecer e as opcoes aparecerem. Ficou em zero:
+// a pausa era boa uma vez e virava espera repetida a partir da terceira tela.
+// A tela inteira entra junto, com a mesma revelacao suave.
+const ATRASO_OPCOES = 0;
 const OUTRO_CUIDADOR = 'Outra pessoa que cuida dele(a)';
 // ------------------------------------------------------------------ FLEXAO
 // O app sabe de quem se trata, entao o texto inteiro fala no genero da crianca
@@ -565,11 +566,11 @@ const QuestionarioPaisPreview = () => {
           // texto e' um convite para pular a leitura, e essas telas sao
           // justamente as que o pai precisa ler: quem esta falando, para que
           // serve, e o que a escola faz com o que ele contar.
-          const PASSO = 1.5;              // intervalo entre uma linha e a proxima
-          const DURACAO = 1;              // o quanto cada linha leva para entrar
-          const INICIO = item.enorme ? 1.1 : 0.5;
+          const PASSO = 0.9;              // intervalo entre uma linha e a proxima
+          const DURACAO = 0.85;           // o quanto cada linha leva para entrar
+          const INICIO = item.enorme ? 0.6 : 0.3;
           const atraso = (k: number) => INICIO + k * PASSO;
-          const atrasoFim = atraso(item.linhas.length - 1) + DURACAO + 0.25;
+          const atrasoFim = atraso(item.linhas.length - 1) + DURACAO + 0.2;
           return (
           <>
             {item.enorme && (
