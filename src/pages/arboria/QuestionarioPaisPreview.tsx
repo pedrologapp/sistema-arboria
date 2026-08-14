@@ -163,106 +163,135 @@ const QUEM_MAIS_FICA = ['A mãe', 'O pai', 'A avó ou o avô', 'Uma babá ou out
 
 const CENAS_M2: Item[] = [
   // ============================================================
-  // AS OITO CENAS DO MATERNAL 2 (v2, 13/08/2026)
+  // AS SETE ISCAS DO MATERNAL 2 (v3, 14/08/2026)
   //
-  // Reescritas depois que a simulacao com pais estimou que ~57% das marcacoes
-  // da versao anterior nao teriam episodio por tras: o pai marcava descrevendo
-  // o filho que ele tem na cabeca. Tres regras saem disso e valem para as
-  // quatro faixas do Infantil:
-  //   1. Toda pergunta em preterito perfeito. Nada de "ele costuma".
-  //   2. Toda cena com ancora de tempo: ontem, essa semana, no ultimo lugar.
-  //   3. O nome da crianca dentro da cena.
+  // Mesma espinha do Grupo IV e o mesmo principio: a opcao e' isca de memoria,
+  // nao categoria, e quem le' o mecanismo e' a IA no relato. O que muda de faixa
+  // para faixa e' o EXEMPLO dentro da cena, nunca a pergunta. Espinha igual e' o
+  // que permite comparar a mania dos 2 anos com a dos 5 da mesma crianca daqui
+  // a tres anos; perguntas diferentes por faixa matariam a regua longitudinal e
+  // fariam o Maternal 2 virar coleta perdida.
   //
-  // Aos 2 anos isto e' EXPLORACAO, nao leitura: nada volta para o pai sobre
-  // inteligencia e nada preenche cobertura de canal. O valor e' ser o
-  // denominador que permite ler a mudanca dois anos depois.
+  // O QUE MUDA AOS 2 ANOS, e vem da ficha da propria professora do Maternal 2:
+  //  - a crianca mostra que entendeu REPRODUZINDO o que ve, nao falando. Por
+  //    isso a imitacao e' isca fixa aqui e no Grupo IV nao e'.
+  //  - quando quer algo e nao sabe pedir, ela "aponta ou pega e leva, fazendo
+  //    gestos". Nada de perguntar o que a crianca disse: so' o que ela fez.
+  //  - lembrar do que aconteceu antes "precisa resgatar, e mesmo assim tem
+  //    crianca que nao lembra". Entao nada de "conta o que aconteceu no passeio":
+  //    a ancora de tempo tem que estar na cena, dada pelo Arboria.
+  //  - do primeiro para o segundo semestre a diferenca e' enorme. Aos 2 anos a
+  //    idade em meses vale mais que a serie, e ela ja' vem da data de nascimento.
+  //
+  // E o que NAO entra: nada de birra, choro ou travamento. Sob frustracao os
+  // oito mecanismos ficam iguais e so' aparece temperamento, que e' estavel e
+  // seria lido pela IA como padrao longitudinal.
   // ============================================================
 
   { tipo: 'pergunta',
-    cena: `Pra começar, uma cena que tem em toda casa. Ontem, anteontem, esses dias: ${NOME} estava mexendo numa coisa que não abria, ou montando alguma coisa que caiu.`,
-    texto: 'Qual foi a primeira coisa que ele(a) fez depois?',
-    convite: 'Me conta como foi essa vez',
-    opcoes: ['Fez de novo do mesmo jeito, com mais força', 'Virou a coisa e tentou por outro lado', 'Levou até você e pôs na sua mão', 'Foi pegar algo pra ajudar: uma cadeira, um pauzinho', 'Ficou olhando aquilo um tempo antes de mexer', 'Deixou pra lá e foi pra outra brincadeira'] },
+    abre: 'Vou começar pela pergunta mais gostosa.',
+    texto: `O que ${NOME} mais gosta de fazer quando chega em casa?`,
+    convite: 'Me conta',
+    ajuda: 'Pode ser a coisa mais boba do mundo. É justamente isso que eu quero saber.',
+    opcoes: [] },
 
   { tipo: 'pergunta',
-    cena: `Essa semana ${NOME} quis uma coisa que estava em cima, alta demais pra ele(a).`,
-    texto: 'O que ele(a) tentou primeiro?',
-    convite: 'Me conta essa cena',
-    opcoes: ['Esticou, pulou, subiu no que tinha perto', 'Arrastou uma cadeira, ou puxou o pano de cima', 'Pegou você pela mão e levou até lá', 'Ficou apontando e falando até alguém ir', 'Ficou olhando pra coisa, esperando alguém ver', 'Deixou pra lá e foi fazer outra coisa'] },
+    abre: 'Agora uma que sempre rende história.',
+    cena: 'Toda criança de 2 anos tem uma coisa que ninguém entende. Tem uma aqui que só entra na sala se for pela mesma porta. Tem um que enche e despeja o mesmo potinho a manhã toda.',
+    texto: `${NOME} tem uma dessas?`,
+    convite: 'Me conta qual é',
+    opcoes: ['Leva um objeto pra todo canto e não larga', 'Enche e despeja, bota e tira, abre e fecha', 'Não deixa mudar o lugar das coisas dela', 'Não lembro de nada assim', 'Põe as coisas em fila ou empilha', 'Faz sempre o mesmo caminho pela casa'] },
 
   { tipo: 'pergunta',
-    cena: `Teve um dia esses dias em que ${NOME} quis alguma coisa e você não estava entendendo o que era. Ele(a) sabia bem o que queria.`,
-    texto: 'Como ele(a) te mostrou?',
-    convite: 'Me conta o que era, e como você descobriu',
-    // O leque foi refeito de proposito (Fundador, opcao A). A lista anterior
-    // era apontar / levar pela mao / por a mao do adulto no objeto / alternancia
-    // de olhar, que e' exatamente a combinacao usada em triagem de
-    // desenvolvimento aos 2 anos. Um pai atento reconheceria a bateria, sairia
-    // preocupado, e o Arboria nao devolve nada no Infantil: acenderia a
-    // preocupacao sem dar onde pousar. Agora as opcoes estao escritas como cena
-    // e duas delas (a analogia e o som) nao pertencem a triagem nenhuma, o que
-    // quebra o padrao sem perder o que a pergunta lia.
-    opcoes: ['Foi puxando você até o lugar', 'Apontou de longe', 'Fez o barulho ou o gesto daquilo que queria', 'Apontou e olhou pra você, esperando você entender', 'Trouxe outra coisa parecida pra você ver', 'Repetiu a mesma palavra até você entender'] },
+    abre: 'Essa é a que a família toda gosta de contar.',
+    cena: 'Acontece de a criança fazer uma coisa e a casa inteira parar pra olhar. Ninguém tinha ensinado aquilo.',
+    texto: `${NOME} já fez uma dessas?`,
+    convite: 'Me conta o que foi',
+    opcoes: ['Falou uma palavra que ninguém sabia que ela sabia', 'Fez sozinha uma coisa que sempre precisou de ajuda', 'Imitou alguém igualzinho', 'Não lembro de nada assim', 'Achou uma coisa que ninguém estava achando', 'Repetiu um som ou uma música certinho'] },
 
-  { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre ${NOME}!`, cta: 'Continuar' },
+  { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre ${NOME}.`, cta: 'Continuar' },
+
+  // A isca ancora do Maternal 2. A professora descreveu a imitacao como o canal
+  // principal de evidencia nessa idade, e o valor nao esta' em QUANTO a crianca
+  // imita: esta' em O QUE ela seleciona da mesma cena. Cinco criancas veem a
+  // mesma coisa e copiam coisas diferentes, e a diferenca e' o filtro. E' o mais
+  // perto de mecanismo puro que existe aos 2 anos, e nao exige uma palavra dela.
+  { tipo: 'pergunta',
+    cena: 'Tem um aqui que pegou o jeito da mãe de falar no telefone, com a mão e tudo. Tem uma que varre igualzinho, com a vassoura maior que ela.',
+    texto: `Você já viu ${NOME} fazendo alguma coisa igualzinha a alguém?`,
+    convite: 'Me conta o que ele(a) copiou',
+    opcoes: ['Um jeito de falar, uma palavra', 'Um gesto, um jeito de mexer a mão', 'Uma coisa inteira, na mesma ordem em que viu', 'Não lembro de nada assim', 'O jeito de andar, de sentar', 'O jeito de cuidar: ninar, fazer carinho'] },
 
   { tipo: 'pergunta',
-    cena: 'Tem coisas que vocês fazem sempre na mesma ordem. Esses dias mudou sem querer: chegou visita, faltou tempo, alguém fez de outro jeito.',
-    texto: `O que ${NOME} fez?`,
-    convite: 'Me conta o que aconteceu',
-    opcoes: ['Refez do jeito de sempre, sozinho(a)', 'Pegou na mão de quem estava fazendo e botou no lugar certo', 'Falou não e apontou o que estava errado', 'Riu e foi junto do jeito novo', 'Seguiu no que estava fazendo, sem mudar nada', 'Saiu de perto'] },
+    abre: 'Confessa uma coisa pra mim.',
+    cena: 'Sabe aquilo que ela faz de novo, e de novo, e de novo? O adulto já enjoou e ela quer outra vez.',
+    texto: `Tem alguma coisa assim com ${NOME}?`,
+    convite: 'Me conta o que é, e quanto tempo ele(a) fica nisso',
+    ajuda: 'Pode reclamar, eu entendo.',
+    opcoes: ['A mesma brincadeira, sempre', 'Encher e despejar, botar e tirar', 'Subir e descer, rodar, pular', 'Não lembro de nada assim', 'O mesmo livro, a mesma figura', 'O mesmo som, a mesma musiquinha'] },
 
-  { tipo: 'pergunta',
-    cena: `Essa semana ${NOME} estava no meio de alguma coisa e parou do nada, por conta própria. Ninguém chamou ele(a).`,
-    texto: 'Da última vez que isso aconteceu, o que foi que fez ele(a) parar?',
-    convite: 'Me conta essa vez',
-    opcoes: ['Um barulho que veio de fora', 'Um bicho, uma planta, alguma coisa viva', 'Alguém chegando ou saindo', 'Uma música, alguém cantando', 'Uma luz, uma sombra, alguma coisa se mexendo', 'Alguma coisa que estava diferente ali'] },
-
-  // A pausa que explica ao pai por que isto importa. Sem ela o questionario
-  // e' so' um formulario; com ela, o pai entende o que esta ajudando a construir.
+  // A pausa que explica ao pai por que isto importa.
   { tipo: 'transicao',
     enorme: 'Quando eu faço essas perguntas, é porque entender cada um deles faz diferença.',
     linha: `Eu não quero que ${NOME} seja apenas mais um na multidão: quero que ele(a) brilhe do jeito dele(a), que não é igual ao de mais ninguém. E eu sei que temos um caminho longo pela frente, mas de pouquinho em pouquinho faremos essa árvore crescer juntos...`,
     cta: 'Continuar' },
 
   { tipo: 'pergunta',
-    cena: `Esses dias teve outra criança por perto de ${NOME}. Na casa de alguém, no parque, na porta da escola.`,
-    texto: 'O que ele(a) fez nos primeiros minutos?',
-    convite: 'Me conta como foi',
-    opcoes: ['Ficou olhando de longe um tempo antes de chegar perto', 'Foi direto, sem esperar', 'Ficou colado em você antes de ir', 'Pegou um brinquedo e levou até a outra criança', 'Começou a fazer o que a outra criança estava fazendo', 'Brincou do lado, cada um no seu'] },
+    cena: 'Tem dia que a gente chega em casa acabado e nem fala nada pra ninguém.',
+    texto: `Já aconteceu de ${NOME} perceber isso antes de alguém falar?`,
+    convite: 'Me conta como foi que ele(a) percebeu',
+    opcoes: ['Veio perto e ficou ali', 'Trouxe alguma coisa pra você', 'Parou de brincar e ficou olhando', 'Não lembro de nada assim', 'Ficou mais agitado(a) do que o normal', 'Nem reparou, seguiu brincando'] },
 
   { tipo: 'pergunta',
-    cena: `Esses dias você viu ${NOME} fazendo alguma coisa igualzinha a alguém.`,
-    texto: 'O que foi que ele(a) copiou?',
-    convite: 'Me conta o que ele(a) copiou',
-    opcoes: ['Uma palavra, um jeito de falar', 'Um gesto, um jeito de mexer a mão', 'Uma coisa inteira, na mesma ordem em que viu', 'O jeito de sentar, de andar', 'Onde a pessoa guardou as coisas', 'O jeito de cuidar: ninar, fazer carinho'] },
-
-  { tipo: 'transicao', enorme: 'Está quase acabando!', cta: 'Continuar' },
-
-  { tipo: 'pergunta',
-    cena: 'No último lugar em que vocês foram juntos, mesmo que tenha sido o mercado ou a casa de alguém. Voltaram, e passaram uns dias.',
-    texto: 'Depois disso, em casa, ele(a) trouxe alguma coisa daquilo de volta?',
-    convite: 'Me conta o que ele(a) trouxe de lá',
-    opcoes: ['Repetiu um movimento que viu alguém fazer lá', 'Repetiu o som ou a música que ouviu', 'Procurou em casa uma coisa parecida com a de lá', 'Brincou de ser alguma coisa que viu lá: o bicho, o moço, o carro', 'Dias depois, do nada, falou uma palavra sobre aquele lugar', 'Não trouxe nada de lá dessa vez'] },
+    abre: 'Essa é a que eu mais preciso.',
+    cena: 'Aqui na sala tem criança que quase não abre a boca, e a mãe chega dizendo que em casa ela não para de falar.',
+    texto: `E ${NOME}, é o(a) mesmo(a) nos dois lugares?`,
+    convite: `Me conta uma coisa que ele(a) faz em casa e que eu talvez nunca tenha visto`,
+    opcoes: ['Em casa ele(a) fala muito mais', 'Em casa ele(a) é mais quieto(a)', 'Em casa ele(a) faz sozinho(a) o que aqui pede ajuda', 'Não sei dizer', 'Em casa ele(a) é mais agitado(a)', 'Nos dois lugares ele(a) é bem parecido(a)'] },
 ];
 
 // ============================================================
-// AS CATORZE CENAS DO GRUPO IV (4 a 5 anos)
+// O BANCO DAS GUARDADAS DO MATERNAL 2
+// Mesma logica do Grupo IV: duas iscas fixas (a abertura e a de casa) e cinco
+// que giram entre a rodada do inicio do ano e a de agosto.
 //
-// Mesmos cinco eixos do Maternal 2, com as linhas de corte da idade. O que
-// muda nao e' o tom da escrita: e' o que a crianca ja pode ter feito.
-//   - aos 4 a FALA assume o lugar da imitacao como canal principal. A
-//     professora do Grupo IV descreveu isso na ficha: a crianca mostra que
-//     entendeu "falando, conversa participativo", enquanto no Maternal 2 e'
-//     "elas reproduzem o que veem".
-//   - reparar o que esta fora do lugar era "tem algumas que tem a percepcao"
-//     no Maternal 2 e virou "a maioria percebe" no Grupo IV. Por isso o eixo
-//     do que ela repara volta com tres itens, e nao com um.
-//   - a crianca de 4 PERGUNTA se pode fazer diferente (a professora relatou),
-//     mas ainda nao MUDA a regra e comunica a mudanca, que e' de 5 a 6 anos.
-//   - o pai de 4 anos precisa de menos ajuda: as cenas sao mais curtas, e ele
-//     ja consegue relatar o que a crianca DISSE, nao so' o que ela fez.
+// REGRA DE LEITURA, INEGOCIAVEL: o que nao apareceu aqui nao e' ausencia na
+// crianca, e' canal que a gente nao perguntou nesta rodada.
 // ============================================================
+const GUARDADAS_M2: Item[] = [
+
+  { tipo: 'pergunta',
+    cena: 'Ela estava no meio de alguma coisa e parou do nada, por conta própria. Ninguém chamou.',
+    texto: 'Da última vez que isso aconteceu, o que foi que fez ele(a) parar?',
+    convite: 'Me conta essa vez',
+    opcoes: ['Um barulho que veio de fora', 'Um bicho, um passarinho, alguma coisa viva', 'Alguém chegando ou saindo', 'Não lembro de nada assim', 'Uma música, alguém cantando', 'Uma luz, uma sombra, alguma coisa se mexendo'] },
+
+  { tipo: 'pergunta',
+    cena: 'Já vi criança de 2 anos separar as coisas sem ninguém pedir. Junta as tampinhas de um lado, os bichinhos do outro. Ou põe tudo numa fila só dela.',
+    texto: `Já viu ${NOME} fazendo isso?`,
+    convite: 'Me conta o que ele(a) separou',
+    opcoes: ['Já vi, com brinquedo', 'Já vi, mas com outra coisa da casa', 'Não lembro de nada assim', 'Junta tudo num monte só', 'Faz o contrário, espalha tudo'] },
+
+  { tipo: 'pergunta',
+    cena: 'Tem criança dessa idade que estranha quando alguém canta a musiquinha de sempre de um jeito diferente. E tem quem repita um barulho dias depois de ouvir.',
+    texto: `${NOME} é assim com som?`,
+    convite: 'Me conta o que aconteceu',
+    opcoes: ['Repete o som ou a música depois', 'Estranha quando cantam diferente', 'Para tudo quando aparece um som novo', 'Não lembro de nada assim', 'Gosta de música, mas não é nada demais', 'Não liga muito pra isso'] },
+
+  { tipo: 'pergunta',
+    cena: 'Tem um aqui que viu uma vez o jeito de bater na panela e no dia seguinte fez igual, com a mesma mão.',
+    texto: `${NOME} já pegou alguma coisa assim, só de ver?`,
+    convite: 'Me conta o que ele(a) pegou',
+    opcoes: ['Um jeito de mexer o corpo', 'Um jeito de segurar ou de fazer com a mão', 'Imitou alguém tão igual que deu risada', 'Não lembro de nada assim', 'Pega, mas precisa tentar várias vezes', 'Não é muito disso'] },
+
+  { tipo: 'pergunta',
+    cena: 'A gente muda uma coisa de lugar em casa e nem lembra que mudou.',
+    texto: `${NOME} repara nessas coisas?`,
+    convite: 'Me conta uma vez que isso aconteceu',
+    opcoes: ['Repõe a coisa no lugar sozinho(a)', 'Aponta e resmunga até alguém ver', 'Estranha pessoa com roupa nova, cabelo cortado', 'Não lembro de nada assim', 'Percebe quando falta uma peça do brinquedo', 'Não costuma reparar nisso'] },
+];
+void GUARDADAS_M2;
+
 const CENAS_G4: Item[] = [
   // ============================================================
   // AS SETE ISCAS DO GRUPO IV (v3, 14/08/2026)
