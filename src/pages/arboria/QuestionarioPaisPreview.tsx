@@ -15,6 +15,7 @@
 // crianca e o nome vem do banco (por isso NOME esta isolado numa constante).
 // ============================================================
 import { useState } from 'react';
+import type React from 'react';
 import { ChevronLeft, Check } from 'lucide-react';
 
 const CEU = '/arboria/ceu.png';
@@ -73,6 +74,17 @@ const CONHECE_LO = FEM ? 'conhecê-la' : 'conhecê-lo';
 const T = {
   fundo: '#135E96',
   serif: '"Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif',
+};
+
+// A VOZ TEM UM TAMANHO SO'.
+// Na tela de pergunta, tudo o que o Arboria diz sai igual: a linha de puxar
+// conversa, a cena, a pergunta, o convite para escrever e a dica embaixo dele.
+// Texto menor o pai simplesmente nao le', e era justamente na letra miuda que
+// estavam as frases que faziam ele escrever em vez de clicar. A hierarquia
+// agora e' feita pelo espaco entre os blocos, nunca pelo tamanho da letra.
+const FALA: React.CSSProperties = {
+  fontFamily: T.serif, fontSize: 23, lineHeight: 1.38, fontWeight: 700,
+  letterSpacing: '-.01em', color: '#fff', margin: '0 0 12px',
 };
 
 type Item =
@@ -457,7 +469,7 @@ const QuestionarioPaisPreview = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{
+    <div className="min-h-screen flex flex-col relative overflow-x-hidden" style={{
       backgroundColor: T.fundo,
       backgroundImage: `linear-gradient(180deg, rgba(6,38,66,.22) 0%, rgba(6,38,66,0) 34%), url("${CEU}")`,
       backgroundSize: 'cover, cover', backgroundPosition: 'center top, center', color: '#fff',
@@ -694,7 +706,7 @@ const QuestionarioPaisPreview = () => {
                       minHeight: 58, padding: '15px 0',
                       borderBottom: '1px solid rgba(255,255,255,.24)',
                       borderTop: k === 0 ? '1px solid rgba(255,255,255,.24)' : undefined,
-                      fontFamily: T.serif, fontSize: 20, lineHeight: 1.35,
+                      fontFamily: T.serif, fontSize: 21, lineHeight: 1.35,
                       fontWeight: on ? 700 : 600,
                       color: on ? '#fff' : 'rgba(255,255,255,.86)',
                       fontStyle: rotulo === livre ? 'italic' : 'normal',
@@ -776,12 +788,10 @@ const QuestionarioPaisPreview = () => {
                   tem alguem do outro lado e nao um formulario, e por isso nao
                   esta' em todas: em todas ela cansaria e viraria tique. */}
               {item.abre && (
-                <p style={{ fontFamily: T.serif, fontSize: 19, lineHeight: 1.4, fontWeight: 600, color: 'rgba(255,255,255,.82)', margin: '0 0 14px' }}>{item.abre}</p>
+                <p style={FALA}>{item.abre}</p>
               )}
-              {item.cena && (
-                <p style={{ fontFamily: T.serif, fontSize: 24, lineHeight: 1.32, fontWeight: 700, letterSpacing: '-.01em', margin: '0 0 12px' }}>{item.cena}</p>
-              )}
-              <p style={{ fontFamily: T.serif, fontSize: 24, lineHeight: 1.32, fontWeight: 700, letterSpacing: '-.01em', margin: '0 0 6px' }}>{item.texto}</p>
+              {item.cena && <p style={FALA}>{item.cena}</p>}
+              <p style={FALA}>{item.texto}</p>
             </div>
             {/* O CAMPO DE ESCREVER VEM ANTES DAS OPCOES.
                 Teste com pais de verdade (Fundador, 14/08): embaixo da lista,
@@ -789,17 +799,15 @@ const QuestionarioPaisPreview = () => {
                 inverte o peso de proposito: a lista existe para ativar a
                 memoria, e o texto e' o dado que a leitura vai usar. */}
             <div key={`escrever-${i}`} className="revela mb-7">
-              <p style={{ fontFamily: T.serif, fontSize: 21, fontWeight: 700, color: '#fff', margin: '0 0 4px' }}>{item.convite ?? 'Tem história aí? Me conta.'}</p>
-              <p className="text-[13px] mb-2" style={{ color: 'rgba(255,255,255,.7)', fontStyle: 'italic', lineHeight: 1.45 }}>
-                {item.ajuda ?? 'o que você lembrar, do jeito que aconteceu'}
-              </p>
+              <p style={FALA}>{item.convite ?? 'Tem história aí? Me conta.'}</p>
+              <p style={{ ...FALA, margin: '0 0 14px' }}>{item.ajuda ?? 'O que você lembrar, do jeito que aconteceu.'}</p>
               <textarea
                 value={textos[i] ?? ''}
                 onChange={(e) => setTextos((t) => ({ ...t, [i]: e.target.value }))}
                 rows={3}
                 placeholder="escreva aqui"
                 className="w-full bg-transparent outline-none resize-y"
-                style={{ borderBottom: '1px solid rgba(255,255,255,.42)', fontFamily: T.serif, fontSize: 19, color: '#fff', paddingBottom: 6 }}
+                style={{ borderBottom: '1px solid rgba(255,255,255,.42)', fontFamily: T.serif, fontSize: 21, lineHeight: 1.4, color: '#fff', paddingBottom: 6 }}
               />
             </div>
 
@@ -807,7 +815,7 @@ const QuestionarioPaisPreview = () => {
                 escreveu ja' respondeu. Por isso "se preferir", e por isso ela
                 some inteira quando a isca nao tem lista (a abertura). */}
             {item.opcoes.length > 0 && (
-              <p key={`instr-${i}`} className="revela text-[15px]" style={{ color: 'rgba(255,255,255,.85)', margin: '0 0 14px' }}>
+              <p key={`instr-${i}`} className="revela" style={{ ...FALA, margin: '0 0 14px' }}>
                 Ou, se preferir, marque o que mais parece:
               </p>
             )}
@@ -843,30 +851,47 @@ const QuestionarioPaisPreview = () => {
             </div>
 
 
-            <div key={`rodape-${i}`} className="revela pt-6 flex items-center justify-between gap-4 flex-wrap" style={{ animationDelay: ATRASO_OPCOES + 's' }}>
-              <button
-                onClick={() => { setMarcadas((m) => ({ ...m, [i]: [NAO_SEI] })); avanca(); }}
-                className="text-[15px]"
-                style={{ color: 'rgba(255,255,255,.82)', textDecoration: 'underline', textUnderlineOffset: 4 }}
-              >
-                Não sei dizer
-              </button>
-              <button
-                onClick={() => { if (podeAvancar) avanca(); }}
-                disabled={!podeAvancar}
-                className="inline-flex items-center gap-2.5 font-bold uppercase"
-                style={{
-                  fontSize: 15, letterSpacing: '.14em', padding: '13px 24px', borderRadius: 999,
-                  border: '2px solid #fff',
-                  background: i === ultimaPergunta ? '#fff' : 'transparent',
-                  color: i === ultimaPergunta ? '#0E3F66' : '#fff',
-                  opacity: podeAvancar ? 1 : 0.35,
-                  cursor: podeAvancar ? 'pointer' : 'default',
-                }}
-              >
-                {i === ultimaPergunta ? 'Finalizar' : 'Próxima'}
-                {i === ultimaPergunta ? <Check size={16} strokeWidth={3} /> : <span aria-hidden style={{ fontSize: 17, lineHeight: 1 }}>→</span>}
-              </button>
+            {/* O RODAPE E' FIXO NA TELA, nao no fim do conteudo.
+                Com a lista de opcoes e o campo de texto, a pergunta passou a ser
+                mais alta que o celular, e o botao de avancar ficava abaixo da
+                dobra: quem nao rolasse ate' o fim nao via saida nenhuma e
+                achava que o questionario tinha travado. Agora ele acompanha a
+                rolagem, e o conteudo ganha um respiro embaixo para nao terminar
+                escondido atras da barra. */}
+            <div style={{ height: 96 }} aria-hidden />
+            <div
+              className="fixed left-0 right-0 bottom-0"
+              style={{
+                zIndex: 30,
+                paddingTop: 30,
+                background: 'linear-gradient(180deg, rgba(11,58,96,0) 0%, rgba(11,58,96,.82) 42%, rgba(11,58,96,.97) 100%)',
+              }}
+            >
+              <div className="mx-auto flex items-center justify-between gap-4" style={{ maxWidth: 560, padding: '0 22px 20px' }}>
+                <button
+                  onClick={() => { setMarcadas((m) => ({ ...m, [i]: [NAO_SEI] })); avanca(); }}
+                  className="text-[15px]"
+                  style={{ color: 'rgba(255,255,255,.82)', textDecoration: 'underline', textUnderlineOffset: 4 }}
+                >
+                  Não sei dizer
+                </button>
+                <button
+                  onClick={() => { if (podeAvancar) avanca(); }}
+                  disabled={!podeAvancar}
+                  className="inline-flex items-center gap-2.5 font-bold uppercase"
+                  style={{
+                    fontSize: 15, letterSpacing: '.14em', padding: '13px 24px', borderRadius: 999,
+                    border: '2px solid #fff',
+                    background: i === ultimaPergunta ? '#fff' : 'transparent',
+                    color: i === ultimaPergunta ? '#0E3F66' : '#fff',
+                    opacity: podeAvancar ? 1 : 0.35,
+                    cursor: podeAvancar ? 'pointer' : 'default',
+                  }}
+                >
+                  {i === ultimaPergunta ? 'Finalizar' : 'Próxima'}
+                  {i === ultimaPergunta ? <Check size={16} strokeWidth={3} /> : <span aria-hidden style={{ fontSize: 17, lineHeight: 1 }}>→</span>}
+                </button>
+              </div>
             </div>
           </>
           );
