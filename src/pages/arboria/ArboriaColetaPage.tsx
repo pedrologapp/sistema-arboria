@@ -36,7 +36,7 @@ interface Pergunta {
   bloqueante?: boolean;
 }
 
-const BLOCOS: { n: number; titulo: string; nota: string }[] = [
+const BLOCOS_V1: { n: number; titulo: string; nota: string }[] = [
   { n: 1, titulo: 'Antes de explicar qualquer coisa', nota: 'O valor está em COMO ela responde, não no que diz. Faça antes de contar o que é o projeto.' },
   { n: 2, titulo: 'A régua da idade', nota: 'O coração da conversa. É o que faz a pergunta caber ou não caber na criança.' },
   { n: 3, titulo: 'Onde dá pra ver', nota: 'Uma pergunta só pode perguntar sobre cena que existe na rotina.' },
@@ -44,7 +44,7 @@ const BLOCOS: { n: number; titulo: string; nota: string }[] = [
   { n: 5, titulo: 'O tamanho do instrumento', nota: 'Uma só, no fim.' },
 ];
 
-const PERGUNTAS: Pergunta[] = [
+const PERGUNTAS_V1: Pergunta[] = [
   { id: 'q01', bloco: 1, tipo: 'longo',
     texto: 'Escolhe uma criança dessa série e me conta o seu último dia com ela.',
     hint: 'Depois fique calado e deixe correr. Anote o mais literal que der: as palavras dela são matéria-prima.' },
@@ -107,7 +107,71 @@ const PERGUNTAS: Pergunta[] = [
     hint: 'A palavra "de verdade" é proposital: autoriza o número honesto em vez do simpático.' },
 ];
 
-const TOTAL = PERGUNTAS.length;
+// ------------------------------------------------------------ a ficha v2
+// A v1 foi escrita quando o objetivo era montar um instrumento de
+// CLASSIFICACAO, entao ela pede a' professora que caracterize a faixa etaria e
+// produz teoria. Nas duas fichas ja' respondidas, o que rendeu foi sempre o
+// oposto: as perguntas que pediam COMPORTAMENTO ("elas reproduzem o que veem",
+// "aponta ou pega e leva, fazendo gestos"). Essas frases viraram opcao do
+// questionario dos pais palavra por palavra. As que pediam caracterizacao nao
+// viraram nada.
+//
+// Entao a v2 se organiza pela espinha das iscas do questionario dos pais, e em
+// cada bloco pede a mesma coisa: UMA CRIANCA, UM DIA, O QUE ELA FEZ.
+//
+// Regra de ouro que continua valendo na conversa: NAO mostrar nenhuma pergunta
+// do questionario dos pais. A professora tem que descrever com as palavras
+// dela, senao a gente colhe de volta o vocabulario que a gente mesmo escreveu.
+const BLOCOS_V2: { n: number; titulo: string; nota: string }[] = [
+  { n: 1, titulo: 'Uma criança dessa idade', nota: 'Abertura. Deixe correr e anote literal: a palavra dela é a matéria-prima.' },
+  { n: 2, titulo: 'Episódios', nota: 'Um exemplo concreto por bloco. Se ela começar a teorizar, traga de volta: "me conta uma criança que fez isso".' },
+  { n: 3, titulo: 'A casa e a escola', nota: 'A parte que só a professora consegue dar, porque ela vê os dois lados.' },
+  { n: 4, titulo: 'O ano e o resto', nota: 'Fecha a conversa.' },
+];
+
+const PERGUNTAS_V2: Pergunta[] = [
+  { id: 'v2_01', bloco: 1, tipo: 'longo', bloqueante: true,
+    texto: 'Me conta uma criança dessa série, de um dia desses. O que ela fez que ficou na sua cabeça?',
+    hint: 'Depois fique calado. Não ajude, não complete. O que vier primeiro é o que importa.' },
+  { id: 'v2_02', bloco: 1, tipo: 'longo', bloqueante: true,
+    texto: 'E o que uma criança dessa idade ainda NÃO faz, que às vezes os adultos acham que ela já faz?',
+    hint: 'Protege contra a gente escrever pergunta que nenhum pai vai reconhecer.' },
+
+  { id: 'v2_03', bloco: 2, tipo: 'longo', bloqueante: true,
+    texto: 'Uma mania que você já viu numa criança dessa idade, dessas que ninguém entende por quê. Qual foi?' },
+  { id: 'v2_04', bloco: 2, tipo: 'longo', bloqueante: true,
+    texto: 'Uma criança que quis contar alguma coisa e não achava a palavra. O que ela fez pra você entender?' },
+  { id: 'v2_05', bloco: 2, tipo: 'longo',
+    texto: 'Uma vez em que uma criança reparou em alguma coisa antes de você. O que foi?' },
+  { id: 'v2_06', bloco: 2, tipo: 'longo',
+    texto: 'Uma criança que copiou alguém. O que exatamente ela copiou?',
+    hint: 'O que ela escolhe copiar da mesma cena é o mais perto de mecanismo que existe nessa idade.' },
+  { id: 'v2_07', bloco: 2, tipo: 'longo',
+    texto: 'Uma coisa que essa idade pede de novo e de novo sem cansar. E quanto tempo a criança fica nisso?' },
+  { id: 'v2_08', bloco: 2, tipo: 'longo',
+    texto: 'Uma criança que estava tentando fazer alguma coisa e não estava indo. O que ela fez em seguida?' },
+  { id: 'v2_09', bloco: 2, tipo: 'longo',
+    texto: 'Uma criança que percebeu que um adulto estava diferente, sem ninguém ter falado nada. Como foi?' },
+
+  { id: 'v2_10', bloco: 3, tipo: 'longo', bloqueante: true,
+    texto: 'O que dessa idade os pais não veem em casa? E o que eles veem que você não vê?' },
+  { id: 'v2_11', bloco: 3, tipo: 'longo', bloqueante: true,
+    texto: 'Como os pais dessa idade descrevem os filhos pra você? Que palavras eles usam?',
+    hint: 'São essas palavras que precisam estar no questionário, não as nossas.' },
+
+  { id: 'v2_12', bloco: 4, tipo: 'longo',
+    texto: 'O que muda numa criança dessa série do começo para o fim do ano?',
+    hint: 'Decide se a rodada de março e a de agosto podem ter o mesmo texto.' },
+  { id: 'v2_13', bloco: 4, tipo: 'longo',
+    texto: 'Tem alguma coisa que eu não perguntei e que você acha que eu precisava saber sobre essa idade?' },
+];
+
+// Qual conjunto cada ficha usa. As duas ja' respondidas (Maternal 2 e Grupo IV)
+// continuam na v1: trocar as perguntas embaixo de respostas existentes deixaria
+// texto orfao apontando para pergunta que nao existe mais.
+const perguntasDe = (versao: number) => (versao === 1 ? PERGUNTAS_V1 : PERGUNTAS_V2);
+const blocosDe = (versao: number) => (versao === 1 ? BLOCOS_V1 : BLOCOS_V2);
+
 
 // ------------------------------------------------------------ tipos
 
@@ -121,10 +185,11 @@ interface Ficha {
   idade_referencia: string | null;
   respostas: Record<string, string | string[]>;
   status: string;
+  versao: number;
 }
 
-const respondidas = (r: Record<string, string | string[]>) =>
-  PERGUNTAS.filter((p) => {
+const respondidas = (r: Record<string, string | string[]>, versao: number) =>
+  perguntasDe(versao).filter((p) => {
     const v = r?.[p.id];
     return Array.isArray(v) ? v.length > 0 : !!(v && String(v).trim());
   }).length;
@@ -170,7 +235,7 @@ const ArboriaColetaPage = () => {
 
   const carregar = async () => {
     const { data, error } = await fromAny('coleta_descoberta')
-      .select('id, segmento, serie, ordem, professoras, num_criancas, idade_referencia, respostas, status')
+      .select('id, segmento, serie, ordem, professoras, num_criancas, idade_referencia, respostas, status, versao')
       .order('ordem');
     if (error) { toast.error('Não consegui carregar as fichas'); setFichas([]); return; }
     setFichas(((data ?? []) as unknown as Ficha[]).map((f) => ({ ...f, respostas: f.respostas ?? {} })));
@@ -352,7 +417,7 @@ const ArboriaColetaPage = () => {
 
             <div className="flex flex-col gap-2">
               {doSegmento.map((f) => {
-                const n = respondidas(f.respostas);
+                const n = respondidas(f.respostas, f.versao);
                 const done = f.status === 'concluida';
                 const doing = !done && n > 0;
                 return (
@@ -391,7 +456,7 @@ const ArboriaColetaPage = () => {
                           : { backgroundColor: t.surfaceSunken, color: t.textFaint }
                       }
                     >
-                      {done ? 'conversada' : doing ? `${n} de ${TOTAL}` : 'não iniciada'}
+                      {done ? 'conversada' : doing ? `${n} de ${perguntasDe(f.versao).length}` : 'não iniciada'}
                     </span>
                     <ChevronRight size={17} style={{ color: t.silencio }} className="flex-shrink-0" />
                   </button>
@@ -408,8 +473,8 @@ const ArboriaColetaPage = () => {
 
   // ---------------------------------------------------------- ficha aberta
 
-  const n = respondidas(aberta.respostas);
-  const pct = Math.round((n / TOTAL) * 100);
+  const n = respondidas(aberta.respostas, aberta.versao);
+  const pct = Math.round((n / perguntasDe(aberta.versao).length) * 100);
 
   return (
     <div>
@@ -459,11 +524,11 @@ const ArboriaColetaPage = () => {
         <div className="h-1.5 rounded-full mt-3.5 overflow-hidden" style={{ backgroundColor: t.surfaceSunken }}>
           <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: t.accent }} />
         </div>
-        <p className="text-[11px] mt-1.5 m-0" style={{ color: t.textFaint }}>{n} de {TOTAL} respondidas</p>
+        <p className="text-[11px] mt-1.5 m-0" style={{ color: t.textFaint }}>{n} de {perguntasDe(aberta.versao).length} respondidas</p>
       </div>
 
-      {BLOCOS.map((b) => {
-        const doBloco = PERGUNTAS.filter((p) => p.bloco === b.n);
+      {blocosDe(aberta.versao).map((b) => {
+        const doBloco = perguntasDe(aberta.versao).filter((p) => p.bloco === b.n);
         return (
           <div key={b.n}>
             <p className="text-[11px] font-bold uppercase tracking-wider mt-6 mb-1" style={{ color: t.textFaint }}>
