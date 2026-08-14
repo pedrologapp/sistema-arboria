@@ -14,7 +14,7 @@
 // A crianca de exemplo e' fixa. Quando isto virar produto, o link sera unico por
 // crianca e o nome vem do banco (por isso NOME esta isolado numa constante).
 // ============================================================
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type React from 'react';
 import { ChevronLeft, Check } from 'lucide-react';
 
@@ -398,6 +398,12 @@ const numeroDaPergunta = (i: number) => FLUXO.slice(0, i + 1).filter((x) => x.ti
 
 const QuestionarioPaisPreview = () => {
   const [i, setI] = useState(0);
+
+  // Toda tela nova comeca do topo. Sem isto o navegador mantem a rolagem de
+  // onde o pai estava, entao ele apertava "Proxima" no rodape e caia no meio da
+  // pergunta seguinte, sem ver a cena que a explica. Instantaneo de proposito:
+  // rolagem suave mostraria o texto antigo subindo, o que e' pior.
+  useEffect(() => { window.scrollTo(0, 0); }, [i]);
   const [escolhas, setEscolhas] = useState<Record<string, string>>({});
   const [escolhaTexto, setEscolhaTexto] = useState<Record<string, string>>({});
   const [linkCopiado, setLinkCopiado] = useState(false);
