@@ -128,7 +128,6 @@ const ENTRADA: Item[] = [
   { tipo: 'fala', enorme: 'Uma coisa rápida.',
     linhas: [
       'Isto não é prova e não vira nota.',
-      `Quem lê o que você escrever é a professora dele(a) e a coordenação. Ele(a) nunca vê.`,
       'Queremos entender ele(a) melhor, porque é conhecendo o caminho dele(a) que a escola consegue caminhar junto.',
       'Vamos lá?',
     ],
