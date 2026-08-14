@@ -80,7 +80,7 @@ type Item =
   | { tipo: 'crianca'; cta: string }
   | { tipo: 'respondente'; chave: string; titulo: string; sub?: string; opcoes: string[]; livre?: string; cta: string }
   | { tipo: 'transicao'; enorme: string; linha?: string; cta: string }
-  | { tipo: 'pergunta'; cena?: string; texto: string; instr?: string; opcoes: string[]; outra?: string; convite?: string };
+  | { tipo: 'pergunta'; abre?: string; cena?: string; texto: string; convite?: string; ajuda?: string; opcoes: string[] };
 
 // A entrada e' a mesma para todas as faixas: quem esta falando, para que serve,
 // quem e' a crianca e de qual olhar vem a resposta.
@@ -168,21 +168,18 @@ const CENAS_M2: Item[] = [
     cena: `Pra começar, uma cena que tem em toda casa. Ontem, anteontem, esses dias: ${NOME} estava mexendo numa coisa que não abria, ou montando alguma coisa que caiu.`,
     texto: 'Qual foi a primeira coisa que ele(a) fez depois?',
     convite: 'Me conta como foi essa vez',
-    opcoes: ['Fez de novo do mesmo jeito, com mais força', 'Virou a coisa e tentou por outro lado', 'Levou até você e pôs na sua mão', 'Foi pegar algo pra ajudar: uma cadeira, um pauzinho', 'Ficou olhando aquilo um tempo antes de mexer', 'Deixou pra lá e foi pra outra brincadeira'],
-    outra: 'De outro jeito' },
+    opcoes: ['Fez de novo do mesmo jeito, com mais força', 'Virou a coisa e tentou por outro lado', 'Levou até você e pôs na sua mão', 'Foi pegar algo pra ajudar: uma cadeira, um pauzinho', 'Ficou olhando aquilo um tempo antes de mexer', 'Deixou pra lá e foi pra outra brincadeira'] },
 
   { tipo: 'pergunta',
     cena: `Essa semana ${NOME} quis uma coisa que estava em cima, alta demais pra ele(a).`,
     texto: 'O que ele(a) tentou primeiro?',
     convite: 'Me conta essa cena',
-    opcoes: ['Esticou, pulou, subiu no que tinha perto', 'Arrastou uma cadeira, ou puxou o pano de cima', 'Pegou você pela mão e levou até lá', 'Ficou apontando e falando até alguém ir', 'Ficou olhando pra coisa, esperando alguém ver', 'Deixou pra lá e foi fazer outra coisa'],
-    outra: 'De outro jeito' },
+    opcoes: ['Esticou, pulou, subiu no que tinha perto', 'Arrastou uma cadeira, ou puxou o pano de cima', 'Pegou você pela mão e levou até lá', 'Ficou apontando e falando até alguém ir', 'Ficou olhando pra coisa, esperando alguém ver', 'Deixou pra lá e foi fazer outra coisa'] },
 
   { tipo: 'pergunta',
     cena: `Teve um dia esses dias em que ${NOME} quis alguma coisa e você não estava entendendo o que era. Ele(a) sabia bem o que queria.`,
     texto: 'Como ele(a) te mostrou?',
     convite: 'Me conta o que era, e como você descobriu',
-    instr: 'Pode marcar mais de uma',
     // O leque foi refeito de proposito (Fundador, opcao A). A lista anterior
     // era apontar / levar pela mao / por a mao do adulto no objeto / alternancia
     // de olhar, que e' exatamente a combinacao usada em triagem de
@@ -191,8 +188,7 @@ const CENAS_M2: Item[] = [
     // preocupacao sem dar onde pousar. Agora as opcoes estao escritas como cena
     // e duas delas (a analogia e o som) nao pertencem a triagem nenhuma, o que
     // quebra o padrao sem perder o que a pergunta lia.
-    opcoes: ['Foi puxando você até o lugar', 'Apontou de longe', 'Fez o barulho ou o gesto daquilo que queria', 'Apontou e olhou pra você, esperando você entender', 'Trouxe outra coisa parecida pra você ver', 'Repetiu a mesma palavra até você entender'],
-    outra: 'De outro jeito' },
+    opcoes: ['Foi puxando você até o lugar', 'Apontou de longe', 'Fez o barulho ou o gesto daquilo que queria', 'Apontou e olhou pra você, esperando você entender', 'Trouxe outra coisa parecida pra você ver', 'Repetiu a mesma palavra até você entender'] },
 
   { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre ${NOME}!`, cta: 'Continuar' },
 
@@ -200,15 +196,13 @@ const CENAS_M2: Item[] = [
     cena: 'Tem coisas que vocês fazem sempre na mesma ordem. Esses dias mudou sem querer: chegou visita, faltou tempo, alguém fez de outro jeito.',
     texto: `O que ${NOME} fez?`,
     convite: 'Me conta o que aconteceu',
-    opcoes: ['Refez do jeito de sempre, sozinho(a)', 'Pegou na mão de quem estava fazendo e botou no lugar certo', 'Falou não e apontou o que estava errado', 'Riu e foi junto do jeito novo', 'Seguiu no que estava fazendo, sem mudar nada', 'Saiu de perto'],
-    outra: 'De outro jeito' },
+    opcoes: ['Refez do jeito de sempre, sozinho(a)', 'Pegou na mão de quem estava fazendo e botou no lugar certo', 'Falou não e apontou o que estava errado', 'Riu e foi junto do jeito novo', 'Seguiu no que estava fazendo, sem mudar nada', 'Saiu de perto'] },
 
   { tipo: 'pergunta',
     cena: `Essa semana ${NOME} estava no meio de alguma coisa e parou do nada, por conta própria. Ninguém chamou ele(a).`,
     texto: 'Da última vez que isso aconteceu, o que foi que fez ele(a) parar?',
     convite: 'Me conta essa vez',
-    opcoes: ['Um barulho que veio de fora', 'Um bicho, uma planta, alguma coisa viva', 'Alguém chegando ou saindo', 'Uma música, alguém cantando', 'Uma luz, uma sombra, alguma coisa se mexendo', 'Alguma coisa que estava diferente ali'],
-    outra: 'De outro jeito' },
+    opcoes: ['Um barulho que veio de fora', 'Um bicho, uma planta, alguma coisa viva', 'Alguém chegando ou saindo', 'Uma música, alguém cantando', 'Uma luz, uma sombra, alguma coisa se mexendo', 'Alguma coisa que estava diferente ali'] },
 
   // A pausa que explica ao pai por que isto importa. Sem ela o questionario
   // e' so' um formulario; com ela, o pai entende o que esta ajudando a construir.
@@ -221,16 +215,13 @@ const CENAS_M2: Item[] = [
     cena: `Esses dias teve outra criança por perto de ${NOME}. Na casa de alguém, no parque, na porta da escola.`,
     texto: 'O que ele(a) fez nos primeiros minutos?',
     convite: 'Me conta como foi',
-    opcoes: ['Ficou olhando de longe um tempo antes de chegar perto', 'Foi direto, sem esperar', 'Ficou colado em você antes de ir', 'Pegou um brinquedo e levou até a outra criança', 'Começou a fazer o que a outra criança estava fazendo', 'Brincou do lado, cada um no seu'],
-    outra: 'De outro jeito' },
+    opcoes: ['Ficou olhando de longe um tempo antes de chegar perto', 'Foi direto, sem esperar', 'Ficou colado em você antes de ir', 'Pegou um brinquedo e levou até a outra criança', 'Começou a fazer o que a outra criança estava fazendo', 'Brincou do lado, cada um no seu'] },
 
   { tipo: 'pergunta',
     cena: `Esses dias você viu ${NOME} fazendo alguma coisa igualzinha a alguém.`,
     texto: 'O que foi que ele(a) copiou?',
     convite: 'Me conta o que ele(a) copiou',
-    instr: 'Pode marcar mais de uma',
-    opcoes: ['Uma palavra, um jeito de falar', 'Um gesto, um jeito de mexer a mão', 'Uma coisa inteira, na mesma ordem em que viu', 'O jeito de sentar, de andar', 'Onde a pessoa guardou as coisas', 'O jeito de cuidar: ninar, fazer carinho'],
-    outra: 'De outro jeito' },
+    opcoes: ['Uma palavra, um jeito de falar', 'Um gesto, um jeito de mexer a mão', 'Uma coisa inteira, na mesma ordem em que viu', 'O jeito de sentar, de andar', 'Onde a pessoa guardou as coisas', 'O jeito de cuidar: ninar, fazer carinho'] },
 
   { tipo: 'transicao', enorme: 'Está quase acabando!', cta: 'Continuar' },
 
@@ -238,9 +229,7 @@ const CENAS_M2: Item[] = [
     cena: 'No último lugar em que vocês foram juntos, mesmo que tenha sido o mercado ou a casa de alguém. Voltaram, e passaram uns dias.',
     texto: 'Depois disso, em casa, ele(a) trouxe alguma coisa daquilo de volta?',
     convite: 'Me conta o que ele(a) trouxe de lá',
-    instr: 'Pode marcar mais de uma',
-    opcoes: ['Repetiu um movimento que viu alguém fazer lá', 'Repetiu o som ou a música que ouviu', 'Procurou em casa uma coisa parecida com a de lá', 'Brincou de ser alguma coisa que viu lá: o bicho, o moço, o carro', 'Dias depois, do nada, falou uma palavra sobre aquele lugar', 'Não trouxe nada de lá dessa vez'],
-    outra: 'De outro jeito' },
+    opcoes: ['Repetiu um movimento que viu alguém fazer lá', 'Repetiu o som ou a música que ouviu', 'Procurou em casa uma coisa parecida com a de lá', 'Brincou de ser alguma coisa que viu lá: o bicho, o moço, o carro', 'Dias depois, do nada, falou uma palavra sobre aquele lugar', 'Não trouxe nada de lá dessa vez'] },
 ];
 
 // ============================================================
@@ -261,125 +250,132 @@ const CENAS_M2: Item[] = [
 //     ja consegue relatar o que a crianca DISSE, nao so' o que ela fez.
 // ============================================================
 const CENAS_G4: Item[] = [
-
-  // ---------------------------------------------- eixo 1: o que nao obedece
-  { tipo: 'pergunta',
-    cena: `Pra começar, uma cena que tem em toda casa. Ontem, anteontem, esses dias: ${NOME} estava tentando fazer alguma coisa sozinho(a) e aquilo não ia.`,
-    texto: 'O que ele(a) fez antes de pedir ajuda?',
-    convite: 'Me conta como foi essa vez',
-    opcoes: ['Insistiu, tentou de novo várias vezes', 'Parou, olhou bem a coisa e tentou de outro jeito', 'Foi buscar algo pra ajudar: uma cadeira, um pauzinho', 'Ficou falando sozinho(a) enquanto tentava', 'Já foi dizendo que não ia conseguir', 'Tentou uma vez e já veio chamar'],
-    outra: 'De outro jeito' },
-
-  { tipo: 'pergunta',
-    cena: `Esses dias ${NOME} começou alguma coisa que ia demorar: um desenho grande, uma construção, uma brincadeira de várias partes.`,
-    texto: 'Como ele(a) começou?',
-    convite: 'Me conta o que ele(a) estava fazendo',
-    opcoes: ['Já foi fazendo, sem parar pra pensar', 'Contou antes o que ia fazer', 'Separou tudo o que ia usar antes de começar', 'Foi procurar um pronto pra copiar: uma figura, um igual', 'Já chamou alguém pra fazer junto', 'Começou pela parte mais fácil'],
-    outra: 'De outro jeito' },
-
-  { tipo: 'pergunta',
-    cena: `Esses dias alguma coisa que ${NOME} estava fazendo deu errado pela segunda vez.`,
-    texto: 'O que ele(a) fez dessa vez?',
-    convite: 'Me conta o que aconteceu',
-    opcoes: ['Fez tudo de novo, do mesmo jeito', 'Mudou uma coisinha e tentou de novo', 'Deixou aquele jeito e foi tentar outro', 'Contou o que tinha dado errado', 'Chamou ajuda já mostrando onde travou', 'Largou e foi fazer outra coisa'],
-    outra: 'De outro jeito' },
-
-  { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre ${NOME}!`, cta: 'Continuar' },
-
-  // ------------------------------------------ eixo 2: fazer o outro entender
-  { tipo: 'pergunta',
-    cena: `${NOME} quis te contar uma coisa e você não estava entendendo. Ele(a) sabia o que queria dizer, mas não estava saindo.`,
-    texto: 'O que ele(a) fez?',
-    convite: 'Me conta o que era, e como você descobriu',
-    instr: 'Pode marcar mais de uma',
-    opcoes: ['Falou de novo, trocando as palavras', 'Disse o que não era: não é esse, é o outro', 'Comparou com outra coisa que você conhece', 'Levou você até lá pra mostrar', 'Imitou a cena, mostrou como tinha sido', 'Ficou bravo(a) e largou de explicar'],
-    outra: 'De outro jeito' },
+  // ============================================================
+  // AS SETE ISCAS DO GRUPO IV (v3, 14/08/2026)
+  //
+  // Mudanca de principio, nao de redacao. Ate' a v2 as opcoes tentavam LER o
+  // mecanismo, e o pai tinha que classificar o proprio filho numa grade de
+  // analista. No teste com pais eles clicavam qualquer coisa so' para avancar.
+  //
+  // Agora a opcao e' ISCA DE MEMORIA, nao categoria: o Arboria conta uma cena
+  // que aconteceu com OUTRA crianca, e o pai reconhece a dele ali ou nao
+  // reconhece. Quem le' o mecanismo passa a ser a IA, no relato escrito. Por
+  // isso o campo de texto vem primeiro e as opcoes viraram saida rapida para
+  // quem nao vai escrever.
+  //
+  // "Nao lembro de nada assim" fica no MEIO da lista, nunca no fim, e e' uma
+  // resposta legitima: a gente esta' pescando, e as vezes nao vem peixe.
+  //
+  // SETE, e nao doze: com sete o pai escreve nas sete; com doze ele escreve
+  // nas tres primeiras e clica o resto. O custo e' que quatro mecanismos nao
+  // sao convocados nesta rodada, e por isso vale a regra de leitura abaixo.
+  // ============================================================
 
   { tipo: 'pergunta',
-    cena: `Esses dias ${NOME} quis que alguém fizesse alguma coisa do jeito dele(a). Um jogo, um desenho, uma brincadeira.`,
-    texto: 'Como ele(a) conduziu?',
-    convite: 'Me conta como foi',
-    opcoes: ['Foi explicando por partes, falando', 'Fez uma vez pra pessoa ver como era', 'Pegou na mão da pessoa e foi ajeitando', 'Combinou a vez: agora você, depois eu', 'Foi corrigindo a pessoa enquanto ela fazia', 'Cansou de explicar e fez sozinho(a)'],
-    outra: 'De outro jeito' },
+    abre: 'Vou começar pela pergunta mais gostosa.',
+    texto: `O que ${NOME} mais gosta de fazer quando chega em casa?`,
+    convite: 'Me conta',
+    ajuda: 'Pode ser a coisa mais boba do mundo. É justamente isso que eu quero saber.',
+    opcoes: [] },
 
   { tipo: 'pergunta',
-    cena: 'Fim da tarde, você perguntou como tinha sido o dia.',
-    texto: 'O que aconteceu?',
-    convite: 'Me conta o que ele(a) falou',
-    opcoes: ['Contou tudo sozinho(a), do começo ao fim', 'Contou só uma coisa, a que marcou', 'Só contou porque você foi perguntando', 'Repetiu a fala de alguém, do jeitinho da pessoa', 'Falou de como se sentiu, não do que aconteceu', 'Disse que não lembrava'],
-    outra: 'De outro jeito' },
+    abre: 'Agora uma que sempre rende história.',
+    cena: 'Toda criança de 4 anos tem uma mania que ninguém entende. Tem um aqui que sobe a escada contando os degraus, e se erra a conta volta e começa tudo de novo. Tem uma que guarda tampinha no bolso e não deixa ninguém pegar.',
+    texto: `${NOME} tem uma dessas?`,
+    convite: 'Me conta qual é',
+    opcoes: ['Junta e guarda coisinha: tampinha, pedra, palito de picolé', 'Repete uma frase até todo mundo decorar', 'Não deixa mudar o lugar das coisas dela', 'Não lembro de nada assim', 'Conversa com o bicho de pelúcia e responde por ele', 'Faz tudo na mesma ordem, sempre'] },
 
-  // ----------------------------------------- eixo 3: como decifra o que e' novo
   { tipo: 'pergunta',
-    cena: `Uma brincadeira com regra que ${NOME} nunca tinha visto, e as outras crianças já sabiam como era.`,
-    texto: 'O que ele(a) fez?',
-    convite: 'Me conta como foi',
-    opcoes: ['Perguntou como era antes de entrar', 'Assistiu uma rodada inteira e só depois entrou', 'Entrou logo e foi aprendendo errando', 'Ficou fazendo igual a uma criança só', 'Perguntou se podia fazer de outro jeito', 'Chamou um adulto pra explicar'],
-    outra: 'De outro jeito' },
+    abre: 'Essa é a que a família toda gosta de contar.',
+    cena: 'Acontece de a criança fazer uma coisa e a casa inteira parar pra olhar. Ninguém tinha ensinado aquilo. E depois vira história que todo mundo repete.',
+    texto: `${NOME} já fez uma dessas?`,
+    convite: 'Me conta o que foi',
+    opcoes: ['Falou uma palavra que ninguém sabia que ela sabia', 'Montou ou consertou uma coisa sozinha', 'Viu uma coisa que passou por todo mundo', 'Não lembro de nada assim', 'Cantou uma música inteira de primeira', 'Resolveu uma briga entre duas pessoas'] },
 
-  // A pausa que explica ao pai por que isto importa. Sem ela o questionario
-  // e' so' um formulario; com ela, o pai entende o que esta ajudando a construir.
+  { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre ${NOME}.`, cta: 'Continuar' },
+
+  { tipo: 'pergunta',
+    abre: 'Confessa uma coisa pra mim.',
+    cena: 'Sabe aquilo que ela pede de novo, e de novo, e de novo? O adulto já não aguenta mais e ela quer outra vez.',
+    texto: `Tem alguma coisa assim com ${NOME}?`,
+    convite: 'Me conta o que é, e quanto tempo ela fica nisso',
+    ajuda: 'Pode reclamar, eu entendo.',
+    opcoes: ['Uma brincadeira que ela sempre puxa', 'Uma música que ela mesma canta', 'Um brinquedo que vai pra todo canto com ela', 'Não lembro de nada assim', 'Rodar, pular, subir, sem parar', 'Ficar mexendo em água, terra, areia'] },
+
+  { tipo: 'pergunta',
+    cena: 'Tem dia que a gente chega em casa acabado e nem fala nada pra ninguém.',
+    texto: `Já aconteceu de ${NOME} perceber isso antes de alguém falar?`,
+    convite: 'Me conta como foi que ela percebeu',
+    opcoes: ['Veio perguntar o que tinha acontecido', 'Não falou nada, só chegou perto', 'Mudou o jeito dela, ficou mais quietinha', 'Não lembro de nada assim', 'Foi buscar alguma coisa pra agradar', 'Nem reparou, seguiu brincando'] },
+
+  // A pausa que explica ao pai por que isto importa.
   { tipo: 'transicao',
     enorme: 'Quando eu faço essas perguntas, é porque entender cada um deles faz diferença.',
     linha: `Eu não quero que ${NOME} seja apenas mais um na multidão: quero que ele(a) brilhe do jeito dele(a), que não é igual ao de mais ninguém. E eu sei que temos um caminho longo pela frente, mas de pouquinho em pouquinho faremos essa árvore crescer juntos...`,
     cta: 'Continuar' },
 
   { tipo: 'pergunta',
-    cena: `Chegou uma coisa nova, ou vocês viram alguma coisa funcionando que ${NOME} nunca tinha visto.`,
-    texto: 'Qual foi a primeira pergunta dele(a)?',
-    convite: 'Me conta o que era, e o que ele(a) perguntou',
-    opcoes: ['Pra que isso serve?', 'Como é por dentro?', 'Eu posso mexer?', 'Quem trouxe? De quem é?', 'Tem outro igual em algum lugar?', 'Por que é assim?'],
-    outra: 'De outro jeito' },
-
-  // ----------------------------------------------- eixo 4: o que sobra dela
-  { tipo: 'pergunta',
-    cena: 'Fila, sala de espera, viagem de carro. Nada pra fazer e ainda ia demorar.',
-    texto: `O que ${NOME} fez com esse tempo?`,
-    convite: 'Me conta como foi',
-    instr: 'Pode marcar mais de uma',
-    opcoes: ['Inventou uma história e ficou falando sozinho(a)', 'Ficou cantando ou batendo em alguma coisa', 'Ficou olhando as pessoas e falando delas', 'Ficou reparando em tudo: placa, carro, letra', 'Ficou contando as coisas e vendo qual era maior', 'Não parou quieto(a) um minuto'],
-    outra: 'De outro jeito' },
+    cena: 'Já mudei um armário de lugar na sala e teve criança que reparou antes de eu terminar de arrastar.',
+    texto: `${NOME} repara nessas coisas?`,
+    convite: 'Me conta uma vez que isso aconteceu',
+    opcoes: ['Repara quando alguma coisa muda de lugar em casa', 'Sabe onde cada coisa fica, melhor que os adultos', 'Na rua ela sabe o caminho de volta', 'Não lembro de nada assim', 'Percebe quando falta uma peça do brinquedo', 'Não costuma reparar nisso'] },
 
   { tipo: 'pergunta',
-    cena: `No último passeio de que ${NOME} gostou. Voltaram, e passaram uns dias.`,
-    texto: 'O que sobrou daquilo nele(a)?',
-    convite: 'Me conta o que ficou',
-    instr: 'Pode marcar mais de uma',
-    opcoes: ['Ficou contando a mesma história várias vezes', 'Desenhou o que tinha visto', 'Brincou de ser o que viu lá: o bicho, o moço, o carro', 'Ficou repetindo uma música ou um som de lá', 'Dias depois voltou no assunto com uma pergunta nova', 'Ficou pedindo pra voltar lá'],
-    outra: 'De outro jeito' },
-
-  { tipo: 'pergunta',
-    cena: `Pensa nas últimas vezes que ${NOME} brincou sozinho(a), essa semana.`,
-    texto: 'O que ele(a) fez, na prática, nessas vezes?',
-    convite: 'Me conta do que ele(a) brincou',
-    instr: 'Pode marcar mais de uma',
-    opcoes: ['Ficou conversando pelos bonecos, fazendo a voz de cada um', 'Ficou falando sozinho(a) o tempo todo, mesmo sem ninguém', 'Ficou cantarolando ou fazendo barulhinho enquanto brincava', 'Antes de começar, separou e arrumou tudo do jeito dele(a)', 'Inventou uma regra e foi seguindo ela sozinho(a)', 'Não ficou parado(a): levantava, corria, voltava'],
-    outra: 'De outro jeito' },
-
-  { tipo: 'transicao', enorme: 'Está quase acabando!', cta: 'Continuar' },
-
-  // ------------------------------------------------- eixo 5: o que ela repara
-  { tipo: 'pergunta',
-    cena: `Esses dias ${NOME} reparou em alguma coisa que ninguém mais tinha visto.`,
-    texto: 'O que foi?',
-    convite: 'Me conta essa vez',
-    opcoes: ['Uma coisa que tinha mudado de lugar em casa', 'Que duas coisas quase iguais tinham uma diferença', 'Um barulho que ninguém mais tinha ouvido', 'A cara de alguém, que estava diferente', 'Uma letra, um número, uma placa', 'Que estava faltando alguma coisa, ou alguém'],
-    outra: 'De outro jeito' },
-
-  { tipo: 'pergunta',
-    cena: `${NOME} já te corrigiu numa coisa que você nem tinha percebido que errou.`,
-    texto: 'Sobre o que foi?',
-    convite: 'Me conta como foi',
-    opcoes: ['Uma palavra que você trocou contando história', 'O caminho: não é por aqui', 'Uma coisa que estava fora do lugar', 'A música: você cantou errado', 'Que você disse uma coisa e fez outra', 'Uma conta, um número de coisas'],
-    outra: 'De outro jeito' },
-
-  { tipo: 'pergunta',
-    cena: `${NOME} junta e guarda coisas dele(a): pedra, tampinha, papel, brinquedo pequeno.`,
-    texto: 'Da última vez que você viu aquilo, como estava organizado?',
-    convite: 'Me conta o que ele(a) junta',
-    opcoes: ['Tudo junto por cor', 'Tudo junto por tamanho', 'Bicho com bicho, carro com carro', 'Numa ordem dele(a), e reclama se alguém mexe', 'Do jeito que achou bonito, sem regra nenhuma', 'Tudo misturado, sem ordem'],
-    outra: 'De outro jeito' },
+    abre: 'Essa é a que eu mais preciso.',
+    cena: 'Aqui na sala tem criança que quase não abre a boca, e o pai chega dizendo que em casa ela não para de falar.',
+    texto: `E ${NOME}, é a mesma nos dois lugares?`,
+    convite: `Me conta uma coisa que ela faz em casa e que eu talvez nunca tenha visto`,
+    opcoes: ['Em casa ela fala muito mais', 'Em casa ela é mais quieta', 'Em casa ela manda, aqui ela segue', 'Não sei dizer', 'Em casa ela faz sozinha o que aqui ela pede ajuda', 'Nos dois lugares ela é bem parecida'] },
 ];
+
+// ============================================================
+// O BANCO DAS GUARDADAS
+//
+// O questionario roda duas vezes por ano: no comeco do ano e agora em agosto.
+// Duas iscas sao fixas (a abertura e a de casa, que ancoram e fecham) e cinco
+// giram. Assim o pai nunca responde doze de uma vez, e ao longo de dois anos
+// todos os caminhos foram convocados. Ganho que nao era o objetivo: na segunda
+// aplicacao o questionario NAO e' o mesmo, entao o pai nao responde no piloto
+// automatico nem repete o que ja' escreveu.
+//
+// REGRA DE LEITURA, INEGOCIAVEL: o que nao apareceu aqui nao e' ausencia na
+// crianca, e' canal que a gente nao perguntou nesta rodada. Ler o silencio de
+// uma isca guardada como sinal quebra o Principio 6 com a nossa propria mao.
+// ============================================================
+const GUARDADAS_G4: Item[] = [
+
+  { tipo: 'pergunta',
+    cena: 'Já vi criança começar a arrumar as coisas sem ninguém pedir nada. Junta os carrinhos de um lado, os bichinhos do outro. Ou põe tudo em fila, do menor pro maior. Se alguém bagunça, ela arruma tudo de novo.',
+    texto: `Já viu ${NOME} fazendo isso?`,
+    convite: 'Me conta o que ela separou',
+    opcoes: ['Já vi, com brinquedo', 'Já vi, mas com outra coisa da casa', 'Não lembro de nada assim', 'Ela junta tudo num monte só', 'Ela faz o contrário, espalha tudo'] },
+
+  { tipo: 'pergunta',
+    cena: 'Uma vez uma menina daqui ouviu uma música no carro e, dias depois, cantou o pedaço inteiro no tom certo. E tem criança que reclama quando alguém canta a música dela de um jeito diferente.',
+    texto: `${NOME} é assim com música?`,
+    convite: 'Me conta o que aconteceu',
+    opcoes: ['Pega a música rápido e canta certinho', 'Reclama se alguém canta diferente', 'Repete um barulho ou um som que ouviu', 'Não lembro de nada assim', 'Gosta de música, mas não é nada demais', 'Não liga muito pra isso'] },
+
+  { tipo: 'pergunta',
+    cena: 'Umas crianças aprendem olhando. Veem uma vez o jeito de chutar a bola, e o pé já sai igual.',
+    texto: `${NOME} já pegou alguma coisa assim, só de ver?`,
+    convite: 'Me conta o que ela pegou',
+    opcoes: ['Um passo de dança, um jeito de mexer o corpo', 'Um jeito de segurar ou de fazer alguma coisa com a mão', 'Imitou alguém tão igual que deu risada', 'Não lembro de nada assim', 'Pega, mas precisa tentar várias vezes', 'Não é muito disso'] },
+
+  { tipo: 'pergunta',
+    cena: 'Quando a história é sempre a mesma, tem criança que já sabe de cor. Aí o adulto pula uma parte pra terminar mais rápido, e ela reclama na hora.',
+    texto: `${NOME} já te pegou fazendo isso?`,
+    convite: 'Me conta o que ela falou',
+    opcoes: ['Reclama se troca uma palavra', 'Faz a fala dos personagens junto', 'Conta a história de volta, do jeito dela', 'Não lembro de nada assim', 'Gosta da história, mas não repara nisso', 'Ela prefere história nova toda vez'] },
+
+  { tipo: 'pergunta',
+    abre: 'Essa você vai reconhecer na hora.',
+    cena: 'É aquele "por quê" que puxa outro "por quê", e mais outro, e a conversa não acaba nunca.',
+    texto: `${NOME} faz isso?`,
+    convite: 'Me conta sobre o que ela costuma perguntar',
+    opcoes: ['Faz, e uma pergunta puxa a outra', 'Pergunta muito, mas cada hora de uma coisa', 'Quer saber como as coisas funcionam por dentro', 'Não lembro de nada assim', 'Pergunta mais sobre as pessoas', 'Não é de perguntar muito'] },
+];
+void GUARDADAS_G4;
 
 const FLUXO_BRUTO: Item[] = [...ENTRADA, ...(FAIXA === 'g4' ? CENAS_G4 : CENAS_M2)];
 
@@ -514,9 +510,9 @@ const QuestionarioPaisPreview = () => {
         {noFim && (
           <>
             <p className="fim-1" style={{ fontFamily: T.serif, fontSize: 44, lineHeight: 1.04, letterSpacing: '-.022em', margin: '0 0 20px' }}>Muito obrigado!</p>
-            <p className="fim-2" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Vou ler com muito carinho tudo o que você me contou.</p>
-            <p className="fim-3" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>No fim do semestre eu te mando o que a gente foi vendo, e também o que ainda não apareceu.</p>
-            <p className="fim-4" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Nada se constrói de um dia para o outro. Fique de olho, porque em breve estaremos juntos de novo.</p>
+            <p className="fim-2" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Anotei tudo o que você me contou.</p>
+            <p className="fim-3" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Na semana que vem eu vou procurar essas coisas aqui dentro: se ela faz o mesmo na sala, com quem, em que hora do dia.</p>
+            <p className="fim-4" style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>O que acontece em casa eu não tenho como ver. Por isso eu perguntei.</p>
             {/* O convite para uma segunda voz vem DEPOIS de responder, e nao
                 antes: agora o pai ja' sabe o que sao as perguntas, entao ele
                 consegue pensar em quem mais teria o que contar. Antes de
@@ -756,17 +752,14 @@ const QuestionarioPaisPreview = () => {
 
         {/* ---------- PERGUNTA ---------- */}
         {item?.tipo === 'pergunta' && (() => {
-          const rotuloOutra = item.outra ?? 'De outro jeito';
-          const opcoes = [...item.opcoes, rotuloOutra];
-          const escolheuOutra = marcadasAqui.includes(rotuloOutra);
-          // So' avanca com opcao marcada: texto sozinho nao vira dado legivel.
-          // A saida honesta e' o "Nao sei dizer", que tambem e' uma resposta.
-          // E quem marca "de outro jeito" precisa dizer qual: a opcao existe
-          // justamente para o caso que as nossas nao previram, e sem o texto
-          // ela devolve menos do que nada.
+          const opcoes = item.opcoes;
+          // A regra do avanco mudou junto com o principio. Antes era "so' avanca
+          // com opcao marcada", porque texto solto nao virava dado legivel. Como
+          // agora quem le' o mecanismo e' a IA no relato, o texto E' a resposta,
+          // e obrigar a marcar depois de escrever seria cobrar duas vezes pela
+          // mesma coisa. A abertura, que nao tem lista, avanca sozinha.
           const escreveu = (textos[i] ?? '').trim() !== '';
-          const deveEscrever = escolheuOutra && !escreveu;
-          const podeAvancar = marcadasAqui.length > 0 && !deveEscrever;
+          const podeAvancar = opcoes.length === 0 || escreveu || marcadasAqui.length > 0;
           return (
           <>
             {/* Sem rotulo de bloco no topo: a pergunta ja e' uma cena e se explica
@@ -779,6 +772,12 @@ const QuestionarioPaisPreview = () => {
                 ela o React reaproveita o no' e a animacao nao recomeca na tela
                 seguinte. */}
             <div key={`cena-${i}`} className="revela">
+              {/* A linha de puxar conversa. Ela e' o que faz o pai sentir que
+                  tem alguem do outro lado e nao um formulario, e por isso nao
+                  esta' em todas: em todas ela cansaria e viraria tique. */}
+              {item.abre && (
+                <p style={{ fontFamily: T.serif, fontSize: 19, lineHeight: 1.4, fontWeight: 600, color: 'rgba(255,255,255,.82)', margin: '0 0 14px' }}>{item.abre}</p>
+              )}
               {item.cena && (
                 <p style={{ fontFamily: T.serif, fontSize: 24, lineHeight: 1.32, fontWeight: 700, letterSpacing: '-.01em', margin: '0 0 12px' }}>{item.cena}</p>
               )}
@@ -792,7 +791,7 @@ const QuestionarioPaisPreview = () => {
             <div key={`escrever-${i}`} className="revela mb-7">
               <p style={{ fontFamily: T.serif, fontSize: 21, fontWeight: 700, color: '#fff', margin: '0 0 4px' }}>{item.convite ?? 'Tem história aí? Me conta.'}</p>
               <p className="text-[13px] mb-2" style={{ color: 'rgba(255,255,255,.7)', fontStyle: 'italic', lineHeight: 1.45 }}>
-                o que você lembrar, do jeito que aconteceu
+                {item.ajuda ?? 'o que você lembrar, do jeito que aconteceu'}
               </p>
               <textarea
                 value={textos[i] ?? ''}
@@ -804,9 +803,14 @@ const QuestionarioPaisPreview = () => {
               />
             </div>
 
-            <p key={`instr-${i}`} className="revela text-[15px]" style={{ color: 'rgba(255,255,255,.85)', margin: '0 0 14px' }}>
-              E marque também {item.instr === 'Pode marcar mais de uma' ? 'o que aconteceu, pode ser mais de uma' : 'o que mais se parece com aquele dia'}:
-            </p>
+            {/* A lista agora e' SAIDA RAPIDA, nao a resposta principal: quem
+                escreveu ja' respondeu. Por isso "se preferir", e por isso ela
+                some inteira quando a isca nao tem lista (a abertura). */}
+            {item.opcoes.length > 0 && (
+              <p key={`instr-${i}`} className="revela text-[15px]" style={{ color: 'rgba(255,255,255,.85)', margin: '0 0 14px' }}>
+                Ou, se preferir, marque o que mais parece:
+              </p>
+            )}
 
             {/* Lista de linhas, sem caixa: o peso visual fica no texto e nao no
                 container. Quem carrega a marcacao e' o circulo. Vazio ele ja diz
@@ -819,7 +823,7 @@ const QuestionarioPaisPreview = () => {
                 return (
                   <button
                     key={op}
-                    onClick={() => { alterna(op); if (op === rotuloOutra) setAbertos((a) => ({ ...a, [i]: true })); }}
+                    onClick={() => alterna(op)}
                     className="w-full flex items-center justify-between gap-3.5 text-left"
                     style={{
                       minHeight: 58, padding: '15px 0',
@@ -828,7 +832,7 @@ const QuestionarioPaisPreview = () => {
                       fontFamily: T.serif, fontSize: 20, lineHeight: 1.35,
                       fontWeight: on ? 700 : 600,
                       color: on ? '#fff' : 'rgba(255,255,255,.86)',
-                      fontStyle: op === rotuloOutra ? 'italic' : 'normal',
+                      
                     }}
                   >
                     <span>{op}</span>
@@ -838,17 +842,6 @@ const QuestionarioPaisPreview = () => {
               })}
             </div>
 
-            {marcadasAqui.length === 0 && escreveu && (
-              <p className="text-[14px] mt-5" style={{ color: '#FFE0B2', lineHeight: 1.5 }}>
-                É necessário escolher alguma opção para continuar, além do texto.
-              </p>
-            )}
-
-            {deveEscrever && (
-              <p className="text-[14px] mt-5" style={{ color: '#FFE0B2', lineHeight: 1.5 }}>
-                Você marcou {rotuloOutra.toLowerCase()}. Me conta qual é o jeito, aí a gente continua.
-              </p>
-            )}
 
             <div key={`rodape-${i}`} className="revela pt-6 flex items-center justify-between gap-4 flex-wrap" style={{ animationDelay: ATRASO_OPCOES + 's' }}>
               <button
