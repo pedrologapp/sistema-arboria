@@ -14,7 +14,7 @@
 // A crianca de exemplo e' fixa. Quando isto virar produto, o link sera unico por
 // crianca e o nome vem do banco (por isso NOME esta isolado numa constante).
 // ============================================================
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type React from 'react';
 import { ChevronLeft, Check } from 'lucide-react';
 
@@ -401,9 +401,19 @@ const QuestionarioPaisPreview = () => {
 
   // Toda tela nova comeca do topo. Sem isto o navegador mantem a rolagem de
   // onde o pai estava, entao ele apertava "Proxima" no rodape e caia no meio da
-  // pergunta seguinte, sem ver a cena que a explica. Instantaneo de proposito:
-  // rolagem suave mostraria o texto antigo subindo, o que e' pior.
-  useEffect(() => { window.scrollTo(0, 0); }, [i]);
+  // pergunta seguinte, sem ver a cena que a explica.
+  //
+  // Rolar a janela nao bastava: "overflow-x: hidden" no container faz o
+  // navegador tratar o eixo vertical como "auto", entao dependendo da altura do
+  // conteudo quem rola e' a propria div, e nao a pagina. Por isso a rolagem e'
+  // zerada nos dois. Instantaneo de proposito: rolagem suave mostraria o texto
+  // da tela anterior subindo, o que confunde mais do que ajuda.
+  const palco = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    palco.current?.scrollTo(0, 0);
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+  }, [i]);
   const [escolhas, setEscolhas] = useState<Record<string, string>>({});
   const [escolhaTexto, setEscolhaTexto] = useState<Record<string, string>>({});
   const [linkCopiado, setLinkCopiado] = useState(false);
@@ -475,7 +485,7 @@ const QuestionarioPaisPreview = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-x-hidden" style={{
+    <div ref={palco} className="min-h-screen flex flex-col relative overflow-x-hidden" style={{
       backgroundColor: T.fundo,
       backgroundImage: `linear-gradient(180deg, rgba(6,38,66,.22) 0%, rgba(6,38,66,0) 34%), url("${CEU}")`,
       backgroundSize: 'cover, cover', backgroundPosition: 'center top, center', color: '#fff',
