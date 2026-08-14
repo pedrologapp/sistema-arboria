@@ -138,15 +138,14 @@ const ENTRADA: Item[] = [
     opcoes: ['A mãe', 'O pai', 'Os dois juntos', 'A avó ou o avô', OUTRO_CUIDADOR],
     livre: OUTRO_CUIDADOR, cta: 'Continuar' },
 
-  // Cerca de uma em cada seis respostas seria dada sobre horas que quem esta
-  // respondendo nao viu, e dada com confianca. Esta tela corrige mais vies do
-  // que qualquer reescrita de item.
-  { tipo: 'respondente', chave: 'tempo',
-    titulo: `E durante a semana, quem fica mais tempo com ${NOME}?`,
-    sub: 'Pergunto porque quem passa mais horas junto vê coisas que os outros não veem.',
-    opcoes: ['Eu mesmo', 'A mãe', 'O pai', 'A avó ou o avô', 'Uma babá ou outra pessoa que cuida', 'Fica dividido, ninguém mais que os outros'],
-    cta: 'Prontos' },
 ];
+
+// Quem mais fica com a crianca durante a semana. Estava aqui na entrada e saiu:
+// no teste com pais (14/08) a pergunta foi lida como cobranca, como se OUTRA
+// pessoa e' que devesse responder, e alguns pararam ali. No fim ela vira
+// convite, porque a essa altura o pai ja' respondeu e ja' sabe o que ele
+// estaria passando adiante.
+const QUEM_MAIS_FICA = ['A mãe', 'O pai', 'A avó ou o avô', 'Uma babá ou outra pessoa que cuida', 'Uma tia, um tio, alguém da família', 'Não, sou eu mesmo quem fica mais'];
 
 const CENAS_M2: Item[] = [
   // ============================================================
@@ -481,9 +480,13 @@ const QuestionarioPaisPreview = () => {
         @keyframes surge { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
         
         .revela { animation: surge 1s cubic-bezier(.22,.61,.36,1) both; }
-        .pausa-frase { animation: surge 1.1s cubic-bezier(.22,.61,.36,1) .4s both; }
-        .pausa-linha { animation: surge 1.1s cubic-bezier(.22,.61,.36,1) 1.6s both; }
-        .cta-forte { animation: surge .9s cubic-bezier(.22,.61,.36,1) 2.8s both; }
+        /* As pausas curtas ("Está quase acabando!") estavam demorando o mesmo
+           que as longas, porque o atraso do botao era fixo. Encurtado: numa
+           frase de tres palavras, esperar quase tres segundos pelo botao
+           parecia tela travada. */
+        .pausa-frase { animation: surge .9s cubic-bezier(.22,.61,.36,1) .2s both; }
+        .pausa-linha { animation: surge .9s cubic-bezier(.22,.61,.36,1) .95s both; }
+        .cta-forte { animation: surge .7s cubic-bezier(.22,.61,.36,1) 1.5s both; }
         /* A tela do fim entra mais devagar que todas: e' a unica que o pai
            nao precisa vencer, entao ela pode tomar o tempo dela. */
         .fim-1 { animation: surge 1.2s cubic-bezier(.22,.61,.36,1) .4s both; }
@@ -520,19 +523,47 @@ const QuestionarioPaisPreview = () => {
                 responder ele nao tinha como saber. */}
             <div className="fim-5 mt-2" style={{ borderLeft: '2px solid rgba(255,255,255,.55)', padding: '2px 0 2px 16px' }}>
               <p style={{ fontFamily: T.serif, fontSize: 21, lineHeight: 1.42, fontWeight: 700, color: '#fff', margin: '0 0 6px' }}>
-                Tem mais alguém que você gostaria que me contasse sobre {NOME}?
+                Tem mais alguém que fica bastante tempo com {NOME} durante a semana?
               </p>
-              <p className="text-[13.5px]" style={{ color: 'rgba(255,255,255,.75)', margin: '0 0 14px', lineHeight: 1.5 }}>
-                A avó, a babá, quem fica com {flex('ele(a)')} quando você não está. Cada um vê uma parte diferente.
+              <p className="text-[13.5px]" style={{ color: 'rgba(255,255,255,.75)', margin: '0 0 10px', lineHeight: 1.5 }}>
+                Cada um vê uma parte diferente do dia {flex('dele(a)')}. Se quiser, eu ouço essa pessoa também.
               </p>
-              <button
-                onClick={() => { navigator.clipboard?.writeText(window.location.href); setLinkCopiado(true); }}
-                className="inline-flex items-center gap-2 font-bold uppercase"
-                style={{ fontSize: 13, letterSpacing: '.12em', padding: '11px 20px', borderRadius: 999, border: '2px solid rgba(255,255,255,.75)', color: '#fff' }}
-              >
-                {linkCopiado ? 'Link copiado' : 'Copiar o link'}
-                {linkCopiado && <Check size={14} strokeWidth={3} />}
-              </button>
+
+              <div className="mb-4">
+                {QUEM_MAIS_FICA.map((quem, k) => {
+                  const on = escolhas['tempo'] === quem;
+                  return (
+                    <button
+                      key={quem}
+                      onClick={() => { setEscolhas((e) => ({ ...e, tempo: quem })); setLinkCopiado(false); }}
+                      className="w-full flex items-center justify-between gap-3 text-left"
+                      style={{
+                        minHeight: 48, padding: '11px 0',
+                        borderBottom: '1px solid rgba(255,255,255,.22)',
+                        borderTop: k === 0 ? '1px solid rgba(255,255,255,.22)' : undefined,
+                        fontFamily: T.serif, fontSize: 18, lineHeight: 1.3,
+                        fontWeight: on ? 700 : 600,
+                        color: on ? '#fff' : 'rgba(255,255,255,.86)',
+                      }}
+                    >
+                      <span>{quem}</span>
+                      <Marca on={on} />
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* O link so' aparece quando ha' de fato outra pessoa para ouvir. */}
+              {escolhas['tempo'] && escolhas['tempo'] !== 'Não, sou eu mesmo quem fica mais' && (
+                <button
+                  onClick={() => { navigator.clipboard?.writeText(window.location.href); setLinkCopiado(true); }}
+                  className="inline-flex items-center gap-2 font-bold uppercase"
+                  style={{ fontSize: 13, letterSpacing: '.12em', padding: '11px 20px', borderRadius: 999, border: '2px solid rgba(255,255,255,.75)', color: '#fff' }}
+                >
+                  {linkCopiado ? 'Link copiado' : 'Copiar o link pra essa pessoa'}
+                  {linkCopiado && <Check size={14} strokeWidth={3} />}
+                </button>
+              )}
             </div>
 
             <p className="fim-5 text-[13px] mt-7" style={{ color: 'rgba(255,255,255,.74)' }}>Se quiser mudar alguma resposta, é só entrar de novo pelo mesmo link.</p>
@@ -753,7 +784,29 @@ const QuestionarioPaisPreview = () => {
               )}
               <p style={{ fontFamily: T.serif, fontSize: 24, lineHeight: 1.32, fontWeight: 700, letterSpacing: '-.01em', margin: '0 0 6px' }}>{item.texto}</p>
             </div>
-            <p key={`instr-${i}`} className="revela text-[14px]" style={{ color: 'rgba(255,255,255,.8)', margin: '0 0 22px', animationDelay: ATRASO_OPCOES + 's' }}>{item.instr ?? 'Escolha uma'}</p>
+            {/* O CAMPO DE ESCREVER VEM ANTES DAS OPCOES.
+                Teste com pais de verdade (Fundador, 14/08): embaixo da lista,
+                quase ninguem lia o convite, e o campo aberto por padrao. Isso
+                inverte o peso de proposito: a lista existe para ativar a
+                memoria, e o texto e' o dado que a leitura vai usar. */}
+            <div key={`escrever-${i}`} className="revela mb-7">
+              <p style={{ fontFamily: T.serif, fontSize: 21, fontWeight: 700, color: '#fff', margin: '0 0 4px' }}>{item.convite ?? 'Tem história aí? Me conta.'}</p>
+              <p className="text-[13px] mb-2" style={{ color: 'rgba(255,255,255,.7)', fontStyle: 'italic', lineHeight: 1.45 }}>
+                o que você lembrar, do jeito que aconteceu
+              </p>
+              <textarea
+                value={textos[i] ?? ''}
+                onChange={(e) => setTextos((t) => ({ ...t, [i]: e.target.value }))}
+                rows={3}
+                placeholder="escreva aqui"
+                className="w-full bg-transparent outline-none resize-y"
+                style={{ borderBottom: '1px solid rgba(255,255,255,.42)', fontFamily: T.serif, fontSize: 19, color: '#fff', paddingBottom: 6 }}
+              />
+            </div>
+
+            <p key={`instr-${i}`} className="revela text-[15px]" style={{ color: 'rgba(255,255,255,.85)', margin: '0 0 14px' }}>
+              E marque também {item.instr === 'Pode marcar mais de uma' ? 'o que aconteceu, pode ser mais de uma' : 'o que mais se parece com aquele dia'}:
+            </p>
 
             {/* Lista de linhas, sem caixa: o peso visual fica no texto e nao no
                 container. Quem carrega a marcacao e' o circulo. Vazio ele ja diz
@@ -784,32 +837,6 @@ const QuestionarioPaisPreview = () => {
                 );
               })}
             </div>
-
-            {abertos[i] || escolheuOutra ? (
-              <div className="mt-6">
-                <p style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 700, color: '#fff', margin: '0 0 4px' }}>{item.convite ?? 'Tem história aí? Me conta.'}</p>
-                <p className="text-[13.5px] mb-3" style={{ color: 'rgba(255,255,255,.7)', fontStyle: 'italic' }}>
-                  tipo: “no papel ele erra a conta, mas se eu pergunto de cabeça ele acerta na hora”
-                </p>
-                <textarea
-                  value={textos[i] ?? ''}
-                  onChange={(e) => setTextos((t) => ({ ...t, [i]: e.target.value }))}
-                  rows={3}
-                  placeholder="escreva o quanto quiser"
-                  className="w-full bg-transparent outline-none resize-y"
-                  style={{ borderBottom: '1px solid rgba(255,255,255,.42)', fontFamily: T.serif, fontSize: 19, color: '#fff', paddingBottom: 6 }}
-                />
-              </div>
-            ) : (
-              // O "+" sozinho nao dizia que ali se aperta. A segunda linha resolve.
-              <button onClick={() => setAbertos((a) => ({ ...a, [i]: true }))} className="flex items-start gap-3 mt-6 text-left" style={{ color: '#fff' }}>
-                <span className="flex items-center justify-center flex-none" style={{ width: 30, height: 30, borderRadius: 999, border: '2px solid rgba(255,255,255,.7)', fontSize: 19, lineHeight: 1, paddingBottom: 2, marginTop: 2 }}>+</span>
-                <span>
-                  <span className="block" style={{ fontFamily: T.serif, fontSize: 19, fontWeight: 600, lineHeight: 1.3 }}>{item.convite ?? 'Tem história aí? Me conta.'}</span>
-                  <span className="block text-[13px] mt-1" style={{ color: 'rgba(255,255,255,.72)', textDecoration: 'underline', textUnderlineOffset: 3 }}>clique aqui para escrever</span>
-                </span>
-              </button>
-            )}
 
             {marcadasAqui.length === 0 && escreveu && (
               <p className="text-[14px] mt-5" style={{ color: '#FFE0B2', lineHeight: 1.5 }}>
