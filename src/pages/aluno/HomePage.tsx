@@ -185,6 +185,32 @@ const HomePage = () => {
     staleTime: 120000,
   });
 
+  // ---------------------------------------------------------- Arena, 2ª fase
+  // A convocação não pode depender do cartão de urgência: aquele só acende com
+  // prazo em menos de 2 dias, e a 2ª fase abre com uma semana. Sem isto o aluno
+  // selecionado entra no app e não vê nada.
+  const { data: arena2Fase } = useQuery({
+    queryKey: ['arena-2fase', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return null;
+      const { data } = await supabase.rpc('get_missoes_do_aluno', { p_aluno_id: profile.id });
+      const m = (data ?? []).find((x: any) => x.titulo === 'Arena Arboria: 2ª fase' && !x.ja_entregou);
+      return m ?? null;
+    },
+    enabled: !!profile?.id,
+    staleTime: 120000,
+  });
+
+  // O pop-up abre sozinho uma vez. Depois disso o cartão fica na home, para ele
+  // voltar quando tiver o material na mão.
+  useEffect(() => {
+    if (!arena2Fase || !profile?.id) return;
+    const chave = `arboria_arena_2fase_visto_${profile.id}`;
+    if (localStorage.getItem(chave)) return;
+    localStorage.setItem(chave, '1');
+    navigate('/aluno/arena/2fase');
+  }, [arena2Fase, profile?.id, navigate]);
+
   // Até quando as missões do aluno ficam abertas. Sai do próprio prazo das missões
   // dele (nunca de uma data escrita no código), então acompanha o que o mentor definir.
   const { data: prazoMissoes } = useQuery({
@@ -340,6 +366,29 @@ const HomePage = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* 1.5 Arena, 2a fase: so aparece para quem foi selecionado */}
+        {arena2Fase && (
+          <button
+            onClick={() => navigate('/aluno/arena/2fase')}
+            className="rounded-[14px] w-full p-3.5 text-left active:scale-[0.98] transition-transform"
+            style={{
+              border: '1px solid rgba(94,224,208,.42)',
+              background: 'linear-gradient(135deg, rgba(94,224,208,.13), rgba(94,224,208,.04))',
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <Trophy className="w-5 h-5 shrink-0" style={{ color: '#5EE0D0' }} />
+              <div className="flex-1">
+                <p className="text-[10px] font-extrabold uppercase tracking-[.22em]" style={{ color: '#5EE0D0' }}>
+                  Arena Arboria
+                </p>
+                <p className="text-white text-sm font-semibold mt-0.5">Você passou para a 2ª fase</p>
+                <p className="text-white/45 text-[11px] mt-0.5">Toque para ver o que enviar</p>
+              </div>
+            </div>
+          </button>
         )}
 
         {/* 2. Urgencia (mesmo cartao de hoje) */}

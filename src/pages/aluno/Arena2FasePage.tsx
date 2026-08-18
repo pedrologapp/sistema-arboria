@@ -266,7 +266,7 @@ const Arena2FasePage = () => {
             não de vocês: sem rosto na foto e sem ninguém no vídeo, porque isso vai para fora da escola.
           </p>
 
-          <button onClick={() => navegar('/aluno/missoes')} className="w-full mt-5 rounded-2xl font-extrabold uppercase"
+          <button onClick={() => navegar('/aluno/arena/2fase/enviar')} className="w-full mt-5 rounded-2xl font-extrabold uppercase"
             style={{ padding: 15, background: T.casa, color: '#04121C', fontSize: 14, letterSpacing: '.06em' }}>
             Começar
           </button>
@@ -368,7 +368,7 @@ const Arena2FasePage = () => {
         }
       `}</style>
       <div className="max-w-md mx-auto">
-        <button onClick={() => navegar('/aluno/missoes')} className="flex items-center gap-1.5 pt-4 text-[11px] font-bold uppercase tracking-widest"
+        <button onClick={() => navegar('/aluno')} className="flex items-center gap-1.5 pt-4 text-[11px] font-bold uppercase tracking-widest"
           style={{ color: T.texto3 }}><ArrowLeft size={13} /> 2ª fase · Arena</button>
 
         <h1 className="mt-4 mb-0" style={{ fontFamily: T.serif, fontSize: 24, lineHeight: 1.1, letterSpacing: '-.02em' }}>
