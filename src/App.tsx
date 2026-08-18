@@ -80,6 +80,9 @@ const AdminLoginsProfessoresPage = lazy(() => import("./pages/admin/AdminLoginsP
 // Aluno pages (lazy)
 const HomePage = lazy(() => import("./pages/aluno/HomePage"));
 const MissoesPage = lazy(() => import("./pages/aluno/MissoesPage"));
+// PROTOTIPO da 2a fase da Arena. Rota propria, fora do fluxo de missao, para
+// poder ser testada sem mexer no que ja roda.
+const Arena2FasePage = lazy(() => import("./pages/aluno/Arena2FasePage"));
 const MissoesFasePage = lazy(() => import("./pages/aluno/MissoesFasePage"));
 const MissoesSemanaPageAluno = lazy(() => import("./pages/aluno/MissoesSemanaPage"));
 const MissoesCasaPage = lazy(() => import("./pages/aluno/MissoesCasaPage"));
@@ -531,6 +534,17 @@ const App = () => (
                 <StudentLayout>
                   <HomePage />
                 </StudentLayout>
+              </StudentProtectedRoute>
+            } />
+            <Route path="/aluno/arena/2fase" element={
+              <StudentProtectedRoute>
+                <Arena2FasePage />
+              </StudentProtectedRoute>
+            } />
+            {/* O envio em si, para onde a pagina de missoes vai apontar. */}
+            <Route path="/aluno/arena/2fase/enviar" element={
+              <StudentProtectedRoute>
+                <Arena2FasePage />
               </StudentProtectedRoute>
             } />
             <Route path="/aluno/missoes" element={
