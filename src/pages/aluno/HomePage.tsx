@@ -194,7 +194,12 @@ const HomePage = () => {
     queryFn: async () => {
       if (!profile?.id) return null;
       const { data } = await supabase.rpc('get_missoes_do_aluno', { p_aluno_id: profile.id });
-      const m = (data ?? []).find((x: any) => x.titulo === 'Arena Arboria: 2ª fase' && !x.ja_entregou);
+      // Compara pelo comeco do titulo, e nao pela string inteira: o "2ª" tem
+      // caractere ordinal e um acento fora do lugar deixaria a convocacao
+      // invisivel sem erro nenhum aparecer.
+      const m = (data ?? []).find(
+        (x: any) => typeof x?.titulo === 'string' && x.titulo.startsWith('Arena Arboria') && !x.ja_entregou,
+      );
       return m ?? null;
     },
     enabled: !!profile?.id,
