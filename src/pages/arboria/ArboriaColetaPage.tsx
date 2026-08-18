@@ -166,11 +166,98 @@ const PERGUNTAS_V2: Pergunta[] = [
     texto: 'Tem alguma coisa que eu não perguntei e que você acha que eu precisava saber sobre essa idade?' },
 ];
 
+// ----------------------------------------------------- o F1 (versoes 3 e 4)
+//
+// Por que o F1 nao pode usar o mesmo texto do Infantil: no Infantil a cena e' a
+// crianca no mundo. No F1 entra uma coisa que nao existia antes, a TAREFA COM
+// RESPOSTA CERTA, e e' ali que o mecanismo aparece e some ao mesmo tempo. Some
+// porque a resposta certa esconde o caminho: duas criancas escrevem 12 e
+// chegaram por estradas diferentes. Aparece porque o erro e o desvio denunciam
+// a estrada. Por isso o bloco do caminho e' o coracao daqui, e nao existe no
+// Infantil.
+//
+// A segunda diferenca: no F1 a crianca ja' tem palavra. Perguntar "ela quis
+// contar e nao achava a palavra" para uma professora de 5o ano e' perguntar
+// sobre crianca de 3 anos. A professora responde por educacao e a resposta nao
+// serve.
+//
+// Versao 3 = 1o ao 3o ano. Versao 4 = 4o e 5o, que e' a mesma coisa mais o
+// bloco 6: e' nessa idade que a crianca comeca a ter OPINIAO SOBRE SI, e essa
+// fala e' o material do Acreditar. Duas versoes em vez de um filtro por serie
+// para que a ficha registre no banco qual instrumento foi usado.
+// Cada pergunta daqui existe para produzir UMA das quatro coisas que faltam
+// para escrever uma isca da faixa. Pergunta sem destino foi cortada.
+const BLOCOS_F1: { n: number; titulo: string; nota: string }[] = [
+  { n: 1, titulo: 'O que chega de casa', nota: 'Serve para levantar as CENAS. O questionário pergunta sobre casa, e só quem ouve os pais todo dia sabe que cena existe lá dentro.' },
+  { n: 2, titulo: 'O leque de cada cena', nota: 'A parte pesada, uns dez minutos em cada. É daqui que saem as opções, uma a uma. Peça criança por criança, não a média da turma. Se ela citou uma cena melhor no bloco 1, troque a minha pela dela.' },
+  { n: 3, titulo: 'As palavras dos pais', nota: 'O vocabulário deles é o que faz a isca soar como lembrança em vez de formulário.' },
+  { n: 4, titulo: 'O teto e o chão da idade', nota: 'Isca acima da idade o pai não reconhece. Abaixo, ele acha bobo e responde por educação.' },
+  { n: 5, titulo: 'O teste de realidade', nota: 'Última pergunta. Ela decide o que entra e o que fica de fora.' },
+];
+
+const BLOCO_F1_2 = { n: 6, titulo: 'O que ela já diz de si', nota: 'Só do 4º ano em diante. Peça a frase com as palavras da criança, não o resumo. Aqui não se conclui nada sobre a criança: o que se colhe é o que ela diz.' };
+
+const PERGUNTAS_F1: Pergunta[] = [
+  { id: 'f1b_01', bloco: 1, tipo: 'longo', bloqueante: true,
+    texto: 'Quando um pai dessa série te procura pra falar do filho, o que ele conta que aconteceu EM CASA?',
+    hint: 'Deixe correr. Cada cena que aparecer aqui é candidata a virar uma pergunta do questionário.' },
+  { id: 'f1b_02', bloco: 1, tipo: 'longo', bloqueante: true,
+    texto: 'E o que as crianças te contam que fizeram em casa, quando chegam na segunda?',
+    hint: 'A segunda fonte da mesma coisa. A criança conta cena que o pai não acha importante mencionar.' },
+
+  { id: 'f1b_03', bloco: 2, tipo: 'longo', bloqueante: true,
+    texto: 'Pensa na LIÇÃO DE CASA. Me dá cinco crianças diferentes dessa turma e o que cada uma faz nessa hora.',
+    hint: 'Não o resultado, o que ela faz. Cinco crianças, uma de cada vez. Estas cinco respostas viram as cinco opções da pergunta.' },
+  // A cena original aqui era "tempo livre em casa, SEM tela". A entrevista do
+  // 4o ano em 18/08 derrubou: a professora contou que os pais falam quase so'
+  // de celular, e que eles queriam os filhos brincando na rua mas nao tem
+  // coragem, "porque as criancas nao sabem correr". Isca sobre brincadeira de
+  // rua seria isca sobre uma cena que nao acontece. A tela e' o tempo livre
+  // dessa idade, e o que a crianca faz DENTRO dela e' tao revelador quanto.
+  { id: 'f1b_04', bloco: 2, tipo: 'longo', bloqueante: true,
+    texto: 'Agora o CELULAR OU TABLET em casa. As mesmas cinco crianças: o que cada uma faz DENTRO da tela?',
+    hint: 'Assiste, joga sozinha, joga com gente, constrói, conversa, desenha, pesquisa, copia o que viu. O que ela escolhe fazer lá dentro é mecanismo igual.' },
+  { id: 'f1b_05', bloco: 2, tipo: 'longo', bloqueante: true,
+    texto: 'E quando ela CHEGA DA ESCOLA E CONTA O DIA. Como cada uma conta?',
+    hint: 'Uma conta pela ordem, outra pelo que sentiu, outra só responde se perguntarem. O jeito de contar é mecanismo.' },
+
+  { id: 'f1b_06', bloco: 3, tipo: 'longo', bloqueante: true,
+    texto: 'Como os pais dessa idade descrevem os filhos pra você? Repete do jeito que eles falam, com o erro e tudo.',
+    hint: '"Ele fica horas montando" é isca. "Ele demonstra persistência" não é.' },
+
+  { id: 'f1b_07', bloco: 4, tipo: 'longo', bloqueante: true,
+    texto: 'O que uma criança dessa série ainda NÃO faz, que os pais acham que ela já faz?' },
+  { id: 'f1b_08', bloco: 4, tipo: 'longo', bloqueante: true,
+    texto: 'E o que ela já faz que os pais ainda NÃO perceberam?' },
+
+  { id: 'f1b_09', bloco: 5, tipo: 'longo', bloqueante: true,
+    texto: 'Dessas cenas que a gente falou, qual delas um pai vai lembrar de verdade, e qual vai gerar resposta pronta?',
+    hint: 'A cena que gera resposta pronta não entra no questionário, por melhor que pareça.' },
+];
+
+const PERGUNTAS_F1_2: Pergunta[] = [
+  ...PERGUNTAS_F1,
+  { id: 'f1b_10', bloco: 6, tipo: 'longo', bloqueante: true,
+    texto: 'Uma criança dessa série que já falou de si mesma: "isso eu não sei fazer", "isso é comigo". O que ela disse, com as palavras dela?',
+    hint: 'A frase literal. Não o resumo, não a interpretação.' },
+  { id: 'f1b_11', bloco: 6, tipo: 'longo',
+    texto: 'E o que ela faz depois de dizer isso? Desiste, tenta escondido, pede ajuda, disfarça?' },
+];
+
 // Qual conjunto cada ficha usa. As duas ja' respondidas (Maternal 2 e Grupo IV)
 // continuam na v1: trocar as perguntas embaixo de respostas existentes deixaria
 // texto orfao apontando para pergunta que nao existe mais.
-const perguntasDe = (versao: number) => (versao === 1 ? PERGUNTAS_V1 : PERGUNTAS_V2);
-const blocosDe = (versao: number) => (versao === 1 ? BLOCOS_V1 : BLOCOS_V2);
+const perguntasDe = (versao: number) =>
+  versao === 1 ? PERGUNTAS_V1
+  : versao === 3 ? PERGUNTAS_F1
+  : versao === 4 ? PERGUNTAS_F1_2
+  : PERGUNTAS_V2;
+
+const blocosDe = (versao: number) =>
+  versao === 1 ? BLOCOS_V1
+  : versao === 3 ? BLOCOS_F1
+  : versao === 4 ? [...BLOCOS_F1, BLOCO_F1_2]
+  : BLOCOS_V2;
 
 
 // ------------------------------------------------------------ tipos
