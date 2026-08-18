@@ -24,6 +24,10 @@ import { comprimirImagem, emMB, contarPalavras } from '@/lib/comprimirMidia';
 import { subirComProgresso, type FalhaUpload } from '@/lib/subirArquivo';
 
 const BUCKET = 'arena-2fase';
+// A missao da 2a fase, criada em 18/08 e enderecada por missao_destinatarios
+// aos integrantes dos projetos selecionados. E' ela que da' o missao_id da
+// entrega, sem o qual o banco recusa a gravacao.
+const MISSAO_2FASE = 'ddaf54d2-7781-4ab6-b3e7-2a54749329a5';
 const MINIMO_PALAVRAS = 150;
 const MAX_PORTFOLIO = 5;
 const TIPO_POR_EXT: Record<string, string> = {
@@ -173,23 +177,58 @@ const Arena2FasePage = () => {
     if (!podeEnviar || !user) return;
     setEnviando(true);
     try {
-      // O prototipo grava so' o que ja' existe no esquema: nao inventa tabela
-      // antes de o formato estar fechado com o Fundador.
-      const { error } = await supabase.from('entregas').insert({
-        missao_id: null,
-        aluno_id: user.id,
-        texto_resposta: descricao.trim(),
-        status: 'pendente',
-        entregue_no_prazo: true,
-        numero_tentativa: 1,
-      } as never);
-      if (error) throw error;
+      // 1. A entrega. E' ela que registra QUEM enviou (aluno_id) e QUANDO, e e'
+      //    por ela que a professora enxerga o trabalho na tela dela. Sem
+      //    missao_id o banco recusa, porque a coluna e' NOT NULL: foi isso que
+      //    fazia o envio falhar no fim, depois de os arquivos ja terem subido.
+      const { data: entrega, error: erroEntrega } = await supabase
+        .from('entregas')
+        .insert({
+          missao_id: MISSAO_2FASE,
+          aluno_id: user.id,
+          texto_resposta: descricao.trim(),
+          status: 'pendente',
+          entregue_no_prazo: true,
+          numero_tentativa: 1,
+        } as never)
+        .select('id')
+        .single();
+      if (erroEntrega) throw erroEntrega;
+
+      const entregaId = (entrega as { id: string } | null)?.id;
+
+      // 2. Os arquivos. Sem esta parte o material fica orfao no bucket: existe
+      //    no Storage e ninguem sabe de quem e'. O caminho continua sendo o
+      //    unico identificador, e ele nao carrega nome de crianca.
+      if (entregaId && arquivos.length > 0) {
+        const linhas = arquivos.map((a) => ({
+          entrega_id: entregaId,
+          nome_original: a.nome,
+          nome_storage: a.caminho,
+          tipo_arquivo: a.slot,          // capa, portfolio ou video
+          tamanho_bytes: a.bytes,
+          url: `${BUCKET}/${a.caminho}`,  // bucket privado: a leitura e' por URL assinada
+        }));
+        const { error: erroArquivos } = await supabase
+          .from('entrega_arquivos')
+          .insert(linhas as never);
+        if (erroArquivos) throw erroArquivos;
+      }
+
       setEnviado(true);
     } catch (e) {
+      const msg = e instanceof Error ? e.message : '';
+      // Enviar duas vezes bate no indice unico da entrega. Isso nao e' erro do
+      // aluno: quer dizer que o grupo dele ja mandou.
+      if (/duplicate|unique/i.test(msg)) {
+        setEnviado(true);
+        return;
+      }
+      console.error('[arena 2fase] envio falhou', e);
       toast({
         variant: 'destructive',
         title: 'O material subiu, mas o envio não fechou',
-        description: 'Os arquivos estão salvos. É só apertar Enviar de novo.',
+        description: 'Suas fotos e o vídeo estão salvos. É só apertar Enviar de novo.',
       });
     } finally {
       setEnviando(false);
