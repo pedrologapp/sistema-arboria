@@ -48,6 +48,52 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
     <!-- Sci-fi (tela de Missões) -->
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <script>
+      // ============================================================
+      // Rede de seguranca de carregamento. Roda ANTES do app.
+      //
+      // Dois problemas diferentes, o mesmo sintoma: a tela fica branca.
+      //
+      // 1. Service worker legado. O app usou vite-plugin-pwa e depois desligou.
+      //    Quem instalou naquela janela segue com um service worker servindo um
+      //    index.html guardado que aponta para bundles que o deploy apagou.
+      //    Aqui a gente desregistra qualquer um que ainda exista.
+      //
+      // 2. index.html velho no cache. O navegador guarda a pagina antiga, que
+      //    pede /assets/index-XXXX.js. O arquivo nao existe mais, o servidor
+      //    devolve HTML, o navegador recusa por MIME e nada sobe. Recarregar uma
+      //    vez resolve, porque ai vem o index.html novo.
+      //
+      // O sessionStorage impede laco infinito: se recarregar e continuar
+      // falhando, o problema e outro e a pagina para de tentar.
+      // ============================================================
+      (function () {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function (regs) {
+            regs.forEach(function (r) { r.unregister(); });
+          }).catch(function () {});
+          if (window.caches && caches.keys) {
+            caches.keys().then(function (ks) {
+              ks.forEach(function (k) { caches.delete(k); });
+            }).catch(function () {});
+          }
+        }
+
+        var CHAVE = 'arboria_recarga_bundle';
+        window.addEventListener('error', function (e) {
+          var alvo = e && e.target;
+          if (!alvo || alvo.tagName !== 'SCRIPT') return;
+          if (sessionStorage.getItem(CHAVE)) return;
+          sessionStorage.setItem(CHAVE, '1');
+          location.reload();
+        }, true);
+
+        window.addEventListener('load', function () {
+          // Carregou: libera a rede para a proxima vez que precisar.
+          setTimeout(function () { sessionStorage.removeItem(CHAVE); }, 4000);
+        });
+      })();
+    </script>
   </head>
 
   <body>
