@@ -76,6 +76,15 @@ const Arena2FasePage = () => {
 
   useEffect(() => { window.scrollTo(0, 0); }, [passo]);
 
+  // As duas rotas usam o MESMO componente, entao o React Router nao remonta na
+  // troca: o endereco mudava para /enviar e a tela continuava na de boas-vindas,
+  // porque o passo inicial so' e' calculado uma vez. Sem isto, o "Comecar" nao
+  // levava a lugar nenhum.
+  useEffect(() => {
+    if (soEnvio && passo !== 3) setPasso(3);
+    if (!soEnvio && passo === 3) setPasso(2);
+  }, [soEnvio]);   // eslint-disable-line react-hooks/exhaustive-deps
+
   const capa = arquivos.find((a) => a.slot === 'capa');
   const portfolio = arquivos.filter((a) => a.slot === 'portfolio');
   const video = arquivos.find((a) => a.slot === 'video');

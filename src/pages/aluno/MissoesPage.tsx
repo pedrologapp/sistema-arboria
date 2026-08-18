@@ -307,6 +307,40 @@ const MissoesPage = () => {
           }
         }
       }
+      // ---------- Missões dirigidas a este aluno, fora da fase ----------
+      // As consultas acima só olham a fase ATUAL. Missão endereçada a alunos
+      // específicos (missao_destinatarios) não fica presa a fase nenhuma: é o
+      // caso da 2ª fase da Arena, que atravessa turmas e séries. Sem isto ela
+      // existe, aparece na home, e some justamente da aba onde o aluno procura.
+      try {
+        const { data: doAluno } = await (
+          supabase as unknown as {
+            rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown }>;
+          }
+        ).rpc('get_missoes_do_aluno', { p_aluno_id: profile.id });
+
+        const jaListadas = new Set(questsFaseArr.map(q => q.id));
+        for (const m of (Array.isArray(doAluno) ? doAluno : []) as Array<Record<string, unknown>>) {
+          const id = String(m.id);
+          if (jaListadas.has(id)) continue;
+          // A RPC devolve status_entrega 'pendente' mesmo quando nao existe
+          // entrega nenhuma, entao quem decide se ja foi entregue e' ja_entregou.
+          const st = m.ja_entregou ? statusDe(m.status_entrega as string) : 'disponivel';
+          if (st === 'aprovada') continue;   // concluida vai para a outra aba
+          questsFaseArr.push({
+            id,
+            titulo: String(m.titulo),
+            pontos: Number(m.pontos_base ?? 0),
+            status: st,
+            legenda: 'Missão para você',
+            prazo: m.data_prazo as string,
+          });
+          jaListadas.add(id);
+        }
+      } catch {
+        /* a lista da fase nao pode quebrar por causa desta */
+      }
+
       questsFaseArr.sort((a, b) => ORDEM_STATUS[a.status] - ORDEM_STATUS[b.status]);
       setQuestsFase(questsFaseArr);
 
