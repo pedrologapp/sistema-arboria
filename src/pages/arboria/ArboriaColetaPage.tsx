@@ -244,19 +244,48 @@ const PERGUNTAS_F1_2: Pergunta[] = [
     texto: 'E o que ela faz depois de dizer isso? Desiste, tenta escondido, pede ajuda, disfarça?' },
 ];
 
+// ------------------------------------------ o Infantil anexado ao F1
+//
+// Pedido do Fundador em 19/08: as perguntas do Infantil entram INTEIRAS, abaixo
+// das do F1, para pescar informacao que o instrumento novo ainda nao pega. As
+// do F1 nao sao mexidas.
+//
+// Os ids nao colidem (f1b_* contra v2_*), entao resposta nenhuma se perde nem
+// se sobrepoe. O que colidiria e' o NUMERO do bloco: o F1 usa de 1 a 6 e o
+// Infantil de 1 a 4, e a tela agrupa por numero. Por isso os blocos anexados
+// sao deslocados, e nao renomeados: o registro continua sendo o mesmo item do
+// instrumento do Infantil.
+//
+// Entram como extras e nao como bloqueantes: sao para pescar, nao para travar
+// o fechamento da ficha.
+const DESLOCAMENTO_ANEXO = 6;
+
+const BLOCOS_ANEXO_INFANTIL = BLOCOS_V2.map((b) => ({
+  ...b,
+  n: b.n + DESLOCAMENTO_ANEXO,
+  titulo: `Extra · ${b.titulo}`,
+  nota: `Vem do instrumento do Infantil. Opcional: use o que render nesta turma. ${b.nota}`,
+}));
+
+const PERGUNTAS_ANEXO_INFANTIL: Pergunta[] = PERGUNTAS_V2.map((q) => ({
+  ...q,
+  bloco: q.bloco + DESLOCAMENTO_ANEXO,
+  bloqueante: false,
+}));
+
 // Qual conjunto cada ficha usa. As duas ja' respondidas (Maternal 2 e Grupo IV)
 // continuam na v1: trocar as perguntas embaixo de respostas existentes deixaria
 // texto orfao apontando para pergunta que nao existe mais.
 const perguntasDe = (versao: number) =>
   versao === 1 ? PERGUNTAS_V1
-  : versao === 3 ? PERGUNTAS_F1
-  : versao === 4 ? PERGUNTAS_F1_2
+  : versao === 3 ? [...PERGUNTAS_F1, ...PERGUNTAS_ANEXO_INFANTIL]
+  : versao === 4 ? [...PERGUNTAS_F1_2, ...PERGUNTAS_ANEXO_INFANTIL]
   : PERGUNTAS_V2;
 
 const blocosDe = (versao: number) =>
   versao === 1 ? BLOCOS_V1
-  : versao === 3 ? BLOCOS_F1
-  : versao === 4 ? [...BLOCOS_F1, BLOCO_F1_2]
+  : versao === 3 ? [...BLOCOS_F1, ...BLOCOS_ANEXO_INFANTIL]
+  : versao === 4 ? [...BLOCOS_F1, BLOCO_F1_2, ...BLOCOS_ANEXO_INFANTIL]
   : BLOCOS_V2;
 
 
