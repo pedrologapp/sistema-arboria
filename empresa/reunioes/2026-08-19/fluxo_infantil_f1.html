@@ -5,335 +5,199 @@
 <style>
   :root{
     --papel:#F4F6F8; --linha:#DDE3E9; --tinta:#12242F; --tinta2:#4A5F70; --tinta3:#8497A5;
-    --prof:#135E96; --fam:#1F6141; --ia:#0E8E80; --crianca:#5B4B8A;
-    --prof-bg:#E7F0F8; --fam-bg:#E6F1EA; --ia-bg:#E2F3F1; --crianca-bg:#EEEBF6;
+    --prof:#135E96; --fam:#1F6141; --ia:#0E8E80; --cri:#5B4B8A;
+    --fam-bg:#E6F1EA; --ia-bg:#E2F3F1;
     --sans:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
     --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--papel);color:var(--tinta);font-family:var(--sans);
-    font-size:14px;line-height:1.45;
-    background-image:radial-gradient(var(--linha) 1px, transparent 1px);
-    background-size:22px 22px}
-  .quadro{max-width:1240px;margin:0 auto;padding:34px 22px 70px}
+    font-size:14px;line-height:1.4;
+    background-image:radial-gradient(var(--linha) 1px, transparent 1px);background-size:22px 22px}
+  .quadro{max-width:1180px;margin:0 auto;padding:34px 22px 64px}
 
-  header h1{font-family:var(--serif);font-size:38px;line-height:1.05;letter-spacing:-.02em;margin:0 0 8px}
-  header p{margin:0 0 4px;color:var(--tinta2);max-width:760px}
-  .aviso{display:inline-block;margin-top:12px;padding:6px 12px;border-radius:999px;
-    background:#fff;border:1.5px solid var(--tinta);font-size:12px;font-weight:700;
-    letter-spacing:.04em}
+  h1{font-family:var(--serif);font-size:36px;line-height:1;letter-spacing:-.02em;margin:0 0 10px}
+  .selo{display:inline-block;padding:5px 12px;border-radius:999px;background:#fff;
+    border:1.5px solid var(--tinta);font-size:11px;font-weight:800;letter-spacing:.05em}
 
-  .legenda{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0 30px}
-  .chip{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--linha);
-    border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600}
-  .bola{width:11px;height:11px;border-radius:50%;flex:none}
+  .legenda{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 26px}
+  .chip{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--linha);
+    border-radius:999px;padding:4px 11px;font-size:11.5px;font-weight:600}
+  .bola{width:10px;height:10px;border-radius:50%;flex:none}
 
-  h2{font-family:var(--serif);font-size:22px;margin:34px 0 4px;letter-spacing:-.01em}
-  h2 .quando{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.16em;
-    text-transform:uppercase;color:var(--tinta3);margin-left:10px;vertical-align:middle}
-  .sub{color:var(--tinta2);margin:0 0 16px;max-width:820px}
+  h2{font-family:var(--serif);font-size:20px;margin:32px 0 12px;letter-spacing:-.01em}
+  h2 .q{font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--tinta3);margin-left:9px;vertical-align:middle}
 
-  /* faixa do ano */
-  .ano{background:#fff;border:1.5px solid var(--tinta);border-radius:14px;padding:16px 18px;
+  .ano{background:#fff;border:1.5px solid var(--tinta);border-radius:14px;padding:14px 16px;
     overflow-x:auto}
-  .trilho{display:flex;align-items:stretch;gap:0;min-width:900px}
-  .marco{flex:none;display:flex;flex-direction:column;justify-content:center;
-    padding:10px 14px;border-radius:10px;background:var(--tinta);color:#fff;font-weight:700;
-    font-size:12px;text-align:center;line-height:1.25}
-  .fases{flex:1;display:flex;gap:6px;align-items:center;padding:0 12px}
+  .trilho{display:flex;align-items:stretch;min-width:920px}
+  .marco{flex:none;display:flex;align-items:center;padding:10px 13px;border-radius:9px;
+    background:var(--tinta);color:#fff;font-weight:800;font-size:11px;text-align:center;line-height:1.2}
+  .fases{flex:1;display:flex;gap:5px;align-items:stretch;padding:0 10px}
   .fase{flex:1;background:var(--papel);border:1px solid var(--linha);border-radius:8px;
-    padding:9px 6px;text-align:center;font-size:11px;font-weight:700;color:var(--tinta2)}
-  .fase span{display:block;font-size:9px;font-weight:600;color:var(--tinta3);margin-top:2px}
-  .seta{flex:none;align-self:center;color:var(--tinta3);font-size:18px;padding:0 2px}
+    padding:10px 4px;text-align:center;font-size:11px;font-weight:800;color:var(--tinta2);
+    display:flex;align-items:center;justify-content:center}
+  .pais{flex:none;width:74px;background:var(--fam-bg);border:1.5px solid var(--fam);
+    color:var(--fam);font-size:10px;line-height:1.15}
 
-  /* cartoes */
-  .fluxo{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
-  .card{background:#fff;border-radius:12px;padding:13px 15px;border:1px solid var(--linha);
-    border-top:4px solid var(--linha);min-width:200px;flex:1}
-  .card .quem{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
-    margin:0 0 5px}
-  .card h3{margin:0 0 5px;font-size:14.5px;letter-spacing:-.01em}
-  .card p{margin:0;font-size:12.5px;color:var(--tinta2);line-height:1.4}
-  .card .fala{margin-top:7px;font-family:var(--serif);font-size:13px;color:var(--tinta)}
-
+  .fluxo{display:flex;align-items:stretch;flex-wrap:wrap;gap:0}
+  .card{background:#fff;border-radius:12px;padding:12px 14px;border:1px solid var(--linha);
+    border-top:4px solid var(--linha);min-width:170px;flex:1}
+  .card .quem{font-size:9.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin:0 0 4px}
+  .card h3{margin:0;font-size:14px;letter-spacing:-.01em}
+  .card p{margin:4px 0 0;font-size:12px;color:var(--tinta2)}
   .c-prof{border-top-color:var(--prof)} .c-prof .quem{color:var(--prof)}
   .c-fam{border-top-color:var(--fam)} .c-fam .quem{color:var(--fam)}
   .c-ia{border-top-color:var(--ia);background:var(--ia-bg)} .c-ia .quem{color:var(--ia)}
-  .c-cri{border-top-color:var(--crianca)} .c-cri .quem{color:var(--crianca)}
+  .c-cri{border-top-color:var(--cri)} .c-cri .quem{color:var(--cri)}
+  .liga{flex:none;align-self:center;padding:0 8px;color:var(--tinta3);font-size:19px}
 
-  .liga{flex:none;align-self:center;padding:0 9px;color:var(--tinta3);font-size:20px}
+  .ciclo{background:#fff;border:1.5px dashed var(--tinta3);border-radius:14px;padding:14px;
+    margin-bottom:12px}
+  .ciclo .tipo{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--tinta3);margin:0 0 10px}
+  .volta{margin-top:10px;text-align:center;font-size:11.5px;color:var(--tinta3);font-weight:700}
+  .passo{flex:none;align-self:center;width:22px;height:22px;border-radius:50%;background:var(--tinta);
+    color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;
+    margin-right:-11px;z-index:2}
 
-  .ciclo{position:relative;background:#fff;border:1.5px dashed var(--tinta3);border-radius:14px;
-    padding:16px}
-  .ciclo .volta{margin-top:12px;text-align:center;font-size:12px;color:var(--tinta3);
-    font-weight:600;letter-spacing:.04em}
-
-  /* tabela do que a IA pode dizer */
   table{width:100%;border-collapse:collapse;background:#fff;border:1.5px solid var(--tinta);
-    border-radius:14px;overflow:hidden;font-size:12.5px}
-  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--linha);vertical-align:top}
-  th{background:var(--tinta);color:#fff;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase}
+    border-radius:12px;overflow:hidden;font-size:12.5px}
+  th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--linha)}
+  th{background:var(--tinta);color:#fff;font-size:10px;letter-spacing:.1em;text-transform:uppercase}
   td.mom{font-weight:800;color:var(--ia);white-space:nowrap}
   td.nao{color:#8A3A3A}
 
-  /* hoje x ideal */
-  .hoje{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
-  .fonte{background:#fff;border:1px solid var(--linha);border-radius:12px;padding:13px 15px}
-  .fonte h4{margin:0 0 4px;font-size:13.5px}
-  .estado{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.1em;
-    text-transform:uppercase;padding:3px 8px;border-radius:999px;margin-bottom:6px}
-  .ok{background:#E6F1EA;color:#1F6141} .nao-existe{background:#F7E7E7;color:#8A3A3A}
-  .fonte p{margin:0;font-size:12px;color:var(--tinta2)}
+  .hoje{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px}
+  .fonte{background:#fff;border:1px solid var(--linha);border-radius:12px;padding:12px 14px}
+  .fonte h4{margin:0 0 5px;font-size:13px}
+  .est{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.1em;
+    text-transform:uppercase;padding:3px 8px;border-radius:999px;margin-bottom:5px}
+  .ok{background:#E6F1EA;color:#1F6141} .nao{background:#F7E7E7;color:#8A3A3A}
+  .fonte p{margin:0;font-size:11.5px;color:var(--tinta2)}
 
-  .nota{background:#fff;border-left:4px solid var(--tinta);border-radius:0 12px 12px 0;
-    padding:14px 18px;margin:18px 0}
-  .nota b{color:var(--tinta)}
-
-  footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--linha);
-    font-size:12px;color:var(--tinta3)}
-
-  @media (max-width:820px){ .fluxo{flex-direction:column} .liga{transform:rotate(90deg);padding:6px 0} }
+  footer{margin-top:38px;padding-top:14px;border-top:1px solid var(--linha);
+    font-size:11.5px;color:var(--tinta3)}
+  @media (max-width:820px){ .fluxo{flex-direction:column} .liga{transform:rotate(90deg);padding:5px 0} }
 </style></head><body>
 <div class="quadro">
 
-<header>
-  <h1>O ciclo do Infantil e do F1</h1>
-  <p>
-    Como a coleta, a análise e a devolução se encaixam ao longo do ano, e o que a IA faz em
-    cada momento. Cada volta do ciclo alimenta a seguinte, e nada reseta: a criança é fixa,
-    o ano e a turma é que mudam.
-  </p>
-  <span class="aviso">Este é o desenho ideal, não o que roda hoje. O estado atual está no fim.</span>
-</header>
+<h1>O ciclo do Infantil e do F1</h1>
+<span class="selo">Desenho ideal. O que roda hoje está no fim.</span>
 
 <div class="legenda">
-  <span class="chip"><span class="bola" style="background:var(--crianca)"></span>A criança</span>
-  <span class="chip"><span class="bola" style="background:var(--prof)"></span>A professora</span>
-  <span class="chip"><span class="bola" style="background:var(--fam)"></span>A família</span>
-  <span class="chip"><span class="bola" style="background:var(--ia)"></span>O Arboria</span>
+  <span class="chip"><span class="bola" style="background:var(--cri)"></span>Criança</span>
+  <span class="chip"><span class="bola" style="background:var(--prof)"></span>Professora</span>
+  <span class="chip"><span class="bola" style="background:var(--fam)"></span>Família</span>
+  <span class="chip"><span class="bola" style="background:var(--ia)"></span>Arboria</span>
 </div>
 
-<!-- ================================================= O ANO -->
-<h2>O ano inteiro <span class="quando">fevereiro a dezembro</span></h2>
-<p class="sub">
-  Oito fases, uma por inteligência, de 3 a 4 semanas cada, com uma aula por semana. O nome da
-  inteligência é vocabulário interno: nunca aparece para a criança, para a família nem no
-  material da aula.
-</p>
-
+<h2>O ano <span class="q">8 fases, 1 aula por semana</span></h2>
 <div class="ano">
   <div class="trilho">
     <div class="marco">INÍCIO<br>DO ANO</div>
     <div class="fases">
-      <div class="fase">FASE 1<span>3 a 4 sem</span></div>
-      <div class="fase">FASE 2<span>3 a 4 sem</span></div>
-      <div class="fase">FASE 3<span>3 a 4 sem</span></div>
-      <div class="fase">FASE 4<span>3 a 4 sem</span></div>
-      <div class="fase" style="border-color:var(--fam);background:var(--fam-bg)">PAIS<span>1ª rodada</span></div>
-      <div class="fase">FASE 5<span>3 a 4 sem</span></div>
-      <div class="fase">FASE 6<span>3 a 4 sem</span></div>
-      <div class="fase">FASE 7<span>3 a 4 sem</span></div>
-      <div class="fase">FASE 8<span>3 a 4 sem</span></div>
-      <div class="fase" style="border-color:var(--fam);background:var(--fam-bg)">PAIS<span>2ª rodada</span></div>
+      <div class="fase pais">PAIS<br>1ª rodada</div>
+      <div class="fase">FASE 1</div>
+      <div class="fase">FASE 2</div>
+      <div class="fase">FASE 3</div>
+      <div class="fase">FASE 4</div>
+      <div class="fase">FASE 5</div>
+      <div class="fase pais">PAIS<br>2ª rodada</div>
+      <div class="fase">FASE 6</div>
+      <div class="fase">FASE 7</div>
+      <div class="fase">FASE 8</div>
     </div>
     <div class="marco" style="background:var(--ia)">FIM<br>DO ANO</div>
   </div>
 </div>
 
-<!-- ================================================= A SEMANA -->
-<h2>O loop pequeno: a semana <span class="quando">o coração do ciclo</span></h2>
-<p class="sub">
-  Se este não girar, nenhum outro gira. É ele que garante que nenhuma criança atravesse o ano
-  sem uma linha escrita sobre ela.
-</p>
+<h2>A semana <span class="q">dois tipos</span></h2>
 
 <div class="ciclo">
+  <p class="tipo">Semana com questionário</p>
   <div class="fluxo">
-    <div class="card c-ia">
-      <p class="quem">Arboria · segunda</p>
-      <h3>Escolhe três</h3>
-      <p>Por escassez, não por importância: quem tem menos registro e qual contexto falta em cada uma.</p>
-      <p class="fala">"Esta semana, olhe para estas três."</p>
-    </div>
+    <div class="card c-prof"><p class="quem">1 · Professora</p><h3>Vê a aula da semana</h3></div>
     <span class="liga">→</span>
-    <div class="card c-prof">
-      <p class="quem">Professora</p>
-      <h3>Dá a aula de sempre</h3>
-      <p>Com uma instrução curta por criança, que cabe no que ela já ia fazer. Nunca atividade extra.</p>
-    </div>
+    <div class="card c-ia"><p class="quem">2 · Arboria</p><h3>Instruções, se houver</h3><p>Cabem na aula que ela já ia dar.</p></div>
     <span class="liga">→</span>
-    <div class="card c-cri">
-      <p class="quem">A criança</p>
-      <h3>Faz</h3>
-      <p>Entra pelo canal que quiser. A atividade é aberta de propósito.</p>
-    </div>
+    <div class="card c-prof"><p class="quem">3 · Na aula</p><h3>Observa e registra</h3><p>Quem ela achar necessário.</p></div>
     <span class="liga">→</span>
-    <div class="card c-prof">
-      <p class="quem">Professora</p>
-      <h3>Registra a cena</h3>
-      <p>Texto, foto do que a criança fez, ou os dois. Mais o que transbordar de outras crianças.</p>
-    </div>
+    <div class="card c-ia"><p class="quem">4 · Arboria</p><h3>Manda 3 questionários</h3><p>Por necessidade. Ela tem a semana.</p></div>
+  </div>
+  <p class="volta">não respondeu, volta na semana seguinte como sugestão</p>
+</div>
+
+<div class="ciclo">
+  <p class="tipo">Semana sem questionário</p>
+  <div class="fluxo">
+    <div class="card c-prof"><p class="quem">1 · Professora</p><h3>Vê a aula da semana</h3></div>
     <span class="liga">→</span>
-    <div class="card c-ia">
-      <p class="quem">Arboria · no ato</p>
-      <h3>Confere na hora</h3>
-      <p>Se veio conclusão em vez de cena, devolve na mesma tela, com a memória ainda fresca.</p>
-      <p class="fala">"Isso é conclusão. O que ela fez?"</p>
-    </div>
+    <div class="card c-ia"><p class="quem">2 · Arboria</p><h3>Instruções, se houver</h3></div>
+    <span class="liga">→</span>
+    <div class="card c-prof"><p class="quem">3 · Na aula</p><h3>Aplica e observa</h3><p>Quem ela achar necessário.</p></div>
   </div>
-  <p class="volta">e volta para a segunda seguinte, com outras três</p>
 </div>
 
-<div class="nota">
-  <b>O dirigido é o piso, o espontâneo é o que transborda.</b> A criança que chama atenção
-  continua gerando registro sozinha. As três da semana existem para que a criança que não chama
-  atenção também tenha.
-</div>
-
-<!-- ================================================= A FASE -->
-<h2>O loop médio: a fase <span class="quando">3 a 4 semanas</span></h2>
-
+<h2>A fase <span class="q">3 a 4 semanas</span></h2>
 <div class="fluxo">
-  <div class="card c-prof">
-    <p class="quem">Professora · aula 1</p>
-    <h3>Exposição</h3>
-    <p>Mostrar, levar, apresentar. Aqui o dado não é o que a criança produziu, é o que prendeu ela.</p>
-  </div>
+  <div class="card c-prof"><p class="quem">Aula 1</p><h3>Exposição</h3><p>Observa-se a reação.</p></div>
   <span class="liga">→</span>
-  <div class="card c-prof">
-    <p class="quem">Professora · aulas 2 a 4</p>
-    <h3>Exploração</h3>
-    <p>Atividade com o núcleo da fase, aberta a qualquer canal de entrada.</p>
-  </div>
+  <div class="card c-prof"><p class="quem">Aulas 2 a 4</p><h3>Exploração</h3><p>Observa-se o que ela faz.</p></div>
   <span class="liga">→</span>
-  <div class="card c-ia">
-    <p class="quem">Arboria · fim da fase</p>
-    <h3>Fecha a fase</h3>
-    <p>Devolve três coisas: o que apareceu, quem ficou sem nada, e o que vale provocar na fase seguinte.</p>
-    <p class="fala">Cobertura e falta. Nunca leitura.</p>
-  </div>
+  <div class="card c-ia"><p class="quem">Arboria</p><h3>Fecha a fase</h3><p>O que apareceu. Quem ficou sem nada.</p></div>
 </div>
 
-<!-- ================================================= O SEMESTRE -->
-<h2>O loop do semestre: a casa entra <span class="quando">duas vezes por ano</span></h2>
-
+<h2>A rodada dos pais <span class="q">início do ano e fase 6</span></h2>
 <div class="fluxo">
-  <div class="card c-fam">
-    <p class="quem">Família</p>
-    <h3>Responde 7 iscas</h3>
-    <p>Uma delas amarrada na fase corrente: "tem alguma coisa que ele chegou contando que fez na escola?"</p>
-  </div>
+  <div class="card c-fam"><p class="quem">Família</p><h3>7 iscas</h3><p>Uma amarrada na fase corrente.</p></div>
   <span class="liga">→</span>
-  <div class="card c-ia">
-    <p class="quem">Arboria</p>
-    <h3>Cruza casa com escola</h3>
-    <p>Primeiro momento do ciclo com duas fontes independentes. Onde bate, corrobora. Onde diverge, vira pergunta para a próxima fase.</p>
-    <p class="fala">A divergência é o ouro, não o ruído.</p>
-  </div>
+  <div class="card c-ia"><p class="quem">Arboria</p><h3>Cruza casa e escola</h3><p>A divergência é o ouro.</p></div>
   <span class="liga">→</span>
-  <div class="card c-ia">
-    <p class="quem">Arboria · de quebra</p>
-    <h3>Mede se a aula chegou</h3>
-    <p>Se numa fase inteira nenhuma família relatou nada, aquela fase não pegou. É a única avaliação vinda de fora da escola.</p>
-  </div>
+  <div class="card c-ia"><p class="quem">Arboria</p><h3>Mede a aula</h3><p>Chegou em casa ou não.</p></div>
 </div>
 
-<!-- ================================================= O ANO -->
-<h2>Fim do ano <span class="quando">dezembro</span></h2>
-
+<h2>Fim do ano <span class="q">dezembro</span></h2>
 <div class="fluxo">
-  <div class="card c-ia">
-    <p class="quem">Arboria → professora do ano seguinte</p>
-    <h3>O manual</h3>
-    <p>O que destrava esta criança. "Quando ela trava, volta pela história." Registra o que abre, nunca o que evitar, senão vira desculpa.</p>
-  </div>
+  <div class="card c-ia"><p class="quem">Para a próxima professora</p><h3>O manual</h3><p>O que destrava.</p></div>
   <span class="liga">→</span>
-  <div class="card c-ia">
-    <p class="quem">Arboria → família</p>
-    <h3>O Livro do ano</h3>
-    <p>O ano contado, não a criança julgada. Esqueleto igual para todos (as 8 fases vividas) e as cenas daquela criança dentro.</p>
-    <p class="fala">Sem nota, sem comparação, sem nome de inteligência.</p>
-  </div>
+  <div class="card c-ia"><p class="quem">Para a família</p><h3>O Livro</h3><p>O ano contado.</p></div>
   <span class="liga">→</span>
-  <div class="card c-cri">
-    <p class="quem">A criança</p>
-    <h3>Não recebe nada</h3>
-    <p>E está certo. No Infantil e no F1 nada disso é visível para ela. O retorno para a criança é no F2.</p>
-  </div>
+  <div class="card c-cri"><p class="quem">Criança</p><h3>Não recebe nada</h3><p>Até o F2.</p></div>
 </div>
 
-<!-- ================================================= 4 ANOS -->
-<h2>Depois de quatro anos <span class="quando">Maternal 2 ao Grupo V, e de novo no F1</span></h2>
-
+<h2>Quatro anos <span class="q">Maternal 2 ao Grupo V</span></h2>
 <div class="fluxo">
-  <div class="card c-ia">
-    <p class="quem">Arboria</p>
-    <h3>A leitura</h3>
-    <p>Só aqui, e ainda assim hipótese: com a explicação rival ao lado e com o que a derrubaria, escrito antes.</p>
-  </div>
+  <div class="card c-ia"><p class="quem">Arboria</p><h3>A leitura</h3><p>Com rival e falseador.</p></div>
   <span class="liga">→</span>
-  <div class="card c-ia">
-    <p class="quem">Arboria · passagem de segmento</p>
-    <h3>Aposenta o que venceu</h3>
-    <p>Fato não vence, leitura vence. O que foi escrito quando ela tinha 4 anos não pode seguir com ela aos 12 sem revisão.</p>
-  </div>
+  <div class="card c-ia"><p class="quem">Troca de segmento</p><h3>Aposenta o que venceu</h3><p>Fato fica. Leitura vence.</p></div>
 </div>
 
-<!-- ================================================= O QUE A IA PODE DIZER -->
-<h2>O que a IA pode dizer em cada momento</h2>
-<p class="sub">
-  É esta tabela que impede o sistema de virar máquina de rótulo. Misturar as camadas é o jeito
-  mais fácil de perder a doutrina sem perceber.
-</p>
-
+<h2>O que a IA pode dizer</h2>
 <table>
-  <tr><th>Momento</th><th>O que olha</th><th>O que pode dizer</th><th>O que não pode</th></tr>
-  <tr><td class="mom">No ato</td><td>uma frase</td><td>"isso é conclusão, me conta a cena"</td><td class="nao">nada sobre a criança</td></tr>
-  <tr><td class="mom">Semana</td><td>quem tem o quê</td><td>"olhe para estas três"</td><td class="nao">por que elas interessam</td></tr>
-  <tr><td class="mom">Fase</td><td>um lote</td><td>"isto apareceu, isto ficou vazio"</td><td class="nao">o que isso significa</td></tr>
-  <tr><td class="mom">Semestre</td><td>casa x escola</td><td>"aqui os dois divergem"</td><td class="nao">quem está certo</td></tr>
-  <tr><td class="mom">Ano</td><td>um ano</td><td>o que destrava, e o que aconteceu</td><td class="nao">o que a criança é</td></tr>
-  <tr><td class="mom">4 anos</td><td>a linha inteira</td><td>hipótese, com rival e falseador</td><td class="nao">conclusão fechada</td></tr>
+  <tr><th>Momento</th><th>Pode</th><th>Não pode</th></tr>
+  <tr><td class="mom">No ato</td><td>"me conta a cena"</td><td class="nao">falar da criança</td></tr>
+  <tr><td class="mom">Semana</td><td>"olhe para estas três"</td><td class="nao">dizer por quê</td></tr>
+  <tr><td class="mom">Fase</td><td>o que apareceu e o que faltou</td><td class="nao">o que significa</td></tr>
+  <tr><td class="mom">Rodada dos pais</td><td>onde casa e escola divergem</td><td class="nao">quem está certo</td></tr>
+  <tr><td class="mom">Ano</td><td>o que destrava e o que aconteceu</td><td class="nao">o que a criança é</td></tr>
+  <tr><td class="mom">4 anos</td><td>hipótese</td><td class="nao">conclusão</td></tr>
 </table>
 
-<!-- ================================================= HOJE -->
-<h2>E o que roda hoje <span class="quando">agosto de 2026</span></h2>
-<p class="sub">
-  Das quatro fontes previstas no desenho, uma funciona, e funciona pouco.
-</p>
-
+<h2>Hoje <span class="q">agosto de 2026</span></h2>
 <div class="hoje">
-  <div class="fonte">
-    <span class="estado ok">Funciona</span>
-    <h4>Observação na aula</h4>
-    <p>No Infantil, cerca de 137 registros no ano para 104 crianças. <b>1,3 por criança</b>, e parte delas com nenhum.</p>
-  </div>
-  <div class="fonte">
-    <span class="estado nao-existe">Indistinguível</span>
-    <h4>Observação do dia a dia</h4>
-    <p>Existe no papel. Na prática não dá para separar do registro de aula.</p>
-  </div>
-  <div class="fonte">
-    <span class="estado nao-existe">Não existe</span>
-    <h4>Questionário dos pais</h4>
-    <p>Protótipo no ar em duas faixas, e ele não grava nada. Nenhuma resposta foi coletada até hoje.</p>
-  </div>
-  <div class="fonte">
-    <span class="estado nao-existe">Não existe</span>
-    <h4>Questionário do professor por aluno</h4>
-    <p>O que existe é a conversa sobre a faixa etária, não sobre cada criança.</p>
-  </div>
+  <div class="fonte"><span class="est ok">Funciona</span><h4>Observação na aula</h4>
+    <p>1,3 por criança no ano. Parte com nenhuma.</p></div>
+  <div class="fonte"><span class="est nao">Indistinguível</span><h4>Observação do dia a dia</h4>
+    <p>Não dá para separar da de aula.</p></div>
+  <div class="fonte"><span class="est nao">Não existe</span><h4>Questionário dos pais</h4>
+    <p>Protótipo. Não grava.</p></div>
+  <div class="fonte"><span class="est nao">Não existe</span><h4>Questionário do professor</h4>
+    <p>Só sobre a idade, não sobre a criança.</p></div>
 </div>
 
-<div class="nota">
-  <b>E nada sai.</b> A professora escreve para o vazio, a família não recebe, a IA não existe.
-  É por isso que a fonte que funciona funciona pouco: ninguém sustenta um hábito que não
-  devolve nada. Todas as lacunas desembocam na devolução.
-</div>
-
-<footer>
-  Arboria · confabulação de 19 de agosto de 2026 · desenho em discussão, nada implementado
-</footer>
+<footer>Arboria · 19 de agosto de 2026 · em discussão, nada implementado</footer>
 
 </div>
 </body></html>

@@ -226,3 +226,30 @@ Ficou uma pergunta em aberto, levantada pelo CEO e não respondida: **quem escre
 atividades das oito fases**, com núcleo e habilidades suporte, de um jeito que a professora
 comum aplique. O Fundador respondeu que ele mesmo escreve, e que a aula é exposição além de
 atividade. O volume disso não foi dimensionado.
+
+---
+
+## Adendo: os dois tipos de semana
+
+Definido pelo Fundador ao fim da conversa, e incorporado ao quadro.
+
+**Semana com questionário.** A professora vê a aula da semana, vê as instruções do Arboria
+se houver, aplica e registra quem achar necessário, e recebe **três questionários de
+alunos**. A IA envia por necessidade, e ela tem a semana para responder. **Se não
+responder, volta na semana seguinte como sugestão**, nunca como cobrança.
+
+**Semana sem questionário.** Vê a aula, vê as instruções se houver, aplica e observa quem
+achar necessário.
+
+**Por que isso melhora o desenho:** cria ritmo. Semana pesada e semana leve. Uma professora
+que recebe três questionários toda semana abandona no segundo mês.
+
+**Duas consequências para vigiar quando for construir:**
+
+O adiamento pode acumular em silêncio. Se uma criança for adiada quatro vezes seguidas, ela
+volta a ser invisível, que é exatamente o que o mecanismo existe para impedir. A IA precisa
+enxergar o adiamento repetido, sem transformar isso em cobrança.
+
+E a cadência decide a cobertura. Vinte e cinco alunos a três por semana são nove semanas de
+questionário. Se só metade das semanas tiver questionário, são dezoito, quase o semestre
+inteiro. A frequência com que a IA julga a "necessidade" é o que fecha ou não fecha a conta.
