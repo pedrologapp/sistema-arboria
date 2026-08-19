@@ -80,6 +80,39 @@
   footer{margin-top:38px;padding-top:14px;border-top:1px solid var(--linha);
     font-size:11.5px;color:var(--tinta3)}
   @media (max-width:820px){ .fluxo{flex-direction:column} .liga{transform:rotate(90deg);padding:5px 0} }
+
+  /* Impressão. Paisagem porque a faixa do ano tem dez blocos lado a lado e não
+     cabe em retrato. O fundo pontilhado sai: na tela ele dá cara de quadro, no
+     papel só gasta toner. As cores dos cartões ficam, porque é por elas que se
+     sabe quem age em cada passo. */
+  @media print{
+    @page{ size:A4 landscape; margin:11mm }
+    body{background:#fff;background-image:none;font-size:9.5pt;
+      -webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .quadro{max-width:none;padding:0}
+    h1{font-size:26pt;margin-bottom:6px}
+    h2{font-size:14pt;margin:14px 0 7px;break-after:avoid;page-break-after:avoid}
+    h2 .q{font-size:8pt}
+    .selo{font-size:8.5pt;padding:3px 9px}
+    .legenda{margin:12px 0 14px}
+    .chip{font-size:8.5pt;padding:3px 8px}
+    .ano,.ciclo,.fluxo,table,.hoje{break-inside:avoid;page-break-inside:avoid}
+    .ano{overflow:visible;padding:10px 12px}
+    .trilho{min-width:0}
+    .fase{font-size:8pt;padding:7px 3px}
+    .pais{width:58px;font-size:7.5pt}
+    .marco{font-size:8.5pt;padding:7px 9px}
+    .card{min-width:0;padding:8px 10px;border-radius:9px}
+    .card h3{font-size:10.5pt}
+    .card p{font-size:8.5pt}
+    .card .quem{font-size:7pt}
+    .liga{font-size:14px;padding:0 5px}
+    .ciclo{padding:10px;margin-bottom:9px}
+    .volta{font-size:8.5pt}
+    table{font-size:9pt}
+    th,td{padding:5px 9px}
+    footer{margin-top:16px;font-size:8.5pt}
+  }
 </style></head><body>
 <div class="quadro">
 
@@ -147,55 +180,44 @@
   <div class="card c-prof"><p class="quem">Aulas 2 a 4</p><h3>Exploração</h3><p>Observa-se o que ela faz.</p></div>
   <span class="liga">→</span>
   <div class="card c-ia"><p class="quem">Arboria</p><h3>Fecha a fase</h3><p>O que apareceu. Quem ficou sem nada.</p></div>
+  <span class="liga">→</span>
+  <div class="card c-ia"><p class="quem">Arboria</p><h3>Analisa</h3><p>Tudo que entrou na fase.</p></div>
+  <span class="liga">→</span>
+  <div class="card c-ia"><p class="quem">Arboria</p><h3>Atualiza o diário</h3><p>Cena numa camada. Leitura noutra, datada.</p></div>
+  <span class="liga">→</span>
+  <div class="card c-ia"><p class="quem">Arboria</p><h3>Sugere a sondagem</h3><p>Para o que ficou sem dado. Vira instrução na semana seguinte.</p></div>
 </div>
 
-<h2>A rodada dos pais <span class="q">início do ano e fase 6</span></h2>
+<h2>Questionário dos pais <span class="q">início do ano e fase 6</span></h2>
 <div class="fluxo">
-  <div class="card c-fam"><p class="quem">Família</p><h3>7 iscas</h3><p>Uma amarrada na fase corrente.</p></div>
+  <div class="card c-fam"><p class="quem">Família</p><h3>7 iscas</h3><p>Uma amarrada na fase atual.</p></div>
   <span class="liga">→</span>
-  <div class="card c-ia"><p class="quem">Arboria</p><h3>Cruza casa e escola</h3><p>A divergência é o ouro.</p></div>
+  <div class="card c-ia"><p class="quem">Arboria</p><h3>Recebe</h3></div>
   <span class="liga">→</span>
-  <div class="card c-ia"><p class="quem">Arboria</p><h3>Mede a aula</h3><p>Chegou em casa ou não.</p></div>
+  <div class="card c-ia"><p class="quem">Arboria</p><h3>Analisa</h3><p>Cruza casa e escola.</p></div>
+  <span class="liga">→</span>
+  <div class="card c-ia"><p class="quem">Arboria</p><h3>Atualiza o diário</h3></div>
 </div>
 
 <h2>Fim do ano <span class="q">dezembro</span></h2>
 <div class="fluxo">
-  <div class="card c-ia"><p class="quem">Para a próxima professora</p><h3>O manual</h3><p>O que destrava.</p></div>
+  <div class="card c-ia"><p class="quem">Arboria → família</p><h3>Entrega o Livro do aluno</h3><p>O ano contado.</p></div>
   <span class="liga">→</span>
-  <div class="card c-ia"><p class="quem">Para a família</p><h3>O Livro</h3><p>O ano contado.</p></div>
+  <div class="card c-ia"><p class="quem">Arboria → professora do ano seguinte</p><h3>Entrega o manual</h3><p>Quem é esse aluno que chegou. O que destrava ele.</p></div>
   <span class="liga">→</span>
   <div class="card c-cri"><p class="quem">Criança</p><h3>Não recebe nada</h3><p>Até o F2.</p></div>
-</div>
-
-<h2>Quatro anos <span class="q">Maternal 2 ao Grupo V</span></h2>
-<div class="fluxo">
-  <div class="card c-ia"><p class="quem">Arboria</p><h3>A leitura</h3><p>Com rival e falseador.</p></div>
-  <span class="liga">→</span>
-  <div class="card c-ia"><p class="quem">Troca de segmento</p><h3>Aposenta o que venceu</h3><p>Fato fica. Leitura vence.</p></div>
 </div>
 
 <h2>O que a IA pode dizer</h2>
 <table>
   <tr><th>Momento</th><th>Pode</th><th>Não pode</th></tr>
-  <tr><td class="mom">No ato</td><td>"me conta a cena"</td><td class="nao">falar da criança</td></tr>
-  <tr><td class="mom">Semana</td><td>"olhe para estas três"</td><td class="nao">dizer por quê</td></tr>
-  <tr><td class="mom">Fase</td><td>o que apareceu e o que faltou</td><td class="nao">o que significa</td></tr>
-  <tr><td class="mom">Rodada dos pais</td><td>onde casa e escola divergem</td><td class="nao">quem está certo</td></tr>
-  <tr><td class="mom">Ano</td><td>o que destrava e o que aconteceu</td><td class="nao">o que a criança é</td></tr>
-  <tr><td class="mom">4 anos</td><td>hipótese</td><td class="nao">conclusão</td></tr>
+  <tr><td class="mom">No ato do registro</td><td>"me conta a cena"</td><td class="nao">falar da criança</td></tr>
+  <tr><td class="mom">Na semana</td><td>mandar os três questionários</td><td class="nao">dizer por que são esses</td></tr>
+  <tr><td class="mom">No fim da fase</td><td>o que apareceu e o que faltou</td><td class="nao">o que isso significa</td></tr>
+  <tr><td class="mom">No questionário dos pais</td><td>onde casa e escola divergem</td><td class="nao">quem está certo</td></tr>
+  <tr><td class="mom">No fim do ano</td><td>o que aconteceu e o que destrava</td><td class="nao">o que a criança é</td></tr>
+  <tr><td class="mom">Quando falta dado</td><td>propor uma sondagem: tarefa curta para provocar a cena</td><td class="nao">dizer o que espera encontrar</td></tr>
 </table>
-
-<h2>Hoje <span class="q">agosto de 2026</span></h2>
-<div class="hoje">
-  <div class="fonte"><span class="est ok">Funciona</span><h4>Observação na aula</h4>
-    <p>1,3 por criança no ano. Parte com nenhuma.</p></div>
-  <div class="fonte"><span class="est nao">Indistinguível</span><h4>Observação do dia a dia</h4>
-    <p>Não dá para separar da de aula.</p></div>
-  <div class="fonte"><span class="est nao">Não existe</span><h4>Questionário dos pais</h4>
-    <p>Protótipo. Não grava.</p></div>
-  <div class="fonte"><span class="est nao">Não existe</span><h4>Questionário do professor</h4>
-    <p>Só sobre a idade, não sobre a criança.</p></div>
-</div>
 
 <footer>Arboria · 19 de agosto de 2026 · em discussão, nada implementado</footer>
 
