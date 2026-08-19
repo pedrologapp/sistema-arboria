@@ -422,6 +422,10 @@ const HomePage = () => {
           </button>
         )}
 
+        {/* Relatar problema: alto na pagina, porque quem esta travado precisa
+            achar isto sem rolar. */}
+        <RelatarProblema userId={profile?.id} institutionId={profile?.institution_id} contexto={{ tela: 'home' }} />
+
         {/* Aluno sem casa */}
         {!casa && (
           <div className="rounded-[18px] border border-white/[0.08] bg-white/[0.04] animate-fade-in p-5 text-center">
@@ -871,9 +875,6 @@ const HomePage = () => {
 
       {/* Campo de relato */}
       <CampoRelato userId={profile?.id} institutionId={profile?.institution_id} faseId={faseAtual?.id} semana={semanaAtual} casaColor={casaColor} />
-
-      {/* Relatar problema */}
-      <RelatarProblema userId={profile?.id} institutionId={profile?.institution_id} contexto={{ tela: 'home' }} />
 
       {/* Frase viva: rotativa com fade */}
       {frasesDisponiveis.length > 0 && (

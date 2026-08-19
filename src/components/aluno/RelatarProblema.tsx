@@ -83,11 +83,14 @@ const RelatarProblema = ({ userId, institutionId, contexto, variant = 'card' }: 
     ) : (
       <button
         onClick={() => setAberto(true)}
-        className="animate-fade-in rounded-[14px] border border-white/[0.07] bg-white/[0.03] w-full p-3 text-left active:scale-[0.98] transition-transform"
+        className="animate-fade-in rounded-[14px] border border-white/20 bg-white/[0.07] w-full p-3.5 text-left active:scale-[0.98] transition-transform"
       >
         <div className="flex items-center gap-3">
-          <HelpCircle className="w-4 h-4 text-white/35 shrink-0" />
-          <p className="text-xs text-white/40">Está com algum problema? Toque para nos contar</p>
+          <HelpCircle className="w-5 h-5 text-white/70 shrink-0" />
+          <div>
+            <p className="text-[13px] text-white/85 font-medium">Está com algum problema? Relate aqui</p>
+            <p className="text-[11px] text-white/40 mt-0.5">A gente lê e resolve</p>
+          </div>
         </div>
       </button>
     );
