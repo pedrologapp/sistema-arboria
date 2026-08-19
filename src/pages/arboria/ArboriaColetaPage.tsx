@@ -244,6 +244,63 @@ const PERGUNTAS_F1_2: Pergunta[] = [
     texto: 'E o que ela faz depois de dizer isso? Desiste, tenta escondido, pede ajuda, disfarça?' },
 ];
 
+// ------------------------------------ as faixas que ficam no meio
+//
+// Maternal 3 e Grupo V nao tem entrevista, e o Fundador propos escreve-las como
+// mescla das vizinhas: Maternal 3 entre Maternal 2 e Grupo IV, Grupo V entre
+// Grupo IV e 1o ano.
+//
+// Para isso nao e' preciso recolher a faixa inteira de novo. Basta descobrir
+// ONDE ela fica entre as duas ja conhecidas. Por isso as duas primeiras
+// perguntas de cada bloco sao ancoras de delta: o que ela JA faz que a de tras
+// nao fazia, e o que ela AINDA nao faz que a da frente ja faz. As outras
+// atacam exatamente os pontos que a leitura das duas entrevistas vizinhas
+// deixou em aberto.
+//
+// Bloco 5 porque o instrumento do Infantil vai ate o 4.
+const BLOCO_MESCLA = {
+  n: 5,
+  titulo: 'Onde essa idade fica',
+  nota: 'Perguntas curtas, para posicionar esta série entre as duas vizinhas. Dá para fazer em dez minutos, de pé, no corredor.',
+};
+
+const PERGUNTAS_MESCLA_M3: Pergunta[] = [
+  { id: 'm3_01', bloco: 5, tipo: 'longo', bloqueante: true,
+    texto: 'Uma criança do Maternal 3 mostra que entendeu FALANDO ou FAZENDO? Me dá um exemplo.',
+    hint: 'A pergunta mais importante das duas fichas. No Maternal 2 é fazendo, no Grupo IV já é falando. O meio decide o que conta como prova para o pai.' },
+  { id: 'm3_02', bloco: 5, tipo: 'longo', bloqueante: true,
+    texto: 'O que ela já faz que a criança do Maternal 2 ainda não fazia?' },
+  { id: 'm3_03', bloco: 5, tipo: 'longo', bloqueante: true,
+    texto: 'E o que ela ainda NÃO faz que a do Grupo IV já faz?' },
+  { id: 'm3_04', bloco: 5, tipo: 'longo',
+    texto: 'Quando ela quer uma coisa e não acha a palavra, o que ela faz? Ainda aponta e leva pela mão?' },
+  { id: 'm3_05', bloco: 5, tipo: 'longo',
+    texto: 'Ela conta sozinha o que aconteceu ontem ou no fim de semana, ou só se alguém perguntar?' },
+  { id: 'm3_06', bloco: 5, tipo: 'texto',
+    texto: 'Quanto tempo ela fica na mesma coisa quando ninguém interrompe?' },
+  { id: 'm3_07', bloco: 5, tipo: 'texto',
+    texto: 'Ela brinca do lado das outras ou junto com as outras?' },
+];
+
+const PERGUNTAS_MESCLA_GV: Pergunta[] = [
+  { id: 'gv_01', bloco: 5, tipo: 'longo', bloqueante: true,
+    texto: 'O que uma criança do Grupo V já faz que a do Grupo IV ainda não fazia?' },
+  { id: 'gv_02', bloco: 5, tipo: 'longo', bloqueante: true,
+    texto: 'E o que ela ainda NÃO faz que a do 1º ano já faz?' },
+  { id: 'gv_03', bloco: 5, tipo: 'longo', bloqueante: true,
+    texto: 'Ela já escreve alguma coisa sozinha, ou ainda copia do quadro?' },
+  { id: 'gv_04', bloco: 5, tipo: 'longo',
+    texto: 'Ela copia o que o colega está fazendo? Em que situação?',
+    hint: 'No 1º ano a professora disse que copiam muito, como se já tivessem achado a resposta. Interessa saber se isso começa aqui.' },
+  { id: 'gv_05', bloco: 5, tipo: 'texto',
+    texto: 'Quanto tempo ela fica na mesma coisa quando ninguém interrompe?' },
+  { id: 'gv_06', bloco: 5, tipo: 'longo',
+    texto: 'Os pais ainda fazem as coisas por ela? O quê?',
+    hint: 'A professora do 1º ano disse que os pais não desacostumaram do Grupo V. Vale ouvir o outro lado.' },
+  { id: 'gv_07', bloco: 5, tipo: 'longo',
+    texto: 'Celular e vídeo já aparecem na conversa dela? O que ela conta?' },
+];
+
 // ------------------------------------------ o Infantil anexado ao F1
 //
 // Pedido do Fundador em 19/08: as perguntas do Infantil entram INTEIRAS, abaixo
@@ -280,12 +337,15 @@ const perguntasDe = (versao: number) =>
   versao === 1 ? PERGUNTAS_V1
   : versao === 3 ? [...PERGUNTAS_F1, ...PERGUNTAS_ANEXO_INFANTIL]
   : versao === 4 ? [...PERGUNTAS_F1_2, ...PERGUNTAS_ANEXO_INFANTIL]
+  : versao === 5 ? [...PERGUNTAS_V2, ...PERGUNTAS_MESCLA_M3]
+  : versao === 6 ? [...PERGUNTAS_V2, ...PERGUNTAS_MESCLA_GV]
   : PERGUNTAS_V2;
 
 const blocosDe = (versao: number) =>
   versao === 1 ? BLOCOS_V1
   : versao === 3 ? [...BLOCOS_F1, ...BLOCOS_ANEXO_INFANTIL]
   : versao === 4 ? [...BLOCOS_F1, BLOCO_F1_2, ...BLOCOS_ANEXO_INFANTIL]
+  : versao === 5 || versao === 6 ? [...BLOCOS_V2, BLOCO_MESCLA]
   : BLOCOS_V2;
 
 
