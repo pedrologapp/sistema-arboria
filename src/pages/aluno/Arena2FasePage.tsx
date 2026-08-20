@@ -52,7 +52,13 @@ const T = {
 };
 
 type Slot = 'capa' | 'portfolio' | 'video';
-interface Arquivo { slot: Slot; caminho: string; nome: string; bytes: number; previa?: string }
+interface Arquivo {
+  slot: Slot; caminho: string; nome: string; bytes: number; previa?: string;
+  // Ja' esta' amarrado a uma entrega no banco. Um arquivo pode existir no bucket
+  // e ainda nao ter sido enviado: sobe primeiro, e so' vira entrega no Enviar.
+  salvo?: boolean;
+  linhaId?: string;
+}
 
 const Arena2FasePage = () => {
   const { user } = useAuth();
@@ -73,6 +79,13 @@ const Arena2FasePage = () => {
   const [pct, setPct] = useState(-1);
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  // O envio deixa de ser porta de saida. O aluno manda, ve o que ja' foi, e
+  // pode voltar depois para acrescentar ate' o prazo. Guardar o id da entrega
+  // e' o que permite ACRESCENTAR em vez de duplicar.
+  const [entregaId, setEntregaId] = useState<string | null>(null);
+  const [enviadoEm, setEnviadoEm] = useState<string | null>(null);
+  const [descricaoSalva, setDescricaoSalva] = useState('');
+  const [carregando, setCarregando] = useState(true);
   // O erro fica NA TELA, e nao so' num toast. No celular o toast some antes de a
   // crianca ler, e ai ela conclui que "nao foi" sem saber por que, e fica
   // repetindo o mesmo envio. Foi o que aconteceu em 19/08: duas alunas subiram a
@@ -84,6 +97,53 @@ const Arena2FasePage = () => {
   const refVideo = useRef<HTMLInputElement>(null);
 
   useEffect(() => { window.scrollTo(0, 0); }, [passo]);
+
+  // Ao abrir, busca o que este aluno ja' mandou. Sem isto, quem volta no dia
+  // seguinte ve a tela em branco e conclui que perdeu tudo.
+  useEffect(() => {
+    if (!user) return;
+    let vivo = true;
+    (async () => {
+      try {
+        const { data: ent } = await supabase
+          .from('entregas')
+          .select('id, texto_resposta, created_at')
+          .eq('missao_id', MISSAO_2FASE)
+          .eq('aluno_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (!vivo || !ent) return;
+
+        const e = ent as { id: string; texto_resposta: string | null; created_at: string };
+        setEntregaId(e.id);
+        setEnviadoEm(e.created_at);
+        setEnviado(true);
+        setDescricao(e.texto_resposta ?? '');
+        setDescricaoSalva(e.texto_resposta ?? '');
+
+        const { data: arqs } = await supabase
+          .from('entrega_arquivos')
+          .select('id, nome_original, nome_storage, tipo_arquivo, tamanho_bytes')
+          .eq('entrega_id', e.id);
+        if (!vivo || !arqs) return;
+
+        setArquivos((arqs as Array<Record<string, unknown>>).map((r) => ({
+          slot: String(r.tipo_arquivo) as Slot,
+          caminho: String(r.nome_storage),
+          nome: String(r.nome_original),
+          bytes: Number(r.tamanho_bytes ?? 0),
+          salvo: true,
+          linhaId: String(r.id),
+        })));
+      } catch {
+        /* nao achar entrega anterior nao pode impedir um envio novo */
+      } finally {
+        if (vivo) setCarregando(false);
+      }
+    })();
+    return () => { vivo = false; };
+  }, [user]);
 
   // As duas rotas usam o MESMO componente, entao o React Router nao remonta na
   // troca: o endereco mudava para /enviar e a tela continuava na de boas-vindas,
@@ -101,6 +161,10 @@ const Arena2FasePage = () => {
 
   const podeEnviar =
     !!capa && portfolio.length >= MIN_PORTFOLIO && !!video && palavras >= MINIMO_PALAVRAS;
+
+  // O que ainda nao foi para o banco: arquivo novo no bucket, ou texto mexido.
+  const novidade =
+    arquivos.some((a) => !a.salvo) || descricao.trim() !== descricaoSalva.trim();
 
   // ---------------------------------------------------------------- upload
   async function subir(lista: FileList | null, slot: Slot) {
@@ -187,67 +251,88 @@ const Arena2FasePage = () => {
   }
 
   async function remover(a: Arquivo) {
+    // Se ja' estava numa entrega, sai dos dois lugares. Apagar so' do bucket
+    // deixaria a professora com uma linha apontando para arquivo que sumiu.
+    if (a.linhaId) {
+      await supabase.from('entrega_arquivos').delete().eq('id', a.linhaId);
+    }
     await supabase.storage.from(BUCKET).remove([a.caminho]);
     setArquivos((lista) => lista.filter((x) => x.caminho !== a.caminho));
   }
 
   async function enviar() {
-    if (!podeEnviar || !user) return;
+    if (!user || enviando) return;
+    if (!entregaId && !podeEnviar) return;
     setEnviando(true);
+    setErro(null);
     try {
-      // 1. A entrega. E' ela que registra QUEM enviou (aluno_id) e QUANDO, e e'
-      //    por ela que a professora enxerga o trabalho na tela dela. Sem
-      //    missao_id o banco recusa, porque a coluna e' NOT NULL: foi isso que
-      //    fazia o envio falhar no fim, depois de os arquivos ja terem subido.
-      const { data: entrega, error: erroEntrega } = await supabase
-        .from('entregas')
-        .insert({
-          missao_id: MISSAO_2FASE,
-          aluno_id: user.id,
-          texto_resposta: descricao.trim(),
-          status: 'pendente',
-          entregue_no_prazo: true,
-          numero_tentativa: 1,
-        } as never)
-        .select('id')
-        .single();
-      if (erroEntrega) throw erroEntrega;
+      let id = entregaId;
 
-      const entregaId = (entrega as { id: string } | null)?.id;
-
-      // 2. Os arquivos. Sem esta parte o material fica orfao no bucket: existe
-      //    no Storage e ninguem sabe de quem e'. O caminho continua sendo o
-      //    unico identificador, e ele nao carrega nome de crianca.
-      if (entregaId && arquivos.length > 0) {
-        const linhas = arquivos.map((a) => ({
-          entrega_id: entregaId,
-          nome_original: a.nome,
-          nome_storage: a.caminho,
-          tipo_arquivo: a.slot,          // capa, portfolio ou video
-          tamanho_bytes: a.bytes,
-          url: `${BUCKET}/${a.caminho}`,  // bucket privado: a leitura e' por URL assinada
-        }));
-        const { error: erroArquivos } = await supabase
-          .from('entrega_arquivos')
-          .insert(linhas as never);
-        if (erroArquivos) throw erroArquivos;
+      // 1. A entrega. Uma so' por aluno nesta missao: se ja' existe, atualiza o
+      //    texto em vez de criar outra. E' isso que deixa o aluno voltar depois
+      //    para acrescentar sem duplicar o trabalho do grupo.
+      if (!id) {
+        const { data: nova, error: erroEntrega } = await supabase
+          .from('entregas')
+          .insert({
+            missao_id: MISSAO_2FASE,
+            aluno_id: user.id,
+            texto_resposta: descricao.trim(),
+            status: 'pendente',
+            entregue_no_prazo: true,
+            numero_tentativa: 1,
+          } as never)
+          .select('id, created_at')
+          .single();
+        if (erroEntrega) throw erroEntrega;
+        const e = nova as { id: string; created_at: string };
+        id = e.id;
+        setEntregaId(e.id);
+        setEnviadoEm(e.created_at);
+      } else if (descricao.trim() !== descricaoSalva.trim()) {
+        const { error: erroTexto } = await supabase
+          .from('entregas')
+          .update({ texto_resposta: descricao.trim() } as never)
+          .eq('id', id);
+        if (erroTexto) throw erroTexto;
       }
 
+      // 2. So' os arquivos que ainda nao foram. Reenviar os que ja' estao la'
+      //    criaria linha repetida e a professora veria a mesma foto duas vezes.
+      const novos = arquivos.filter((a) => !a.salvo);
+      if (id && novos.length > 0) {
+        const { data: gravados, error: erroArquivos } = await supabase
+          .from('entrega_arquivos')
+          .insert(novos.map((a) => ({
+            entrega_id: id,
+            nome_original: a.nome,
+            nome_storage: a.caminho,
+            tipo_arquivo: a.slot,
+            tamanho_bytes: a.bytes,
+            url: `${BUCKET}/${a.caminho}`,
+          })) as never)
+          .select('id, nome_storage');
+        if (erroArquivos) throw erroArquivos;
+
+        const porCaminho = new Map(
+          ((gravados ?? []) as Array<Record<string, unknown>>)
+            .map((r) => [String(r.nome_storage), String(r.id)]),
+        );
+        setArquivos((lista) => lista.map((a) =>
+          a.salvo ? a : { ...a, salvo: true, linhaId: porCaminho.get(a.caminho) }));
+      }
+
+      setDescricaoSalva(descricao.trim());
       setEnviado(true);
+      toast({ title: enviado ? 'Atualizado' : 'Recebido!' });
     } catch (e) {
       const msg = e instanceof Error ? e.message : '';
-      // Enviar duas vezes bate no indice unico da entrega. Isso nao e' erro do
-      // aluno: quer dizer que o grupo dele ja mandou.
-      if (/duplicate|unique/i.test(msg)) {
-        setEnviado(true);
-        return;
-      }
       console.error('[arena 2fase] envio falhou', e);
-      toast({
-        variant: 'destructive',
-        title: 'O material subiu, mas o envio não fechou',
-        description: 'Suas fotos e o vídeo estão salvos. É só apertar Enviar de novo.',
-      });
+      setErro(
+        /duplicate|unique/i.test(msg)
+          ? 'Parece que alguém do grupo já enviou. Recarregue a página para ver o que já foi.'
+          : 'O material está salvo. Toque em Enviar de novo daqui a pouco.',
+      );
     } finally {
       setEnviando(false);
     }
@@ -341,25 +426,21 @@ const Arena2FasePage = () => {
     );
   }
 
-  // --------------------------------------------------------- 3. enviado
-  if (enviado) {
-    return (
-      <div style={fundo} className="flex items-center justify-center px-5">
-        <div className="max-w-md text-center">
-          <div className="w-16 h-16 rounded-full mx-auto flex items-center justify-center"
-            style={{ background: `${T.verde}22`, border: `2px solid ${T.verde}` }}>
-            <Check size={30} color={T.verde} strokeWidth={3} />
-          </div>
-          <h1 className="mt-6" style={{ fontFamily: T.serif, fontSize: 30, lineHeight: 1.1 }}>Recebido!</h1>
-          <p className="mt-3" style={{ fontSize: 15, color: T.texto2, lineHeight: 1.55 }}>
-            O material do seu projeto está com o Arboria. Agora é com a gente.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // A tela de "Recebido!" que fechava o fluxo saiu de proposito. O envio nao e'
+  // porta de saida: enquanto o prazo estiver aberto, o aluno volta, ve o que ja'
+  // mandou e acrescenta. O que era aquela tela virou a faixa verde do topo.
 
-  // -------------------------------------------------------- 3. o formulário
+  // A etiqueta diz se AQUELE campo ja' foi enviado. Sem isso, depois do primeiro
+  // envio a tela fica igual e o aluno nao sabe o que ja' esta' com o Arboria e o
+  // que ele acabou de acrescentar.
+  const Enviado = ({ slot }: { slot: Slot }) =>
+    arquivos.some((a) => a.slot === slot && a.salvo) ? (
+      <span className="inline-flex items-center gap-1" style={{ fontSize: 9.5, fontWeight: 800,
+        letterSpacing: '.12em', textTransform: 'uppercase', color: T.verde }}>
+        <Check size={11} strokeWidth={3} /> enviado
+      </span>
+    ) : null;
+
   const Rotulo = ({ n, texto, extra }: { n: string; texto: string; extra?: string }) => (
     <p className="flex justify-between items-baseline gap-2 mb-1.5" style={{ fontSize: 12.5, fontWeight: 700 }}>
       <span>{n} · {texto}</span>
@@ -449,6 +530,20 @@ const Arena2FasePage = () => {
           Vamos lá
         </h1>
 
+        {enviado && (
+          <div className="rounded-xl px-3.5 py-3 mt-3" style={{
+            border: `1px solid ${T.verde}55`, background: `${T.verde}12`,
+          }}>
+            <p className="m-0 flex items-start gap-2" style={{ fontSize: 12.5, color: T.texto, lineHeight: 1.45 }}>
+              <Check size={15} color={T.verde} className="flex-none mt-0.5" strokeWidth={3} />
+              <span>
+                <b>Recebido</b>{enviadoEm ? `, ${new Date(enviadoEm).toLocaleDateString('pt-BR')}` : ''}.
+                <span style={{ color: T.texto2 }}> Está com o Arboria. Se quiser acrescentar mais alguma coisa, é só continuar aqui embaixo.</span>
+              </span>
+            </p>
+          </div>
+        )}
+
         {erro && (
           <div className="rounded-xl px-3.5 py-3 mt-3" style={{
             border: '1px solid rgba(240,120,120,.45)', background: 'rgba(240,120,120,.10)',
@@ -468,7 +563,7 @@ const Arena2FasePage = () => {
 
         {/* 1. capa */}
         <div className="mt-6">
-          <Rotulo n="1" texto="Foto principal" extra="obrigatória" />
+          <Rotulo n="1" texto="Foto principal" extra="obrigatória" /> <Enviado slot="capa" />
           <Instrucao>
             É <b style={{ color: T.texto }}>a foto que as pessoas vão ver na hora de votar</b>. Capriche: pode ser uma
             foto do produto, do protótipo ou da maquete, e pode ser uma imagem criada por inteligência artificial
@@ -483,7 +578,7 @@ const Arena2FasePage = () => {
 
         {/* 2. portfolio */}
         <div className="mt-6">
-          <Rotulo n="2" texto="Fotos do portfólio" extra={`${portfolio.length} de ${MIN_PORTFOLIO} a ${MAX_PORTFOLIO}`} />
+          <Rotulo n="2" texto="Fotos do portfólio" extra={`${portfolio.length} de ${MIN_PORTFOLIO} a ${MAX_PORTFOLIO}`} /> <Enviado slot="portfolio" />
           <Instrucao>
             São fotos <b style={{ color: T.texto }}>extras</b>, que entram depois da principal. Mostrem outros ângulos,
             os detalhes, as partes separadas, o processo de montagem. É aqui que aparece o que vocês fizeram de verdade.
@@ -499,7 +594,7 @@ const Arena2FasePage = () => {
 
         {/* 3. video */}
         <div className="mt-6">
-          <Rotulo n="3" texto="Vídeo" extra="até 2 minutos" />
+          <Rotulo n="3" texto="Vídeo" extra="até 2 minutos" /> <Enviado slot="video" />
           <Instrucao>
             Um vídeo <b style={{ color: T.texto }}>do projeto funcionando</b>. Grave a coisa acontecendo: o jogo sendo
             jogado, o aplicativo rodando, o circuito ligando. <b style={{ color: T.texto }}>No máximo 2 minutos.</b> Pode ser
@@ -538,16 +633,31 @@ const Arena2FasePage = () => {
           </p>
         </div>
 
-        <button onClick={enviar} disabled={!podeEnviar || enviando}
+        {/* Tres estados. Antes de enviar, "Enviar" e so' acende quando esta' tudo
+            ali. Depois de enviado, "Atualizar envio" acende quando ha' coisa nova,
+            e fica apagado dizendo "Tudo enviado" quando nao ha' o que mandar. */}
+        <button
+          onClick={enviar}
+          disabled={enviando || (enviado ? !novidade : !podeEnviar)}
           className="w-full mt-7 rounded-2xl font-extrabold uppercase flex items-center justify-center gap-2"
           style={{
-            padding: 15, background: T.casa, color: '#04121C', fontSize: 14, letterSpacing: '.06em',
-            opacity: podeEnviar && !enviando ? 1 : .35,
+            padding: 15, fontSize: 14, letterSpacing: '.06em',
+            background: enviado && !novidade ? 'transparent' : T.casa,
+            border: enviado && !novidade ? `1px solid ${T.verde}55` : 'none',
+            color: enviado && !novidade ? T.verde : '#04121C',
+            opacity: enviando ? .5 : (enviado ? (novidade ? 1 : .8) : (podeEnviar ? 1 : .35)),
           }}>
-          {enviando && <Loader2 size={16} className="animate-spin" />} Enviar
+          {enviando && <Loader2 size={16} className="animate-spin" />}
+          {enviado ? (novidade ? 'Atualizar envio' : 'Tudo enviado') : 'Enviar'}
         </button>
 
-        {!podeEnviar && (
+        {enviado && !novidade && (
+          <p className="text-center mt-3 mb-0" style={{ fontSize: 12, color: T.texto3, lineHeight: 1.5 }}>
+            Pode fechar. Se quiser acrescentar mais alguma coisa, é só voltar aqui antes do prazo.
+          </p>
+        )}
+
+        {!enviado && !podeEnviar && (
           <p className="text-center mt-3 mb-0" style={{ fontSize: 12, color: T.texto3, lineHeight: 1.5 }}>
             Falta{' '}
             {[!capa && 'a foto principal',
