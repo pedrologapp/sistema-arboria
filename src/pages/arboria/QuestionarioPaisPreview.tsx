@@ -27,16 +27,18 @@ const CEU = '/arboria/ceu.png';
 // separadas; a entrada, as pausas e o fim sao os mesmos.
 // No prototipo, ?faixa=g4 abre a versao do Grupo IV.
 const PARAMS = new URLSearchParams(window.location.search);
-type Faixa = 'm2' | 'm3' | 'g4' | 'gv' | 'a5';
-const FAIXAS: Faixa[] = ['m2', 'm3', 'g4', 'gv', 'a5'];
+type Faixa = 'm2' | 'm3' | 'g4' | 'gv' | 'a1' | 'a2' | 'a3' | 'a4' | 'a5';
+const FAIXAS: Faixa[] = ['m2', 'm3', 'g4', 'gv', 'a1', 'a2', 'a3', 'a4', 'a5'];
 const PEDIDA = PARAMS.get('faixa') as Faixa | null;
 const FAIXA: Faixa = PEDIDA && FAIXAS.includes(PEDIDA) ? PEDIDA : 'm2';
 
 const NOME_POR_FAIXA: Record<Faixa, string> = {
-  m2: 'Arthur', m3: 'Bento', g4: 'Helena', gv: 'Cecília', a5: 'Rafael',
+  m2: 'Arthur', m3: 'Bento', g4: 'Helena', gv: 'Cecília',
+  a1: 'Miguel', a2: 'Lívia', a3: 'Ana Júlia', a4: 'Caio', a5: 'Rafael',
 };
 const TURMA_POR_FAIXA: Record<Faixa, string> = {
-  m2: 'Maternal 2 B', m3: 'Maternal 3 A', g4: 'Grupo IV A', gv: 'Grupo V A', a5: '5º Ano A',
+  m2: 'Maternal 2 B', m3: 'Maternal 3 A', g4: 'Grupo IV A', gv: 'Grupo V A',
+  a1: '1º Ano A', a2: '2º Ano A', a3: '3º Ano A', a4: '4º Ano A', a5: '5º Ano A',
 };
 const NOME = NOME_POR_FAIXA[FAIXA];
 const TURMA = TURMA_POR_FAIXA[FAIXA];
@@ -63,7 +65,7 @@ const SEM_SEXO = PARAMS.get('sexo')?.toUpperCase() === 'ND';
 const SEXO: 'M' | 'F' =
   PARAMS.get('sexo')?.toUpperCase() === 'F' ? 'F'
   : PARAMS.get('sexo')?.toUpperCase() === 'M' ? 'M'
-  : FAIXA === 'g4' || FAIXA === 'gv' ? 'F' : 'M';
+  : FAIXA === 'g4' || FAIXA === 'gv' || FAIXA === 'a2' || FAIXA === 'a3' ? 'F' : 'M';
 const FEM = SEXO === 'F';
 
 function flex(s: string): string {
@@ -867,6 +869,447 @@ const GUARDADAS_A5: Item[] = [
 ];
 void GUARDADAS_A5;
 
+const CENAS_A1: Item[] = [
+  // ============================================================
+  // AS SETE ISCAS DO 1o ANO (20/08/2026)
+  //
+  // O QUE MUDA AOS 6 ANOS, da conversa com a professora:
+  //
+  //  - ELES COPIAM, E O MOTIVO E' O ACHADO. "Se o aluno ve o amigo fazendo
+  //    algo, ele faz tambem. E' como se eles ja tivessem achado a resposta e
+  //    nao precisassem trabalhar mais em achar outra." Isso nao e' preguica, e'
+  //    economia, e o que a crianca escolhe copiar da mesma cena e' o mais perto
+  //    de mecanismo que existe nessa idade. Por isso e' a isca ancora.
+  //
+  //  - NAO DESISTEM. "Nunca vi alguem nao conseguir e nao fazer mais. Eles
+  //    sempre pedem ajuda. Nao tem a autonomia de desistir." Isso separa esta
+  //    faixa das seguintes: do 3o ano em diante a crianca ja negocia e evita.
+  //
+  //  - REPARAM O ERRO DO ADULTO e esperam para mostrar: "se esquecer alguma
+  //    letra, eles ficam esperando a professora errar a letra no quadro para
+  //    eles mostrarem". Virou a setima isca.
+  //
+  //  - CONTAM MENOS do que contavam. "Hoje esta bem mais dificil falar sobre o
+  //    que fizeram." Entao nada de perguntar o que a crianca contou.
+  // ============================================================
+
+  { tipo: 'pergunta',
+    abre: 'Vou começar pela pergunta mais gostosa.',
+    texto: `O que ${NOME} mais gosta de fazer quando chega em casa?`,
+    convite: 'Me conta',
+    ajuda: 'Pode ser a coisa mais boba do mundo. É justamente isso que eu quero saber.',
+    opcoes: [] },
+
+  { tipo: 'pergunta',
+    abre: 'Agora uma que sempre rende história.',
+    cena: 'Toda criança dessa idade tem uma mania. Tem uma aqui que fica piscando o tempo todo quando conversa. Tem um que não começa nada sem arrumar o material.',
+    texto: `${NOME} tem uma dessas?`,
+    convite: 'Me conta qual é',
+    opcoes: ['Um jeito de mexer o corpo ou o rosto quando fala', 'Precisa arrumar as coisas antes de começar', 'Repete a mesma frase ou a mesma pergunta', 'Não lembro de nada assim', 'Junta ou guarda uma coisa específica', 'Tem uma ordem certa pra fazer as coisas'] },
+
+  { tipo: 'pergunta',
+    abre: 'Essa é a que a família toda gosta de contar.',
+    cena: 'Acontece de a criança fazer uma coisa e a casa inteira parar pra olhar. Ninguém tinha ensinado aquilo.',
+    texto: `${NOME} já fez uma dessas?`,
+    convite: 'Me conta o que foi',
+    opcoes: ['Leu ou escreveu uma coisa que ninguém ensinou', 'Fez sozinho(a) uma coisa que sempre precisou de ajuda', 'Explicou uma coisa de um jeito que ninguém tinha pensado', 'Não lembro de nada assim', 'Consertou ou montou alguma coisa', 'Lembrou de um detalhe que todo mundo tinha esquecido'] },
+
+  { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre ${NOME}.`, cta: 'Continuar' },
+
+  // A ISCA ANCORA DO 1o ANO. Nao interessa QUANTO ela copia: interessa O QUE ela
+  // escolhe copiar da mesma cena. Cinco criancas veem a mesma coisa e levam
+  // partes diferentes, e a parte escolhida e' o filtro.
+  { tipo: 'pergunta',
+    cena: 'Aqui, se um vê o outro fazendo, faz igual na hora. E o interessante é que cada um copia uma parte diferente da mesma coisa.',
+    texto: `Você já viu ${NOME} copiando alguém em casa?`,
+    convite: 'Me conta o que ele(a) copiou',
+    ajuda: 'Pode ser de irmão, de primo, de alguém da TV, de um vídeo.',
+    opcoes: ['O jeito de fazer, o passo a passo', 'Só a parte que achou mais legal', 'Copiou e mudou alguma coisa no meio', 'Não lembro de nada assim', 'Um jeito de falar ou um bordão', 'Prefere fazer do jeito dele(a)'] },
+
+  { tipo: 'pergunta',
+    abre: 'Confessa uma coisa pra mim.',
+    cena: 'Sabe aquilo que ele faz de novo, e de novo, e de novo? O adulto já enjoou e ele quer outra vez.',
+    texto: `Tem alguma coisa assim com ${NOME}?`,
+    convite: 'Me conta o que é, e quanto tempo ele(a) fica nisso',
+    ajuda: 'Pode reclamar, eu entendo.',
+    opcoes: ['A mesma brincadeira, do mesmo jeito', 'O mesmo vídeo, a mesma música', 'Desenhar ou montar a mesma coisa', 'Não lembro de nada assim', 'Correr, pular, treinar o mesmo movimento', 'A mesma pergunta, várias vezes'] },
+
+  { tipo: 'transicao',
+    enorme: 'Quando eu faço essas perguntas, é porque entender cada um deles faz diferença.',
+    linha: `Eu não quero que ${NOME} seja apenas mais um na multidão: quero que ele(a) brilhe do jeito dele(a), que não é igual ao de mais ninguém. E eu sei que temos um caminho longo pela frente, mas de pouquinho em pouquinho faremos essa árvore crescer juntos...`,
+    cta: 'Continuar' },
+
+  // Aqui a crianca ainda nao desiste. O que varia e' A QUEM ela recorre e COMO,
+  // e e' isso que a pergunta persegue: a sequencia do que ela fez, nao como ela
+  // se sentiu.
+  { tipo: 'pergunta',
+    cena: 'Ele estava fazendo alguma coisa em casa e não estava dando certo.',
+    texto: 'Da última vez que isso aconteceu, o que ele(a) fez em seguida?',
+    convite: 'Me conta essa vez',
+    opcoes: ['Chamou alguém pra ajudar', 'Tentou de novo, de outro jeito', 'Chamou alguém pra fazer junto', 'Não lembro de nada assim', 'Foi ver como alguém faz', 'Parou e voltou depois'] },
+
+  { tipo: 'pergunta',
+    cena: 'Aqui eles reparam quando eu escrevo uma letra errada no quadro, e ficam esperando a hora de avisar.',
+    texto: `${NOME} já te apontou alguma coisa que você não tinha percebido?`,
+    convite: 'Me conta o que era',
+    opcoes: ['Um erro que alguém tinha cometido', 'Uma coisa fora do lugar em casa', 'Alguém com uma coisa diferente na roupa ou no cabelo', 'Não lembro de nada assim', 'Um bicho, uma planta, alguma coisa viva', 'Um som que ninguém mais tinha ouvido'] },
+];
+
+const GUARDADAS_A1: Item[] = [
+  { tipo: 'pergunta',
+    cena: 'Tem criança que conta tudo na ordem em que aconteceu, e tem quem comece pelo fim.',
+    texto: `Quando ${NOME} te conta uma coisa que aconteceu, como é?`,
+    convite: 'Me conta como ele(a) conta',
+    opcoes: ['Conta na ordem, do começo ao fim', 'Começa pelo que achou mais legal', 'Conta mais o que sentiu do que o que aconteceu', 'Não lembro de nada assim', 'Mostra com o corpo enquanto fala', 'Vai buscar o objeto pra mostrar'] },
+
+  { tipo: 'pergunta',
+    cena: 'Já vi criança dessa idade separar as coisas por um critério que só ela entende.',
+    texto: `Já viu ${NOME} fazendo isso?`,
+    convite: 'Me conta o que ele(a) separou, e por qual critério',
+    opcoes: ['Já vi, com brinquedo', 'Já vi, com o material da escola', 'Não lembro de nada assim', 'Organiza, mas só quando alguém pede', 'Faz o contrário, espalha tudo'] },
+
+  { tipo: 'pergunta',
+    cena: 'Tem dia que a gente chega em casa acabado e nem fala nada pra ninguém.',
+    texto: `Já aconteceu de ${NOME} perceber isso antes de alguém falar?`,
+    convite: 'Me conta como foi que ele(a) percebeu',
+    opcoes: ['Perguntou o que tinha acontecido', 'Veio perto e ficou ali', 'Fez alguma coisa pra ajudar sem pedir', 'Não lembro de nada assim', 'Ficou mais quieto(a) do que o normal', 'Nem reparou'] },
+
+  { tipo: 'pergunta',
+    cena: 'Tem criança que usa bastante o celular e tem criança que quase não pega.',
+    texto: `Se ${NOME} usa, o que ele(a) gosta de fazer lá dentro?`,
+    convite: 'Me conta o que ele(a) mais faz',
+    opcoes: ['Assiste vídeo', 'Joga sozinho(a)', 'Constrói, monta, cria alguma coisa', 'Ele(a) não usa', 'Joga com outras pessoas', 'Fica procurando coisa nova o tempo todo'] },
+];
+void GUARDADAS_A1;
+
+const CENAS_A2: Item[] = [
+  // ============================================================
+  // AS SETE ISCAS DO 2o ANO (20/08/2026)
+  //
+  // O QUE MUDA AOS 7 ANOS, da conversa com a professora:
+  //
+  //  - ELES TENTAM SOZINHOS PRIMEIRO. "Eles procuram fazer atividade e nao
+  //    procuram ajuda, todos. Quando nao conseguem eles pedem ajuda, nao
+  //    desistem." E' MAIS autonomo que o 1o ano, onde a crianca ja pedia de
+  //    saida. A ancora persegue exatamente esse intervalo: o que ela faz ANTES
+  //    de chamar alguem.
+  //
+  //  - QUEREM MOSTRAR QUE CONSEGUEM. "A questao do se sentir capaz de fazer,
+  //    eles chegam querendo mostrar que tem a autonomia e quando terminam eles
+  //    realmente tem, pro nivel deles." Isso e' semente do Acreditar aos 7 anos.
+  //
+  //  - MANIA DE DANCINHA. "Se deixar ele fica dancando."
+  //
+  //  - E A INVERSAO CASA-ESCOLA: aqui a crianca se apresenta mais carente e em
+  //    casa mais madura, o contrario de todas as outras faixas. Nao vira
+  //    pergunta, porque comparar era o erro que saiu do instrumento; vira
+  //    cuidado de leitura quando os dois questionarios forem cruzados.
+  // ============================================================
+
+  { tipo: 'pergunta',
+    abre: 'Vou começar pela pergunta mais gostosa.',
+    texto: `O que ${NOME} mais gosta de fazer quando chega em casa?`,
+    convite: 'Me conta',
+    ajuda: 'Pode ser a coisa mais boba do mundo. É justamente isso que eu quero saber.',
+    opcoes: [] },
+
+  { tipo: 'pergunta',
+    abre: 'Agora uma que sempre rende história.',
+    cena: 'Toda criança dessa idade tem uma mania. Tem um aqui que, se deixar, fica dançando o dia inteiro. Tem uma que conta tudo em voz alta enquanto faz.',
+    texto: `${NOME} tem uma dessas?`,
+    convite: 'Me conta qual é',
+    opcoes: ['Dança, canta ou repete um movimento', 'Fala sozinho(a) enquanto está fazendo', 'Precisa arrumar as coisas antes de começar', 'Não lembro de nada assim', 'Junta ou coleciona uma coisa específica', 'Repete a mesma frase ou a mesma pergunta'] },
+
+  { tipo: 'pergunta',
+    abre: 'Essa é a que a família toda gosta de contar.',
+    cena: 'Acontece de a criança fazer uma coisa e a casa inteira parar pra olhar. Ninguém tinha ensinado aquilo.',
+    texto: `${NOME} já fez uma dessas?`,
+    convite: 'Me conta o que foi',
+    opcoes: ['Fez sozinho(a) uma coisa que sempre precisou de ajuda', 'Leu ou escreveu uma coisa que ninguém ensinou', 'Explicou uma coisa de um jeito que ninguém tinha pensado', 'Não lembro de nada assim', 'Consertou ou montou alguma coisa', 'Percebeu um erro que ninguém tinha visto'] },
+
+  { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre ${NOME}.`, cta: 'Continuar' },
+
+  // A ISCA ANCORA DO 2o ANO. Aqui existe um intervalo que no 1o ano nao existia:
+  // entre travar e pedir ajuda, a crianca faz alguma coisa sozinha. O que ela
+  // faz nesse intervalo e' o mecanismo aparecendo sem plateia.
+  { tipo: 'pergunta',
+    cena: 'Nessa idade eles tentam sozinhos primeiro. Só depois é que chamam alguém.',
+    texto: `Da última vez que ${NOME} não conseguiu fazer uma coisa em casa, o que ele(a) fez ANTES de pedir ajuda?`,
+    convite: 'Me conta essa vez',
+    opcoes: ['Tentou de novo, de outro jeito', 'Ficou olhando, parado(a), pensando', 'Foi ver como alguém faz', 'Não lembro de nada assim', 'Foi buscar alguma coisa pra ajudar', 'Pediu ajuda na hora, não tentou antes'] },
+
+  { tipo: 'pergunta',
+    abre: 'Confessa uma coisa pra mim.',
+    cena: 'Sabe aquilo que ele faz de novo, e de novo, e de novo? O adulto já enjoou e ele quer outra vez.',
+    texto: `Tem alguma coisa assim com ${NOME}?`,
+    convite: 'Me conta o que é, e quanto tempo ele(a) fica nisso',
+    ajuda: 'Pode reclamar, eu entendo.',
+    opcoes: ['A mesma brincadeira, do mesmo jeito', 'A mesma música, a mesma dança', 'Desenhar ou montar a mesma coisa', 'Não lembro de nada assim', 'O mesmo vídeo, a mesma história', 'Correr, pular, treinar o mesmo movimento'] },
+
+  { tipo: 'transicao',
+    enorme: 'Quando eu faço essas perguntas, é porque entender cada um deles faz diferença.',
+    linha: `Eu não quero que ${NOME} seja apenas mais um na multidão: quero que ele(a) brilhe do jeito dele(a), que não é igual ao de mais ninguém. E eu sei que temos um caminho longo pela frente, mas de pouquinho em pouquinho faremos essa árvore crescer juntos...`,
+    cta: 'Continuar' },
+
+  // Semente do Acreditar aos 7 anos. Nao pergunta no que ela e' boa, que seria
+  // pedir nota: pergunta o que ela FEZ QUESTAO de mostrar, que e' escolha dela.
+  { tipo: 'pergunta',
+    cena: 'Tem uma idade em que a criança faz questão de mostrar que consegue sozinha. Chega chamando pra ver.',
+    texto: `${NOME} já fez isso em casa?`,
+    convite: 'Me conta o que ele(a) fez questão de mostrar',
+    opcoes: ['Uma coisa que ele(a) fez com as mãos', 'Uma coisa que aprendeu na escola', 'Uma coisa que conseguiu fazer sozinho(a) pela primeira vez', 'Não lembro de nada assim', 'Uma habilidade nova: pular, andar de bicicleta, nadar', 'Não costuma chamar pra ver'] },
+
+  { tipo: 'pergunta',
+    cena: 'Nessa idade eles reparam em coisa que o adulto deixou passar.',
+    texto: `${NOME} já te apontou alguma coisa que você não tinha percebido?`,
+    convite: 'Me conta o que era',
+    opcoes: ['Um erro que alguém tinha cometido', 'Uma coisa fora do lugar em casa', 'Alguém com uma coisa diferente na roupa ou no cabelo', 'Não lembro de nada assim', 'Um bicho, uma planta, alguma coisa viva', 'Um som que ninguém mais tinha ouvido'] },
+];
+
+const GUARDADAS_A2: Item[] = [
+  { tipo: 'pergunta',
+    cena: 'Tem criança que vê alguém fazendo uma coisa e faz igual na hora.',
+    texto: `Você já viu ${NOME} copiando alguém em casa?`,
+    convite: 'Me conta o que ele(a) copiou',
+    opcoes: ['O jeito de fazer, o passo a passo', 'Só a parte que achou mais legal', 'Copiou e mudou alguma coisa no meio', 'Não lembro de nada assim', 'Um jeito de falar ou um bordão', 'Prefere fazer do jeito dele(a)'] },
+
+  { tipo: 'pergunta',
+    cena: 'Tem criança que conta tudo na ordem em que aconteceu, e tem quem comece pelo fim.',
+    texto: `Quando ${NOME} te conta uma coisa que aconteceu, como é?`,
+    convite: 'Me conta como ele(a) conta',
+    opcoes: ['Conta na ordem, do começo ao fim', 'Começa pelo que achou mais legal', 'Conta mais o que sentiu do que o que aconteceu', 'Não lembro de nada assim', 'Mostra com o corpo enquanto fala', 'Vai buscar o objeto pra mostrar'] },
+
+  { tipo: 'pergunta',
+    cena: 'Tem dia que a gente chega em casa acabado e nem fala nada pra ninguém.',
+    texto: `Já aconteceu de ${NOME} perceber isso antes de alguém falar?`,
+    convite: 'Me conta como foi que ele(a) percebeu',
+    opcoes: ['Perguntou o que tinha acontecido', 'Veio perto e ficou ali', 'Fez alguma coisa pra ajudar sem pedir', 'Não lembro de nada assim', 'Ficou mais quieto(a) do que o normal', 'Nem reparou'] },
+
+  { tipo: 'pergunta',
+    cena: 'Tem criança que usa bastante o celular e tem criança que quase não pega.',
+    texto: `Se ${NOME} usa, o que ele(a) gosta de fazer lá dentro?`,
+    convite: 'Me conta o que ele(a) mais faz',
+    opcoes: ['Assiste vídeo', 'Joga sozinho(a)', 'Constrói, monta, cria alguma coisa', 'Ele(a) não usa', 'Joga com outras pessoas', 'Fica procurando coisa nova o tempo todo'] },
+];
+void GUARDADAS_A2;
+
+const CENAS_A3: Item[] = [
+  // ============================================================
+  // AS SETE ISCAS DO 3o ANO (20/08/2026)
+  //
+  // E' a UNICA faixa do F1 com as tres perguntas do leque respondidas, entao as
+  // opcoes daqui sao as mais bem apoiadas de todo o Fundamental 1.
+  //
+  //  - A LICAO DE CASA DIVIDE: "alguns falam que nao e' dificil, outros dizem
+  //    que pedem ajuda para os pais". E' a cena da idade e virou a ancora.
+  //
+  //  - A TELA VIRA CORPO: "tem aluno tao viciado em tela que fica fazendo os
+  //    movimentos com os dedos dentro de sala". Nao da' para escrever isca sobre
+  //    brincadeira de rua nesta faixa: a cena e' a tela.
+  //
+  //  - NAO TEM FILTRO: "soltam coisas de casa". Cuidado de leitura, nao de
+  //    redacao: episodio domestico pode voltar com informacao de familia.
+  //
+  //  - E OS PAIS COBRAM MATURIDADE ADIANTADA: "veem a crianca com aparente
+  //    maturidade e acham que podem cobrar responsabilidades, mas ainda e' uma
+  //    crianca de 8 a 9 anos". Por isso nenhuma isca pergunta se ela CONSEGUE:
+  //    todas perguntam o que aconteceu.
+  // ============================================================
+
+  { tipo: 'pergunta',
+    abre: 'Vou começar pela pergunta mais gostosa.',
+    texto: `O que ${NOME} mais gosta de fazer quando chega em casa?`,
+    convite: 'Me conta',
+    ajuda: 'Pode ser a coisa mais boba do mundo. É justamente isso que eu quero saber.',
+    opcoes: [] },
+
+  { tipo: 'pergunta',
+    abre: 'Agora uma que sempre rende história.',
+    cena: 'Toda criança dessa idade tem uma mania. Tem um aqui que fica mexendo os dedos no ar como se estivesse num celular. Tem uma que não senta sem arrumar tudo antes.',
+    texto: `${NOME} tem uma dessas?`,
+    convite: 'Me conta qual é',
+    opcoes: ['Um jeito de mexer as mãos ou o corpo', 'Precisa arrumar as coisas antes de começar', 'Fala sozinho(a) enquanto está fazendo', 'Não lembro de nada assim', 'Junta ou coleciona uma coisa específica', 'Repete a mesma frase ou o mesmo bordão'] },
+
+  // A ISCA ANCORA DO 3o ANO, e a unica do F1 cujas opcoes vieram de resposta
+  // direta da professora sobre CINCO criancas diferentes na mesma cena.
+  { tipo: 'pergunta',
+    cena: 'A lição de casa é a hora que mais divide. Tem quem senta e faz, tem quem chama alguém pra ficar junto, e tem quem deixa pro fim.',
+    texto: `Como é a hora da lição de casa de ${NOME}?`,
+    convite: 'Me conta como costuma ser',
+    opcoes: ['Senta e faz sozinho(a)', 'Chama alguém pra ficar junto', 'Pede ajuda pra fazer', 'Não lembro de nada assim', 'Deixa pro fim e faz correndo', 'Faz com a tela ligada do lado'] },
+
+  { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre ${NOME}.`, cta: 'Continuar' },
+
+  { tipo: 'pergunta',
+    cena: 'Tem criança que usa bastante o celular e tem criança que quase não pega. E quem usa faz coisas bem diferentes lá dentro.',
+    texto: `Se ${NOME} usa celular, o que ele(a) gosta de fazer lá dentro?`,
+    convite: 'Me conta o que ele(a) mais faz',
+    opcoes: ['Assiste vídeo', 'Joga sozinho(a)', 'Joga ou conversa com outras pessoas', 'Ele(a) não usa', 'Constrói, edita, cria alguma coisa', 'Vai atrás de assunto, pesquisa'] },
+
+  { tipo: 'pergunta',
+    abre: 'Confessa uma coisa pra mim.',
+    cena: 'Sabe aquilo que ele faz de novo, e de novo, e de novo? O adulto já enjoou e ele quer outra vez.',
+    texto: `Tem alguma coisa assim com ${NOME}?`,
+    convite: 'Me conta o que é, e quanto tempo ele(a) fica nisso',
+    ajuda: 'Pode reclamar, eu entendo.',
+    opcoes: ['O mesmo jogo, a mesma partida', 'A mesma música, o mesmo artista', 'Ver o mesmo vídeo, a mesma série', 'Não lembro de nada assim', 'Desenhar, montar ou escrever a mesma coisa', 'Treinar o mesmo movimento, o mesmo esporte'] },
+
+  { tipo: 'transicao',
+    enorme: 'Quando eu faço essas perguntas, é porque entender cada um deles faz diferença.',
+    linha: `Eu não quero que ${NOME} seja apenas mais um na multidão: quero que ele(a) brilhe do jeito dele(a), que não é igual ao de mais ninguém. E eu sei que temos um caminho longo pela frente, mas de pouquinho em pouquinho faremos essa árvore crescer juntos...`,
+    cta: 'Continuar' },
+
+  { tipo: 'pergunta',
+    cena: 'Tem criança que conta tudo na ordem em que aconteceu. Tem quem comece pelo fim. E tem quem só conte se alguém perguntar.',
+    texto: `Quando ${NOME} te conta uma coisa que aconteceu, como é?`,
+    convite: 'Me conta como ele(a) conta',
+    opcoes: ['Conta na ordem, do começo ao fim', 'Começa pelo que achou mais legal', 'Conta mais o que sentiu do que o que aconteceu', 'Não lembro de nada assim', 'Só conta se alguém perguntar', 'Mostra no celular em vez de contar'] },
+
+  { tipo: 'pergunta',
+    cena: 'Nessa idade eles reparam em coisa que o adulto deixou passar.',
+    texto: `${NOME} já te apontou alguma coisa que você não tinha percebido?`,
+    convite: 'Me conta o que era',
+    opcoes: ['Um erro que alguém tinha cometido', 'Uma coisa fora do lugar em casa', 'Uma contradição no que alguém falou', 'Não lembro de nada assim', 'Um detalhe num vídeo, num jogo, numa imagem', 'Uma mudança em alguém: humor, jeito, aparência'] },
+];
+
+const GUARDADAS_A3: Item[] = [
+  { tipo: 'pergunta',
+    cena: 'Ele estava fazendo alguma coisa em casa e não estava dando certo.',
+    texto: 'Da última vez que isso aconteceu, o que ele(a) fez em seguida?',
+    convite: 'Me conta essa vez',
+    opcoes: ['Chamou alguém pra ajudar', 'Tentou de outro jeito sozinho(a)', 'Parou e voltou depois', 'Não lembro de nada assim', 'Foi procurar como se faz, num vídeo ou na internet', 'Largou e não voltou mais'] },
+
+  { tipo: 'pergunta',
+    cena: 'Tem uma hora em que eles querem muito uma coisa e a gente não quer dar.',
+    texto: `Da última vez que isso aconteceu com ${NOME}, como foi que ele(a) tentou?`,
+    convite: 'Me conta essa vez',
+    opcoes: ['Explicou por que aquilo era importante', 'Disse o que ia acontecer de ruim se não desse', 'Ofereceu alguma coisa em troca', 'Não lembro de nada assim', 'Insistiu até a gente cansar', 'Foi pedir pra outra pessoa da casa'] },
+
+  { tipo: 'pergunta',
+    cena: 'Tem dia que a gente chega em casa acabado e nem fala nada pra ninguém.',
+    texto: `Já aconteceu de ${NOME} perceber isso antes de alguém falar?`,
+    convite: 'Me conta como foi que ele(a) percebeu',
+    opcoes: ['Perguntou o que tinha acontecido', 'Veio perto e ficou ali', 'Fez alguma coisa pra ajudar sem pedir', 'Não lembro de nada assim', 'Comentou depois, com outra pessoa', 'Nem reparou'] },
+
+  { tipo: 'pergunta',
+    cena: 'Já vi criança dessa idade organizar as coisas por um critério que só ela entende.',
+    texto: `Já viu ${NOME} fazendo isso?`,
+    convite: 'Me conta o que ele(a) organizou, e por qual critério',
+    opcoes: ['As coisas do quarto, do material', 'Coleção, figurinha, carta, jogo', 'Não lembro de nada assim', 'Organiza no celular: pasta, lista, playlist', 'Organiza, mas só quando alguém pede', 'Não é muito disso'] },
+];
+void GUARDADAS_A3;
+
+const CENAS_A4: Item[] = [
+  // ============================================================
+  // AS SETE ISCAS DO 4o ANO (20/08/2026)
+  //
+  // O QUE MUDA AOS 9 ANOS, da conversa com a professora:
+  //
+  //  - APARECE A PERGUNTA CAUSAL. "Ele perguntou como e' que o micróbio entra
+  //    se esta fechado." Virou a isca ancora, e o pai reconhece na hora porque
+  //    costuma ser a pergunta que ele nao soube responder.
+  //
+  //  - EXECUCAO SE SEPARA DE PROCESSAMENTO, e a cena e' a melhor de todo o
+  //    material colhido: "ela sabia dividir mas nao sabia onde colocar os
+  //    numeros. Tentou expressar por palavras mas nao havia construcao da
+  //    explicacao. Quando a professora fez passo a passo, ai sim ela entende."
+  //    Virou a isca de COMO ela explica o que ja sabe fazer.
+  //
+  //  - O ANO VIRA A CRIANCA: "chegam infantis e saem querendo ser adolescentes.
+  //    Nao querem mais participar de evento porque acham coisa de crianca. Ja
+  //    pensam em valor, se algo ta caro. Nao gostam mais de pintar, desenho."
+  //    Por isso nenhuma isca aqui fala em desenhar ou brincar.
+  //
+  //  - E OS PAIS FALAM QUASE SO DE CELULAR.
+  // ============================================================
+
+  { tipo: 'pergunta',
+    abre: 'Vou começar pela pergunta mais gostosa.',
+    texto: `O que ${NOME} mais gosta de fazer quando chega em casa?`,
+    convite: 'Me conta',
+    ajuda: 'Pode ser a coisa mais boba do mundo. É justamente isso que eu quero saber.',
+    opcoes: [] },
+
+  { tipo: 'pergunta',
+    abre: 'Agora uma que sempre rende história.',
+    cena: 'Toda idade tem uma mania. Tem um aqui que fala com a mão levantada, gesticulando o tempo todo. Tem outro que não começa nada sem arrumar a mesa antes.',
+    texto: `${NOME} tem uma dessas?`,
+    convite: 'Me conta qual é',
+    opcoes: ['Um jeito de mexer o corpo ou a mão quando fala', 'Precisa arrumar ou preparar antes de começar', 'Fica repetindo uma música, uma frase, um bordão', 'Não lembro de nada assim', 'Junta ou coleciona uma coisa específica', 'Tem uma ordem certa pra fazer as coisas'] },
+
+  // A ISCA ANCORA DO 4o ANO. A pergunta que a crianca faz revela por onde ela
+  // ataca o mundo, e o pai lembra dessa cena porque ela costuma ser a pergunta
+  // que ele nao soube responder.
+  { tipo: 'pergunta',
+    cena: 'Nessa idade eles fazem umas perguntas que pegam a gente de surpresa. Teve um aqui que perguntou como é que o micróbio entra no pote se o pote está fechado.',
+    texto: `${NOME} já te fez uma dessas?`,
+    convite: 'Me conta qual foi',
+    opcoes: ['Sobre como as coisas funcionam', 'Sobre pessoas, sobre por que alguém fez alguma coisa', 'Sobre dinheiro, sobre quanto custa', 'Não lembro de nada assim', 'Sobre a natureza, bicho, corpo', 'Sobre uma coisa que ele(a) viu num vídeo'] },
+
+  { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre ${NOME}.`, cta: 'Continuar' },
+
+  { tipo: 'pergunta',
+    cena: 'Tem criança que usa bastante o celular e tem criança que quase não pega. E quem usa faz coisas bem diferentes lá dentro.',
+    texto: `Se ${NOME} usa celular, o que ele(a) gosta de fazer lá dentro?`,
+    convite: 'Me conta o que ele(a) mais faz',
+    opcoes: ['Assiste vídeo', 'Joga sozinho(a)', 'Joga ou conversa com outras pessoas', 'Ele(a) não usa', 'Constrói, edita, cria alguma coisa', 'Vai atrás de assunto, pesquisa'] },
+
+  { tipo: 'pergunta',
+    abre: 'Confessa uma coisa pra mim.',
+    cena: 'Sabe aquilo que ele faz de novo, e de novo, e de novo? O adulto já enjoou e ele quer outra vez.',
+    texto: `Tem alguma coisa assim com ${NOME}?`,
+    convite: 'Me conta o que é, e quanto tempo ele(a) fica nisso',
+    ajuda: 'Pode reclamar, eu entendo.',
+    opcoes: ['O mesmo jogo, a mesma partida', 'A mesma música, o mesmo artista', 'Ver o mesmo vídeo, a mesma série', 'Não lembro de nada assim', 'Montar, escrever ou fazer a mesma coisa', 'Treinar o mesmo movimento, o mesmo esporte'] },
+
+  { tipo: 'transicao',
+    enorme: 'Quando eu faço essas perguntas, é porque entender cada um deles faz diferença.',
+    linha: `Eu não quero que ${NOME} seja apenas mais um na multidão: quero que ele(a) brilhe do jeito dele(a), que não é igual ao de mais ninguém. E eu sei que temos um caminho longo pela frente, mas de pouquinho em pouquinho faremos essa árvore crescer juntos...`,
+    cta: 'Continuar' },
+
+  // Saber fazer e conseguir explicar sao coisas diferentes, e aos 9 anos elas se
+  // separam de vez. E' a cena da fracao, trazida para dentro de casa.
+  { tipo: 'pergunta',
+    cena: 'Tem criança que sabe fazer uma coisa e trava na hora de explicar como fez.',
+    texto: `Quando ${NOME} te mostra uma coisa que aprendeu, como é que ele(a) explica?`,
+    convite: 'Me conta como foi da última vez',
+    opcoes: ['Explica com palavras, na ordem', 'Faz na frente da gente em vez de explicar', 'Desenha ou escreve pra mostrar', 'Não lembro de nada assim', 'Sabe fazer, mas trava na hora de explicar', 'Explica pulando partes, na ordem que der'] },
+
+  { tipo: 'pergunta',
+    cena: 'Nessa idade eles reparam em coisa que o adulto deixou passar. Aqui eles percebem na hora quando eu escrevo uma palavra errada no slide.',
+    texto: `${NOME} já te apontou alguma coisa que você não tinha percebido?`,
+    convite: 'Me conta o que era',
+    opcoes: ['Um erro que alguém tinha cometido', 'Uma coisa fora do lugar ou diferente', 'Uma contradição no que alguém falou', 'Não lembro de nada assim', 'Um detalhe num vídeo, num jogo, numa imagem', 'Uma mudança em alguém: humor, jeito, aparência'] },
+];
+
+const GUARDADAS_A4: Item[] = [
+  { tipo: 'pergunta',
+    cena: 'Tem uma hora em que eles querem muito uma coisa e a gente não quer dar.',
+    texto: `Da última vez que isso aconteceu com ${NOME}, como foi que ele(a) tentou?`,
+    convite: 'Me conta essa vez',
+    opcoes: ['Explicou por que aquilo era importante', 'Disse o que ia acontecer de ruim se não desse', 'Ofereceu alguma coisa em troca', 'Não lembro de nada assim', 'Insistiu até a gente cansar', 'Foi pedir pra outra pessoa da casa'] },
+
+  { tipo: 'pergunta',
+    cena: 'Ele estava fazendo alguma coisa em casa e não estava dando certo.',
+    texto: 'Da última vez que isso aconteceu, o que ele(a) fez em seguida?',
+    convite: 'Me conta essa vez',
+    opcoes: ['Chamou alguém pra ajudar', 'Tentou de outro jeito sozinho(a)', 'Parou e voltou depois', 'Não lembro de nada assim', 'Foi procurar como se faz, num vídeo ou na internet', 'Largou e não voltou mais'] },
+
+  { tipo: 'pergunta',
+    cena: 'Tem dia que a gente chega em casa acabado e nem fala nada pra ninguém.',
+    texto: `Já aconteceu de ${NOME} perceber isso antes de alguém falar?`,
+    convite: 'Me conta como foi que ele(a) percebeu',
+    opcoes: ['Perguntou o que tinha acontecido', 'Veio perto e ficou ali', 'Fez alguma coisa pra ajudar sem pedir', 'Não lembro de nada assim', 'Comentou depois, com outra pessoa', 'Nem reparou'] },
+
+  { tipo: 'pergunta',
+    cena: 'Nessa idade eles começam a falar de si mesmos. Tem um aqui que disse "isso é comigo" e tem outro que disse "isso eu não sei fazer".',
+    texto: `${NOME} já falou alguma coisa assim em casa?`,
+    convite: 'Me conta o que ele(a) disse, com as palavras dele(a)',
+    ajuda: 'Pode ser das duas coisas: uma que ele(a) acha que é dele(a), ou uma que ele(a) acha que não é.',
+    opcoes: ['Disse que é bom(boa) em alguma coisa', 'Disse que não consegue fazer alguma coisa', 'Se comparou com alguém', 'Não lembro de nada assim', 'Falou do que quer ser quando crescer', 'Não costuma falar de si'] },
+];
+void GUARDADAS_A4;
+
 // ============================================================
 // A ISCA DE "CASA CONTRA ESCOLA" FOI REMOVIDA EM 20/08/2026.
 //
@@ -887,7 +1330,8 @@ void GUARDADAS_A5;
 // ============================================================
 
 const CENAS_POR_FAIXA: Record<Faixa, Item[]> = {
-  m2: CENAS_M2, m3: CENAS_M3, g4: CENAS_G4, gv: CENAS_GV, a5: CENAS_A5,
+  m2: CENAS_M2, m3: CENAS_M3, g4: CENAS_G4, gv: CENAS_GV,
+  a1: CENAS_A1, a2: CENAS_A2, a3: CENAS_A3, a4: CENAS_A4, a5: CENAS_A5,
 };
 
 const FLUXO_BRUTO: Item[] = [...ENTRADA, ...CENAS_POR_FAIXA[FAIXA]];
