@@ -627,7 +627,6 @@ const HomePage = () => {
                 </button>
               )}
 
-              <CheckInEmocional userId={profile?.id} casaColor={casaColor} />
               <AvisosCard />
               <CrossImHomeCard casaCodigo={casa?.codigo} faseCodigo={faseAtual?.inteligencia?.codigo} corCasa={casaColor} />
               {casa?.codigo && <DesafioDiarioLembrete casaCodigo={casa.codigo} casaColor={casaColor} />}
@@ -878,8 +877,9 @@ const HomePage = () => {
         })}
       </div>
 
-      {/* Check-in emocional (so aparece 1x por dia) */}
-      <CheckInEmocional userId={profile?.id} casaColor={casaColor} />
+      {/* O check-in emocional ("como voce esta hoje") saiu da home por ordem do
+          Fundador em 20/08. O componente continua no arquivo: se voltar, e' so
+          chamar de novo. */}
 
       {/* Campo de relato */}
       <CampoRelato userId={profile?.id} institutionId={profile?.institution_id} faseId={faseAtual?.id} semana={semanaAtual} casaColor={casaColor} />

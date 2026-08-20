@@ -409,7 +409,7 @@ const Arena2FasePage = () => {
           <div className="flex items-center justify-between rounded-2xl px-3.5 py-3 mt-4"
             style={{ background: `${T.acc}14`, border: `1px solid ${T.acc}52` }}>
             <span className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: T.acc }}>Você tem até</span>
-            <span style={{ fontFamily: T.serif, fontSize: 17, fontWeight: 700 }}>sexta, 21/08</span>
+            <span style={{ fontFamily: T.serif, fontSize: 17, fontWeight: 700 }}>domingo, 23/08</span>
           </div>
 
           <p className="mt-3.5" style={{ fontSize: 11.5, color: T.texto3, lineHeight: 1.5 }}>

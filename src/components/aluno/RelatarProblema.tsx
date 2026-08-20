@@ -38,7 +38,13 @@ interface Props {
 }
 
 interface Mensagem { id: string; de: 'aluno' | 'arboria'; texto: string; lida_pelo_aluno: boolean; created_at: string }
-interface Conversa { id: string; texto: string; created_at: string; mensagens: Mensagem[] }
+interface Conversa {
+  id: string; texto: string; created_at: string; mensagens: Mensagem[];
+  // Quando o Arboria puxa a conversa, o texto do relato e' o ASSUNTO e nao a
+  // fala de ninguem. Desenhar aquilo como bolha do aluno seria por na boca dele
+  // uma frase que ele nao escreveu.
+  iniciado_por?: 'aluno' | 'arboria';
+}
 
 // A tabela problema_mensagens ainda nao esta nos tipos gerados do Supabase, e o
 // encadeamento tipado explode em "type instantiation is excessively deep". Um
@@ -71,11 +77,13 @@ const RelatarProblema = ({ userId, institutionId, contexto, variant = 'card' }: 
   const carregar = useCallback(async () => {
     if (!userId) return;
     const { data: relatos } = await fromAny('problemas_alunos')
-      .select('id, texto, created_at')
+      .select('id, texto, created_at, iniciado_por')
       .eq('aluno_id', userId)
       .order('created_at', { ascending: false })
       .limit(8);
-    const lista = (relatos ?? []) as unknown as Array<{ id: string; texto: string; created_at: string }>;
+    const lista = (relatos ?? []) as unknown as Array<{
+      id: string; texto: string; created_at: string; iniciado_por?: 'aluno' | 'arboria';
+    }>;
     if (!lista.length) { setConversas([]); return; }
 
     const { data: msgs } = await fromAny('problema_mensagens')
@@ -203,12 +211,18 @@ const RelatarProblema = ({ userId, institutionId, contexto, variant = 'card' }: 
 
       {conversas.map((c) => (
         <div key={c.id} className="space-y-2">
-          <div className="rounded-xl px-3 py-2.5 bg-white/[0.06] border border-white/[0.06]">
-            <p className="text-[9px] font-bold uppercase tracking-[.14em] text-white/30 mb-1">
-              Você · {quando(c.created_at)}
+          {c.iniciado_por === 'arboria' ? (
+            <p className="text-[9px] font-bold uppercase tracking-[.14em] text-white/25 m-0 px-1">
+              {c.texto}
             </p>
-            <p className="text-[13px] text-white/85 leading-snug m-0">{c.texto}</p>
-          </div>
+          ) : (
+            <div className="rounded-xl px-3 py-2.5 bg-white/[0.06] border border-white/[0.06]">
+              <p className="text-[9px] font-bold uppercase tracking-[.14em] text-white/30 mb-1">
+                Você · {quando(c.created_at)}
+              </p>
+              <p className="text-[13px] text-white/85 leading-snug m-0">{c.texto}</p>
+            </div>
+          )}
 
           {c.mensagens.map((m) => (
             <div key={m.id}
