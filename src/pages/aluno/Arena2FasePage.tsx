@@ -73,6 +73,11 @@ const Arena2FasePage = () => {
   const [pct, setPct] = useState(-1);
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  // O erro fica NA TELA, e nao so' num toast. No celular o toast some antes de a
+  // crianca ler, e ai ela conclui que "nao foi" sem saber por que, e fica
+  // repetindo o mesmo envio. Foi o que aconteceu em 19/08: duas alunas subiram a
+  // capa varias vezes e nenhuma conseguiu uma foto de portfolio.
+  const [erro, setErro] = useState<string | null>(null);
 
   const refCapa = useRef<HTMLInputElement>(null);
   const refPort = useRef<HTMLInputElement>(null);
@@ -100,25 +105,43 @@ const Arena2FasePage = () => {
   // ---------------------------------------------------------------- upload
   async function subir(lista: FileList | null, slot: Slot) {
     if (!lista?.length || !user) return;
-    setSubindo(slot);
-    try {
-      for (const bruto of Array.from(lista)) {
-        if (slot === 'portfolio' && portfolio.length >= MAX_PORTFOLIO) break;
 
-        // 1. comprime, se for imagem. Video vai como veio: comprimir video no
-        //    navegador exigiria ffmpeg em wasm, uns 30 MB de download so' para
-        //    carregar a ferramenta. Nao compensa para um video de 2 minutos.
-        if (bruto.size > MAX_ARQUIVO_MB * 1024 * 1024) {
-          throw new Error(
-            `Esse arquivo tem ${emMB(bruto.size)} e o limite é ${MAX_ARQUIVO_MB} MB. ` +
-            `Grave um vídeo mais curto, ou escolha a opção de enviar em qualidade menor.`
-          );
+    // A FileList e' viva: ela morre quando o input e' limpo, e em alguns
+    // navegadores de celular os File dentro dela deixam de poder ser lidos.
+    // Copiar para um array ANTES de qualquer await e' o que garante que os
+    // arquivos sobrevivam ao envio.
+    const arquivosEscolhidos = Array.from(lista);
+
+    setSubindo(slot);
+    setErro(null);
+
+    // Contador local. Ler portfolio.length dentro do laco pegava o valor do
+    // render anterior e nao enxergava o que acabou de subir, entao o limite
+    // nunca era respeitado de verdade num envio de varias fotos.
+    let jaTem = arquivos.filter((a) => a.slot === 'portfolio').length;
+    const falhas: string[] = [];
+    let subiu = 0;
+
+    for (const bruto of arquivosEscolhidos) {
+      if (slot === 'portfolio' && jaTem >= MAX_PORTFOLIO) {
+        falhas.push(`${bruto.name}: o limite e' ${MAX_PORTFOLIO} fotos`);
+        continue;
+      }
+
+      // Cada arquivo tem o proprio try. Antes, uma foto ruim no meio de cinco
+      // derrubava o lote inteiro e as que ja' tinham subido nao apareciam.
+      try {
+        if (bruto.size === 0) {
+          throw new Error('o arquivo chegou vazio. Tente escolher de novo, direto da galeria.');
         }
+        if (bruto.size > MAX_ARQUIVO_MB * 1024 * 1024) {
+          throw new Error(`tem ${emMB(bruto.size)} e o limite e' ${MAX_ARQUIVO_MB} MB.`);
+        }
+
         setPct(-1);
         setProgresso(slot === 'video' ? 'preparando o vídeo' : 'preparando a imagem');
         const { arquivo, bytesAntes, bytesDepois } = await comprimirImagem(bruto);
 
-        // 2. sobe direto para o Storage
         setPct(0);
         setProgresso(`0 de ${emMB(bytesDepois)}`);
         const ext = (arquivo.name.split('.').pop() || 'bin').toLowerCase();
@@ -128,12 +151,7 @@ const Arena2FasePage = () => {
         const caminho = `${user.id}/${slot}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
         await subirComProgresso(BUCKET, caminho, arquivo, tipo, (feito, enviados) => {
-          // A barra nao e' enfeite: sem ela, um video de 100 MB fica 6 minutos
-          // com a tela parada e a crianca fecha o app achando que travou.
           setPct(feito);
-          // Aos 100% o arquivo saiu do celular mas o servidor ainda esta'
-          // gravando. Dizer "100%" e nao terminar seria mentira; o "guardando"
-          // explica a espera do fim.
           setProgresso(feito >= 100 ? 'guardando' : `${emMB(enviados)} de ${emMB(bytesDepois)}`);
         });
 
@@ -142,29 +160,29 @@ const Arena2FasePage = () => {
           ...a.filter((x) => (slot === 'portfolio' ? true : x.slot !== slot)),
           { slot, caminho, nome: bruto.name, bytes: bytesDepois, previa },
         ]);
-
-        if (bytesDepois < bytesAntes * 0.9) {
-          toast({ title: 'Foto enviada', description: `De ${emMB(bytesAntes)} para ${emMB(bytesDepois)}.` });
-        }
+        if (slot === 'portfolio') jaTem += 1;
+        subiu += 1;
+        void bytesAntes;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'não deu';
+        console.error('[arena 2fase] falhou', bruto.name, bruto.type, bruto.size, e);
+        falhas.push(`${bruto.name}: ${/exceeded|too large|413|payload|maximum allowed size/i.test(msg)
+          ? `o servidor recusou o tamanho (limite ${MAX_ARQUIVO_MB} MB)`
+          : msg}`);
       }
-    } catch (e) {
-      const falha = e as FalhaUpload;
-      const msg = falha?.message || 'tente de novo';
-      // Enquanto isto e' prototipo, o erro cru vai para o console: e' por ele
-      // que da' para separar limite global do projeto de regra do bucket.
-      console.error('[arena 2fase] upload falhou', { status: falha?.status, corpo: falha?.corpo, msg });
-      const grande = /exceeded|too large|413|payload|maximum allowed size/i.test(msg) || falha?.status === 413;
-      toast({
-        variant: 'destructive',
-        title: 'Não deu para enviar',
-        description: grande
-          ? `O arquivo é grande demais para o servidor aceitar. Ele respondeu: "${msg}".`
-          : msg,
-      });
-    } finally {
-      setSubindo(null);
-      setProgresso('');
-      setPct(-1);
+    }
+
+    setSubindo(null);
+    setProgresso('');
+    setPct(-1);
+
+    if (falhas.length) {
+      setErro(
+        (subiu > 0 ? `${subiu} de ${arquivosEscolhidos.length} foram. ` : '') +
+        (falhas.length === 1 ? falhas[0] : falhas.join('  |  '))
+      );
+    } else if (subiu > 0) {
+      toast({ title: subiu === 1 ? 'Enviado' : `${subiu} enviados` });
     }
   }
 
@@ -396,9 +414,17 @@ const Arena2FasePage = () => {
   const Miniatura = ({ a }: { a: Arquivo }) => (
     <span className="relative block w-14 h-14 rounded-xl overflow-hidden flex-none"
       style={{ border: `1px solid ${T.verde}`, background: '#16233A' }}>
+      {/* HEIC de iPhone tem type de imagem e o navegador nao desenha. Sem o
+          onError a miniatura ficava um quadrado vazio, e a crianca lia isso
+          como "nao subiu" mesmo com o arquivo ja' no servidor. */}
       {a.previa
-        ? <img src={a.previa} alt="" className="w-full h-full object-cover" />
-        : <span className="w-full h-full flex items-center justify-center"><Video size={18} color={T.casa} /></span>}
+        ? <img src={a.previa} alt="" className="w-full h-full object-cover"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+        : null}
+      {!a.previa && <span className="w-full h-full flex items-center justify-center"><Video size={18} color={T.casa} /></span>}
+      <span className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: -1 }}>
+        <Check size={16} color={T.verde} />
+      </span>
       <button onClick={() => remover(a)} className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full flex items-center justify-center"
         style={{ background: 'rgba(5,10,18,.85)' }}><X size={11} color="#fff" /></button>
     </span>
@@ -422,6 +448,19 @@ const Arena2FasePage = () => {
         <h1 className="mt-4 mb-0" style={{ fontFamily: T.serif, fontSize: 24, lineHeight: 1.1, letterSpacing: '-.02em' }}>
           Vamos lá
         </h1>
+
+        {erro && (
+          <div className="rounded-xl px-3.5 py-3 mt-3" style={{
+            border: '1px solid rgba(240,120,120,.45)', background: 'rgba(240,120,120,.10)',
+          }}>
+            <p className="m-0 flex items-start gap-2" style={{ fontSize: 12.5, color: '#F3B4B4', lineHeight: 1.4 }}>
+              <X size={14} className="flex-none mt-0.5" />
+              <span><b style={{ color: '#fff' }}>Não deu para enviar.</b> {erro}</span>
+            </p>
+            <button onClick={() => setErro(null)} className="mt-2 text-[11px] font-bold uppercase tracking-widest"
+              style={{ color: T.texto3 }}>Fechar</button>
+          </div>
+        )}
         <p className="mt-2" style={{ fontSize: 13.5, color: T.texto2, lineHeight: 1.5 }}>
           Para fazer parte da Arena, você precisa preencher o que vem a seguir.
           Pode enviar na ordem que quiser: o que já subiu fica salvo.
@@ -473,7 +512,11 @@ const Arena2FasePage = () => {
                 <span style={{ fontSize: 12, color: T.texto2 }}>{video.nome}<br /><span style={{ color: T.texto3 }}>{emMB(video.bytes)}</span></span>
               </div>
             : <Caixa onClick={() => refVideo.current?.click()} icone={<Video size={20} />} label="Gravar ou escolher do celular" slot="video" />}
-          <input ref={refVideo} type="file" accept="video/*" capture="environment" className="hidden"
+          {/* SEM capture. Com capture="environment" o celular abre a camera
+              direto e ESCONDE a galeria, entao quem ja' tinha gravado o video
+              nao tinha como escolher o arquivo. Relatado por uma aluna do 9o
+              ano em 20/08. */}
+          <input ref={refVideo} type="file" accept="video/*" className="hidden"
             onChange={(e) => { subir(e.target.files, 'video'); e.target.value = ''; }} />
         </div>
 
