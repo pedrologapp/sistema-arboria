@@ -749,10 +749,15 @@ const CENAS_A5: Item[] = [
   //    sobre brincadeira de rua seria isca sobre cena que nao acontece. A cena
   //    e' a tela, e o que varia e' o que a crianca faz LA DENTRO.
   //
-  //  - E O QUE JA' NAO CABE: "chegam infantis e saem querendo ser adolescentes.
-  //    Nao querem mais participar de evento porque acham coisa de crianca. Nao
-  //    gostam mais de pintar, desenho." Entao nada de isca sobre desenhar ou
-  //    brincar, que seria recusada como coisa de crianca pequena.
+  //  - O ANO VIRA A CRIANCA: "chegam infantis e saem querendo ser adolescentes.
+  //    Nao querem mais participar de evento porque acham coisa de crianca."
+  //
+  //    ATENCAO, correcao do Fundador em 20/08: "nao gostam mais de pintar,
+  //    desenho" fala da ATIVIDADE ESCOLAR de pintar, e nao do desenho. O Ayrton
+  //    desta turma passa o dia desenhando e faz gibi. Desenhar voltou.
+  //
+  //  - E E' NO INTERESSE QUE ELES SE MOSTRAM: aos 10 anos o mecanismo aparece
+  //    dentro do que a crianca escolhe nao largar.
   //
   // O que sai das sete e vai para o banco: a surpresa e o perceber o outro.
   // Aos 10 anos as duas continuam valendo, mas a tela e o convencer rendem
@@ -794,12 +799,12 @@ const CENAS_A5: Item[] = [
     opcoes: ['Assiste vídeo', 'Joga sozinho(a)', 'Joga ou conversa com outras pessoas', 'Ele(a) não usa', 'Constrói, edita, cria alguma coisa', 'Vai atrás de assunto, pesquisa'] },
 
   { tipo: 'pergunta',
-    abre: 'Confessa uma coisa pra mim.',
-    cena: 'Sabe aquilo que ele faz de novo, e de novo, e de novo? O adulto já enjoou e ele quer outra vez.',
+    abre: 'Agora a que eu mais aprendo.',
+    cena: 'Tem uma coisa que a criança dessa idade não larga. Ela volta naquilo sozinha, sem ninguém mandar, e vai atrás de saber mais.',
     texto: `Tem alguma coisa assim com ${NOME}?`,
-    convite: 'Me conta o que é, e quanto tempo ele(a) fica nisso',
-    ajuda: 'Pode reclamar, eu entendo.',
-    opcoes: ['O mesmo jogo, a mesma partida', 'A mesma música, o mesmo artista', 'Ver o mesmo vídeo, a mesma série', 'Não lembro de nada assim', 'Treinar o mesmo movimento, o mesmo esporte', 'Montar, escrever ou fazer a mesma coisa'] },
+    convite: 'Me conta o que é. E se ele(a) já foi atrás disso por conta própria, me conta como',
+    ajuda: 'Vale qualquer coisa: um assunto, um jogo, um bicho, uma música, um jeito de fazer.',
+    opcoes: ['Um assunto que ele(a) fica pesquisando', 'Desenhar, escrever, criar alguma coisa', 'Um jogo, e vai atrás de aprender mais sobre ele', 'Não lembro de nada assim', 'Montar, construir, consertar', 'Um esporte, uma dança, um instrumento'] },
 
   { tipo: 'transicao',
     enorme: 'Quando eu faço essas perguntas, é porque entender cada um deles faz diferença.',
@@ -1147,12 +1152,12 @@ const CENAS_A3: Item[] = [
     opcoes: ['Assiste vídeo', 'Joga sozinho(a)', 'Joga ou conversa com outras pessoas', 'Ele(a) não usa', 'Constrói, edita, cria alguma coisa', 'Vai atrás de assunto, pesquisa'] },
 
   { tipo: 'pergunta',
-    abre: 'Confessa uma coisa pra mim.',
-    cena: 'Sabe aquilo que ele faz de novo, e de novo, e de novo? O adulto já enjoou e ele quer outra vez.',
+    abre: 'Agora a que eu mais aprendo.',
+    cena: 'Tem uma coisa que a criança dessa idade não larga. Ela volta naquilo sozinha, sem ninguém mandar, e vai atrás de saber mais.',
     texto: `Tem alguma coisa assim com ${NOME}?`,
-    convite: 'Me conta o que é, e quanto tempo ele(a) fica nisso',
-    ajuda: 'Pode reclamar, eu entendo.',
-    opcoes: ['O mesmo jogo, a mesma partida', 'A mesma música, o mesmo artista', 'Ver o mesmo vídeo, a mesma série', 'Não lembro de nada assim', 'Desenhar, montar ou escrever a mesma coisa', 'Treinar o mesmo movimento, o mesmo esporte'] },
+    convite: 'Me conta o que é. E se ele(a) já foi atrás disso por conta própria, me conta como',
+    ajuda: 'Vale qualquer coisa: um assunto, um jogo, um bicho, uma música, um jeito de fazer.',
+    opcoes: ['Um assunto que ele(a) fica pesquisando', 'Desenhar, escrever, criar alguma coisa', 'Um jogo, e vai atrás de aprender mais sobre ele', 'Não lembro de nada assim', 'Montar, construir, consertar', 'Um esporte, uma dança, um instrumento'] },
 
   { tipo: 'transicao',
     enorme: 'Quando eu faço essas perguntas, é porque entender cada um deles faz diferença.',
@@ -1217,8 +1222,18 @@ const CENAS_A4: Item[] = [
   //
   //  - O ANO VIRA A CRIANCA: "chegam infantis e saem querendo ser adolescentes.
   //    Nao querem mais participar de evento porque acham coisa de crianca. Ja
-  //    pensam em valor, se algo ta caro. Nao gostam mais de pintar, desenho."
-  //    Por isso nenhuma isca aqui fala em desenhar ou brincar.
+  //    pensam em valor, se algo ta caro."
+  //
+  //    ATENCAO, correcao do Fundador em 20/08: a mesma professora disse que
+  //    "nao gostam mais de pintar, desenho", e isso foi lido aqui como "nao
+  //    gostam de desenhar". Sao coisas diferentes: o que morre nessa idade e' a
+  //    ATIVIDADE ESCOLAR de pintar, nao o desenho. O Ayrton do 5o ano passa o
+  //    dia desenhando e faz gibi. Desenhar voltou para as opcoes.
+  //
+  //  - E E' NO INTERESSE QUE ELES SE MOSTRAM. Aos 9 e 10 anos o mecanismo
+  //    aparece dentro daquilo que a crianca escolhe nao largar, e por isso a
+  //    isca de repeticao, que e' enquadramento de crianca pequena, deu lugar a
+  //    do interesse: o que ela nao larga, e o que ela ja foi atras sozinha.
   //
   //  - E OS PAIS FALAM QUASE SO DE CELULAR.
   // ============================================================
@@ -1255,12 +1270,12 @@ const CENAS_A4: Item[] = [
     opcoes: ['Assiste vídeo', 'Joga sozinho(a)', 'Joga ou conversa com outras pessoas', 'Ele(a) não usa', 'Constrói, edita, cria alguma coisa', 'Vai atrás de assunto, pesquisa'] },
 
   { tipo: 'pergunta',
-    abre: 'Confessa uma coisa pra mim.',
-    cena: 'Sabe aquilo que ele faz de novo, e de novo, e de novo? O adulto já enjoou e ele quer outra vez.',
+    abre: 'Agora a que eu mais aprendo.',
+    cena: 'Tem uma coisa que a criança dessa idade não larga. Ela volta naquilo sozinha, sem ninguém mandar, e vai atrás de saber mais.',
     texto: `Tem alguma coisa assim com ${NOME}?`,
-    convite: 'Me conta o que é, e quanto tempo ele(a) fica nisso',
-    ajuda: 'Pode reclamar, eu entendo.',
-    opcoes: ['O mesmo jogo, a mesma partida', 'A mesma música, o mesmo artista', 'Ver o mesmo vídeo, a mesma série', 'Não lembro de nada assim', 'Montar, escrever ou fazer a mesma coisa', 'Treinar o mesmo movimento, o mesmo esporte'] },
+    convite: 'Me conta o que é. E se ele(a) já foi atrás disso por conta própria, me conta como',
+    ajuda: 'Vale qualquer coisa: um assunto, um jogo, um bicho, uma música, um jeito de fazer.',
+    opcoes: ['Um assunto que ele(a) fica pesquisando', 'Desenhar, escrever, criar alguma coisa', 'Um jogo, e vai atrás de aprender mais sobre ele', 'Não lembro de nada assim', 'Montar, construir, consertar', 'Um esporte, uma dança, um instrumento'] },
 
   { tipo: 'transicao',
     enorme: 'Quando eu faço essas perguntas, é porque entender cada um deles faz diferença.',
