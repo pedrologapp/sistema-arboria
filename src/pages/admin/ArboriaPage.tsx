@@ -181,14 +181,51 @@ const ArboriaPage = () => {
   const { data: problemasAlunos = [] } = useQuery({
     queryKey: ['admin-problemas'],
     queryFn: async () => {
+      // Os resolvidos vem junto de proposito. Em 20/08 o Fundador achou sete
+      // alunos descrevendo o mesmo defeito em abril, e o painel escondia todos
+      // por estarem marcados como resolvidos: o padrao ficou invisivel por
+      // quatro meses.
       const { data } = await supabase.from('problemas_alunos')
         .select('id, aluno_id, texto, resolvido, created_at, contexto')
-        .eq('resolvido', false)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(40);
       return data || [];
     },
   });
+
+  // A conversa de cada relato. E' o que transforma o painel em canal de mao
+  // dupla: sem ver o que ja foi respondido, o mesmo aluno seria respondido duas
+  // vezes ou nenhuma.
+  const { data: conversas = {} } = useQuery({
+    queryKey: ['admin-problema-mensagens'],
+    queryFn: async () => {
+      const { data } = await (supabase as any).from('problema_mensagens')
+        .select('id, problema_id, de, texto, created_at')
+        .order('created_at', { ascending: true });
+      const porProblema: Record<string, any[]> = {};
+      (data || []).forEach((m: any) => {
+        (porProblema[m.problema_id] ||= []).push(m);
+      });
+      return porProblema;
+    },
+  });
+
+  const [respondendo, setRespondendo] = useState<string | null>(null);
+  const [respostaTexto, setRespostaTexto] = useState('');
+  const [enviandoResposta, setEnviandoResposta] = useState(false);
+
+  const responderAluno = async (problemaId: string) => {
+    if (!respostaTexto.trim() || enviandoResposta) return;
+    setEnviandoResposta(true);
+    const { error } = await (supabase as any).from('problema_mensagens').insert({
+      problema_id: problemaId, de: 'arboria', texto: respostaTexto.trim(),
+    });
+    setEnviandoResposta(false);
+    if (error) { console.error('[arboria] resposta falhou', error); return; }
+    setRespostaTexto('');
+    setRespondendo(null);
+    queryClient.invalidateQueries({ queryKey: ['admin-problema-mensagens'] });
+  };
 
   const getCasa = (casaId: number | null) => casas.find(c => c.id === casaId);
 
@@ -836,6 +873,46 @@ const ArboriaPage = () => {
                       )}
 
                       <p className="text-[9px] text-white/20 mt-1">{new Date(p.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
+
+                      {/* A conversa. So o aluno e o dono do sistema veem isto:
+                          nem professor, nem lider de casa. */}
+                      {(conversas[p.id] || []).map((m: any) => (
+                        <div key={m.id} className="mt-2 p-2 rounded-lg"
+                          style={m.de === 'arboria'
+                            ? { background: 'rgba(61,214,140,.08)', border: '1px solid rgba(61,214,140,.22)' }
+                            : { background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.07)' }}>
+                          <p className="text-[8px] font-bold uppercase tracking-widest mb-0.5"
+                            style={{ color: m.de === 'arboria' ? '#3DD68C' : 'rgba(255,255,255,.3)' }}>
+                            {m.de === 'arboria' ? 'Arboria' : 'Aluno'} · {new Date(m.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                          </p>
+                          <p className="text-[11px] text-white/70 leading-snug m-0 whitespace-pre-line">{m.texto}</p>
+                        </div>
+                      ))}
+
+                      {respondendo === p.id ? (
+                        <div className="mt-2 space-y-1.5">
+                          <textarea
+                            value={respostaTexto}
+                            onChange={(e) => setRespostaTexto(e.target.value)}
+                            placeholder="Responda como o Arboria. O aluno vê isso na home dele."
+                            rows={3}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-[11px] text-white placeholder:text-white/20 resize-none focus:outline-none focus:border-white/20"
+                          />
+                          <div className="flex items-center gap-3 justify-end">
+                            <button onClick={() => { setRespondendo(null); setRespostaTexto(''); }}
+                              className="text-[10px] text-white/30">Cancelar</button>
+                            <button onClick={() => responderAluno(p.id)} disabled={!respostaTexto.trim() || enviandoResposta}
+                              className="px-3 py-1 rounded-full text-[10px] font-medium bg-emerald-500/20 text-emerald-300 disabled:opacity-30">
+                              {enviandoResposta ? 'Enviando' : 'Responder'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button onClick={() => { setRespondendo(p.id); setRespostaTexto(''); }}
+                          className="mt-2 text-[10px] text-emerald-400/70 hover:text-emerald-400">
+                          {(conversas[p.id] || []).length ? 'Responder de novo' : 'Responder'}
+                        </button>
+                      )}
                     </div>
                   );
                 })}
