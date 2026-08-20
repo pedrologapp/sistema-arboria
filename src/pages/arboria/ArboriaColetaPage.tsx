@@ -391,11 +391,11 @@ const INSTRUMENTOS: { id: Instrumento; label: string; nota: string }[] = [
 const TURMAS_PAIS: { turma: string; idade: string; link: string | null }[] = [
   { turma: 'Maternal 2 A', idade: '2 anos', link: null },
   { turma: 'Maternal 2 B', idade: '2 anos', link: '/arboria/coleta/pais/preview' },
-  { turma: 'Maternal 3 A', idade: '3 anos', link: null },
+  { turma: 'Maternal 3 A', idade: '3 anos', link: '/arboria/coleta/pais/preview?faixa=m3' },
   { turma: 'Maternal 3 B', idade: '3 anos', link: null },
   { turma: 'Grupo IV A', idade: '4 anos', link: '/arboria/coleta/pais/preview?faixa=g4' },
   { turma: 'Grupo IV B', idade: '4 anos', link: null },
-  { turma: 'Grupo V A', idade: '5 anos', link: null },
+  { turma: 'Grupo V A', idade: '5 anos', link: '/arboria/coleta/pais/preview?faixa=gv' },
   { turma: 'Grupo V B', idade: '5 anos', link: null },
 ];
 
