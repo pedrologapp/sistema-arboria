@@ -397,6 +397,9 @@ const TURMAS_PAIS: { turma: string; idade: string; link: string | null }[] = [
   { turma: 'Grupo IV B', idade: '4 anos', link: null },
   { turma: 'Grupo V A', idade: '5 anos', link: '/arboria/coleta/pais/preview?faixa=gv' },
   { turma: 'Grupo V B', idade: '5 anos', link: null },
+  { turma: '5º Ano A', idade: '10 anos', link: '/arboria/coleta/pais/preview?faixa=a5' },
+  { turma: '5º Ano B', idade: '10 anos', link: null },
+  { turma: '5º Ano C', idade: '10 anos', link: null },
 ];
 
 // ============================================================
