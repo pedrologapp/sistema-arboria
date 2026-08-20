@@ -55,6 +55,11 @@ const OUTRO_CUIDADOR = 'Outra pessoa que cuida dele(a)';
 // "ele(a)" e a flexao acontece aqui: no masculino o parenteses cai, no feminino
 // a ultima vogal vira "a". Quem escrever pergunta nova so precisa usar a marca.
 // No produto o sexo vem do cadastro da crianca; aqui o ?sexo=F testa o feminino.
+// Existe um terceiro estado: NAO SABER. Sem ele o texto assumia o masculino por
+// omissao, e o pai de uma menina lia o questionario inteiro no genero errado.
+// Quando o sexo nao e' conhecido, as marcas ficam como estao e o pai le'
+// "seu filho(a)", que e' feio mas e' honesto. ?sexo=ND testa esse caso.
+const SEM_SEXO = PARAMS.get('sexo')?.toUpperCase() === 'ND';
 const SEXO: 'M' | 'F' =
   PARAMS.get('sexo')?.toUpperCase() === 'F' ? 'F'
   : PARAMS.get('sexo')?.toUpperCase() === 'M' ? 'M'
@@ -62,12 +67,16 @@ const SEXO: 'M' | 'F' =
 const FEM = SEXO === 'F';
 
 function flex(s: string): string {
+  if (SEM_SEXO) return s;
   return s
     // artigo e possessivo andam junto com o substantivo
     .replace(/\bo seu filho\(a\)/g, FEM ? 'a sua filha' : 'o seu filho')
     .replace(/\bseu filho\(a\)/g, FEM ? 'sua filha' : 'seu filho')
     // ele(a) -> ela | dele(a) -> dela | sozinho(a) -> sozinha
-    .replace(/([A-Za-zÀ-ÿ]+?)([oe])\(a\)/g, (_m, raiz, vogal) => raiz + (FEM ? 'a' : vogal));
+    .replace(/([A-Za-zÀ-ÿ]+?)([oe])\(a\)/g, (_m, raiz, vogal) => raiz + (FEM ? 'a' : vogal))
+    // o(a) SOZINHO nao casava na regra acima, porque ela exige letra antes do
+    // "o". Ficava literal na tela: "e o Bento, e' o(a) mesmo nos dois lugares?".
+    .replace(/\bo\(a\)/g, FEM ? 'a' : 'o');
 }
 
 // A flexao roda uma vez sobre os dados, nao a cada render.
@@ -210,7 +219,7 @@ const CENAS_M2: Item[] = [
     cena: 'Toda criança de 2 anos tem uma coisa que ninguém entende. Tem uma aqui que só entra na sala se for pela mesma porta. Tem um que enche e despeja o mesmo potinho a manhã toda.',
     texto: `${NOME} tem uma dessas?`,
     convite: 'Me conta qual é',
-    opcoes: ['Leva um objeto pra todo canto e não larga', 'Enche e despeja, bota e tira, abre e fecha', 'Não deixa mudar o lugar das coisas dela', 'Não lembro de nada assim', 'Põe as coisas em fila ou empilha', 'Faz sempre o mesmo caminho pela casa'] },
+    opcoes: ['Leva um objeto pra todo canto e não larga', 'Tira tudo de dentro de uma caixa ou gaveta', 'Não deixa mudar o lugar das coisas dela', 'Não lembro de nada assim', 'Põe as coisas em fila ou empilha', 'Faz sempre o mesmo caminho pela casa'] },
 
   { tipo: 'pergunta',
     abre: 'Essa é a que a família toda gosta de contar.',
@@ -227,10 +236,10 @@ const CENAS_M2: Item[] = [
   // mesma coisa e copiam coisas diferentes, e a diferenca e' o filtro. E' o mais
   // perto de mecanismo puro que existe aos 2 anos, e nao exige uma palavra dela.
   { tipo: 'pergunta',
-    cena: 'Tem um aqui que pegou o jeito da mãe de falar no telefone, com a mão e tudo. Tem uma que varre igualzinho, com a vassoura maior que ela.',
+    cena: 'Tem um aqui que põe a mão no ouvido igualzinho a quem está falando no telefone. Tem uma que passa a mão na mesa do mesmo jeito que viu alguém limpando.',
     texto: `Você já viu ${NOME} fazendo alguma coisa igualzinha a alguém?`,
     convite: 'Me conta o que ele(a) copiou',
-    opcoes: ['Um jeito de falar, uma palavra', 'Um gesto, um jeito de mexer a mão', 'Uma coisa inteira, na mesma ordem em que viu', 'Não lembro de nada assim', 'O jeito de andar, de sentar', 'O jeito de cuidar: ninar, fazer carinho'] },
+    opcoes: ['Repetiu um gesto logo depois de ver', 'Um som, um jeito de falar', 'O jeito de andar ou de sentar', 'Não lembro de nada assim', 'O jeito de cuidar: ninar, fazer carinho', 'Pegou um objeto e usou do mesmo jeito que viu'] },
 
   { tipo: 'pergunta',
     abre: 'Confessa uma coisa pra mim.',
@@ -238,7 +247,7 @@ const CENAS_M2: Item[] = [
     texto: `Tem alguma coisa assim com ${NOME}?`,
     convite: 'Me conta o que é, e quanto tempo ele(a) fica nisso',
     ajuda: 'Pode reclamar, eu entendo.',
-    opcoes: ['A mesma brincadeira, sempre', 'Encher e despejar, botar e tirar', 'Subir e descer, rodar, pular', 'Não lembro de nada assim', 'O mesmo livro, a mesma figura', 'O mesmo som, a mesma musiquinha'] },
+    opcoes: ['A mesma brincadeira, sempre', 'Tirar tudo de dentro e botar de volta', 'O mesmo livro, a mesma figura', 'Não lembro de nada assim', 'A mesma musiquinha, o mesmo som', 'Correr de um lado pro outro sem parar'] },
 
   // A pausa que explica ao pai por que isto importa.
   { tipo: 'transicao',
@@ -254,10 +263,10 @@ const CENAS_M2: Item[] = [
 
   { tipo: 'pergunta',
     abre: 'Essa é a que eu mais preciso.',
-    cena: 'Aqui na sala tem criança que quase não abre a boca, e a mãe chega dizendo que em casa ela não para de falar.',
+    cena: 'Aqui na sala tem criança que fica bem quietinha, e a mãe chega dizendo que em casa ela não para um minuto.',
     texto: `E ${NOME}, é o(a) mesmo(a) nos dois lugares?`,
     convite: `Me conta uma coisa que ele(a) faz em casa e que eu talvez nunca tenha visto`,
-    opcoes: ['Em casa ele(a) fala muito mais', 'Em casa ele(a) é mais quieto(a)', 'Em casa ele(a) faz sozinho(a) o que aqui pede ajuda', 'Não sei dizer', 'Em casa ele(a) é mais agitado(a)', 'Nos dois lugares ele(a) é bem parecido(a)'] },
+    opcoes: ['Em casa ele(a) é mais agitado(a)', 'Em casa ele(a) é mais quieto(a)', 'Em casa ele(a) faz sozinho(a) o que aqui pede ajuda', 'Não sei dizer', 'Em casa ele(a) chora mais, pede mais colo', 'Nos dois lugares ele(a) é bem parecido(a)'] },
 ];
 
 // ============================================================
@@ -502,11 +511,11 @@ const CENAS_M3: Item[] = [
   // vai buscar, outra aponta, outra espera alguem mostrar, outra repete a
   // palavra. Isso e' filtro puro, e nao exige que ela explique nada.
   { tipo: 'pergunta',
-    cena: 'Tem um aqui que, quando eu falo de uma coisa que não está na sala, fica me olhando esperando. Se eu desenho, ele entende na hora.',
-    texto: `Da última vez que você falou com ${NOME} de uma coisa que não estava ali na frente, o que ele(a) fez?`,
-    convite: 'Me conta como foi',
-    ajuda: 'Pode ser um passeio que ia acontecer, um brinquedo que ficou em outro lugar, alguém que ia chegar.',
-    opcoes: ['Entendeu na hora e já foi se preparar', 'Foi procurar, ou apontou pra onde a coisa estava', 'Ficou esperando alguém mostrar', 'Não lembro de nada assim', 'Perguntou de novo várias vezes', 'Entendeu, mas trocou os detalhes na hora de repetir'] },
+    cena: 'Aqui, quando eu falo de uma coisa que não está na sala, tem criança que entende na hora e tem criança que fica esperando eu mostrar.',
+    texto: `Quando você fala com ${NOME} de uma coisa que vai acontecer depois, ou que está em outro cômodo, o que ele(a) faz?`,
+    convite: 'Me conta o que ele(a) fez da última vez',
+    ajuda: 'Por exemplo: você avisou que ia sair, ou pediu pra ele(a) buscar uma coisa em outro cômodo.',
+    opcoes: ['Entendeu na hora, sem precisar ver', 'Foi procurar, ou apontou pra onde a coisa estava', 'Ficou esperando alguém mostrar', 'Não lembro de nada assim', 'Perguntou de novo várias vezes', 'Entendeu, mas trocou os detalhes na hora de repetir'] },
 
   { tipo: 'pergunta',
     abre: 'Confessa uma coisa pra mim.',
@@ -692,10 +701,10 @@ const GUARDADAS_GV: Item[] = [
     opcoes: ['Copia o jeito de fazer, mas muda alguma coisa', 'Copia igualzinho', 'Copia só a parte que achou legal', 'Não lembro de nada assim', 'Prefere fazer do jeito dele(a)', 'Fica olhando, mas não faz'] },
 
   { tipo: 'pergunta',
-    cena: 'Quando ela está no celular ou no tablet, tem criança que só assiste e tem criança que fica construindo alguma coisa.',
-    texto: `O que ${NOME} faz quando está lá dentro?`,
+    cena: 'Tem criança dessa idade que usa celular ou tablet e tem criança que quase não pega. E quem usa faz coisas bem diferentes lá dentro.',
+    texto: `Se ${NOME} usa, o que ele(a) gosta de fazer lá dentro?`,
     convite: 'Me conta o que ele(a) mais faz',
-    opcoes: ['Assiste vídeo', 'Joga sozinho(a)', 'Constrói, monta, cria alguma coisa', 'Não usa, ou usa muito pouco', 'Joga com outras pessoas', 'Fica procurando coisa nova o tempo todo'] },
+    opcoes: ['Assiste vídeo', 'Joga sozinho(a)', 'Constrói, monta, cria alguma coisa', 'Ele(a) não usa', 'Joga com outras pessoas', 'Fica procurando coisa nova o tempo todo'] },
 
   { tipo: 'pergunta',
     cena: 'Ela estava fazendo alguma coisa e não estava dando certo.',
@@ -796,10 +805,10 @@ const CENAS_A5: Item[] = [
   // abertura diz "e tudo bem" de proposito: sem isso o pai responde o que ele
   // gostaria que fosse verdade, e a resposta vira o tempo de tela ideal.
   { tipo: 'pergunta',
-    cena: 'Eu sei que boa parte do tempo livre hoje é no celular, e tudo bem. Só que lá dentro cada um faz uma coisa diferente.',
-    texto: `O que ${NOME} mais faz quando está lá?`,
+    cena: 'Tem criança que usa bastante o celular e tem criança que quase não pega. E quem usa faz coisas bem diferentes lá dentro.',
+    texto: `Se ${NOME} usa celular, o que ele(a) gosta de fazer lá dentro?`,
     convite: 'Me conta o que ele(a) mais faz',
-    opcoes: ['Assiste vídeo', 'Joga sozinho(a)', 'Joga ou conversa com outras pessoas', 'Quase não usa', 'Constrói, edita, cria alguma coisa', 'Vai atrás de assunto, pesquisa'] },
+    opcoes: ['Assiste vídeo', 'Joga sozinho(a)', 'Joga ou conversa com outras pessoas', 'Ele(a) não usa', 'Constrói, edita, cria alguma coisa', 'Vai atrás de assunto, pesquisa'] },
 
   { tipo: 'pergunta',
     abre: 'Confessa uma coisa pra mim.',
@@ -1415,23 +1424,12 @@ const QuestionarioPaisPreview = () => {
             </div>
 
 
-            {/* O RODAPE E' FIXO NA TELA, nao no fim do conteudo.
-                Com a lista de opcoes e o campo de texto, a pergunta passou a ser
-                mais alta que o celular, e o botao de avancar ficava abaixo da
-                dobra: quem nao rolasse ate' o fim nao via saida nenhuma e
-                achava que o questionario tinha travado. Agora ele acompanha a
-                rolagem, e o conteudo ganha um respiro embaixo para nao terminar
-                escondido atras da barra. */}
-            <div style={{ height: 96 }} aria-hidden />
-            <div
-              className="fixed left-0 right-0 bottom-0"
-              style={{
-                zIndex: 30,
-                paddingTop: 30,
-                background: 'linear-gradient(180deg, rgba(11,58,96,0) 0%, rgba(11,58,96,.82) 42%, rgba(11,58,96,.97) 100%)',
-              }}
-            >
-              <div className="mx-auto flex items-center justify-between gap-4" style={{ maxWidth: 560, padding: '0 22px 20px' }}>
+            {/* O botao vem LOGO DEPOIS da ultima opcao, e nao grudado no fim da
+                tela. Fixo ele resolvia a dobra mas cobria a ultima opcao, e o
+                pai que rolava ate' o fim da lista batia numa barra em vez do
+                proximo passo. Aqui a rolagem termina exatamente no botao. */}
+            <div style={{ paddingTop: 26, paddingBottom: 34 }}>
+              <div className="mx-auto flex items-center justify-between gap-4" style={{ maxWidth: 560 }}>
                 <button
                   onClick={() => { setMarcadas((m) => ({ ...m, [i]: [NAO_SEI] })); avanca(); }}
                   className="text-[15px]"
