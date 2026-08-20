@@ -96,6 +96,66 @@ const Arena2FasePage = () => {
   const refPort = useRef<HTMLInputElement>(null);
   const refVideo = useRef<HTMLInputElement>(null);
 
+  // O id da entrega tambem vive num ref, e nao so' no state. O upload precisa
+  // dele DENTRO de um laco assincrono, e state dentro de laco entrega o valor
+  // do render anterior.
+  const entregaRef = useRef<string | null>(null);
+  // Guarda a criacao em voo. Sem isto, o aluno que escolhe tres fotos de uma vez
+  // dispara tres criacoes ao mesmo tempo e fica com tres entregas.
+  const criando = useRef<Promise<string> | null>(null);
+
+  // A ENTREGA NASCE NO PRIMEIRO ARQUIVO, nao no botao Enviar.
+  //
+  // Antes ela so' nascia no Enviar, e o Enviar so' destrava com capa, tres
+  // fotos, video e 150 palavras. Ate' la' o material existia apenas na memoria
+  // da pagina: no bucket estava salvo, mas nada no banco apontava para ele.
+  // Bastava a aba recarregar (e no celular escolher um video de 5 MB recarrega)
+  // para a tela voltar vazia com tudo intacto no storage.
+  //
+  // Foi o que aconteceu em 20/08: uma aluna subiu 11 arquivos em seis minutos,
+  // sempre os mesmos cinco, alternando video e capa, porque a cada volta a tela
+  // aparecia limpa. Saiu sem nada registrado.
+  function garantirEntrega(): Promise<string> {
+    if (entregaRef.current) return Promise.resolve(entregaRef.current);
+    if (!criando.current) {
+      criando.current = (async () => {
+        if (!user) throw new Error('sem usuario');
+        // Procura antes de criar: pode existir de outra aba, ou de um
+        // carregamento que ainda nao tinha terminado quando a foto subiu.
+        const { data: ja } = await supabase
+          .from('entregas')
+          .select('id, created_at')
+          .eq('missao_id', MISSAO_2FASE)
+          .eq('aluno_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        let e = ja as { id: string; created_at: string } | null;
+        if (!e) {
+          const { data: nova, error } = await supabase
+            .from('entregas')
+            .insert({
+              missao_id: MISSAO_2FASE,
+              aluno_id: user.id,
+              status: 'pendente',
+              entregue_no_prazo: true,
+              numero_tentativa: 1,
+            } as never)
+            .select('id, created_at')
+            .single();
+          if (error) throw error;
+          e = nova as { id: string; created_at: string };
+        }
+        entregaRef.current = e.id;
+        setEntregaId(e.id);
+        setEnviadoEm(e.created_at);
+        return e.id;
+      })().catch((err) => { criando.current = null; throw err; });
+    }
+    return criando.current;
+  }
+
   useEffect(() => { window.scrollTo(0, 0); }, [passo]);
 
   // Ao abrir, busca o que este aluno ja' mandou. Sem isto, quem volta no dia
@@ -116,9 +176,9 @@ const Arena2FasePage = () => {
         if (!vivo || !ent) return;
 
         const e = ent as { id: string; texto_resposta: string | null; created_at: string };
+        entregaRef.current = e.id;
         setEntregaId(e.id);
         setEnviadoEm(e.created_at);
-        setEnviado(true);
         setDescricao(e.texto_resposta ?? '');
         setDescricaoSalva(e.texto_resposta ?? '');
 
@@ -128,7 +188,8 @@ const Arena2FasePage = () => {
           .eq('entrega_id', e.id);
         if (!vivo || !arqs) return;
 
-        setArquivos((arqs as Array<Record<string, unknown>>).map((r) => ({
+        const linhas = arqs as Array<Record<string, unknown>>;
+        setArquivos(linhas.map((r) => ({
           slot: String(r.tipo_arquivo) as Slot,
           caminho: String(r.nome_storage),
           nome: String(r.nome_original),
@@ -136,6 +197,17 @@ const Arena2FasePage = () => {
           salvo: true,
           linhaId: String(r.id),
         })));
+
+        // Existir entrega NAO quer mais dizer "enviado", porque agora ela nasce
+        // no primeiro arquivo. Enviado e' quem reuniu as quatro coisas. Quem
+        // parou no meio volta e encontra o que ja' mandou, com o que falta
+        // escrito na tela em vez de uma tela em branco.
+        setEnviado(
+          linhas.some((r) => r.tipo_arquivo === 'capa')
+          && linhas.some((r) => r.tipo_arquivo === 'video')
+          && linhas.filter((r) => r.tipo_arquivo === 'portfolio').length >= MIN_PORTFOLIO
+          && contarPalavras(e.texto_resposta ?? '') >= MINIMO_PALAVRAS,
+        );
       } catch {
         /* nao achar entrega anterior nao pode impedir um envio novo */
       } finally {
@@ -165,6 +237,34 @@ const Arena2FasePage = () => {
   // O que ainda nao foi para o banco: arquivo novo no bucket, ou texto mexido.
   const novidade =
     arquivos.some((a) => !a.salvo) || descricao.trim() !== descricaoSalva.trim();
+
+  // A DESCRICAO SE SALVA SOZINHA.
+  //
+  // Sao 150 palavras de minimo, digitadas no celular. Perder isso por uma
+  // recarga de aba doi mais do que perder uma foto, que pelo menos ainda esta'
+  // na galeria. Vai para o banco pouco depois de a crianca parar de escrever.
+  //
+  // Nao grava rascunho de duas letras: abaixo de 20 caracteres e' provavel que
+  // seja um toque sem querer, e criar entrega por isso encheria a lista da
+  // professora de entregas vazias.
+  useEffect(() => {
+    if (!user || enviando) return;
+    const texto = descricao.trim();
+    if (texto.length < 20 || texto === descricaoSalva.trim()) return;
+    const t = setTimeout(async () => {
+      try {
+        const id = await garantirEntrega();
+        const { error } = await supabase
+          .from('entregas')
+          .update({ texto_resposta: texto } as never)
+          .eq('id', id);
+        if (!error) setDescricaoSalva(texto);
+      } catch {
+        /* o Enviar tenta de novo; o texto continua na tela */
+      }
+    }, 2000);
+    return () => clearTimeout(t);
+  }, [descricao, descricaoSalva, user, enviando]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------- upload
   async function subir(lista: FileList | null, slot: Slot) {
@@ -219,10 +319,45 @@ const Arena2FasePage = () => {
           setProgresso(feito >= 100 ? 'guardando' : `${emMB(enviados)} de ${emMB(bytesDepois)}`);
         });
 
+        // Gravado JA', antes de o aluno tocar em qualquer botao. Se falhar aqui,
+        // o arquivo continua no bucket e o Enviar grava depois: o pior caso volta
+        // a ser o comportamento antigo, nunca pior que ele.
+        let linhaId: string | undefined;
+        try {
+          const eid = await garantirEntrega();
+          const { data: linha, error: erroLinha } = await supabase
+            .from('entrega_arquivos')
+            .insert({
+              entrega_id: eid,
+              nome_original: bruto.name,
+              nome_storage: caminho,
+              tipo_arquivo: slot,
+              tamanho_bytes: bytesDepois,
+              url: `${BUCKET}/${caminho}`,
+            } as never)
+            .select('id')
+            .single();
+          if (erroLinha) throw erroLinha;
+          linhaId = String((linha as { id: string }).id);
+
+          // Capa e video sao um so'. Trocar a foto tem que apagar a linha da
+          // anterior, senao a professora abre a entrega e ve duas capas.
+          if (slot !== 'portfolio') {
+            await supabase
+              .from('entrega_arquivos')
+              .delete()
+              .eq('entrega_id', eid)
+              .eq('tipo_arquivo', slot)
+              .neq('nome_storage', caminho);
+          }
+        } catch (eg) {
+          console.error('[arena 2fase] nao gravou a linha do arquivo', eg);
+        }
+
         const previa = arquivo.type.startsWith('image/') ? URL.createObjectURL(arquivo) : undefined;
         setArquivos((a) => [
           ...a.filter((x) => (slot === 'portfolio' ? true : x.slot !== slot)),
-          { slot, caminho, nome: bruto.name, bytes: bytesDepois, previa },
+          { slot, caminho, nome: bruto.name, bytes: bytesDepois, previa, salvo: !!linhaId, linhaId },
         ]);
         if (slot === 'portfolio') jaTem += 1;
         subiu += 1;
@@ -262,34 +397,18 @@ const Arena2FasePage = () => {
 
   async function enviar() {
     if (!user || enviando) return;
-    if (!entregaId && !podeEnviar) return;
+    // A entrega existe desde a primeira foto, entao a existencia dela nao serve
+    // mais de tranca. Quem ainda nao enviou precisa das quatro coisas; quem ja'
+    // enviou pode voltar para acrescentar. As 150 palavras seguem obrigatorias.
+    if (!enviado && !podeEnviar) return;
     setEnviando(true);
     setErro(null);
     try {
-      let id = entregaId;
-
-      // 1. A entrega. Uma so' por aluno nesta missao: se ja' existe, atualiza o
-      //    texto em vez de criar outra. E' isso que deixa o aluno voltar depois
-      //    para acrescentar sem duplicar o trabalho do grupo.
-      if (!id) {
-        const { data: nova, error: erroEntrega } = await supabase
-          .from('entregas')
-          .insert({
-            missao_id: MISSAO_2FASE,
-            aluno_id: user.id,
-            texto_resposta: descricao.trim(),
-            status: 'pendente',
-            entregue_no_prazo: true,
-            numero_tentativa: 1,
-          } as never)
-          .select('id, created_at')
-          .single();
-        if (erroEntrega) throw erroEntrega;
-        const e = nova as { id: string; created_at: string };
-        id = e.id;
-        setEntregaId(e.id);
-        setEnviadoEm(e.created_at);
-      } else if (descricao.trim() !== descricaoSalva.trim()) {
+      // 1. A entrega. Uma so' por aluno nesta missao, e a esta altura ela quase
+      //    sempre ja' existe: nasceu no primeiro arquivo ou no rascunho do
+      //    texto. Aqui ela so' recebe a descricao final.
+      const id = await garantirEntrega();
+      if (descricao.trim() !== descricaoSalva.trim()) {
         const { error: erroTexto } = await supabase
           .from('entregas')
           .update({ texto_resposta: descricao.trim() } as never)
@@ -300,7 +419,7 @@ const Arena2FasePage = () => {
       // 2. So' os arquivos que ainda nao foram. Reenviar os que ja' estao la'
       //    criaria linha repetida e a professora veria a mesma foto duas vezes.
       const novos = arquivos.filter((a) => !a.salvo);
-      if (id && novos.length > 0) {
+      if (novos.length > 0) {
         const { data: gravados, error: erroArquivos } = await supabase
           .from('entrega_arquivos')
           .insert(novos.map((a) => ({
