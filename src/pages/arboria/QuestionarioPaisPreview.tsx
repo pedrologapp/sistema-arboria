@@ -261,6 +261,11 @@ const CENAS_M2: Item[] = [
     convite: 'Me conta como foi que ele(a) percebeu',
     opcoes: ['Veio perto e ficou ali', 'Trouxe alguma coisa pra você', 'Parou de brincar e ficou olhando', 'Não lembro de nada assim', 'Ficou mais agitado(a) do que o normal', 'Nem reparou, seguiu brincando'] },
 
+  { tipo: 'pergunta',
+    cena: 'A gente muda uma coisa de lugar em casa e nem lembra que mudou.',
+    texto: `${NOME} repara nessas coisas?`,
+    convite: 'Me conta uma vez que isso aconteceu',
+    opcoes: ['Repõe a coisa no lugar sozinho(a)', 'Aponta e resmunga até alguém ver', 'Estranha pessoa com roupa nova, cabelo cortado', 'Não lembro de nada assim', 'Percebe quando falta uma peça do brinquedo', 'Não costuma reparar nisso'] },
 ];
 
 // ============================================================
@@ -297,11 +302,6 @@ const GUARDADAS_M2: Item[] = [
     convite: 'Me conta o que ele(a) pegou',
     opcoes: ['Um jeito de mexer o corpo', 'Um jeito de segurar ou de fazer com a mão', 'Imitou alguém tão igual que deu risada', 'Não lembro de nada assim', 'Pega, mas precisa tentar várias vezes', 'Não é muito disso'] },
 
-  { tipo: 'pergunta',
-    cena: 'A gente muda uma coisa de lugar em casa e nem lembra que mudou.',
-    texto: `${NOME} repara nessas coisas?`,
-    convite: 'Me conta uma vez que isso aconteceu',
-    opcoes: ['Repõe a coisa no lugar sozinho(a)', 'Aponta e resmunga até alguém ver', 'Estranha pessoa com roupa nova, cabelo cortado', 'Não lembro de nada assim', 'Percebe quando falta uma peça do brinquedo', 'Não costuma reparar nisso'] },
 ];
 void GUARDADAS_M2;
 
@@ -376,6 +376,11 @@ const CENAS_G4: Item[] = [
     convite: 'Me conta uma vez que isso aconteceu',
     opcoes: ['Repara quando alguma coisa muda de lugar em casa', 'Sabe onde cada coisa fica, melhor que os adultos', 'Na rua ela sabe o caminho de volta', 'Não lembro de nada assim', 'Percebe quando falta uma peça do brinquedo', 'Não costuma reparar nisso'] },
 
+  { tipo: 'pergunta',
+    cena: 'Tem criança que conta tudo na ordem em que aconteceu. Tem uma que começa pelo que achou mais legal. E tem quem levante e mostre com o corpo em vez de falar.',
+    texto: `Quando ${NOME} te conta uma coisa que aconteceu, como é?`,
+    convite: 'Me conta como ele(a) conta',
+    opcoes: ['Conta na ordem, do começo ao fim', 'Começa pelo que achou mais legal', 'Levanta e mostra com o corpo', 'Não lembro de nada assim', 'Conta mais o que sentiu do que o que aconteceu', 'Vai buscar o objeto pra mostrar'] },
 ];
 
 // ============================================================
@@ -526,6 +531,11 @@ const CENAS_M3: Item[] = [
     convite: 'Me conta como foi que ele(a) percebeu',
     opcoes: ['Veio perto, encostou, ficou ali', 'Perguntou o que tinha acontecido', 'Foi buscar alguma coisa pra pessoa', 'Não lembro de nada assim', 'Contou pra outra pessoa que fulano estava triste', 'Nem reparou, seguiu no que estava fazendo'] },
 
+  { tipo: 'pergunta',
+    cena: 'A gente muda uma coisa de lugar em casa e nem lembra que mudou.',
+    texto: `${NOME} repara nessas coisas?`,
+    convite: 'Me conta uma vez que isso aconteceu',
+    opcoes: ['Repõe a coisa no lugar sozinho(a)', 'Aponta e fala até alguém ver', 'Estranha pessoa com roupa nova, cabelo cortado', 'Não lembro de nada assim', 'Percebe quando falta uma peça do brinquedo', 'Não costuma reparar nisso'] },
 ];
 
 // ============================================================
@@ -557,11 +567,6 @@ const GUARDADAS_M3: Item[] = [
     convite: 'Me conta o que ele(a) separou',
     opcoes: ['Já vi, com brinquedo', 'Já vi, mas com outra coisa da casa', 'Não lembro de nada assim', 'Junta tudo num monte só', 'Faz o contrário, espalha tudo'] },
 
-  { tipo: 'pergunta',
-    cena: 'A gente muda uma coisa de lugar em casa e nem lembra que mudou.',
-    texto: `${NOME} repara nessas coisas?`,
-    convite: 'Me conta uma vez que isso aconteceu',
-    opcoes: ['Repõe a coisa no lugar sozinho(a)', 'Aponta e fala até alguém ver', 'Estranha pessoa com roupa nova, cabelo cortado', 'Não lembro de nada assim', 'Percebe quando falta uma peça do brinquedo', 'Não costuma reparar nisso'] },
 
   { tipo: 'pergunta',
     cena: 'Tem criança dessa idade que estranha quando alguém canta a musiquinha de sempre de um jeito diferente. E tem quem repita um barulho dias depois de ouvir.',
@@ -660,6 +665,11 @@ const CENAS_GV: Item[] = [
     convite: 'Me conta como foi que ele(a) percebeu',
     opcoes: ['Perguntou o que tinha acontecido', 'Veio perto e ficou ali', 'Foi buscar alguma coisa pra você', 'Não lembro de nada assim', 'Mudou o jeito de falar, ficou mais quieto(a)', 'Nem reparou, seguiu no que estava fazendo'] },
 
+  { tipo: 'pergunta',
+    cena: 'Nessa idade eles começam a reparar em coisa que o adulto nem viu.',
+    texto: `${NOME} já te apontou alguma coisa que você não tinha percebido?`,
+    convite: 'Me conta o que era',
+    opcoes: ['Uma coisa fora do lugar em casa', 'Um bicho, uma planta, alguma coisa viva', 'Alguém com uma coisa diferente na roupa ou no cabelo', 'Não lembro de nada assim', 'Um erro que o adulto tinha cometido', 'Um som que ninguém mais tinha ouvido'] },
 ];
 
 // ============================================================
@@ -694,11 +704,6 @@ const GUARDADAS_GV: Item[] = [
     convite: 'Me conta o que ele(a) separou, e por qual critério',
     opcoes: ['Já vi, com brinquedo', 'Já vi, mas com outra coisa da casa', 'Não lembro de nada assim', 'Organiza, mas só quando alguém pede', 'Faz o contrário, espalha tudo'] },
 
-  { tipo: 'pergunta',
-    cena: 'Nessa idade eles começam a reparar em coisa que o adulto nem viu.',
-    texto: `${NOME} já te apontou alguma coisa que você não tinha percebido?`,
-    convite: 'Me conta o que era',
-    opcoes: ['Uma coisa fora do lugar em casa', 'Um bicho, uma planta, alguma coisa viva', 'Alguém com uma coisa diferente na roupa ou no cabelo', 'Não lembro de nada assim', 'Um erro que o adulto tinha cometido', 'Um som que ninguém mais tinha ouvido'] },
 ];
 void GUARDADAS_GV;
 
@@ -807,6 +812,11 @@ const CENAS_A5: Item[] = [
     convite: 'Me conta essa vez',
     opcoes: ['Chamou alguém pra ajudar', 'Tentou de outro jeito sozinho(a)', 'Parou e voltou depois', 'Não lembro de nada assim', 'Foi procurar como se faz, num vídeo ou na internet', 'Largou e não voltou mais'] },
 
+  { tipo: 'pergunta',
+    cena: 'Nessa idade eles reparam em coisa que o adulto deixou passar. Aqui eles percebem na hora quando eu escrevo uma palavra errada no slide.',
+    texto: `${NOME} já te apontou alguma coisa que você não tinha percebido?`,
+    convite: 'Me conta o que era',
+    opcoes: ['Um erro que alguém tinha cometido', 'Uma coisa fora do lugar ou diferente', 'Uma contradição no que alguém falou', 'Não lembro de nada assim', 'Um detalhe num vídeo, num jogo, numa imagem', 'Uma mudança em alguém: humor, jeito, aparência'] },
 ];
 
 // ============================================================
@@ -869,10 +879,11 @@ void GUARDADAS_A5;
 // E' o mesmo erro que a auditoria de 14/08 encontrou no Grupo IV, quando 8 dos
 // 14 itens liam rota, estilo ou temperamento em vez de filtro.
 //
-// O que se perdeu junto: a divergencia entre casa e escola, que e' onde mora o
-// que nenhum dos dois lados sabe sozinho. Se ela voltar, tem que voltar
-// perguntando o que a crianca FAZ em casa que a escola nao ve, sem oferecer
-// adjetivo nenhum na lista.
+// No lugar dela entrou uma setima isca de MECANISMO em cada faixa, e a
+// divergencia entre casa e escola deixa de ser perguntada: ela passa a sair do
+// CRUZAMENTO entre este questionario e o do professor. E' mais honesto, porque
+// o pai nao sabe o que acontece na escola, e pedir que ele comparasse era pedir
+// o que ele nao tem.
 // ============================================================
 
 const CENAS_POR_FAIXA: Record<Faixa, Item[]> = {
