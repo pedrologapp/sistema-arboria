@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { HelpCircle, Send, Loader2, AlertCircle, MessageCircle } from 'lucide-react';
+import { HelpCircle, Send, Loader2, AlertCircle, MessageCircle, Bell } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -159,8 +159,14 @@ const RelatarProblema = ({ userId, institutionId, contexto, variant = 'card' }: 
   if (!aberto) {
     if (variant === 'inline') {
       return (
-        <button onClick={abrir} className="flex items-center gap-2 text-[11.5px] text-white/35 hover:text-white/60 transition-colors">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+        <button onClick={abrir} className="flex items-center gap-2 text-[11.5px] transition-colors"
+          style={{ color: naoLidas > 0 ? '#3DD68C' : 'rgba(255,255,255,.35)' }}>
+          <span className="relative shrink-0">
+            {naoLidas > 0 ? <MessageCircle className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+            {naoLidas > 0 && (
+              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
+            )}
+          </span>
           {naoLidas > 0 ? 'O Arboria te respondeu' : 'Deu problema nesta missão? Avise a gente'}
         </button>
       );
@@ -173,13 +179,21 @@ const RelatarProblema = ({ userId, institutionId, contexto, variant = 'card' }: 
           className="animate-fade-in rounded-[14px] w-full p-3.5 text-left active:scale-[0.98] transition-transform"
           style={{ border: '1px solid rgba(61,214,140,.45)', background: 'rgba(61,214,140,.10)' }}>
           <div className="flex items-center gap-3">
-            <MessageCircle className="w-5 h-5 shrink-0" style={{ color: '#3DD68C' }} />
+            <span className="relative shrink-0">
+              <MessageCircle className="w-5 h-5" style={{ color: '#3DD68C' }} />
+              <span className="absolute -top-1.5 -right-1.5 min-w-[15px] h-[15px] px-1 flex items-center justify-center
+                text-[9px] font-bold text-white bg-red-500 rounded-full ring-2 ring-[#070C16]">
+                {naoLidas > 9 ? '9+' : naoLidas}
+              </span>
+              <span className="absolute -top-1.5 -right-1.5 w-[15px] h-[15px] rounded-full bg-red-500 animate-ping opacity-60" />
+            </span>
             <div className="flex-1">
               <p className="text-[13px] text-white font-semibold">O Arboria te respondeu</p>
               <p className="text-[11px] text-white/45 mt-0.5">
                 {naoLidas === 1 ? 'Toque para ver' : `${naoLidas} respostas novas`}
               </p>
             </div>
+            <Bell className="w-4 h-4 shrink-0" style={{ color: '#3DD68C' }} />
           </div>
         </button>
       );

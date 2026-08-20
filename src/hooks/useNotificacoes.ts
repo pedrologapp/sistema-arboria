@@ -108,6 +108,38 @@ export const useNotificacoes = () => {
     };
   }, [missoesData]);
 
+  // === Respostas do Arboria no canal de relato ===
+  // Entra na conta do sino porque o cartao verde da home so aparece na home. Se
+  // a crianca estiver em outra tela, nada avisava que ela foi respondida.
+  const { data: respostasArboria = 0 } = useQuery({
+    queryKey: ['notif-arboria-relato', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return 0;
+      const { data: relatos } = await (supabase as never as {
+        from: (t: string) => { select: (c: string) => { eq: (a: string, b: string) => Promise<{ data: Array<{ id: string }> | null }> } };
+      }).from('problemas_alunos').select('id').eq('aluno_id', profile.id);
+      const ids = (relatos ?? []).map((r) => r.id);
+      if (!ids.length) return 0;
+
+      const { count } = await (supabase as never as {
+        from: (t: string) => {
+          select: (c: string, o: { count: 'exact'; head: true }) => {
+            in: (a: string, b: string[]) => {
+              eq: (a: string, b: string) => { eq: (a: string, b: boolean) => Promise<{ count: number | null }> };
+            };
+          };
+        };
+      }).from('problema_mensagens')
+        .select('id', { count: 'exact', head: true })
+        .in('problema_id', ids)
+        .eq('de', 'arboria')
+        .eq('lida_pelo_aluno', false);
+      return count ?? 0;
+    },
+    enabled: !!profile?.id,
+    staleTime: 60000,
+  });
+
   // === QUERY 2: Mensagens não lidas (canais + DMs em UMA query cada, sem N+1) ===
   const { data: mensagensNaoLidas = 0 } = useQuery({
     queryKey: ['notif-mensagens', profile?.id, casa?.id, profile?.institution_id],
@@ -211,7 +243,8 @@ export const useNotificacoes = () => {
   return {
     missoesPendentes,
     aprovadasNaoVistas,
-    mensagensNaoLidas,
+    mensagensNaoLidas: mensagensNaoLidas + respostasArboria,
+    respostasArboria,
     notificacoesPorFase,
     notificacoesPorSemana,
     getNotificacoesFase,
