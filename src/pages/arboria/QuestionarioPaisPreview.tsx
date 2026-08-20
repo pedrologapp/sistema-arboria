@@ -261,12 +261,6 @@ const CENAS_M2: Item[] = [
     convite: 'Me conta como foi que ele(a) percebeu',
     opcoes: ['Veio perto e ficou ali', 'Trouxe alguma coisa pra você', 'Parou de brincar e ficou olhando', 'Não lembro de nada assim', 'Ficou mais agitado(a) do que o normal', 'Nem reparou, seguiu brincando'] },
 
-  { tipo: 'pergunta',
-    abre: 'Essa é a que eu mais preciso.',
-    cena: 'Aqui na sala tem criança que fica bem quietinha, e a mãe chega dizendo que em casa ela não para um minuto.',
-    texto: `E ${NOME}, é o(a) mesmo(a) nos dois lugares?`,
-    convite: `Me conta uma coisa que ele(a) faz em casa e que eu talvez nunca tenha visto`,
-    opcoes: ['Em casa ele(a) é mais agitado(a)', 'Em casa ele(a) é mais quieto(a)', 'Em casa ele(a) faz sozinho(a) o que aqui pede ajuda', 'Não sei dizer', 'Em casa ele(a) chora mais, pede mais colo', 'Nos dois lugares ele(a) é bem parecido(a)'] },
 ];
 
 // ============================================================
@@ -382,12 +376,6 @@ const CENAS_G4: Item[] = [
     convite: 'Me conta uma vez que isso aconteceu',
     opcoes: ['Repara quando alguma coisa muda de lugar em casa', 'Sabe onde cada coisa fica, melhor que os adultos', 'Na rua ela sabe o caminho de volta', 'Não lembro de nada assim', 'Percebe quando falta uma peça do brinquedo', 'Não costuma reparar nisso'] },
 
-  { tipo: 'pergunta',
-    abre: 'Essa é a que eu mais preciso.',
-    cena: 'Aqui na sala tem criança que quase não abre a boca, e o pai chega dizendo que em casa ela não para de falar.',
-    texto: `E ${NOME}, é a mesma nos dois lugares?`,
-    convite: `Me conta uma coisa que ela faz em casa e que eu talvez nunca tenha visto`,
-    opcoes: ['Em casa ela fala muito mais', 'Em casa ela é mais quieta', 'Em casa ela manda, aqui ela segue', 'Não sei dizer', 'Em casa ela faz sozinha o que aqui ela pede ajuda', 'Nos dois lugares ela é bem parecida'] },
 ];
 
 // ============================================================
@@ -538,12 +526,6 @@ const CENAS_M3: Item[] = [
     convite: 'Me conta como foi que ele(a) percebeu',
     opcoes: ['Veio perto, encostou, ficou ali', 'Perguntou o que tinha acontecido', 'Foi buscar alguma coisa pra pessoa', 'Não lembro de nada assim', 'Contou pra outra pessoa que fulano estava triste', 'Nem reparou, seguiu no que estava fazendo'] },
 
-  { tipo: 'pergunta',
-    abre: 'Essa é a que eu mais preciso.',
-    cena: 'Aqui na sala eles têm uma rotina certinha, e eu sei que em casa é outra coisa.',
-    texto: `E ${NOME}, é o(a) mesmo(a) nos dois lugares?`,
-    convite: `Me conta uma coisa que ele(a) faz em casa e que eu talvez nunca tenha visto`,
-    opcoes: ['Em casa ele(a) faz muito mais sozinho(a)', 'Em casa alguém acaba fazendo por ele(a)', 'Em casa ele(a) fala muito mais', 'Não sei dizer', 'Em casa ele(a) é mais agitado(a)', 'Nos dois lugares ele(a) é bem parecido(a)'] },
 ];
 
 // ============================================================
@@ -678,12 +660,6 @@ const CENAS_GV: Item[] = [
     convite: 'Me conta como foi que ele(a) percebeu',
     opcoes: ['Perguntou o que tinha acontecido', 'Veio perto e ficou ali', 'Foi buscar alguma coisa pra você', 'Não lembro de nada assim', 'Mudou o jeito de falar, ficou mais quieto(a)', 'Nem reparou, seguiu no que estava fazendo'] },
 
-  { tipo: 'pergunta',
-    abre: 'Essa é a que eu mais preciso.',
-    cena: 'Aqui na sala tem criança que quase não abre a boca, e a mãe chega dizendo que em casa ela não para de falar.',
-    texto: `E ${NOME}, é o(a) mesmo(a) nos dois lugares?`,
-    convite: `Me conta uma coisa que ele(a) faz em casa e que eu talvez nunca tenha visto`,
-    opcoes: ['Em casa ele(a) fala muito mais', 'Em casa ele(a) é mais quieto(a)', 'Em casa ele(a) faz sozinho(a) o que aqui pede ajuda', 'Não sei dizer', 'Em casa ele(a) é mais agitado(a)', 'Nos dois lugares ele(a) é bem parecido(a)'] },
 ];
 
 // ============================================================
@@ -831,12 +807,6 @@ const CENAS_A5: Item[] = [
     convite: 'Me conta essa vez',
     opcoes: ['Chamou alguém pra ajudar', 'Tentou de outro jeito sozinho(a)', 'Parou e voltou depois', 'Não lembro de nada assim', 'Foi procurar como se faz, num vídeo ou na internet', 'Largou e não voltou mais'] },
 
-  { tipo: 'pergunta',
-    abre: 'Essa é a que eu mais preciso.',
-    cena: 'Aqui na sala tem aluno que quase não abre a boca, e a mãe chega dizendo que em casa ele não para de falar. E tem o contrário também.',
-    texto: `E ${NOME}, é o(a) mesmo(a) nos dois lugares?`,
-    convite: `Me conta uma coisa que ele(a) faz em casa e que eu talvez nunca tenha visto`,
-    opcoes: ['Em casa ele(a) fala muito mais', 'Em casa ele(a) é mais quieto(a)', 'Em casa ele(a) faz sozinho(a) o que aqui pede ajuda', 'Não sei dizer', 'Em casa ele(a) é mais responsável', 'Nos dois lugares ele(a) é bem parecido(a)'] },
 ];
 
 // ============================================================
@@ -886,6 +856,24 @@ const GUARDADAS_A5: Item[] = [
     opcoes: ['Disse que é bom(boa) em alguma coisa', 'Disse que não consegue fazer alguma coisa', 'Se comparou com alguém', 'Não lembro de nada assim', 'Falou do que quer ser quando crescer', 'Não costuma falar de si'] },
 ];
 void GUARDADAS_A5;
+
+// ============================================================
+// A ISCA DE "CASA CONTRA ESCOLA" FOI REMOVIDA EM 20/08/2026.
+//
+// Ela existia nas cinco faixas e perguntava se a crianca era a mesma nos dois
+// lugares. Diagnostico do Fundador: do jeito que estava escrita, ela dirigia o
+// pai a falar de COMPORTAMENTO. As opcoes eram quieto, agitado, fala muito,
+// manda, mais responsavel, chora mais. Nada disso e' mecanismo: e' temperamento,
+// que e' estavel, e a IA leria como padrao longitudinal da crianca.
+//
+// E' o mesmo erro que a auditoria de 14/08 encontrou no Grupo IV, quando 8 dos
+// 14 itens liam rota, estilo ou temperamento em vez de filtro.
+//
+// O que se perdeu junto: a divergencia entre casa e escola, que e' onde mora o
+// que nenhum dos dois lados sabe sozinho. Se ela voltar, tem que voltar
+// perguntando o que a crianca FAZ em casa que a escola nao ve, sem oferecer
+// adjetivo nenhum na lista.
+// ============================================================
 
 const CENAS_POR_FAIXA: Record<Faixa, Item[]> = {
   m2: CENAS_M2, m3: CENAS_M3, g4: CENAS_G4, gv: CENAS_GV, a5: CENAS_A5,
