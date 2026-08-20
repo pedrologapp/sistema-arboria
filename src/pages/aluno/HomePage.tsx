@@ -360,6 +360,72 @@ const HomePage = () => {
           <p className="text-[12.5px] text-white/30 mt-1">{dataHoje}</p>
         </div>
 
+        {/* Aluno sem casa */}
+        {!casa && (
+          <div className="rounded-[18px] border border-white/[0.08] bg-white/[0.04] animate-fade-in p-5 text-center">
+            <p className="text-white font-medium">Bem-vindo ao Arboria!</p>
+            <p className="text-white/40 text-sm mt-2">Você ainda não foi alocado a uma casa. Aguarde seu professor: em breve você vai descobrir a qual casa pertence!</p>
+          </div>
+        )}
+
+        {/* 3. Cartao de JORNADA (mockup .journey) */}
+        {casa && (
+          <div className="relative overflow-hidden rounded-[18px] border border-white/[0.08] bg-white/[0.04] animate-fade-in animate-fade-in-d1">
+            <div className="relative z-10 p-4">
+              {/* linha: crest + casa + cargo */}
+              <div className="flex items-center gap-[14px]">
+                <div
+                  className="shrink-0 w-[52px] h-[52px] rounded-full flex items-center justify-center"
+                  style={{
+                    background: `radial-gradient(circle, ${casaColor}59 0%, transparent 70%)`,
+                    boxShadow: `inset 0 0 0 1px ${casaColor}80, 0 0 26px ${casaColor}38`,
+                  }}
+                >
+                  <CasaBrasao brasaoUrl={casa.brasao_url} emoji={casa.emoji} nome={casa.nome} size="small" className="w-10 h-10" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-serif text-[20px] font-semibold leading-tight" style={{ color: acento }}>
+                    Casa {casa.nome}
+                  </h3>
+                  <p className="text-[12px] text-white/50 mt-0.5">
+                    {cargo || 'Membro'}
+                    {profile?.serie && ` · ${profile.serie} ${profile.turma || ''}`.trimEnd()}
+                  </p>
+                </div>
+              </div>
+
+              {/* divisor fino */}
+              <div className="h-px my-[14px]" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} />
+
+              {/* linha coletiva da fase */}
+              {nomeFaseTurma ? (
+                <p className="text-[12.5px] text-white/50 leading-relaxed">
+                  A turma está na fase da Casa <span className="text-white/85 font-semibold">{nomeFaseTurma}</span>
+                </p>
+              ) : (
+                <p className="text-[12.5px] text-white/40">A turma ainda não iniciou uma fase.</p>
+              )}
+
+              {/* placar discreto: pontos do aluno + posicao E pontos da CASA
+                  (nunca rank individual: doutrina do Fundador, sem comparar criancas) */}
+              <p className="mt-3 text-[11.5px] text-white/40 leading-relaxed">
+                Você conquistou <span className="text-white/60 font-semibold tabular-nums">{ranking?.total_pontos || 0}</span> pontos
+                {contribuicaoCasa > 0 && (
+                  <> e <span className="text-white/60 font-semibold tabular-nums">{contribuicaoCasa}</span> pontos para sua Casa</>
+                )}.
+                {casaRank?.posicao ? (
+                  <>
+                    <br />
+                    Casa em <span className="text-white/60 font-semibold tabular-nums">{casaRank.posicao}º</span>
+                    {' · '}
+                    <span className="text-white/60 font-semibold tabular-nums">{(casaRank.pontos_casa || 0).toLocaleString('pt-BR')}</span> pontos da Casa.
+                  </>
+                ) : null}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Prazo das missões */}
         {prazoMissoes && (
           <div className="rounded-[14px] border border-white/[0.09] bg-white/[0.035] p-3 animate-fade-in">
@@ -433,72 +499,6 @@ const HomePage = () => {
         {/* Relatar problema: alto na pagina, porque quem esta travado precisa
             achar isto sem rolar. */}
         <RelatarProblema userId={profile?.id} institutionId={profile?.institution_id} contexto={{ tela: 'home' }} />
-
-        {/* Aluno sem casa */}
-        {!casa && (
-          <div className="rounded-[18px] border border-white/[0.08] bg-white/[0.04] animate-fade-in p-5 text-center">
-            <p className="text-white font-medium">Bem-vindo ao Arboria!</p>
-            <p className="text-white/40 text-sm mt-2">Você ainda não foi alocado a uma casa. Aguarde seu professor: em breve você vai descobrir a qual casa pertence!</p>
-          </div>
-        )}
-
-        {/* 3. Cartao de JORNADA (mockup .journey) */}
-        {casa && (
-          <div className="relative overflow-hidden rounded-[18px] border border-white/[0.08] bg-white/[0.04] animate-fade-in animate-fade-in-d1">
-            <div className="relative z-10 p-4">
-              {/* linha: crest + casa + cargo */}
-              <div className="flex items-center gap-[14px]">
-                <div
-                  className="shrink-0 w-[52px] h-[52px] rounded-full flex items-center justify-center"
-                  style={{
-                    background: `radial-gradient(circle, ${casaColor}59 0%, transparent 70%)`,
-                    boxShadow: `inset 0 0 0 1px ${casaColor}80, 0 0 26px ${casaColor}38`,
-                  }}
-                >
-                  <CasaBrasao brasaoUrl={casa.brasao_url} emoji={casa.emoji} nome={casa.nome} size="small" className="w-10 h-10" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-serif text-[20px] font-semibold leading-tight" style={{ color: acento }}>
-                    Casa {casa.nome}
-                  </h3>
-                  <p className="text-[12px] text-white/50 mt-0.5">
-                    {cargo || 'Membro'}
-                    {profile?.serie && ` · ${profile.serie}° ${profile.turma || ''}`}
-                  </p>
-                </div>
-              </div>
-
-              {/* divisor fino */}
-              <div className="h-px my-[14px]" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} />
-
-              {/* linha coletiva da fase */}
-              {nomeFaseTurma ? (
-                <p className="text-[12.5px] text-white/50 leading-relaxed">
-                  A turma está na fase da Casa <span className="text-white/85 font-semibold">{nomeFaseTurma}</span>
-                </p>
-              ) : (
-                <p className="text-[12.5px] text-white/40">A turma ainda não iniciou uma fase.</p>
-              )}
-
-              {/* placar discreto: pontos do aluno + posicao E pontos da CASA
-                  (nunca rank individual: doutrina do Fundador, sem comparar criancas) */}
-              <p className="mt-3 text-[11.5px] text-white/40 leading-relaxed">
-                Você conquistou <span className="text-white/60 font-semibold tabular-nums">{ranking?.total_pontos || 0}</span> pontos
-                {contribuicaoCasa > 0 && (
-                  <> e <span className="text-white/60 font-semibold tabular-nums">{contribuicaoCasa}</span> pontos para sua Casa</>
-                )}.
-                {casaRank?.posicao ? (
-                  <>
-                    <br />
-                    Casa em <span className="text-white/60 font-semibold tabular-nums">{casaRank.posicao}º</span>
-                    {' · '}
-                    <span className="text-white/60 font-semibold tabular-nums">{(casaRank.pontos_casa || 0).toLocaleString('pt-BR')}</span> pontos da Casa.
-                  </>
-                ) : null}
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* 4. Cartao do CAPITULO DA VEZ (mockup .cap). So renderiza se houver capitulo ativo. */}
         {capituloHome && (
