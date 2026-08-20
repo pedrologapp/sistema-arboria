@@ -564,22 +564,13 @@ const HomePage = () => {
           </div>
         </button>
 
-        {/* 6. Cartao SECUNDARIO compacto (mockup .secondary): abre o drawer de utilidades */}
-        <button
-          onClick={() => setUtilAberto(true)}
-          className="rounded-[18px] border border-white/[0.08] bg-white/[0.04] w-full text-left opacity-90 active:scale-[0.98] transition-transform animate-fade-in animate-fade-in-d3"
-        >
-          <div className="flex items-center gap-[10px] px-[14px] py-[11px]">
-            <div className="w-[30px] h-[30px] rounded-[9px] shrink-0 flex items-center justify-center bg-white/[0.05]">
-              <Smile className="w-[15px] h-[15px] text-white/50" />
-            </div>
-            <div className="flex-1">
-              <p className="text-[12.5px] font-semibold text-white/50">Como você está hoje?</p>
-              <p className="text-[10.5px] text-white/30 mt-0.5">Check-in do dia · avisos</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-white/30" />
-          </div>
-        </button>
+        {/* O cartao "Como voce esta hoje?" e a gaveta que ele abria sairam da home
+            em 20/08, por ordem do Fundador. Foram junto: avisos, Cross-IM,
+            desafio diario, campo de relato e o painel de lider. Nada foi
+            apagado: os componentes continuam importados e e' so chamar de novo
+            se algum deles tiver que voltar direto na home.
+            A conversa com o Arboria NAO estava so ali: ela ja vive solta mais
+            acima, entao o aluno continua alcancando. */}
 
         {/* 7. Frase viva (mesma de hoje) */}
         {frasesDisponiveis.length > 0 && (
@@ -597,44 +588,6 @@ const HomePage = () => {
           </div>
         )}
 
-        {/* DRAWER de utilidades: mantem todas as funcoes, so saem da tela principal */}
-        <Drawer open={utilAberto} onOpenChange={setUtilAberto}>
-          <DrawerContent className="bg-[#1A1A2E] border-white/10 text-white max-h-[92vh]">
-            <DrawerHeader className="text-left">
-              <DrawerTitle className="font-serif text-white">Como você está hoje?</DrawerTitle>
-              <DrawerDescription className="text-white/50">
-                Check-in do dia, avisos e um espaço para você falar.
-              </DrawerDescription>
-            </DrawerHeader>
-            <div className="scifi px-4 pb-8 space-y-4 overflow-y-auto" style={scifiVars}>
-              {isLiderOuCoord && resumoCasa && (
-                <button
-                  onClick={() => { setUtilAberto(false); navigate('/aluno/dashboard'); }}
-                  className="rounded-[14px] border border-white/[0.07] bg-white/[0.03] w-full p-3.5 text-left active:scale-[0.98] transition-transform"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-[11px]" style={{ backgroundColor: `${casaBase}24` }}>
-                      <Shield className="w-5 h-5" style={{ color: acento }} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-white font-medium text-sm">Painel de {cargo}</p>
-                      <p className="text-white/40 text-[11px] mt-0.5">
-                        {resumoCasa.comEntrega}/{resumoCasa.totalMembros} membros com entregas · {resumoCasa.pctEntrega}%
-                      </p>
-                    </div>
-                    <div className="text-lg font-bold" style={{ color: acento }}>{resumoCasa.pctEntrega}%</div>
-                  </div>
-                </button>
-              )}
-
-              <AvisosCard />
-              <CrossImHomeCard casaCodigo={casa?.codigo} faseCodigo={faseAtual?.inteligencia?.codigo} corCasa={casaColor} />
-              {casa?.codigo && <DesafioDiarioLembrete casaCodigo={casa.codigo} casaColor={casaColor} />}
-              <CampoRelato userId={profile?.id} institutionId={profile?.institution_id} faseId={faseAtual?.id} semana={semanaAtual} casaColor={casaColor} />
-              <RelatarProblema userId={profile?.id} institutionId={profile?.institution_id} contexto={{ tela: 'home' }} />
-            </div>
-          </DrawerContent>
-        </Drawer>
       </div>
     );
   }
