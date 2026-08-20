@@ -165,6 +165,11 @@ const HomePage = () => {
     },
   });
 
+  // A 2a fase da Arena tem UM caminho so': o cartao proprio dela. Sem esta
+  // marca, ela aparecia tambem no cartao de urgencia e a home mostrava duas
+  // portas para a mesma coisa.
+  const ehArena2Fase = (m: { titulo?: string }) => String(m?.titulo ?? '').startsWith('Arena Arboria');
+
   // Missões urgentes (prazo em menos de 2 dias e não entregues)
   const { data: missoesUrgentes } = useQuery({
     queryKey: ['missoes-urgentes', profile?.id],
@@ -175,7 +180,8 @@ const HomePage = () => {
       const agora = new Date();
       const limite = new Date(agora.getTime() + 2 * 24 * 60 * 60 * 1000); // +2 dias
       return data.filter((m: any) =>
-        !m.ja_entregou
+        !ehArena2Fase(m)
+        && !m.ja_entregou
         && m.status_entrega === 'pendente'
         && new Date(m.data_prazo) <= limite
         && new Date(m.data_prazo) > agora
@@ -197,9 +203,7 @@ const HomePage = () => {
       // Compara pelo comeco do titulo, e nao pela string inteira: o "2ª" tem
       // caractere ordinal e um acento fora do lugar deixaria a convocacao
       // invisivel sem erro nenhum aparecer.
-      const m = (data ?? []).find(
-        (x: any) => typeof x?.titulo === 'string' && x.titulo.startsWith('Arena Arboria') && !x.ja_entregou,
-      );
+      const m = (data ?? []).find((x: any) => ehArena2Fase(x));
       return m ?? null;
     },
     enabled: !!profile?.id,
@@ -209,7 +213,7 @@ const HomePage = () => {
   // O pop-up abre sozinho uma vez. Depois disso o cartão fica na home, para ele
   // voltar quando tiver o material na mão.
   useEffect(() => {
-    if (!arena2Fase || !profile?.id) return;
+    if (!arena2Fase || arena2Fase.ja_entregou || !profile?.id) return;
     const chave = `arboria_arena_2fase_visto_${profile.id}`;
     if (localStorage.getItem(chave)) return;
     localStorage.setItem(chave, '1');
@@ -389,8 +393,12 @@ const HomePage = () => {
                 <p className="text-[10px] font-extrabold uppercase tracking-[.22em]" style={{ color: '#5EE0D0' }}>
                   Arena Arboria
                 </p>
-                <p className="text-white text-sm font-semibold mt-0.5">Você passou para a 2ª fase</p>
-                <p className="text-white/45 text-[11px] mt-0.5">Toque para ver o que enviar</p>
+                <p className="text-white text-sm font-semibold mt-0.5">
+                  {arena2Fase?.ja_entregou ? 'Seu material foi recebido' : 'Você passou para a 2ª fase'}
+                </p>
+                <p className="text-white/45 text-[11px] mt-0.5">
+                  {arena2Fase?.ja_entregou ? 'Toque para acrescentar mais' : 'Toque para ver o que enviar'}
+                </p>
               </div>
             </div>
           </button>
