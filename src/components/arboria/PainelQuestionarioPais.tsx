@@ -18,7 +18,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { infantilTheme as t } from '@/styles/infantilTheme';
-import { Loader2, ArrowLeft, Search, Users, Clock } from 'lucide-react';
+import { Loader2, ArrowLeft, Search, Users, Clock, ArrowUpDown } from 'lucide-react';
 
 interface Linha {
   aluno_id: string;
@@ -53,6 +53,26 @@ const SERIES = ['Maternal 2', 'Maternal 3', 'Grupo IV', 'Grupo V',
 
 type Lente = 'todas' | 'responderam' | 'meio' | 'faltam';
 
+// DUAS ORDENS, PARA DUAS PERGUNTAS DIFERENTES.
+//
+// "Por turma" responde "quem ainda falta na 4ª A", e por isso quem NAO
+// respondeu vem primeiro dentro de cada turma: a lista serve para cobrar, e o
+// que se cobra tem que estar no alto.
+//
+// "Ultimos que responderam" responde "esta entrando agora?", que e' a pergunta
+// do dia do envio, quando se olha o painel de dez em dez minutos.
+type Ordem = 'turma' | 'recentes';
+
+const ORDENS: { id: Ordem; label: string }[] = [
+  { id: 'turma', label: 'Por turma' },
+  { id: 'recentes', label: 'Últimos que responderam' },
+];
+
+const posSerie = (s: string) => {
+  const i = SERIES.indexOf(s);
+  return i < 0 ? 99 : i;
+};
+
 const LENTES: { id: Lente; label: string }[] = [
   { id: 'todas', label: 'Todas' },
   { id: 'responderam', label: 'Responderam' },
@@ -75,6 +95,7 @@ const PainelQuestionarioPais = () => {
   const [lente, setLente] = useState<Lente>('todas');
   const [serie, setSerie] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
+  const [ordem, setOrdem] = useState<Ordem>('turma');
   const [aberta, setAberta] = useState<Linha | null>(null);
   const [respostas, setRespostas] = useState<Resposta[] | null>(null);
 
@@ -117,13 +138,29 @@ const PainelQuestionarioPais = () => {
     if (lente === 'faltam') ls = ls.filter((l) => l.vozes === 0);
     const b = semAcento(busca.trim());
     if (b) ls = ls.filter((l) => semAcento(l.nome_completo).includes(b));
-    // Quem tem mais para ler primeiro. Quem nao respondeu vai para o fim: o
-    // painel serve para LER o que chegou, e so depois para cobrar o que falta.
+    if (ordem === 'recentes') {
+      // Quem mexeu por ultimo em cima. Quem nunca abriu nao tem data e vai para
+      // o fim inteiro, em ordem de turma, para a lista nao terminar num monte
+      // aleatorio.
+      return [...ls].sort((a, b2) => {
+        const ta = a.ultima ? Date.parse(a.ultima) : -1;
+        const tb = b2.ultima ? Date.parse(b2.ultima) : -1;
+        if (ta !== tb) return tb - ta;
+        return posSerie(a.serie) - posSerie(b2.serie)
+          || a.turma.localeCompare(b2.turma, 'pt-BR')
+          || a.nome_completo.localeCompare(b2.nome_completo, 'pt-BR');
+      });
+    }
+
+    // Serie, turma, e dentro da turma os que AINDA NAO responderam primeiro.
+    // Assim o que falta fica no alto de cada turma, que e' o que se cobra, e o
+    // que ja veio fica logo abaixo, na mesma vizinhanca.
     return [...ls].sort((a, b2) =>
-      b2.vozes_concluidas - a.vozes_concluidas
-      || b2.letras - a.letras
+      posSerie(a.serie) - posSerie(b2.serie)
+      || a.turma.localeCompare(b2.turma, 'pt-BR')
+      || (a.vozes_concluidas > 0 ? 1 : 0) - (b2.vozes_concluidas > 0 ? 1 : 0)
       || a.nome_completo.localeCompare(b2.nome_completo, 'pt-BR'));
-  }, [linhas, lente, serie, busca]);
+  }, [linhas, lente, serie, busca, ordem]);
 
   if (!linhas) {
     return (
@@ -280,6 +317,24 @@ const PainelQuestionarioPais = () => {
         })}
       </div>
 
+      <div className="flex gap-2 flex-wrap mb-3">
+        {ORDENS.map((x) => {
+          const on = ordem === x.id;
+          return (
+            <button
+              key={x.id}
+              onClick={() => setOrdem(x.id)}
+              className="text-[12.5px] font-semibold px-3.5 py-1.5 rounded-full transition-colors inline-flex items-center gap-1.5"
+              style={on
+                ? { backgroundColor: t.accentSoft, color: t.accentText, border: `1px solid ${t.accentBorder}` }
+                : { backgroundColor: t.surface, color: t.textMuted, border: `1px solid ${t.border}` }}
+            >
+              <ArrowUpDown size={13} /> {x.label}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="flex gap-2 flex-wrap items-center mb-4">
         <button
           onClick={() => setSerie(null)}
@@ -350,8 +405,19 @@ const PainelQuestionarioPais = () => {
                 <span className="text-[11.5px]" style={{ color: t.textFaint }}>
                   {l.turma}
                   {(l.respondentes ?? []).length > 0 && ' · ' + (l.respondentes ?? []).join(', ')}
+                  {l.ultima && <span className="sm:hidden"> · {quando(l.ultima)}</span>}
                 </span>
               </span>
+
+              {/* A hora de quando aquela familia mexeu pela ultima vez. Sem ela
+                  nao da para saber se o painel esta parado ou se acabou de
+                  entrar gente, que e' a pergunta do dia do envio. */}
+              {l.ultima && (
+                <span className="text-[11px] tabular-nums whitespace-nowrap hidden sm:inline"
+                  style={{ color: t.textFaint }}>
+                  {quando(l.ultima)}
+                </span>
+              )}
 
               {l.acrescimos > 0 && (
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
