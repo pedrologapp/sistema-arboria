@@ -19,12 +19,6 @@ import type React from 'react';
 import { ChevronLeft, ChevronDown, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-// As tabelas do questionario dos pais nasceram em 20/08 e os tipos gerados do
-// Supabase ainda nao as conhecem, entao supabase.from('questionario_pais_envio')
-// nao casa com nenhuma sobrecarga. Mesmo atalho ja usado em RelatarProblema.
-// Sai sozinho quando os tipos forem regerados.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const tabela = (nome: string): any => (supabase as any).from(nome);
 
 const CEU = '/arboria/ceu.png';
 
@@ -1732,17 +1726,17 @@ const QuestionarioPaisPreview = () => {
     // Concluido fecha o envio: as politicas do banco so' aceitam escrita
     // enquanto ele esta aberto, entao carimbar aqui e' o que impede alguem de
     // reescrever a resposta depois pelo mesmo link.
+    // Concluir passa por FUNCAO, e nao por update direto. Para executar um
+    // "update ... where" o Postgres precisa localizar a linha, e para isso
+    // aplica tambem as politicas de LEITURA. O pai nao tem nenhuma nesta tabela,
+    // de proposito, e por isso todo update dele afetava zero linhas em silencio.
     if (MODO_REAL && CTX) {
-      void tabela('questionario_pais_envio')
-        .update({
-          concluido_em: new Date().toISOString(),
-          // 'convive' nunca existiu: a unica chave de respondente e 'responde'.
-          // E quem fica mais tempo e escolhido na tela do FIM, depois desta
-          // linha rodar, entao ele tem funcao propria (registrar_quem_fica).
-          respondente: escolhas['responde'] ?? null,
-        } as never)
-        .eq('id', CTX.envio)
-        .then(({ error }) => { if (error) console.error('[questionario pais] nao fechou o envio', error); });
+      void supabase.rpc('concluir_envio_pais' as never, {
+        p_envio_id: CTX.envio,
+        p_respondente: escolhas['responde'] ?? null,
+      } as never).then(({ error }) => {
+        if (error) console.error('[questionario pais] nao fechou o envio', error);
+      });
     }
     avanca();
   };
@@ -2010,18 +2004,18 @@ const QuestionarioPaisPreview = () => {
             {/* As duas saidas ficam na ultima tela, e nao no comeco: e' aqui
                 que o pai ja sabe o que sao as perguntas e consegue pensar em
                 quem mais teria o que contar, ou lembrar do outro filho. */}
-            <p className="fim-5 text-[13px] mt-8" style={{ color: 'rgba(255,255,255,.74)', lineHeight: 1.55 }}>
+            {/* SEM a revelacao em cascata. A cascata tem 6s de atraso, e ao
+                escolher quem fica mais tempo estes nos sao recriados e a
+                animacao recomeca: as saidas sumiam e voltavam sozinhas. Aqui
+                embaixo elas nao precisam de entrada dramatica, precisam estar. */}
+            <p className="text-[13px] mt-8" style={{ color: 'rgba(255,255,255,.74)', lineHeight: 1.55 }}>
               Se outra pessoa da casa quiser responder sobre {NOME}, ou se você
               tiver outra criança aqui na escola, dá pra começar de novo por aqui.
               Nada do que você já mandou se perde.
             </p>
             <Rodape>
-              <span className="fim-5">
-                <Cta texto="Responder sobre outra criança" suave onClick={() => recomecar(false)} />
-              </span>
-              <span className="fim-5">
-                <Cta texto="Passar para outra pessoa" suave onClick={() => recomecar(true)} />
-              </span>
+              <Cta texto="Responder sobre outra criança" suave onClick={() => recomecar(false)} />
+              <Cta texto="Passar para outra pessoa" suave onClick={() => recomecar(true)} />
             </Rodape>
           </>
         )}
