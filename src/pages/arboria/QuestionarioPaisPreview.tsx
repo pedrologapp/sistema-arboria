@@ -16,7 +16,7 @@
 // ============================================================
 import { useState, useEffect, useRef } from 'react';
 import type React from 'react';
-import { ChevronLeft, Check } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Check } from 'lucide-react';
 
 const CEU = '/arboria/ceu.png';
 
@@ -50,6 +50,19 @@ const ATRASO_OPCOES = 0;
 // Onde o rascunho mora. No produto a chave leva o id da crianca, senao dois
 // filhos na mesma casa dividiriam o mesmo rascunho.
 const CHAVE_RASCUNHO = 'arboria:questionario-pais:' + FAIXA;
+// Marca que este questionario ja foi finalizado neste aparelho. Fica separado
+// do rascunho de proposito: o rascunho se apaga quando alguem passa o celular
+// para outra pessoa, e o "ja finalizei" precisa sobreviver a uma recarga.
+const CHAVE_FIM = CHAVE_RASCUNHO + ':finalizado';
+
+// A TRAVA DO 4o ANO.
+//
+// Os tres consertos de uso (rolagem, atalho de quem escreveu, e o fecho depois
+// de finalizar) NAO sao conteudo do 4o ano: sao do esqueleto que as nove faixas
+// dividem. Estao presos aqui nesta rodada para o Fundador abrir o 4o e o 5o
+// lado a lado e sentir a diferenca antes de a mudanca valer para todo mundo.
+// Para soltar: trocar por "true" e apagar os "TRAVA &&" que sobrarem.
+const TRAVA: boolean = FAIXA === 'a4';
 const OUTRO_CUIDADOR = 'Outra pessoa que cuida dele(a)';
 // ------------------------------------------------------------------ FLEXAO
 // O app sabe de quem se trata, entao o texto inteiro fala no genero da crianca
@@ -1393,6 +1406,26 @@ const QuestionarioPaisPreview = () => {
   const [textos, setTextos] = useState<Record<number, string>>({});
   const [verMais, setVerMais] = useState(false);
 
+  // DEPOIS DE FINALIZAR NAO SE VOLTA PARA AS PERGUNTAS.
+  //
+  // Ate' agora o "voltar" da tela final devolvia o pai para a ultima pergunta, e
+  // ele podia mexer e finalizar de novo. Sao dois estragos de uma vez: a escola
+  // fica sem saber qual versao vale, e o pai perde a sensacao de que aquilo foi
+  // entregue. Agora finalizar FECHA, e quem volta cai numa tela que diz isso e
+  // abre espaco para o que ficou faltando, que costuma ser o melhor pedaco.
+  const [depois, setDepois] = useState(false);
+  const [acrescimo, setAcrescimo] = useState('');
+  const [acrescimoGuardado, setAcrescimoGuardado] = useState(false);
+
+  useEffect(() => {
+    if (!TRAVA) return;
+    try {
+      if (localStorage.getItem(CHAVE_FIM)) setDepois(true);
+    } catch {
+      // Aba anonima ou memoria cheia: sem a marca, o pai reentra pelo comeco.
+    }
+  }, []);
+
   // ------------------------------------------------------------- RASCUNHO
   // O pai escreve no celular, e no celular ele e' interrompido: chega ligacao,
   // a crianca chama, ele troca de aplicativo. Sem rascunho, voltar significa
@@ -1426,8 +1459,12 @@ const QuestionarioPaisPreview = () => {
     }
   }, [i, textos, marcadas, escolhas, escolhaTexto]);
 
-  const noFim = i >= FLUXO.length;
-  const item = noFim ? null : FLUXO[i];
+  // Com o fecho na tela, nenhum outro bloco pode aparecer: nem pergunta, nem
+  // transicao, nem a celebracao do fim. Zerar os dois aqui e' o que garante
+  // isso num lugar so', em vez de pendurar "&& !depois" em cada bloco e
+  // esquecer de um.
+  const noFim = i >= FLUXO.length && !depois;
+  const item = depois || i >= FLUXO.length ? null : FLUXO[i];
   const ehPergunta = item?.tipo === 'pergunta';
   const num = ehPergunta ? numeroDaPergunta(i) : 0;
   const marcadasAqui = marcadas[i] ?? [];
@@ -1439,6 +1476,15 @@ const QuestionarioPaisPreview = () => {
     });
 
   const avanca = () => { setRestaurado(false); setI((v) => v + 1); };
+
+  // Finalizar deixa a marca no aparelho. E' o que faz o pai que reabre o link
+  // amanha cair no fecho, e nao numa tela de perguntas que ele ja respondeu.
+  const finaliza = () => {
+    if (TRAVA) {
+      try { localStorage.setItem(CHAVE_FIM, new Date().toISOString()); } catch { /* sem memoria, segue */ }
+    }
+    avanca();
+  };
   // O questionario so' e' gravado quando o pai aperta "Finalizar" na ultima
   // pergunta. Ate' la' ele pode voltar e trocar o que quiser sem virar bagunca,
   // porque nada foi para o banco ainda: o que grava e' um envio so', no fim.
@@ -1489,7 +1535,22 @@ const QuestionarioPaisPreview = () => {
   );
 
   return (
-    <div ref={palco} className="min-h-screen flex flex-col relative overflow-x-hidden" style={{
+    <div ref={palco}
+      className={`flex flex-col relative ${TRAVA ? '' : 'min-h-screen overflow-x-hidden'}`}
+      style={{
+      // DOIS ROLADORES BRIGANDO PELO MESMO DEDO.
+      //
+      // "overflow-x: hidden" faz o navegador tratar o eixo vertical como "auto",
+      // entao esta div virava um rolador por conta propria DENTRO da pagina que
+      // ja rolava. No celular o toque cai ora num ora noutro: as vezes nao
+      // desce, as vezes nao sobe. "clip" corta o horizontal sem criar rolador
+      // nenhum, e ai sobra um so'.
+      //
+      // E "100vh" no celular mede a tela contando a faixa da barra do navegador
+      // que se recolhe, entao a pagina fica sempre uns dedos mais alta do que o
+      // que se ve e treme a cada rolagem. "100dvh" mede a altura que existe de
+      // verdade naquele instante.
+      ...(TRAVA ? { minHeight: '100dvh', overflowX: 'clip' as const } : null),
       backgroundColor: T.fundo,
       backgroundImage: `linear-gradient(180deg, rgba(6,38,66,.22) 0%, rgba(6,38,66,0) 34%), url("${CEU}")`,
       backgroundSize: 'cover, cover', backgroundPosition: 'center top, center', color: '#fff',
@@ -1531,14 +1592,67 @@ const QuestionarioPaisPreview = () => {
       <div className="relative flex-1 flex flex-col w-full max-w-lg mx-auto px-6 pt-8 pb-7" style={{ zIndex: 2 }}>
 
         <div className="flex items-center justify-between mb-5" style={{ minHeight: 28 }}>
-          {i > 0 ? (
-            <button onClick={() => setI((v) => v - 1)} className="p-1 -ml-1" style={{ color: 'rgba(255,255,255,.88)' }} aria-label="Voltar"><ChevronLeft size={19} /></button>
+          {i > 0 && !depois ? (
+            <button
+              onClick={() => {
+                // Na tela final o voltar nao desfaz o envio: leva ao fecho.
+                if (TRAVA && noFim) setDepois(true); else setI((v) => v - 1);
+              }}
+              className="p-1 -ml-1" style={{ color: 'rgba(255,255,255,.88)' }} aria-label="Voltar"><ChevronLeft size={19} /></button>
           ) : <span />}
           {/* Sem contador e sem barra: o pai nao deve medir quanto falta.
               Quem marca o caminho sao as pausas do Arboria, que dizem onde
               estamos com afeto em vez de com numero. */}
           <span />
         </div>
+
+        {/* ---------- JA RESPONDEU ---------- */}
+        {depois && (
+          <>
+            <p style={{ fontFamily: T.serif, fontSize: 38, lineHeight: 1.1, letterSpacing: '-.024em', margin: '0 0 22px' }}>
+              Você já respondeu.
+            </p>
+            <p style={{ ...FALA, marginBottom: 6 }}>
+              O que você escreveu já chegou aqui, e não muda mais.
+            </p>
+            <p style={{ ...FALA, marginBottom: 24 }}>
+              Ficou faltando alguma coisa que você lembrou depois? Pode contar aqui.
+            </p>
+
+            <textarea
+              value={acrescimo}
+              onChange={(e) => { setAcrescimo(e.target.value); setAcrescimoGuardado(false); }}
+              rows={5}
+              placeholder="escreva aqui"
+              className="campo-relato w-full outline-none resize-y"
+              style={{
+                padding: '15px 17px', borderRadius: 16,
+                background: 'rgba(255,255,255,.13)',
+                border: '2px solid rgba(255,255,255,.5)',
+                fontFamily: T.serif, fontSize: 23, lineHeight: 1.38, color: '#fff',
+              }}
+            />
+
+            <Rodape>
+              <Cta
+                texto={acrescimoGuardado ? 'Recebido' : 'Mandar isso também'}
+                forte
+                onClick={() => {
+                  // FIO PENDURADO: por enquanto isto so' confirma na tela. O
+                  // acrescimo vira uma resposta a mais do envio quando o
+                  // salvamento inteiro entrar (salvar_resposta_pais).
+                  if (acrescimo.trim()) setAcrescimoGuardado(true);
+                }}
+              />
+            </Rodape>
+
+            {acrescimoGuardado && (
+              <p className="text-[13px] mt-6" style={{ color: 'rgba(255,255,255,.74)' }}>
+                Obrigado por voltar pra contar.
+              </p>
+            )}
+          </>
+        )}
 
         {/* ---------- FIM ---------- */}
         {noFim && (
@@ -1596,7 +1710,12 @@ const QuestionarioPaisPreview = () => {
               )}
             </div>
 
-            <p className="fim-5 text-[13px] mt-7" style={{ color: 'rgba(255,255,255,.74)' }}>Se quiser mudar alguma resposta, é só entrar de novo pelo mesmo link.</p>
+            {/* A promessa antiga era "entre de novo e mude o que quiser". Ela
+                cai junto com o fecho: agora entrar de novo leva ao acrescimo, e
+                prometer edicao seria mentir na ultima tela. */}
+            {!TRAVA && (
+              <p className="fim-5 text-[13px] mt-7" style={{ color: 'rgba(255,255,255,.74)' }}>Se quiser mudar alguma resposta, é só entrar de novo pelo mesmo link.</p>
+            )}
             <Rodape>
               {/* Limpa tudo: quem comeca agora e' outra pessoa, e ver as
                   respostas de quem respondeu antes contaminaria as dela. */}
@@ -1604,7 +1723,19 @@ const QuestionarioPaisPreview = () => {
                 <Cta
                   texto="Passar para outra pessoa"
                   suave
-                  onClick={() => { try { localStorage.removeItem(CHAVE_RASCUNHO); } catch { /* sem rascunho, nada a limpar */ } setI(0); setMarcadas({}); setTextos({}); setAbertos({}); setEscolhas({}); setEscolhaTexto({}); setLinkCopiado(false); setRestaurado(false); }}
+                  onClick={() => {
+                    // Quem comeca agora e' outra pessoa: sai o rascunho E sai a
+                    // marca de finalizado, senao a avo abriria direto no fecho da
+                    // mae e nunca veria uma pergunta.
+                    try {
+                      localStorage.removeItem(CHAVE_RASCUNHO);
+                      localStorage.removeItem(CHAVE_FIM);
+                    } catch { /* sem rascunho, nada a limpar */ }
+                    setI(0); setMarcadas({}); setTextos({}); setAbertos({});
+                    setEscolhas({}); setEscolhaTexto({}); setLinkCopiado(false);
+                    setRestaurado(false); setDepois(false);
+                    setAcrescimo(''); setAcrescimoGuardado(false);
+                  }}
                 />
               </span>
             </Rodape>
@@ -1852,6 +1983,36 @@ const QuestionarioPaisPreview = () => {
               />
             </div>
 
+            {/* O ATALHO DE QUEM JA RESPONDEU.
+                O campo vem antes da lista, entao quem escreve termina a resposta
+                no meio da tela, com o botao la' embaixo depois de seis opcoes que
+                ele nem queria ver. No celular aquilo parece fim de tela, e o pai
+                sai achando que acabou. Havendo texto, o proximo passo aparece
+                ali mesmo, e a linha de baixo avisa que a lista continua existindo
+                para quem quiser. */}
+            {TRAVA && escreveu && (
+              <div className="revela" style={{ margin: '-10px 0 26px' }}>
+                <button
+                  onClick={() => { if (i === ultimaPergunta) finaliza(); else avanca(); }}
+                  className="inline-flex items-center gap-2.5 font-bold uppercase"
+                  style={{
+                    fontSize: 15, letterSpacing: '.14em', padding: '13px 24px', borderRadius: 999,
+                    border: '2px solid #fff',
+                    background: i === ultimaPergunta ? '#fff' : 'transparent',
+                    color: i === ultimaPergunta ? '#0E3F66' : '#fff',
+                  }}
+                >
+                  {i === ultimaPergunta ? 'Finalizar' : 'Próxima'}
+                  {i === ultimaPergunta
+                    ? <Check size={16} strokeWidth={3} />
+                    : <span aria-hidden style={{ fontSize: 17, lineHeight: 1 }}>→</span>}
+                </button>
+                <p className="flex items-center gap-1.5 text-[13px]" style={{ color: 'rgba(255,255,255,.74)', margin: '13px 0 0' }}>
+                  <ChevronDown size={15} /> ou desça e marque o que mais parece
+                </p>
+              </div>
+            )}
+
             {/* A lista agora e' SAIDA RAPIDA, nao a resposta principal: quem
                 escreveu ja' respondeu. Por isso "se preferir", e por isso ela
                 some inteira quando a isca nao tem lista (a abertura). */}
@@ -1906,7 +2067,7 @@ const QuestionarioPaisPreview = () => {
                   Não sei dizer
                 </button>
                 <button
-                  onClick={() => { if (podeAvancar) avanca(); }}
+                  onClick={() => { if (!podeAvancar) return; if (i === ultimaPergunta) finaliza(); else avanca(); }}
                   disabled={!podeAvancar}
                   className="inline-flex items-center gap-2.5 font-bold uppercase"
                   style={{
