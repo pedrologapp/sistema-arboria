@@ -1547,6 +1547,10 @@ const QuestionarioPaisPreview = () => {
     } catch { /* sem retomada, comeca do inicio */ }
   }, []);
 
+  // Quando o pai tenta avancar sem ter escrito nem marcado nada. Nao e' erro:
+  // e' um lembrete de que existe uma saida ali do lado.
+  const [avisoVazio, setAvisoVazio] = useState(false);
+
   const [depois, setDepois] = useState(false);
   const [acrescimo, setAcrescimo] = useState('');
 
@@ -1601,11 +1605,13 @@ const QuestionarioPaisPreview = () => {
   const num = ehPergunta ? numeroDaPergunta(i) : 0;
   const marcadasAqui = marcadas[i] ?? [];
 
-  const alterna = (op: string) =>
+  const alterna = (op: string) => {
+    setAvisoVazio(false);
     setMarcadas((m) => {
       const atual = m[i] ?? [];
       return { ...m, [i]: atual.includes(op) ? atual.filter((x) => x !== op) : [...atual, op] };
     });
+  };
 
   // ---------------------------------------------------------------- GRAVAR
   // Uma chamada por pergunta respondida, no momento em que o pai avanca, e nao
@@ -1729,7 +1735,7 @@ const QuestionarioPaisPreview = () => {
     setRestaurado(false); setDepois(false); setAcrescimo('');
   };
 
-  const avanca = () => { gravaResposta(i); setRestaurado(false); setI((v) => v + 1); };
+  const avanca = () => { gravaResposta(i); setAvisoVazio(false); setRestaurado(false); setI((v) => v + 1); };
 
   // Finalizar deixa a marca no aparelho. E' o que faz o pai que reabre o link
   // amanha cair no fecho, e nao numa tela de perguntas que ele ja respondeu.
@@ -2181,7 +2187,9 @@ const QuestionarioPaisPreview = () => {
           );
         })()}
 
-        {/* No prototipo a crianca e' inventada, entao a tela e' so' confirmacao. */}
+        {/* Ja identificada: a tela vira confirmacao. No prototipo porque a
+            crianca e' inventada; de verdade porque a porta ja perguntou nome e
+            data, e quem volta aqui esta so' conferindo. */}
         {item?.tipo === 'crianca' && !NA_PORTA && (
           <>
             <p style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Só para eu ter certeza de quem a gente está falando.</p>
@@ -2198,6 +2206,18 @@ const QuestionarioPaisPreview = () => {
                 <input inputMode="numeric" placeholder="__ / __ / ____" className="w-full bg-transparent outline-none"
                   style={{ borderBottom: '1px solid rgba(255,255,255,.5)', padding: '12px 0', fontFamily: T.serif, fontSize: 22, color: '#fff', letterSpacing: '.1em', marginTop: 4 }} />
               </>
+            )}
+            {/* Quem volta a esta tela as vezes voltou porque errou a crianca, ou
+                porque quer responder pelo outro filho. Sem esta saida ele teria
+                que fechar o navegador e limpar a memoria para trocar. */}
+            {MODO_REAL && (
+              <button
+                onClick={() => recomecar(false)}
+                className="text-[13px] block"
+                style={{ color: 'rgba(255,255,255,.8)', textDecoration: 'underline', textUnderlineOffset: 4, marginTop: 18 }}
+              >
+                Mudar o nome
+              </button>
             )}
             <Rodape><Cta texto={item.cta} onClick={avanca} /></Rodape>
           </>
@@ -2322,7 +2342,16 @@ const QuestionarioPaisPreview = () => {
           // e obrigar a marcar depois de escrever seria cobrar duas vezes pela
           // mesma coisa. A abertura, que nao tem lista, avanca sozinha.
           const escreveu = (textos[i] ?? '').trim() !== '';
-          const podeAvancar = opcoes.length === 0 || escreveu || marcadasAqui.length > 0;
+          // Escrever OU marcar. Nao existe terceira via, nem para a pergunta de
+          // abertura, que nao tem lista: ela tambem so' passa com texto ou com o
+          // "Nao sei dizer". Antes, "opcoes.length === 0" abria uma porta que
+          // deixava atravessar a primeira pergunta em branco.
+          //
+          // Quem nao quer responder tem saida, e ela e' explicita: "Nao sei
+          // dizer" ao lado. E' diferente de passar batido, e a diferenca importa
+          // na leitura: o pai que diz que nao sabe esta contando uma coisa; o
+          // que aperta sem ver nao esta contando nada.
+          const podeAvancar = escreveu || marcadasAqui.length > 0;
           return (
           <>
             {/* Sem rotulo de bloco no topo: a pergunta ja e' uma cena e se explica
@@ -2368,7 +2397,7 @@ const QuestionarioPaisPreview = () => {
                   e na mesma letra do resto para nao virar letra miuda de novo. */}
               <textarea
                 value={textos[i] ?? ''}
-                onChange={(e) => setTextos((t) => ({ ...t, [i]: e.target.value }))}
+                onChange={(e) => { setAvisoVazio(false); setTextos((t) => ({ ...t, [i]: e.target.value })); }}
                 rows={4}
                 placeholder="escreva aqui"
                 className="campo-relato w-full outline-none resize-y"
@@ -2465,22 +2494,33 @@ const QuestionarioPaisPreview = () => {
                   Não sei dizer
                 </button>
                 <button
-                  onClick={() => { if (!podeAvancar) return; if (i === ultimaPergunta) finaliza(); else avanca(); }}
-                  disabled={!podeAvancar}
+                  onClick={() => {
+                    if (!podeAvancar) { setAvisoVazio(true); return; }
+                    if (i === ultimaPergunta) finaliza(); else avanca();
+                  }}
                   className="inline-flex items-center gap-2.5 font-bold uppercase"
                   style={{
                     fontSize: 15, letterSpacing: '.14em', padding: '13px 24px', borderRadius: 999,
                     border: '2px solid #fff',
                     background: i === ultimaPergunta ? '#fff' : 'transparent',
                     color: i === ultimaPergunta ? '#0E3F66' : '#fff',
-                    opacity: podeAvancar ? 1 : 0.35,
-                    cursor: podeAvancar ? 'pointer' : 'default',
+                    opacity: podeAvancar ? 1 : 0.5,
                   }}
                 >
                   {i === ultimaPergunta ? 'Finalizar' : 'Próxima'}
                   {i === ultimaPergunta ? <Check size={16} strokeWidth={3} /> : <span aria-hidden style={{ fontSize: 17, lineHeight: 1 }}>→</span>}
                 </button>
               </div>
+
+              {avisoVazio && (
+                <p className="mx-auto" style={{
+                  maxWidth: 560, marginTop: 16, padding: '13px 16px', borderRadius: 14,
+                  background: 'rgba(255,255,255,.14)', border: '1px solid rgba(255,255,255,.42)',
+                  fontFamily: T.serif, fontSize: 18, lineHeight: 1.4, color: '#fff',
+                }}>
+                  Escreva alguma coisa, ou toque em <b>Não sei dizer</b> para continuar.
+                </p>
+              )}
             </div>
           </>
           );
