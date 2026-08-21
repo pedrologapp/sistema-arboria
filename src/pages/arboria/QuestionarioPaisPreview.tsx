@@ -17,6 +17,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type React from 'react';
 import { ChevronLeft, ChevronDown, Check } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const CEU = '/arboria/ceu.png';
 
@@ -30,7 +31,36 @@ const PARAMS = new URLSearchParams(window.location.search);
 type Faixa = 'm2' | 'm3' | 'g4' | 'gv' | 'a1' | 'a2' | 'a3' | 'a4' | 'a5';
 const FAIXAS: Faixa[] = ['m2', 'm3', 'g4', 'gv', 'a1', 'a2', 'a3', 'a4', 'a5'];
 const PEDIDA = PARAMS.get('faixa') as Faixa | null;
-const FAIXA: Faixa = PEDIDA && FAIXAS.includes(PEDIDA) ? PEDIDA : 'm2';
+
+// ===========================================================================
+// DUAS VIDAS DESTA MESMA TELA
+//
+// 1. PROTOTIPO, em /arboria/coleta/pais/preview?faixa=a4. Crianca inventada,
+//    nada e' gravado. E' onde o Fundador valida pergunta antes de pai nenhum
+//    ver, e por isso ele nao pode morrer quando o de verdade nascer.
+//
+// 2. DE VERDADE, em /familia/perguntas. A crianca chega da porta pela memoria
+//    da aba, e cada resposta vai para o banco.
+//
+// O contexto e' lido AQUI, no carregamento do modulo, e nao dentro do
+// componente. E' o que faz as 114 perguntas nascerem ja com o nome certo sem
+// reescrever o arquivo: elas sao montadas uma vez, na hora em que o arquivo
+// carrega. Por isso a porta entra com recarga de verdade em vez de navegar.
+// ===========================================================================
+interface Contexto {
+  envio: string; aluno: string; faixa: Faixa | null;
+  nome: string; nomeCompleto: string; turma: string; serie: string; sexo: string | null;
+}
+const CTX: Contexto | null = (() => {
+  try { return JSON.parse(sessionStorage.getItem('arboria:familia') || 'null'); }
+  catch { return null; }
+})();
+const MODO_REAL = !!CTX?.envio;
+
+const FAIXA: Faixa =
+  CTX?.faixa && FAIXAS.includes(CTX.faixa) ? CTX.faixa
+  : PEDIDA && FAIXAS.includes(PEDIDA) ? PEDIDA
+  : 'm2';
 
 const NOME_POR_FAIXA: Record<Faixa, string> = {
   m2: 'Arthur', m3: 'Bento', g4: 'Helena', gv: 'Cecília',
@@ -40,8 +70,8 @@ const TURMA_POR_FAIXA: Record<Faixa, string> = {
   m2: 'Maternal 2 B', m3: 'Maternal 3 A', g4: 'Grupo IV A', gv: 'Grupo V A',
   a1: '1º Ano A', a2: '2º Ano A', a3: '3º Ano A', a4: '4º Ano A', a5: '5º Ano A',
 };
-const NOME = NOME_POR_FAIXA[FAIXA];
-const TURMA = TURMA_POR_FAIXA[FAIXA];
+const NOME = CTX?.nome || NOME_POR_FAIXA[FAIXA];
+const TURMA = CTX?.turma || TURMA_POR_FAIXA[FAIXA];
 const NAO_SEI = '__nao_sei__';
 // Segundos entre a pergunta aparecer e as opcoes aparecerem. Ficou em zero:
 // a pausa era boa uma vez e virava espera repetida a partir da terceira tela.
@@ -49,13 +79,20 @@ const NAO_SEI = '__nao_sei__';
 const ATRASO_OPCOES = 0;
 // Onde o rascunho mora. No produto a chave leva o id da crianca, senao dois
 // filhos na mesma casa dividiriam o mesmo rascunho.
-const CHAVE_RASCUNHO = 'arboria:questionario-pais:' + FAIXA;
+// A chave leva o id da crianca quando ele existe: dois filhos na mesma casa,
+// respondidos do mesmo celular, dividiriam o mesmo rascunho e um apagaria o
+// outro. No prototipo, onde nao ha crianca, a faixa faz esse papel.
+const CHAVE_RASCUNHO = 'arboria:questionario-pais:' + (CTX?.aluno || FAIXA);
 // Marca que este questionario ja foi finalizado neste aparelho. Fica separado
 // do rascunho de proposito: o rascunho se apaga quando alguem passa o celular
 // para outra pessoa, e o "ja finalizei" precisa sobreviver a uma recarga.
 const CHAVE_FIM = CHAVE_RASCUNHO + ':finalizado';
 
 const OUTRO_CUIDADOR = 'Outra pessoa que cuida dele(a)';
+// A versao do que o pai aceitou. MUDA SEMPRE que o texto da tela "Uma coisa
+// rapida" ou o do "Saber mais" mudar: sem isso, daqui a um ano ninguem sabe
+// qual texto aquele pai leu, e o aceite guardado nao prova nada.
+const VERSAO_TERMO = '2026-08-21';
 // ------------------------------------------------------------------ FLEXAO
 // O app sabe de quem se trata, entao o texto inteiro fala no genero da crianca
 // em vez de empurrar "(a)" para o pai ler. As frases sao escritas com a marca
@@ -66,9 +103,15 @@ const OUTRO_CUIDADOR = 'Outra pessoa que cuida dele(a)';
 // omissao, e o pai de uma menina lia o questionario inteiro no genero errado.
 // Quando o sexo nao e' conhecido, as marcas ficam como estao e o pai le'
 // "seu filho(a)", que e' feio mas e' honesto. ?sexo=ND testa esse caso.
-const SEM_SEXO = PARAMS.get('sexo')?.toUpperCase() === 'ND';
+// De verdade o sexo vem do cadastro. Crianca sem sexo cadastrado cai no
+// terceiro estado, e o pai le' "seu filho(a)": feio, e honesto.
+const SEXO_CTX = CTX?.sexo?.toUpperCase();
+const SEM_SEXO = MODO_REAL
+  ? (SEXO_CTX !== 'M' && SEXO_CTX !== 'F')
+  : PARAMS.get('sexo')?.toUpperCase() === 'ND';
 const SEXO: 'M' | 'F' =
-  PARAMS.get('sexo')?.toUpperCase() === 'F' ? 'F'
+  SEXO_CTX === 'F' ? 'F' : SEXO_CTX === 'M' ? 'M'
+  : PARAMS.get('sexo')?.toUpperCase() === 'F' ? 'F'
   : PARAMS.get('sexo')?.toUpperCase() === 'M' ? 'M'
   : FAIXA === 'g4' || FAIXA === 'gv' || FAIXA === 'a2' || FAIXA === 'a3' ? 'F' : 'M';
 const FEM = SEXO === 'F';
@@ -1465,12 +1508,82 @@ const QuestionarioPaisPreview = () => {
       return { ...m, [i]: atual.includes(op) ? atual.filter((x) => x !== op) : [...atual, op] };
     });
 
-  const avanca = () => { setRestaurado(false); setI((v) => v + 1); };
+  // ---------------------------------------------------------------- GRAVAR
+  // Uma chamada por pergunta respondida, no momento em que o pai avanca, e nao
+  // um envio unico no fim. E' a mesma licao que a Arena cobrou caro em 20/08:
+  // no celular o pai e' interrompido, e o que so grava no fim nao grava nunca.
+  //
+  // Falha de rede aqui nao interrompe nada e nao avisa. O rascunho local ja
+  // guardou o texto, o pai segue respondendo, e perder uma resposta e' menos
+  // grave do que parar o questionario inteiro numa tela de erro que ele nao
+  // sabe resolver.
+  const gravaResposta = (indice: number) => {
+    if (!MODO_REAL || !CTX) return;
+    const it = FLUXO[indice];
+    if (!it || it.tipo !== 'pergunta') return;
+
+    const marcadasAli = (marcadas[indice] ?? []).filter((m) => m !== NAO_SEI);
+    const texto = (textos[indice] ?? '').trim();
+    if (!texto && marcadasAli.length === 0) return;
+
+    void supabase.rpc('salvar_resposta_pais' as never, {
+      p_envio_id: CTX.envio,
+      p_ordem: numeroDaPergunta(indice),
+      // O texto da pergunta vai junto com a resposta. As perguntas moram no
+      // codigo e mudam; sem guardar o que foi perguntado, a resposta de hoje
+      // fica pendurada numa pergunta que amanha nao existe mais.
+      p_pergunta: it.texto,
+      p_cena: it.cena ?? null,
+      p_texto: texto || null,
+      p_marcadas: marcadasAli,
+    } as never).then(({ error }) => {
+      if (error) console.error('[questionario pais] nao gravou a pergunta', indice, error);
+    });
+  };
+
+  // O ACEITE DO TERMO.
+  //
+  // A tela "Uma coisa rapida" ja explicava tudo, com o "Saber mais" ao lado, e
+  // nao registrava nada: ninguem aceitava coisa nenhuma, e nao havia versao nem
+  // data. Passar dali agora E' o aceite, e fica gravado com a versao do texto,
+  // porque o texto muda e a escola precisa saber qual deles o pai leu.
+  //
+  // Nao vira caixa de marcar de proposito: caixa de marcar em publico amplo e'
+  // clicada sem ler, e o que protege a crianca aqui e' o pai ter LIDO, nao ter
+  // clicado. O texto inteiro esta na tela, acima do botao.
+  const registraAceite = () => {
+    if (!MODO_REAL || !CTX) return;
+    void supabase.from('questionario_pais_envio')
+      .update({
+        aceite_termo: true,
+        aceite_em: new Date().toISOString(),
+        versao_termo: VERSAO_TERMO,
+      } as never)
+      .eq('id', CTX.envio)
+      .then(({ error }) => { if (error) console.error('[questionario pais] nao gravou o aceite', error); });
+  };
+
+  const avanca = () => { gravaResposta(i); setRestaurado(false); setI((v) => v + 1); };
 
   // Finalizar deixa a marca no aparelho. E' o que faz o pai que reabre o link
   // amanha cair no fecho, e nao numa tela de perguntas que ele ja respondeu.
   const finaliza = () => {
+    gravaResposta(i);
     try { localStorage.setItem(CHAVE_FIM, new Date().toISOString()); } catch { /* sem memoria, segue */ }
+
+    // Concluido fecha o envio: as politicas do banco so' aceitam escrita
+    // enquanto ele esta aberto, entao carimbar aqui e' o que impede alguem de
+    // reescrever a resposta depois pelo mesmo link.
+    if (MODO_REAL && CTX) {
+      void supabase.from('questionario_pais_envio')
+        .update({
+          concluido_em: new Date().toISOString(),
+          respondente: escolhas['responde'] ?? null,
+          quem_fica_mais_tempo: escolhas['convive'] ?? null,
+        } as never)
+        .eq('id', CTX.envio)
+        .then(({ error }) => { if (error) console.error('[questionario pais] nao fechou o envio', error); });
+    }
     avanca();
   };
   // O questionario so' e' gravado quando o pai aperta "Finalizar" na ultima
@@ -1631,11 +1744,15 @@ const QuestionarioPaisPreview = () => {
                 texto="Mandar isso também"
                 forte
                 onClick={() => {
-                  if (!acrescimo.trim()) return;
-                  // FIO PENDURADO: o acrescimo ainda nao vai para o banco. Ele
-                  // vira uma resposta a mais do envio quando o salvamento
-                  // inteiro entrar (salvar_resposta_pais).
-                  //
+                  const texto = acrescimo.trim();
+                  if (!texto) return;
+                  if (MODO_REAL && CTX) {
+                    void supabase.rpc('acrescentar_depois' as never, {
+                      p_envio_id: CTX.envio, p_texto: texto,
+                    } as never).then(({ error }) => {
+                      if (error) console.error('[questionario pais] nao gravou o acrescimo', error);
+                    });
+                  }
                   // Limpa o campo ao voltar: se o pai lembrar de outra coisa
                   // amanha, ele encontra a folha em branco e nao o texto que ja
                   // mandou, que faria parecer que nao foi.
@@ -1775,7 +1892,7 @@ const QuestionarioPaisPreview = () => {
                 {/* "Saber mais" abre o texto completo. Antes ele avancava igual ao outro
                     botao, o que fazia a saida de quem quer ler virar armadilha. */}
                 {item.ctaSuave && <Cta texto={item.ctaSuave} suave onClick={() => setVerMais(true)} />}
-                <Cta texto={item.cta} onClick={avanca} />
+                <Cta texto={item.cta} onClick={() => { registraAceite(); avanca(); }} />
               </Rodape>
             </div>
           </>
@@ -1787,12 +1904,19 @@ const QuestionarioPaisPreview = () => {
           <>
             <p style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Só para eu ter certeza de quem a gente está falando.</p>
             <div style={{ borderLeft: '2px solid rgba(255,255,255,.7)', padding: '4px 0 4px 16px', margin: '16px 0 4px' }}>
-              <p style={{ fontFamily: T.serif, fontSize: 29, fontWeight: 700, margin: '0 0 1px' }}>{NOME}</p>
+              <p style={{ fontFamily: T.serif, fontSize: 29, fontWeight: 700, margin: '0 0 1px' }}>{CTX?.nomeCompleto || NOME}</p>
               <p className="text-[14px] m-0" style={{ color: 'rgba(255,255,255,.78)' }}>{TURMA}</p>
             </div>
-            <p className="text-[13px] mt-6" style={{ color: 'rgba(255,255,255,.74)' }}>{flex('Data de nascimento dele(a)')}</p>
-            <input inputMode="numeric" placeholder="__ / __ / ____" className="w-full bg-transparent outline-none"
-              style={{ borderBottom: '1px solid rgba(255,255,255,.5)', padding: '12px 0', fontFamily: T.serif, fontSize: 22, color: '#fff', letterSpacing: '.1em', marginTop: 4 }} />
+            {/* A data so' aparece no prototipo, onde ela e' enfeite e nao confere
+                nada. De verdade ela ja foi dada na porta, e pedir de novo na
+                tela seguinte faria o pai achar que a primeira nao valeu. */}
+            {!MODO_REAL && (
+              <>
+                <p className="text-[13px] mt-6" style={{ color: 'rgba(255,255,255,.74)' }}>{flex('Data de nascimento dele(a)')}</p>
+                <input inputMode="numeric" placeholder="__ / __ / ____" className="w-full bg-transparent outline-none"
+                  style={{ borderBottom: '1px solid rgba(255,255,255,.5)', padding: '12px 0', fontFamily: T.serif, fontSize: 22, color: '#fff', letterSpacing: '.1em', marginTop: 4 }} />
+              </>
+            )}
             <Rodape><Cta texto={item.cta} onClick={avanca} /></Rodape>
           </>
         )}
