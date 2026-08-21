@@ -45,6 +45,20 @@ with candidatos as (
   where o.bucket_id = 'arena-2fase'
     and not exists (
       select 1 from public.entrega_arquivos ea where ea.nome_storage = o.name)
+    -- NAO E' SO' PULAR O ARQUIVO JA' AMARRADO, E' PULAR O ALUNO INTEIRO.
+    --
+    -- Rodei isto duas vezes em 20/08 e a segunda rodada DUPLICOU. O motivo: o
+    -- mesmo arquivo subiu varias vezes, a primeira rodada amarrou so' a copia
+    -- mais recente e DESCARTOU as outras, que continuaram orfas. Na segunda
+    -- rodada as sobras viraram "a mais recente" entre o que restou e entraram
+    -- tambem. A Ana Clara passou de 2 fotos para 4 sem ter mandado nada novo.
+    --
+    -- Quem ja' tem qualquer arquivo amarrado nesta missao ja' foi resgatado.
+    and not exists (
+      select 1 from public.entrega_arquivos ea
+        join public.entregas en on en.id = ea.entrega_id
+       where en.missao_id = 'ddaf54d2-7781-4ab6-b3e7-2a54749329a5'
+         and en.aluno_id::text = (storage.foldername(o.name))[1])
 ),
 unicos as (
   select * from candidatos where recencia = 1
