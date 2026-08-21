@@ -1415,7 +1415,6 @@ const QuestionarioPaisPreview = () => {
   // abre espaco para o que ficou faltando, que costuma ser o melhor pedaco.
   const [depois, setDepois] = useState(false);
   const [acrescimo, setAcrescimo] = useState('');
-  const [acrescimoGuardado, setAcrescimoGuardado] = useState(false);
 
   useEffect(() => {
     if (!TRAVA) return;
@@ -1621,7 +1620,7 @@ const QuestionarioPaisPreview = () => {
 
             <textarea
               value={acrescimo}
-              onChange={(e) => { setAcrescimo(e.target.value); setAcrescimoGuardado(false); }}
+              onChange={(e) => setAcrescimo(e.target.value)}
               rows={5}
               placeholder="escreva aqui"
               className="campo-relato w-full outline-none resize-y"
@@ -1633,24 +1632,31 @@ const QuestionarioPaisPreview = () => {
               }}
             />
 
-            <Rodape>
+            {/* O BOTAO GRUDA NO RODAPE.
+                No celular, escrever abre o teclado, o teclado come metade da
+                tela e o botao vai para fora dela. O pai digitava, nao via mais
+                para onde ir, e concluia que nao tinha como mandar. Grudado no
+                rodape ele fica a vista o tempo todo em que se escreve, que e'
+                exatamente quando ele precisa estar. */}
+            <div className="sticky flex justify-end" style={{ bottom: 0, paddingTop: 20, paddingBottom: 12 }}>
               <Cta
-                texto={acrescimoGuardado ? 'Recebido' : 'Mandar isso também'}
+                texto="Mandar isso também"
                 forte
                 onClick={() => {
-                  // FIO PENDURADO: por enquanto isto so' confirma na tela. O
-                  // acrescimo vira uma resposta a mais do envio quando o
-                  // salvamento inteiro entrar (salvar_resposta_pais).
-                  if (acrescimo.trim()) setAcrescimoGuardado(true);
+                  if (!acrescimo.trim()) return;
+                  // FIO PENDURADO: o acrescimo ainda nao vai para o banco. Ele
+                  // vira uma resposta a mais do envio quando o salvamento
+                  // inteiro entrar (salvar_resposta_pais).
+                  //
+                  // Limpa o campo ao voltar: se o pai lembrar de outra coisa
+                  // amanha, ele encontra a folha em branco e nao o texto que ja
+                  // mandou, que faria parecer que nao foi.
+                  setAcrescimo('');
+                  setDepois(false);
+                  setI(FLUXO.length);
                 }}
               />
-            </Rodape>
-
-            {acrescimoGuardado && (
-              <p className="text-[13px] mt-6" style={{ color: 'rgba(255,255,255,.74)' }}>
-                Obrigado por voltar pra contar.
-              </p>
-            )}
+            </div>
           </>
         )}
 
