@@ -57,6 +57,50 @@ const CTX: Contexto | null = (() => {
 })();
 const MODO_REAL = !!CTX?.envio;
 
+// A PORTA VIVE DENTRO DO FLUXO, E NAO ANTES DELE.
+//
+// Ela ja foi uma tela separada em /familia, e estava errado: o pai caia num
+// formulario pedindo o nome do filho antes de saber quem estava perguntando e
+// por que. Agora ele ouve o Arboria se apresentar primeiro, nas mesmas quatro
+// telas de sempre, e so' entao diz de quem a gente vai falar, no passo que ja
+// existia para isso.
+//
+// NA_PORTA e' o estado de quem esta em /familia e ainda nao disse quem e' a
+// crianca. No prototipo isso nunca acontece: la' a crianca e' inventada.
+const NA_PORTA = window.location.pathname.startsWith('/familia') && !MODO_REAL;
+
+// Onde a apresentacao termina e a identificacao comeca.
+const PASSO_CRIANCA_MAIS_UM = 1;   // usado depois de achar o indice do passo
+
+function mascaraData(v: string): string {
+  const d = v.replace(/\D/g, '').slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return d.slice(0, 2) + '/' + d.slice(2);
+  return d.slice(0, 2) + '/' + d.slice(2, 4) + '/' + d.slice(4);
+}
+
+// Devolve a data em ISO, ou null se ela nao existe no calendario. Sem esta
+// checagem, 31/02/2019 vira 03/03/2019 sozinho e a busca falha por um motivo
+// que o pai nao tem como adivinhar.
+function dataParaISO(v: string): string | null {
+  const d = v.replace(/\D/g, '');
+  if (d.length !== 8) return null;
+  const dia = d.slice(0, 2), mes = d.slice(2, 4), ano = d.slice(4);
+  const iso = `${ano}-${mes}-${dia}`;
+  const quando = new Date(iso + 'T00:00:00Z');
+  if (Number.isNaN(quando.getTime())) return null;
+  if (quando.getUTCDate() !== Number(dia) || quando.getUTCMonth() + 1 !== Number(mes)) return null;
+  if (Number(ano) < 1990 || quando.getTime() > Date.now()) return null;
+  return iso;
+}
+
+interface Achado { aluno_id: string; nome_completo: string; turma: string }
+interface Confirmada extends Achado {
+  primeiro_nome: string; serie: string; segmento: string;
+  sexo: string | null; faixa: string | null;
+}
+const MINIMO_BUSCA = 4;
+
 const FAIXA: Faixa =
   CTX?.faixa && FAIXAS.includes(CTX.faixa) ? CTX.faixa
   : PEDIDA && FAIXAS.includes(PEDIDA) ? PEDIDA
@@ -1448,6 +1492,54 @@ const QuestionarioPaisPreview = () => {
   // fica sem saber qual versao vale, e o pai perde a sensacao de que aquilo foi
   // entregue. Agora finalizar FECHA, e quem volta cai numa tela que diz isso e
   // abre espaco para o que ficou faltando, que costuma ser o melhor pedaco.
+  // ------------------------------------------------------------- A PORTA
+  const [termo, setTermo] = useState('');
+  const [achados, setAchados] = useState<Achado[]>([]);
+  const [buscandoNome, setBuscandoNome] = useState(false);
+  const [procurou, setProcurou] = useState(false);
+  const [escolhido, setEscolhido] = useState<Achado | null>(null);
+  const [dataTexto, setDataTexto] = useState('');
+  const [entrando, setEntrando] = useState(false);
+  const [erroPorta, setErroPorta] = useState<string | null>(null);
+
+  // Uma busca por pausa de digitacao, e nao uma por tecla. Sem o contador, as
+  // respostas chegam fora de ordem: a lista de "Ana" chega depois da lista de
+  // "Ana Julia" e sobrescreve a certa.
+  const pedido = useRef(0);
+  useEffect(() => {
+    if (!NA_PORTA || escolhido) return;
+    const t = termo.trim();
+    if (t.length < MINIMO_BUSCA) { setAchados([]); setProcurou(false); return; }
+
+    setBuscandoNome(true);
+    const meu = ++pedido.current;
+    const relogio = setTimeout(async () => {
+      const { data, error } = await supabase.rpc('procurar_criancas' as never, { p_termo: t } as never);
+      if (meu !== pedido.current) return;
+      setAchados(error ? [] : ((data ?? []) as unknown as Achado[]));
+      setProcurou(true);
+      setBuscandoNome(false);
+    }, 350);
+    return () => clearTimeout(relogio);
+  }, [termo, escolhido]);
+
+  // Retoma de onde a porta parou. A entrada faz recarga de verdade, porque as
+  // perguntas sao montadas com o nome da crianca no carregamento do modulo;
+  // sem esta marca, o pai voltaria para o "Ola" depois de ja ter se apresentado.
+  useEffect(() => {
+    if (!CTX) return;
+    const guardado = sessionStorage.getItem('arboria:familia');
+    if (!guardado) return;
+    try {
+      const d = JSON.parse(guardado);
+      if (typeof d.retomar === 'number') {
+        setI(d.retomar);
+        delete d.retomar;
+        sessionStorage.setItem('arboria:familia', JSON.stringify(d));
+      }
+    } catch { /* sem retomada, comeca do inicio */ }
+  }, []);
+
   const [depois, setDepois] = useState(false);
   const [acrescimo, setAcrescimo] = useState('');
 
@@ -1562,6 +1654,59 @@ const QuestionarioPaisPreview = () => {
       .eq('id', CTX.envio)
       .then(({ error }) => { if (error) console.error('[questionario pais] nao gravou o aceite', error); });
   };
+
+  // Confirma a crianca e entra. Do lado do banco a data e' a chave: achar o
+  // nome na lista nao abriu nada ainda, e confirmar_crianca so' responde se a
+  // data bater com a que a escola tem.
+  async function confirmarCrianca() {
+    const iso = dataParaISO(dataTexto);
+    if (!escolhido || !iso || entrando) return;
+    setEntrando(true);
+    setErroPorta(null);
+
+    const { data, error } = await supabase.rpc('confirmar_crianca' as never, {
+      p_aluno_id: escolhido.aluno_id, p_nascimento: iso,
+    } as never);
+    const c = ((data ?? []) as unknown as Confirmada[])[0];
+
+    if (error || !c) {
+      // A mensagem aponta para a data: o nome ele acabou de escolher na lista.
+      setErroPorta('Essa data não confere com a que a escola tem. Confira e tente de novo.');
+      setEntrando(false);
+      return;
+    }
+
+    // O envio nasce aqui, antes da primeira pergunta. E' o que permite gravar
+    // resposta por resposta, e e' o que faz aparecer no painel da escola quem
+    // abriu e parou no meio: sem ele, quem desiste na terceira pergunta some
+    // sem deixar rastro e ninguem descobre que a tela quebrou no aparelho dele.
+    const { data: envio, error: erroEnvio } = await supabase
+      .from('questionario_pais_envio')
+      .insert({
+        aluno_id: c.aluno_id,
+        faixa: c.faixa ?? 'm2',
+        serie: c.serie,
+        contexto: { turma: c.turma, segmento: c.segmento },
+      } as never)
+      .select('id')
+      .single();
+
+    if (erroEnvio || !envio) {
+      setErroPorta('Não consegui abrir agora. Tente de novo daqui a pouco.');
+      setEntrando(false);
+      return;
+    }
+
+    sessionStorage.setItem('arboria:familia', JSON.stringify({
+      envio: (envio as { id: string }).id,
+      aluno: c.aluno_id, faixa: c.faixa,
+      nome: c.primeiro_nome, nomeCompleto: c.nome_completo,
+      turma: c.turma, serie: c.serie, sexo: c.sexo,
+      retomar: FLUXO.findIndex((x) => x.tipo === 'crianca') + PASSO_CRIANCA_MAIS_UM,
+    }));
+
+    window.location.assign('/familia');
+  }
 
   const avanca = () => { gravaResposta(i); setRestaurado(false); setI((v) => v + 1); };
 
@@ -1900,7 +2045,111 @@ const QuestionarioPaisPreview = () => {
         })()}
 
         {/* ---------- CRIANÇA ---------- */}
-        {item?.tipo === 'crianca' && (
+        {item?.tipo === 'crianca' && NA_PORTA && (() => {
+          const iso = dataParaISO(dataTexto);
+          const rotulo: React.CSSProperties = { fontSize: 13, color: 'rgba(255,255,255,.76)' };
+          const campo: React.CSSProperties = {
+            borderBottom: '1px solid rgba(255,255,255,.5)', padding: '12px 0',
+            fontFamily: T.serif, fontSize: 24, color: '#fff', background: 'transparent',
+          };
+          return (
+          <>
+            <p style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 26px' }}>
+              Só para eu ter certeza de quem a gente está falando.
+            </p>
+
+            {escolhido ? (
+              <>
+                <div style={{ borderLeft: '2px solid rgba(255,255,255,.7)', padding: '4px 0 4px 16px', marginBottom: 8 }}>
+                  <p style={{ fontFamily: T.serif, fontSize: 27, fontWeight: 700, margin: '0 0 2px' }}>{escolhido.nome_completo}</p>
+                  <p className="text-[14px] m-0" style={{ color: 'rgba(255,255,255,.78)' }}>{escolhido.turma}</p>
+                </div>
+                <button
+                  onClick={() => { setEscolhido(null); setDataTexto(''); setErroPorta(null); }}
+                  className="text-[13px]"
+                  style={{ color: 'rgba(255,255,255,.8)', textDecoration: 'underline', textUnderlineOffset: 4, marginBottom: 30 }}
+                >
+                  Não é ele(a), procurar de novo
+                </button>
+
+                <p style={rotulo}>{flex('Data de nascimento dele(a)')}</p>
+                {/* Digitada, e nao seletor do aparelho: o pai sabe a data de cor
+                    e digita mais rapido do que rola tres rodinhas de ano. O
+                    teclado que abre e' o numerico, e a mascara poe as barras. */}
+                <input
+                  inputMode="numeric"
+                  value={dataTexto}
+                  onChange={(e) => { setDataTexto(mascaraData(e.target.value)); setErroPorta(null); }}
+                  placeholder="dia / mês / ano"
+                  className="w-full outline-none"
+                  style={{ ...campo, letterSpacing: '.08em' }}
+                />
+
+                {erroPorta && (
+                  <p style={{
+                    marginTop: 22, padding: '14px 16px', borderRadius: 14,
+                    background: 'rgba(255,255,255,.14)', border: '1px solid rgba(255,255,255,.4)',
+                    fontFamily: T.serif, fontSize: 19, lineHeight: 1.4,
+                  }}>{erroPorta}</p>
+                )}
+
+                <Rodape>
+                  <span style={{ opacity: iso && !entrando ? 1 : 0.35, pointerEvents: iso && !entrando ? 'auto' : 'none' }}>
+                    <Cta texto={entrando ? 'Um instante' : item.cta} onClick={() => void confirmarCrianca()} />
+                  </span>
+                </Rodape>
+              </>
+            ) : (
+              <>
+                <p style={rotulo}>Nome da criança</p>
+                <input
+                  value={termo}
+                  onChange={(e) => setTermo(e.target.value)}
+                  placeholder="comece a escrever o nome"
+                  autoComplete="off" autoCorrect="off" autoCapitalize="words"
+                  className="w-full outline-none"
+                  style={campo}
+                />
+
+                <div style={{ marginTop: 24, minHeight: 130 }}>
+                  {termo.trim().length > 0 && termo.trim().length < MINIMO_BUSCA && (
+                    <p className="text-[14px]" style={{ color: 'rgba(255,255,255,.7)' }}>
+                      Escreva pelo menos {MINIMO_BUSCA} letras.
+                    </p>
+                  )}
+                  {buscandoNome && termo.trim().length >= MINIMO_BUSCA && (
+                    <p className="text-[14px]" style={{ color: 'rgba(255,255,255,.7)' }}>Procurando...</p>
+                  )}
+                  {!buscandoNome && procurou && achados.length === 0 && (
+                    <p style={{ fontFamily: T.serif, fontSize: 19, lineHeight: 1.45, color: 'rgba(255,255,255,.9)' }}>
+                      Não achei ninguém com esse nome. Tente escrever de outro jeito,
+                      ou só o primeiro nome.
+                    </p>
+                  )}
+                  {!buscandoNome && achados.map((c) => (
+                    <button
+                      key={c.aluno_id}
+                      onClick={() => { setEscolhido(c); setErroPorta(null); }}
+                      className="w-full text-left"
+                      style={{
+                        borderTop: '1px solid rgba(255,255,255,.24)',
+                        borderBottom: '1px solid rgba(255,255,255,.24)',
+                        marginTop: -1, padding: '15px 0',
+                      }}
+                    >
+                      <p style={{ fontFamily: T.serif, fontSize: 22, fontWeight: 700, margin: '0 0 2px' }}>{c.nome_completo}</p>
+                      <p className="text-[13px] m-0" style={{ color: 'rgba(255,255,255,.76)' }}>{c.turma}</p>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+          );
+        })()}
+
+        {/* No prototipo a crianca e' inventada, entao a tela e' so' confirmacao. */}
+        {item?.tipo === 'crianca' && !NA_PORTA && (
           <>
             <p style={{ fontFamily: T.serif, fontSize: 23, lineHeight: 1.55, fontWeight: 600, margin: '0 0 24px' }}>Só para eu ter certeza de quem a gente está falando.</p>
             <div style={{ borderLeft: '2px solid rgba(255,255,255,.7)', padding: '4px 0 4px 16px', margin: '16px 0 4px' }}>
@@ -2205,9 +2454,6 @@ const QuestionarioPaisPreview = () => {
         })()}
       </div>
 
-      <div className="relative text-center pb-4 text-[11px]" style={{ color: 'rgba(255,255,255,.55)', zIndex: 2 }}>
-        protótipo · nada é gravado
-      </div>
 
       {/* folha do "Saber mais": a finalidade inteira, sem juridiques */}
       {verMais && (

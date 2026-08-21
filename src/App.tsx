@@ -138,7 +138,6 @@ const ArboriaTrilhaPage = lazy(() => import("./pages/arboria/ArboriaTrilhaPage")
 const ArboriaCoordenadoresPage = lazy(() => import("./pages/arboria/ArboriaCoordenadoresPage"));
 const ArboriaColetaPage = lazy(() => import("./pages/arboria/ArboriaColetaPage"));
 const QuestionarioPaisPreview = lazy(() => import("./pages/arboria/QuestionarioPaisPreview"));
-const FamiliaEntrada = lazy(() => import("./pages/familia/FamiliaEntrada"));
 const MissoesSeriePage = lazy(() => import("./pages/professor/MissoesSeriePage"));
 const MissoesSemanaPage = lazy(() => import("./pages/professor/MissoesSemanaPage"));
 const MissoesListaPage = lazy(() => import("./pages/professor/MissoesListaPage"));
@@ -195,8 +194,7 @@ const App = () => (
                 chega pelo QR do aviso da escola e nao tem, nem vai ter, login.
                 Quem controla o acesso aqui e saber o nome da crianca E a data de
                 nascimento dela, as duas coisas juntas. */}
-            <Route path="/familia" element={<FamiliaEntrada />} />
-            <Route path="/familia/perguntas" element={<QuestionarioPaisPreview />} />
+            <Route path="/familia" element={<QuestionarioPaisPreview />} />
             <Route path="/setup" element={<Setup />} />
             <Route path="/recuperar-admin" element={<RecoverAdmin />} />
             <Route path="/redefinir-senha" element={<ResetPassword />} />
