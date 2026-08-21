@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { infantilTheme as t } from '@/styles/infantilTheme';
+import PainelQuestionarioPais from '@/components/arboria/PainelQuestionarioPais';
 import { Loader2, Check, ChevronRight, ArrowLeft, ExternalLink } from 'lucide-react';
 
 const fromAny = (tb: string) =>
@@ -381,29 +382,7 @@ type Instrumento = 'conhecimento' | 'pais';
 
 const INSTRUMENTOS: { id: Instrumento; label: string; nota: string }[] = [
   { id: 'conhecimento', label: 'Conhecimento das turmas', nota: 'A conversa com as professoras, uma ficha por série, para entender como é uma criança de cada idade.' },
-  { id: 'pais', label: 'Questionário dos pais', nota: 'O que a família responde sobre o próprio filho, um link por criança. Ainda em protótipo, sem vínculo com turma.' },
-];
-
-// Turmas do Infantil. Cada faixa tem o seu proprio conjunto de cenas, porque o
-// que uma crianca de 2 anos pode ter feito e o que uma de 4 pode ter feito sao
-// coisas diferentes. Por isso o prototipo abre POR FAIXA, e nao um so' para
-// todas: 'link' diz qual versao aquela turma abriria.
-const TURMAS_PAIS: { turma: string; idade: string; link: string | null }[] = [
-  { turma: 'Maternal 2 A', idade: '2 anos', link: null },
-  { turma: 'Maternal 2 B', idade: '2 anos', link: '/arboria/coleta/pais/preview' },
-  { turma: 'Maternal 3 A', idade: '3 anos', link: '/arboria/coleta/pais/preview?faixa=m3' },
-  { turma: 'Maternal 3 B', idade: '3 anos', link: null },
-  { turma: 'Grupo IV A', idade: '4 anos', link: '/arboria/coleta/pais/preview?faixa=g4' },
-  { turma: 'Grupo IV B', idade: '4 anos', link: null },
-  { turma: 'Grupo V A', idade: '5 anos', link: '/arboria/coleta/pais/preview?faixa=gv' },
-  { turma: 'Grupo V B', idade: '5 anos', link: null },
-  { turma: '1º Ano A', idade: '6 anos', link: '/arboria/coleta/pais/preview?faixa=a1' },
-  { turma: '2º Ano A', idade: '7 anos', link: '/arboria/coleta/pais/preview?faixa=a2' },
-  { turma: '3º Ano A', idade: '8 anos', link: '/arboria/coleta/pais/preview?faixa=a3' },
-  { turma: '4º Ano A', idade: '9 anos', link: '/arboria/coleta/pais/preview?faixa=a4' },
-  { turma: '5º Ano A', idade: '10 anos', link: '/arboria/coleta/pais/preview?faixa=a5' },
-  { turma: '5º Ano B', idade: '10 anos', link: null },
-  { turma: '5º Ano C', idade: '10 anos', link: null },
+  { id: 'pais', label: 'Questionário dos pais', nota: 'O que a família responde sobre o próprio filho. No ar desde 21/08 em /familia, para o Infantil e o 1º ao 5º ano.' },
 ];
 
 // ============================================================
@@ -507,56 +486,7 @@ const ArboriaColetaPage = () => {
 
         {instrumento === 'pais' ? (
           <>
-            <div
-              className="rounded-2xl px-4 py-3.5 mb-4"
-              style={{ backgroundColor: t.accentSoft, border: `1px solid ${t.accentBorder}` }}
-            >
-              <p className="text-[12.5px] m-0" style={{ color: t.textMuted }}>
-                <b style={{ color: t.accentText }}>Ainda não vinculado.</b> O protótipo abaixo abre a versão do
-                Maternal 2, como o pai veria no celular. Nada é gravado, e nenhuma família recebeu link.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              {TURMAS_PAIS.map((x) => (
-                <div
-                  key={x.turma}
-                  className="rounded-2xl px-4 py-3 flex items-center gap-3"
-                  style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}
-                >
-                  <span
-                    className="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center text-[11px] font-bold"
-                    style={x.link
-                      ? { backgroundColor: t.accentSoft, color: t.accentText }
-                      : { backgroundColor: t.surfaceSunken, color: t.textFaint }}
-                  >
-                    {x.idade.replace(' anos', 'a')}
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <b className="block text-sm font-semibold" style={{ color: t.text }}>{x.turma}</b>
-                    <span className="text-[11.5px]" style={{ color: t.textFaint }}>
-                      {x.link ? 'protótipo desta faixa' : 'sem link gerado'}
-                    </span>
-                  </span>
-                  {x.link ? (
-                    <a
-                      href={x.link}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[12px] font-bold px-3 py-2 rounded-xl flex items-center gap-1.5"
-                      style={{ backgroundColor: t.accent, color: '#fff', boxShadow: t.shadowSm }}
-                    >
-                      Abrir <ExternalLink size={13} />
-                    </a>
-                  ) : (
-                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full"
-                      style={{ backgroundColor: t.surfaceSunken, color: t.textFaint }}>
-                      não iniciada
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
+            <PainelQuestionarioPais />
           </>
         ) : (
         <>
