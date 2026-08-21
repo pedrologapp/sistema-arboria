@@ -19,6 +19,13 @@ import type React from 'react';
 import { ChevronLeft, ChevronDown, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
+// As tabelas do questionario dos pais nasceram em 20/08 e os tipos gerados do
+// Supabase ainda nao as conhecem, entao supabase.from('questionario_pais_envio')
+// nao casa com nenhuma sobrecarga. Mesmo atalho ja usado em RelatarProblema.
+// Sai sozinho quando os tipos forem regerados.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const tabela = (nome: string): any => (supabase as any).from(nome);
+
 const CEU = '/arboria/ceu.png';
 
 // ------------------------------------------------------------------ FAIXA
@@ -1645,7 +1652,7 @@ const QuestionarioPaisPreview = () => {
   // clicado. O texto inteiro esta na tela, acima do botao.
   const registraAceite = () => {
     if (!MODO_REAL || !CTX) return;
-    void supabase.from('questionario_pais_envio')
+    void tabela('questionario_pais_envio')
       .update({
         aceite_termo: true,
         aceite_em: new Date().toISOString(),
@@ -1691,6 +1698,37 @@ const QuestionarioPaisPreview = () => {
     window.location.assign('/familia');
   }
 
+  // RECOMECAR, PELA PORTA.
+  //
+  // Duas saidas com a mesma mecanica e intencoes diferentes: outra PESSOA
+  // falando da mesma crianca, ou a mesma pessoa falando de OUTRA crianca. Nos
+  // dois casos o envio anterior fica fechado e intacto, e um novo nasce quando
+  // a pessoa passar pela porta de novo.
+  //
+  // Recomecar nunca sobrescreve o que ja veio. Duas vozes sobre a mesma crianca
+  // sao dois olhares, e a divergencia entre elas e' dado, nao ruido: a mae e a
+  // avo estao em casa em horas diferentes e reparam em coisas diferentes.
+  const recomecar = (mesmaCrianca: boolean) => {
+    try {
+      // O rascunho e a marca de "ja finalizei" pertencem AQUELA crianca: a
+      // chave leva o id dela. Somem quando quem vai falar de novo e' outra
+      // pessoa sobre ela. Se o assunto e' outra crianca, a marca da primeira
+      // fica onde esta, senao o pai voltaria a poder reabrir o que ja fechou.
+      if (mesmaCrianca) {
+        localStorage.removeItem(CHAVE_RASCUNHO);
+        localStorage.removeItem(CHAVE_FIM);
+      }
+      sessionStorage.removeItem('arboria:familia');
+    } catch { /* sem memoria, a recarga resolve do mesmo jeito */ }
+
+    if (MODO_REAL) { window.location.assign('/familia'); return; }
+
+    // No prototipo nao existe porta para voltar: reinicia na propria tela.
+    setI(0); setMarcadas({}); setTextos({}); setAbertos({});
+    setEscolhas({}); setEscolhaTexto({}); setLinkCopiado(false);
+    setRestaurado(false); setDepois(false); setAcrescimo('');
+  };
+
   const avanca = () => { gravaResposta(i); setRestaurado(false); setI((v) => v + 1); };
 
   // Finalizar deixa a marca no aparelho. E' o que faz o pai que reabre o link
@@ -1703,7 +1741,7 @@ const QuestionarioPaisPreview = () => {
     // enquanto ele esta aberto, entao carimbar aqui e' o que impede alguem de
     // reescrever a resposta depois pelo mesmo link.
     if (MODO_REAL && CTX) {
-      void supabase.from('questionario_pais_envio')
+      void tabela('questionario_pais_envio')
         .update({
           concluido_em: new Date().toISOString(),
           respondente: escolhas['responde'] ?? null,
@@ -1890,6 +1928,17 @@ const QuestionarioPaisPreview = () => {
                 }}
               />
             </div>
+
+            {/* Quem volta aqui as vezes nao veio acrescentar nada: veio porque
+                tem outro filho na escola, ou porque a avo pediu o celular. */}
+            <p className="text-[13px] mt-9" style={{ color: 'rgba(255,255,255,.7)', lineHeight: 1.55 }}>
+              Se outra pessoa da casa quiser responder sobre {NOME}, ou se você
+              tiver outra criança aqui na escola, comece de novo por aqui.
+            </p>
+            <Rodape>
+              <Cta texto="Responder sobre outra criança" suave onClick={() => recomecar(false)} />
+              <Cta texto="Passar para outra pessoa" suave onClick={() => recomecar(true)} />
+            </Rodape>
           </>
         )}
 
@@ -1953,27 +2002,20 @@ const QuestionarioPaisPreview = () => {
                 novo pelo mesmo link". Caiu junto com o fecho: entrar de novo
                 agora leva ao acrescimo, e prometer edicao seria mentir na
                 ultima tela que o pai le'. */}
+            {/* As duas saidas ficam na ultima tela, e nao no comeco: e' aqui
+                que o pai ja sabe o que sao as perguntas e consegue pensar em
+                quem mais teria o que contar, ou lembrar do outro filho. */}
+            <p className="fim-5 text-[13px] mt-8" style={{ color: 'rgba(255,255,255,.74)', lineHeight: 1.55 }}>
+              Se outra pessoa da casa quiser responder sobre {NOME}, ou se você
+              tiver outra criança aqui na escola, dá pra começar de novo por aqui.
+              Nada do que você já mandou se perde.
+            </p>
             <Rodape>
-              {/* Limpa tudo: quem comeca agora e' outra pessoa, e ver as
-                  respostas de quem respondeu antes contaminaria as dela. */}
               <span className="fim-5">
-                <Cta
-                  texto="Passar para outra pessoa"
-                  suave
-                  onClick={() => {
-                    // Quem comeca agora e' outra pessoa: sai o rascunho E sai a
-                    // marca de finalizado, senao a avo abriria direto no fecho da
-                    // mae e nunca veria uma pergunta.
-                    try {
-                      localStorage.removeItem(CHAVE_RASCUNHO);
-                      localStorage.removeItem(CHAVE_FIM);
-                    } catch { /* sem rascunho, nada a limpar */ }
-                    setI(0); setMarcadas({}); setTextos({}); setAbertos({});
-                    setEscolhas({}); setEscolhaTexto({}); setLinkCopiado(false);
-                    setRestaurado(false); setDepois(false);
-                    setAcrescimo(''); setAcrescimoGuardado(false);
-                  }}
-                />
+                <Cta texto="Responder sobre outra criança" suave onClick={() => recomecar(false)} />
+              </span>
+              <span className="fim-5">
+                <Cta texto="Passar para outra pessoa" suave onClick={() => recomecar(true)} />
               </span>
             </Rodape>
           </>
@@ -2052,7 +2094,7 @@ const QuestionarioPaisPreview = () => {
                   className="text-[13px]"
                   style={{ color: 'rgba(255,255,255,.8)', textDecoration: 'underline', textUnderlineOffset: 4, marginBottom: 30 }}
                 >
-                  Não é ele(a), procurar de novo
+                  Mudar o nome
                 </button>
 
                 <p style={rotulo}>{flex('Data de nascimento dele(a)')}</p>
