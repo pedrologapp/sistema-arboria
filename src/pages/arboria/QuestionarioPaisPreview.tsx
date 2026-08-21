@@ -94,7 +94,7 @@ function dataParaISO(v: string): string | null {
   return iso;
 }
 
-interface Achado { aluno_id: string; nome_completo: string; turma: string }
+interface Achado { aluno_id: string; nome_completo: string; turma: string; sexo: string | null }
 interface Confirmada extends Achado {
   primeiro_nome: string; serie: string; segmento: string;
   sexo: string | null; faixa: string | null;
@@ -1519,7 +1519,7 @@ const QuestionarioPaisPreview = () => {
       setAchados(error ? [] : ((data ?? []) as unknown as Achado[]));
       setProcurou(true);
       setBuscandoNome(false);
-    }, 350);
+    }, 180);
     return () => clearTimeout(relogio);
   }, [termo, escolhido]);
 
@@ -1664,41 +1664,24 @@ const QuestionarioPaisPreview = () => {
     setEntrando(true);
     setErroPorta(null);
 
-    const { data, error } = await supabase.rpc('confirmar_crianca' as never, {
+    // UMA chamada, e nao duas. Antes o app confirmava a crianca e depois
+    // inseria o envio lendo o id de volta, e a leitura de volta batia na RLS:
+    // o pai pode ESCREVER nesta tabela e nunca ler, que e a assimetria que
+    // impede uma familia de puxar o que outra escreveu. A porta nao abria.
+    const { data, error } = await supabase.rpc('abrir_envio_pais' as never, {
       p_aluno_id: escolhido.aluno_id, p_nascimento: iso,
     } as never);
-    const c = ((data ?? []) as unknown as Confirmada[])[0];
+    const c = ((data ?? []) as unknown as (Confirmada & { envio_id: string })[])[0];
 
-    if (error || !c) {
+    if (error || !c?.envio_id) {
       // A mensagem aponta para a data: o nome ele acabou de escolher na lista.
       setErroPorta('Essa data não confere com a que a escola tem. Confira e tente de novo.');
       setEntrando(false);
       return;
     }
 
-    // O envio nasce aqui, antes da primeira pergunta. E' o que permite gravar
-    // resposta por resposta, e e' o que faz aparecer no painel da escola quem
-    // abriu e parou no meio: sem ele, quem desiste na terceira pergunta some
-    // sem deixar rastro e ninguem descobre que a tela quebrou no aparelho dele.
-    const { data: envio, error: erroEnvio } = await supabase
-      .from('questionario_pais_envio')
-      .insert({
-        aluno_id: c.aluno_id,
-        faixa: c.faixa ?? 'm2',
-        serie: c.serie,
-        contexto: { turma: c.turma, segmento: c.segmento },
-      } as never)
-      .select('id')
-      .single();
-
-    if (erroEnvio || !envio) {
-      setErroPorta('Não consegui abrir agora. Tente de novo daqui a pouco.');
-      setEntrando(false);
-      return;
-    }
-
     sessionStorage.setItem('arboria:familia', JSON.stringify({
-      envio: (envio as { id: string }).id,
+      envio: c.envio_id,
       aluno: c.aluno_id, faixa: c.faixa,
       nome: c.primeiro_nome, nomeCompleto: c.nome_completo,
       turma: c.turma, serie: c.serie, sexo: c.sexo,
@@ -2095,7 +2078,15 @@ const QuestionarioPaisPreview = () => {
 
                 <Rodape>
                   <span style={{ opacity: iso && !entrando ? 1 : 0.35, pointerEvents: iso && !entrando ? 'auto' : 'none' }}>
-                    <Cta texto={entrando ? 'Um instante' : item.cta} onClick={() => void confirmarCrianca()} />
+                    {/* O botao fala no genero da crianca escolhida, e nao no do
+                      prototipo. Sem sexo cadastrado ele fica no parenteses:
+                      feio, e melhor do que chutar o genero da filha de alguem. */}
+                  <Cta
+                    texto={entrando ? 'Um instante'
+                      : escolhido.sexo === 'F' ? 'É ela'
+                      : escolhido.sexo === 'M' ? 'É ele'
+                      : item.cta}
+                    onClick={() => void confirmarCrianca()} />
                   </span>
                 </Rodape>
               </>
