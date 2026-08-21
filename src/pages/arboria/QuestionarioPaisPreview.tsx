@@ -1502,6 +1502,9 @@ const QuestionarioPaisPreview = () => {
   const [dataTexto, setDataTexto] = useState('');
   const [entrando, setEntrando] = useState(false);
   const [erroPorta, setErroPorta] = useState<string | null>(null);
+  // A crianca existe, a data bate, e a serie dela ainda nao tem perguntas.
+  // Guarda o nome porque a tela precisa dele para falar direito com o pai.
+  const [semQuestionario, setSemQuestionario] = useState<{ nome: string; serie: string } | null>(null);
 
   // Uma busca por pausa de digitacao, e nao uma por tecla. Sem o contador, as
   // respostas chegam fora de ordem: a lista de "Ana" chega depois da lista de
@@ -1662,17 +1665,31 @@ const QuestionarioPaisPreview = () => {
     const { data, error } = await supabase.rpc('abrir_envio_pais' as never, {
       p_aluno_id: escolhido.aluno_id, p_nascimento: iso, p_versao_termo: VERSAO_TERMO,
     } as never);
-    const c = ((data ?? []) as unknown as (Confirmada & { envio_id: string })[])[0];
+    const c = ((data ?? []) as unknown as (Confirmada & { situacao: string; envio_id: string | null })[])[0];
 
-    if (error || !c?.envio_id) {
-      // A mensagem aponta para a data: o nome ele acabou de escolher na lista.
+    if (error || !c) {
+      // Zero linhas quer dizer que a data nao bate. O nome ele acabou de
+      // escolher numa lista, entao e' a data que pode estar errada.
       setErroPorta('Essa data não confere com a que a escola tem. Confira e tente de novo.');
       setEntrando(false);
       return;
     }
 
+    // O FUNDAMENTAL 2 AINDA NAO TEM QUESTIONARIO.
+    //
+    // Antes disto, faixa nula caia num coalesce para 'm2' e o pai de um aluno
+    // do 9o ano lia as perguntas do Maternal 2, sobre uma crianca de dois anos.
+    // Eram 160 das 498 familias da escola. O custo nao e' o constrangimento: e'
+    // o pai perdendo a confianca na primeira tela, e essa confianca e a unica
+    // coisa que faz alguem escrever tres paragrafos sobre o proprio filho.
+    if (c.situacao !== 'ok' || !c.envio_id) {
+      setSemQuestionario({ nome: c.primeiro_nome, serie: c.serie });
+      setEntrando(false);
+      return;
+    }
+
     sessionStorage.setItem('arboria:familia', JSON.stringify({
-      envio: c.envio_id,
+      envio: c.envio_id!,
       aluno: c.aluno_id, faixa: c.faixa,
       nome: c.primeiro_nome, nomeCompleto: c.nome_completo,
       turma: c.turma, serie: c.serie, sexo: c.sexo,
@@ -2069,7 +2086,38 @@ const QuestionarioPaisPreview = () => {
         })()}
 
         {/* ---------- CRIANÇA ---------- */}
-        {item?.tipo === 'crianca' && NA_PORTA && (() => {
+        {/* A crianca existe, mas a serie dela ainda nao tem perguntas. A tela
+            fala a verdade, com o nome dela, em vez de abrir um questionario que
+            nao e' dela. Sem botao de tentar de novo: nao ha o que tentar, e
+            oferecer uma saida falsa seria pior do que nao oferecer nenhuma. */}
+        {semQuestionario && (
+          <>
+            <p style={{ fontFamily: T.serif, fontSize: 32, lineHeight: 1.14, letterSpacing: '-.02em', margin: '0 0 22px' }}>
+              Ainda não tenho perguntas para essa idade.
+            </p>
+            <p style={{ ...FALA, marginBottom: 8 }}>
+              Estas são para o Infantil e para o 1º ao 5º ano.
+            </p>
+            <p style={{ ...FALA, marginBottom: 8 }}>
+              Do 6º ao 9º eu ainda estou preparando as minhas. Perguntar a mesma
+              coisa sobre uma criança de dois anos e sobre um adolescente não
+              faria sentido nenhum.
+            </p>
+            <p style={{ ...FALA }}>
+              Quando estiverem prontas, a escola avisa. Obrigado por ter vindo.
+            </p>
+
+            <button
+              onClick={() => { setSemQuestionario(null); setEscolhido(null); setDataTexto(''); setTermo(''); }}
+              className="text-[13px] block"
+              style={{ color: 'rgba(255,255,255,.8)', textDecoration: 'underline', textUnderlineOffset: 4, marginTop: 30 }}
+            >
+              Tenho outra criança na escola
+            </button>
+          </>
+        )}
+
+        {item?.tipo === 'crianca' && NA_PORTA && !semQuestionario && (() => {
           const iso = dataParaISO(dataTexto);
           const rotulo: React.CSSProperties = { fontSize: 13, color: 'rgba(255,255,255,.76)' };
           const campo: React.CSSProperties = {
@@ -2154,8 +2202,9 @@ const QuestionarioPaisPreview = () => {
                   )}
                   {!buscandoNome && procurou && achados.length === 0 && (
                     <p style={{ fontFamily: T.serif, fontSize: 19, lineHeight: 1.45, color: 'rgba(255,255,255,.9)' }}>
-                      Não achei ninguém com esse nome. Tente escrever de outro jeito,
-                      ou só o primeiro nome.
+                      Não achei ninguém com esse nome. Tente escrever de outro
+                      jeito, ou só o primeiro nome.
+                      {' '}Estas perguntas ainda são só para o Infantil e para o 1º ao 5º ano.
                     </p>
                   )}
                   {!buscandoNome && achados.map((c) => (
