@@ -1646,28 +1646,6 @@ const QuestionarioPaisPreview = () => {
     });
   };
 
-  // O ACEITE DO TERMO.
-  //
-  // A tela "Uma coisa rapida" ja explicava tudo, com o "Saber mais" ao lado, e
-  // nao registrava nada: ninguem aceitava coisa nenhuma, e nao havia versao nem
-  // data. Passar dali agora E' o aceite, e fica gravado com a versao do texto,
-  // porque o texto muda e a escola precisa saber qual deles o pai leu.
-  //
-  // Nao vira caixa de marcar de proposito: caixa de marcar em publico amplo e'
-  // clicada sem ler, e o que protege a crianca aqui e' o pai ter LIDO, nao ter
-  // clicado. O texto inteiro esta na tela, acima do botao.
-  const registraAceite = () => {
-    if (!MODO_REAL || !CTX) return;
-    void tabela('questionario_pais_envio')
-      .update({
-        aceite_termo: true,
-        aceite_em: new Date().toISOString(),
-        versao_termo: VERSAO_TERMO,
-      } as never)
-      .eq('id', CTX.envio)
-      .then(({ error }) => { if (error) console.error('[questionario pais] nao gravou o aceite', error); });
-  };
-
   // Confirma a crianca e entra. Do lado do banco a data e' a chave: achar o
   // nome na lista nao abriu nada ainda, e confirmar_crianca so' responde se a
   // data bater com a que a escola tem.
@@ -1679,10 +1657,16 @@ const QuestionarioPaisPreview = () => {
 
     // UMA chamada, e nao duas. Antes o app confirmava a crianca e depois
     // inseria o envio lendo o id de volta, e a leitura de volta batia na RLS:
-    // o pai pode ESCREVER nesta tabela e nunca ler, que e a assimetria que
+    // o pai pode ESCREVER nesta tabela e nunca ler, que e' a assimetria que
     // impede uma familia de puxar o que outra escreveu. A porta nao abria.
+    //
+    // A VERSAO DO TERMO VAI JUNTO. A tela do termo agora vem ANTES da porta (o
+    // Arboria se apresenta primeiro e so' entao pergunta de quem vamos falar),
+    // entao quando o pai passa por ela ainda nao existe envio para marcar. Como
+    // aquela tela e' passo obrigatorio, quem chega ate' aqui ja leu, e o aceite
+    // nasce junto com o envio.
     const { data, error } = await supabase.rpc('abrir_envio_pais' as never, {
-      p_aluno_id: escolhido.aluno_id, p_nascimento: iso,
+      p_aluno_id: escolhido.aluno_id, p_nascimento: iso, p_versao_termo: VERSAO_TERMO,
     } as never);
     const c = ((data ?? []) as unknown as (Confirmada & { envio_id: string })[])[0];
 
@@ -1701,6 +1685,8 @@ const QuestionarioPaisPreview = () => {
       retomar: FLUXO.findIndex((x) => x.tipo === 'crianca') + PASSO_CRIANCA_MAIS_UM,
     }));
 
+    // Recarga de verdade: o questionario monta as perguntas com o nome da
+    // crianca no carregamento do modulo, entao ele precisa nascer de novo.
     window.location.assign('/familia');
   }
 
@@ -1750,8 +1736,10 @@ const QuestionarioPaisPreview = () => {
       void tabela('questionario_pais_envio')
         .update({
           concluido_em: new Date().toISOString(),
+          // 'convive' nunca existiu: a unica chave de respondente e 'responde'.
+          // E quem fica mais tempo e escolhido na tela do FIM, depois desta
+          // linha rodar, entao ele tem funcao propria (registrar_quem_fica).
           respondente: escolhas['responde'] ?? null,
-          quem_fica_mais_tempo: escolhas['convive'] ?? null,
         } as never)
         .eq('id', CTX.envio)
         .then(({ error }) => { if (error) console.error('[questionario pais] nao fechou o envio', error); });
@@ -1973,7 +1961,18 @@ const QuestionarioPaisPreview = () => {
                   return (
                     <button
                       key={quem}
-                      onClick={() => { setEscolhas((e) => ({ ...e, tempo: quem })); setLinkCopiado(false); }}
+                      onClick={() => {
+                        setEscolhas((e) => ({ ...e, tempo: quem }));
+                        setLinkCopiado(false);
+                        // Etiqueta de olhar, e nao resposta: diz de qual ponto
+                        // de vista veio o que ja foi contado. Corrige mais vies
+                        // do que reescrever pergunta nenhuma.
+                        if (MODO_REAL && CTX) {
+                          void supabase.rpc('registrar_quem_fica' as never, {
+                            p_envio_id: CTX.envio, p_quem: quem,
+                          } as never);
+                        }
+                      }}
                       className="w-full flex items-center justify-between gap-3 text-left"
                       style={{
                         minHeight: 48, padding: '11px 0',
@@ -2068,7 +2067,7 @@ const QuestionarioPaisPreview = () => {
                 {/* "Saber mais" abre o texto completo. Antes ele avancava igual ao outro
                     botao, o que fazia a saida de quem quer ler virar armadilha. */}
                 {item.ctaSuave && <Cta texto={item.ctaSuave} suave onClick={() => setVerMais(true)} />}
-                <Cta texto={item.cta} onClick={() => { registraAceite(); avanca(); }} />
+                <Cta texto={item.cta} onClick={avanca} />
               </Rodape>
             </div>
           </>
