@@ -55,14 +55,6 @@ const CHAVE_RASCUNHO = 'arboria:questionario-pais:' + FAIXA;
 // para outra pessoa, e o "ja finalizei" precisa sobreviver a uma recarga.
 const CHAVE_FIM = CHAVE_RASCUNHO + ':finalizado';
 
-// A TRAVA DO 4o ANO.
-//
-// Os tres consertos de uso (rolagem, atalho de quem escreveu, e o fecho depois
-// de finalizar) NAO sao conteudo do 4o ano: sao do esqueleto que as nove faixas
-// dividem. Estao presos aqui nesta rodada para o Fundador abrir o 4o e o 5o
-// lado a lado e sentir a diferenca antes de a mudanca valer para todo mundo.
-// Para soltar: trocar por "true" e apagar os "TRAVA &&" que sobrarem.
-const TRAVA: boolean = FAIXA === 'a4';
 const OUTRO_CUIDADOR = 'Outra pessoa que cuida dele(a)';
 // ------------------------------------------------------------------ FLEXAO
 // O app sabe de quem se trata, entao o texto inteiro fala no genero da crianca
@@ -1417,7 +1409,6 @@ const QuestionarioPaisPreview = () => {
   const [acrescimo, setAcrescimo] = useState('');
 
   useEffect(() => {
-    if (!TRAVA) return;
     try {
       if (localStorage.getItem(CHAVE_FIM)) setDepois(true);
     } catch {
@@ -1479,9 +1470,7 @@ const QuestionarioPaisPreview = () => {
   // Finalizar deixa a marca no aparelho. E' o que faz o pai que reabre o link
   // amanha cair no fecho, e nao numa tela de perguntas que ele ja respondeu.
   const finaliza = () => {
-    if (TRAVA) {
-      try { localStorage.setItem(CHAVE_FIM, new Date().toISOString()); } catch { /* sem memoria, segue */ }
-    }
+    try { localStorage.setItem(CHAVE_FIM, new Date().toISOString()); } catch { /* sem memoria, segue */ }
     avanca();
   };
   // O questionario so' e' gravado quando o pai aperta "Finalizar" na ultima
@@ -1534,9 +1523,7 @@ const QuestionarioPaisPreview = () => {
   );
 
   return (
-    <div ref={palco}
-      className={`flex flex-col relative ${TRAVA ? '' : 'min-h-screen overflow-x-hidden'}`}
-      style={{
+    <div ref={palco} className="flex flex-col relative" style={{
       // DOIS ROLADORES BRIGANDO PELO MESMO DEDO.
       //
       // "overflow-x: hidden" faz o navegador tratar o eixo vertical como "auto",
@@ -1549,7 +1536,8 @@ const QuestionarioPaisPreview = () => {
       // que se recolhe, entao a pagina fica sempre uns dedos mais alta do que o
       // que se ve e treme a cada rolagem. "100dvh" mede a altura que existe de
       // verdade naquele instante.
-      ...(TRAVA ? { minHeight: '100dvh', overflowX: 'clip' as const } : null),
+      minHeight: '100dvh',
+      overflowX: 'clip',
       backgroundColor: T.fundo,
       backgroundImage: `linear-gradient(180deg, rgba(6,38,66,.22) 0%, rgba(6,38,66,0) 34%), url("${CEU}")`,
       backgroundSize: 'cover, cover', backgroundPosition: 'center top, center', color: '#fff',
@@ -1595,7 +1583,7 @@ const QuestionarioPaisPreview = () => {
             <button
               onClick={() => {
                 // Na tela final o voltar nao desfaz o envio: leva ao fecho.
-                if (TRAVA && noFim) setDepois(true); else setI((v) => v - 1);
+                if (noFim) setDepois(true); else setI((v) => v - 1);
               }}
               className="p-1 -ml-1" style={{ color: 'rgba(255,255,255,.88)' }} aria-label="Voltar"><ChevronLeft size={19} /></button>
           ) : <span />}
@@ -1716,12 +1704,10 @@ const QuestionarioPaisPreview = () => {
               )}
             </div>
 
-            {/* A promessa antiga era "entre de novo e mude o que quiser". Ela
-                cai junto com o fecho: agora entrar de novo leva ao acrescimo, e
-                prometer edicao seria mentir na ultima tela. */}
-            {!TRAVA && (
-              <p className="fim-5 text-[13px] mt-7" style={{ color: 'rgba(255,255,255,.74)' }}>Se quiser mudar alguma resposta, é só entrar de novo pelo mesmo link.</p>
-            )}
+            {/* Aqui havia "se quiser mudar alguma resposta, e' so' entrar de
+                novo pelo mesmo link". Caiu junto com o fecho: entrar de novo
+                agora leva ao acrescimo, e prometer edicao seria mentir na
+                ultima tela que o pai le'. */}
             <Rodape>
               {/* Limpa tudo: quem comeca agora e' outra pessoa, e ver as
                   respostas de quem respondeu antes contaminaria as dela. */}
@@ -1996,7 +1982,7 @@ const QuestionarioPaisPreview = () => {
                 sai achando que acabou. Havendo texto, o proximo passo aparece
                 ali mesmo, e a linha de baixo avisa que a lista continua existindo
                 para quem quiser. */}
-            {TRAVA && escreveu && (
+            {escreveu && (
               <div className="revela" style={{ margin: '-10px 0 26px' }}>
                 <button
                   onClick={() => { if (i === ultimaPergunta) finaliza(); else avanca(); }}
