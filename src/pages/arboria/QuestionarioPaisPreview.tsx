@@ -2415,8 +2415,13 @@ const QuestionarioPaisPreview = () => {
                 ele nem queria ver. No celular aquilo parece fim de tela, e o pai
                 sai achando que acabou. Havendo texto, o proximo passo aparece
                 ali mesmo, e a linha de baixo avisa que a lista continua existindo
-                para quem quiser. */}
-            {escreveu && (
+                para quem quiser.
+
+                SO' QUANDO HA LISTA. O atalho existe porque as opcoes separam o
+                campo do botao. Na pergunta de abertura, que nao tem lista, o
+                botao de baixo ja esta logo ali, e o atalho virava um segundo
+                "Proxima" a dois dedos do primeiro. */}
+            {escreveu && opcoes.length > 0 && (
               <div className="revela" style={{ margin: '-10px 0 26px' }}>
                 <button
                   onClick={() => { if (i === ultimaPergunta) finaliza(); else avanca(); }}
