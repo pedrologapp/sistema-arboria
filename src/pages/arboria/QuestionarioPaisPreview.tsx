@@ -793,10 +793,10 @@ const CENAS_A5: Item[] = [
   // abertura diz "e tudo bem" de proposito: sem isso o pai responde o que ele
   // gostaria que fosse verdade, e a resposta vira o tempo de tela ideal.
   { tipo: 'pergunta',
-    cena: 'Tem criança que usa bastante o celular e tem criança que quase não pega. E quem usa faz coisas bem diferentes lá dentro.',
-    texto: `Se ${NOME} usa celular, o que ele(a) gosta de fazer lá dentro?`,
-    convite: 'Me conta o que ele(a) mais faz',
-    opcoes: ['Assiste vídeo', 'Joga sozinho(a)', 'Joga ou conversa com outras pessoas', 'Ele(a) não usa', 'Constrói, edita, cria alguma coisa', 'Vai atrás de assunto, pesquisa'] },
+    cena: 'No celular quase toda criança assiste vídeo e joga. O que muda de uma pra outra é o assunto: tem quem só veja vídeo de bicho, tem quem fique vendo gente montando coisa, tem quem volte sempre no mesmo jogo.',
+    texto: `Sobre o que é o vídeo ou o jogo que ${NOME} mais procura?`,
+    convite: 'Se souber o nome, escreve. Se não souber, me conta o que ele(a) fala sobre aquilo',
+    opcoes: ['Um jogo específico, e acompanha quem joga aquilo', 'Gente ensinando ou mostrando como se faz', 'Um assunto que ele(a) foi atrás sozinho(a)', 'Não sei dizer, ou ele(a) quase não usa', 'Música, edição, gente criando alguma coisa', 'Humor, corte, gente conversando'] },
 
   { tipo: 'pergunta',
     abre: 'Agora a que eu mais aprendo.',
@@ -814,10 +814,10 @@ const CENAS_A5: Item[] = [
   // Nao se pergunta o que ele CONTOU: aos 10 anos ele conta se quiser, e a
   // resposta mediria o vinculo. Pergunta-se o que ele fez quando travou.
   { tipo: 'pergunta',
-    cena: 'Ele estava fazendo alguma coisa em casa e não estava dando certo.',
+    cena: 'Ele(a) estava fazendo alguma coisa em casa e não estava dando certo. O que me interessa não é se conseguiu no fim, é o que ele(a) fez no minuto seguinte.',
     texto: 'Da última vez que isso aconteceu, o que ele(a) fez em seguida?',
-    convite: 'Me conta essa vez',
-    opcoes: ['Chamou alguém pra ajudar', 'Tentou de outro jeito sozinho(a)', 'Parou e voltou depois', 'Não lembro de nada assim', 'Foi procurar como se faz, num vídeo ou na internet', 'Largou e não voltou mais'] },
+    convite: 'Me conta essa vez, do jeito que aconteceu',
+    opcoes: ['Chamou alguém, mas pra olhar junto, não pra fazer por ele(a)', 'Desmanchou e começou de novo do zero', 'Ficou insistindo no mesmo ponto até sair', 'Não lembro de nada assim', 'Foi ver num vídeo como se faz e voltou pra tentar', 'Largou naquele dia e voltou depois, sozinho(a)'] },
 
   { tipo: 'pergunta',
     cena: 'Nessa idade eles reparam em coisa que o adulto deixou passar. Aqui eles percebem na hora quando eu escrevo uma palavra errada no slide.',
@@ -1135,21 +1135,31 @@ const CENAS_A3: Item[] = [
     convite: 'Me conta qual é',
     opcoes: ['Um jeito de mexer as mãos ou o corpo', 'Precisa arrumar as coisas antes de começar', 'Fala sozinho(a) enquanto está fazendo', 'Não lembro de nada assim', 'Junta ou coleciona uma coisa específica', 'Repete a mesma frase ou o mesmo bordão'] },
 
-  // A ISCA ANCORA DO 3o ANO, e a unica do F1 cujas opcoes vieram de resposta
-  // direta da professora sobre CINCO criancas diferentes na mesma cena.
+  // A ISCA ANCORA DO 3o ANO. Ela perguntava COMO ERA a hora da licao, e as
+  // opcoes eram senta e faz / chama alguem / deixa pro fim. Vieram de resposta
+  // direta da professora, mas sobre a LOGISTICA da tarefa: quem faz, quando faz,
+  // se o pai senta junto. Isso o boletim ja' responde, e a isca estava sendo
+  // gasta com comportamento.
+  //
+  // Agora ela persegue o que a crianca faz ENQUANTO faz. Quem narra em voz alta
+  // o proprio passo a passo esta pensando por linguagem. Quem para no meio para
+  // perguntar do personagem esta entrando pela pessoa dentro da historia. Quem
+  // quer saber pra que aquilo serve antes de comecar esta pedindo a regra. Sao
+  // tres cabecas diferentes na mesma folha de dever, e nenhuma delas aparece em
+  // "senta e faz sozinho".
   { tipo: 'pergunta',
-    cena: 'A lição de casa é a hora que mais divide. Tem quem senta e faz, tem quem chama alguém pra ficar junto, e tem quem deixa pro fim.',
-    texto: `Como é a hora da lição de casa de ${NOME}?`,
-    convite: 'Me conta como costuma ser',
-    opcoes: ['Senta e faz sozinho(a)', 'Chama alguém pra ficar junto', 'Pede ajuda pra fazer', 'Não lembro de nada assim', 'Deixa pro fim e faz correndo', 'Faz com a tela ligada do lado'] },
+    cena: 'Enquanto faz a atividade, cada criança faz uma coisa junto. Tem uma que narra em voz alta tudo o que está fazendo. Tem uma que para no meio pra perguntar se o personagem da historinha está bem.',
+    texto: `${NOME} faz alguma coisa assim enquanto está fazendo a atividade?`,
+    convite: 'Me conta o que ele(a) faz',
+    opcoes: ['Narra em voz alta o que está fazendo', 'Pergunta dos personagens, quer saber o que aconteceu com eles', 'Desenha ou rabisca no canto da folha', 'Não lembro de nada assim', 'Cantarola, bate um ritmo, balança o pé', 'Quer saber pra que serve aquilo, por que é assim'] },
 
   { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre ${NOME}.`, cta: 'Continuar' },
 
   { tipo: 'pergunta',
-    cena: 'Tem criança que usa bastante o celular e tem criança que quase não pega. E quem usa faz coisas bem diferentes lá dentro.',
-    texto: `Se ${NOME} usa celular, o que ele(a) gosta de fazer lá dentro?`,
-    convite: 'Me conta o que ele(a) mais faz',
-    opcoes: ['Assiste vídeo', 'Joga sozinho(a)', 'Joga ou conversa com outras pessoas', 'Ele(a) não usa', 'Constrói, edita, cria alguma coisa', 'Vai atrás de assunto, pesquisa'] },
+    cena: 'No celular quase toda criança assiste vídeo e joga. O que muda de uma pra outra é o assunto: tem quem só veja vídeo de bicho, tem quem fique vendo gente montando coisa, tem quem volte sempre no mesmo jogo.',
+    texto: `Sobre o que é o vídeo ou o jogo que ${NOME} mais procura?`,
+    convite: 'Se souber o nome, escreve. Se não souber, me conta o que ele(a) fala sobre aquilo',
+    opcoes: ['Bicho, dinossauro, natureza, espaço', 'Gente montando, construindo, consertando', 'História, personagem, desenho que ele(a) acompanha', 'Não sei dizer, ou ele(a) quase não usa', 'Música, dança, gente cantando', 'Um jogo só, e volta sempre no mesmo'] },
 
   { tipo: 'pergunta',
     abre: 'Agora a que eu mais aprendo.',
@@ -1179,10 +1189,10 @@ const CENAS_A3: Item[] = [
 
 const GUARDADAS_A3: Item[] = [
   { tipo: 'pergunta',
-    cena: 'Ele estava fazendo alguma coisa em casa e não estava dando certo.',
+    cena: 'Ele(a) estava fazendo alguma coisa em casa e não estava dando certo. O que me interessa não é se conseguiu no fim, é o que ele(a) fez no minuto seguinte.',
     texto: 'Da última vez que isso aconteceu, o que ele(a) fez em seguida?',
-    convite: 'Me conta essa vez',
-    opcoes: ['Chamou alguém pra ajudar', 'Tentou de outro jeito sozinho(a)', 'Parou e voltou depois', 'Não lembro de nada assim', 'Foi procurar como se faz, num vídeo ou na internet', 'Largou e não voltou mais'] },
+    convite: 'Me conta essa vez, do jeito que aconteceu',
+    opcoes: ['Chamou alguém, mas pra olhar junto, não pra fazer por ele(a)', 'Desmanchou e começou de novo do zero', 'Ficou insistindo no mesmo ponto até sair', 'Não lembro de nada assim', 'Foi ver num vídeo como se faz e voltou pra tentar', 'Largou naquele dia e voltou depois, sozinho(a)'] },
 
   { tipo: 'pergunta',
     cena: 'Tem uma hora em que eles querem muito uma coisa e a gente não quer dar.',
@@ -1264,10 +1274,10 @@ const CENAS_A4: Item[] = [
   { tipo: 'transicao', enorme: `Estou adorando saber essas coisas sobre ${NOME}.`, cta: 'Continuar' },
 
   { tipo: 'pergunta',
-    cena: 'Tem criança que usa bastante o celular e tem criança que quase não pega. E quem usa faz coisas bem diferentes lá dentro.',
-    texto: `Se ${NOME} usa celular, o que ele(a) gosta de fazer lá dentro?`,
-    convite: 'Me conta o que ele(a) mais faz',
-    opcoes: ['Assiste vídeo', 'Joga sozinho(a)', 'Joga ou conversa com outras pessoas', 'Ele(a) não usa', 'Constrói, edita, cria alguma coisa', 'Vai atrás de assunto, pesquisa'] },
+    cena: 'No celular quase toda criança assiste vídeo e joga. O que muda de uma pra outra é o assunto: tem quem só veja vídeo de bicho, tem quem fique vendo gente montando coisa, tem quem volte sempre no mesmo jogo.',
+    texto: `Sobre o que é o vídeo ou o jogo que ${NOME} mais procura?`,
+    convite: 'Se souber o nome, escreve. Se não souber, me conta o que ele(a) fala sobre aquilo',
+    opcoes: ['Um jogo específico, e vai atrás de saber mais dele', 'Gente ensinando a fazer alguma coisa', 'Bicho, ciência, curiosidade, "você sabia"', 'Não sei dizer, ou ele(a) quase não usa', 'Humor, pegadinha, corte de gente falando', 'Desenho, história, mundo que ele(a) acompanha'] },
 
   { tipo: 'pergunta',
     abre: 'Agora a que eu mais aprendo.',
@@ -1305,10 +1315,10 @@ const GUARDADAS_A4: Item[] = [
     opcoes: ['Explicou por que aquilo era importante', 'Disse o que ia acontecer de ruim se não desse', 'Ofereceu alguma coisa em troca', 'Não lembro de nada assim', 'Insistiu até a gente cansar', 'Foi pedir pra outra pessoa da casa'] },
 
   { tipo: 'pergunta',
-    cena: 'Ele estava fazendo alguma coisa em casa e não estava dando certo.',
+    cena: 'Ele(a) estava fazendo alguma coisa em casa e não estava dando certo. O que me interessa não é se conseguiu no fim, é o que ele(a) fez no minuto seguinte.',
     texto: 'Da última vez que isso aconteceu, o que ele(a) fez em seguida?',
-    convite: 'Me conta essa vez',
-    opcoes: ['Chamou alguém pra ajudar', 'Tentou de outro jeito sozinho(a)', 'Parou e voltou depois', 'Não lembro de nada assim', 'Foi procurar como se faz, num vídeo ou na internet', 'Largou e não voltou mais'] },
+    convite: 'Me conta essa vez, do jeito que aconteceu',
+    opcoes: ['Chamou alguém, mas pra olhar junto, não pra fazer por ele(a)', 'Desmanchou e começou de novo do zero', 'Ficou insistindo no mesmo ponto até sair', 'Não lembro de nada assim', 'Foi ver num vídeo como se faz e voltou pra tentar', 'Largou naquele dia e voltou depois, sozinho(a)'] },
 
   { tipo: 'pergunta',
     cena: 'Tem dia que a gente chega em casa acabado e nem fala nada pra ninguém.',
