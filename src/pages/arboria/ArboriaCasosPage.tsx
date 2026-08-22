@@ -61,6 +61,17 @@ const ESTADO_NOME: Record<string, string> = {
   em_espera: 'em espera', encerrado: 'encerrado',
 };
 
+// O caso e conhecido pelo primeiro nome, igual as pastas em privado/casos.
+// Nomes compostos comuns levam duas palavras, senao Maria Cecilia e Maria Helena
+// viram a mesma "Maria" na lista e o numero passa a ser a unica diferenca.
+const COMPOSTOS = new Set(['maria','ana','joao','josé','jose','luiz','luís','luis','pedro','antonio','antônio','carlos','paulo','francisco','marco','marcos','joão']);
+const nomeCurto = (n: string) => {
+  const p = n.trim().split(/\s+/);
+  if (p.length < 2) return p[0] ?? '';
+  const primeiro = p[0].toLowerCase();
+  return COMPOSTOS.has(primeiro) ? p[0] + ' ' + p[1] : p[0];
+};
+
 const dia = (iso: string | null) => {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
@@ -380,14 +391,15 @@ const ArboriaCasosPage = () => {
             <button key={c.id} onClick={() => void abrir(c)}
               className="rounded-2xl px-4 py-3.5 flex items-start gap-3.5 text-left w-full"
               style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}>
-              <span className="text-[15px] font-bold mt-0.5 tabular-nums"
-                style={{ color: t.textFaint, minWidth: 26 }}>#{c.numero}</span>
-
               <span className="flex-1 min-w-0">
-                <b className="block text-[15px] font-semibold" style={{ color: t.text }}>
-                  {c.nome ?? c.quem}
+                {/* "#1 Ayrton". O numero e o primeiro nome sao o identificador do
+                    caso, do jeito que a gente fala dele em voz alta. O nome
+                    completo aparece dentro, quando ja se sabe de quem se trata. */}
+                <b className="block text-[15.5px] font-bold mb-0.5" style={{ color: t.text }}>
+                  <span style={{ color: t.textFaint }}>#{c.numero}</span>{' '}
+                  {nomeCurto(c.nome ?? c.quem ?? '')}
                 </b>
-                <span className="block text-[13px] mb-1" style={{ color: t.text }}>{c.titulo}</span>
+                <span className="block text-[13px] mb-1" style={{ color: t.textMuted }}>{c.titulo}</span>
                 <span className="text-[11.5px]" style={{ color: t.textFaint }}>
                   {c.turma ? c.turma + ' · ' : ''}
                   {c.cenas} no acervo · {c.mecanismos} mecanismos · {c.apostas} apostas
