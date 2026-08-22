@@ -44,12 +44,14 @@ interface Caso {
   o_que_estamos_vendo: string | null; analise: string | null; proximos_passos: string[];
   o_que_nao_fecha: string | null; o_que_muda: string | null; tipo_tensao: string | null;
   pergunta_veio_de: string | null;
+  pecas_soltas: string[]; proxima_peca: string | null;
   nome?: string; turma?: string; serie?: string; nascimento?: string | null;
   cenas?: number; mecanismos?: number; apostas?: number;
 }
 interface Cena {
   id: string; tipo: string; descricao: string; citacao: string | null;
   fonte: string; quem: string | null; quando: string | null; origem_tipo: string | null;
+  contexto: string | null;
 }
 interface Mecanismo { id: string; descricao: string; ordem: number; cenas: string[] }
 interface Aposta {
@@ -154,7 +156,7 @@ const ArboriaCasosPage = () => {
 
   async function carregarLista() {
     const { data, error } = await tabela('casos')
-      .select('id, numero, aluno_id, quem, titulo, pergunta, estado, resumo, gostos, o_que_estamos_vendo, analise, proximos_passos, o_que_nao_fecha, o_que_muda, tipo_tensao, pergunta_veio_de, aberto_em, ultima_atividade')
+      .select('id, numero, aluno_id, quem, titulo, pergunta, estado, resumo, gostos, o_que_estamos_vendo, analise, proximos_passos, o_que_nao_fecha, o_que_muda, tipo_tensao, pergunta_veio_de, pecas_soltas, proxima_peca, aberto_em, ultima_atividade')
       .order('numero');
     if (error) { toast.error('Não consegui carregar os casos'); setCasos([]); return; }
     const lista = (data ?? []) as Caso[];
@@ -466,9 +468,13 @@ const ArboriaCasosPage = () => {
             </Secao>
 
             {/* -------------------------------------------- apostas */}
-            <Secao titulo="As apostas" n={vivas.length}
-              nota="Hipótese nunca anda sozinha. O banco recusa aposta sem rival e sem o que a derrubaria.">
-              {vivas.length === 0 ? <Vazio>Nenhuma aposta feita ainda.</Vazio> : vivas.map((a) => (
+            {/* AS LEITURAS, não as apostas. A palavra mudou junto com a
+                doutrina: aposta pede vencedor, leitura convive. O rival
+                continua obrigatório, e o trabalho dele deixou de ser competir:
+                é impedir que a primeira leitura feche. */}
+            <Secao titulo="As leituras em aberto" n={vivas.length}
+              nota="Duas leituras podem valer ao mesmo tempo. O rival não é candidato a morrer: ele existe para a primeira não fechar.">
+              {vivas.length === 0 ? <Vazio>Nenhuma leitura escrita ainda.</Vazio> : vivas.map((a) => (
                 <div key={a.id} style={{
                   border: `1px solid ${F.linha}`, borderRadius: 12,
                   padding: '20px 22px', margin: '0 0 12px',
@@ -496,12 +502,50 @@ const ArboriaCasosPage = () => {
                   </p>
 
                   <p style={{ fontSize: 11.5, color: F.claro2, margin: '20px 0 0' }}>
-                    apostada em {dia(a.data_aposta)}
-                    {a.checada_em ? ` · checada em ${dia(a.checada_em)}` : ' · nunca checada'}
+                    {a.estado === 'convivem'
+                      ? 'as duas leituras valem por enquanto · '
+                      : ''}
+                    escrita em {dia(a.data_aposta)}
+                    {a.checada_em ? ` · revista em ${dia(a.checada_em)}` : ''}
                   </p>
                 </div>
               ))}
             </Secao>
+
+            {/* ===================== A MESA: PEÇAS SOLTAS E A PRÓXIMA */}
+            {aberto.pecas_soltas.length > 0 && (
+              <Secao titulo="Peças que ainda não encaixam" n={aberto.pecas_soltas.length}
+                nota="Num quebra-cabeça isso não é fracasso, é o estado normal da mesa. Algumas só vão fazer sentido quando outra peça chegar.">
+                <ul style={{ margin: 0, padding: 0 }}>
+                  {aberto.pecas_soltas.map((p) => (
+                    <li key={p} style={{
+                      listStyle: 'none', position: 'relative', paddingLeft: 34,
+                      margin: '0 0 12px', fontSize: 15, lineHeight: 1.5, color: F.claro2,
+                    }}>
+                      <span aria-hidden style={{
+                        position: 'absolute', left: 0, top: 11, width: 20, height: 1.4,
+                        background: 'rgba(169,174,188,.45)',
+                      }} />
+                      {p}
+                    </li>
+                  ))}
+                </ul>
+              </Secao>
+            )}
+
+            {aberto.proxima_peca && (
+              <div style={{
+                borderLeft: `3px solid ${F.acc}`, padding: '4px 0 4px 22px', margin: '0 0 34px',
+              }}>
+                <p style={{
+                  fontSize: 10.5, letterSpacing: '.26em', textTransform: 'uppercase',
+                  color: F.acc, fontWeight: 800, margin: '0 0 10px',
+                }}>a próxima peça que a gente procura</p>
+                <p style={{ fontSize: 16, lineHeight: 1.6, margin: 0, maxWidth: '64ch' }}>
+                  {aberto.proxima_peca}
+                </p>
+              </div>
+            )}
 
             {/* ================================== A ANÁLISE E OS PASSOS */}
             {aberto.analise && (
@@ -605,6 +649,15 @@ const ArboriaCasosPage = () => {
                       }}>
                         {c.fonte === 'casa' ? 'casa' : 'escola'} · {c.quem} · {dia(c.quando)}
                       </p>
+                      {/* O CONTEXTO. Sem ele a cena é frase solta, e quem lê não
+                          tem como pesar o que está lendo: não sabe qual pergunta
+                          a mãe respondia, nem em que aula a professora estava. */}
+                      {c.contexto && (
+                        <p style={{
+                          fontSize: 12, lineHeight: 1.45, margin: '0 0 10px',
+                          color: 'rgba(169,174,188,.75)', fontStyle: 'italic',
+                        }}>{c.contexto}</p>
+                      )}
                       <p style={{ fontSize: 14.5, lineHeight: 1.5, margin: 0 }}>
                         {c.citacao ?? c.descricao}
                       </p>
