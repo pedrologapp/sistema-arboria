@@ -51,7 +51,7 @@ interface Caso {
 interface Cena {
   id: string; tipo: string; descricao: string; citacao: string | null;
   fonte: string; quem: string | null; quando: string | null; origem_tipo: string | null;
-  contexto: string | null;
+  contexto: string | null; aula: string | null;
 }
 interface Mecanismo { id: string; descricao: string; ordem: number; cenas: string[] }
 interface Aposta {
@@ -60,7 +60,7 @@ interface Aposta {
 }
 interface Sondagem {
   id: string; pedido: string; pergunta: string; para_quem: string | null;
-  enviada_em: string; volta: string | null; voltou_em: string | null;
+  enviada_em: string; entregue_em: string | null; volta: string | null; voltou_em: string | null;
 }
 interface Ligacao { mecanismo_id: string; cena_id: string; papel: string }
 interface Leitura {
@@ -68,13 +68,25 @@ interface Leitura {
   texto: string; o_que_mudou: string | null;
 }
 
-// A leitura é escrita em prosa, com **negrito** onde a frase vira o argumento.
-// Não vale a pena um renderizador de markdown inteiro para um marcador só.
+// A SEMIÓTICA DA COR, copiada da folha impressa.
+//
+// Turquesa não é enfeite, é função: ela marca por onde o olho ENTRA. Na folha
+// ela está nas datas, e é isso que deixa a leitura navegável, porque a data é a
+// âncora de qualquer cronologia. Branco forte é onde a frase VIRA o argumento.
+// Cinza é contexto. Três papéis, três tons, e nada de negrito decorativo.
+//
+// Antes disto a folha estava toda branca, e um texto todo branco não tem por
+// onde o olho pousar: lê-se do começo ao fim ou não se lê.
+const PARECE_DATA = /^(\d|1º|º)|(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)/i;
+
 const comNegrito = (texto: string) =>
-  texto.split(/(\*\*[^*]+\*\*)/g).map((p, k) =>
-    p.startsWith('**') && p.endsWith('**')
-      ? <b key={k} style={{ fontWeight: 700, color: '#fff' }}>{p.slice(2, -2)}</b>
-      : <span key={k}>{p}</span>);
+  texto.split(/(\*\*[^*]+\*\*)/g).map((p, k) => {
+    if (!(p.startsWith('**') && p.endsWith('**'))) return <span key={k}>{p}</span>;
+    const dentro = p.slice(2, -2);
+    return PARECE_DATA.test(dentro.trim())
+      ? <b key={k} style={{ fontWeight: 800, color: F.acc, letterSpacing: '.01em' }}>{dentro}</b>
+      : <b key={k} style={{ fontWeight: 700, color: '#fff' }}>{dentro}</b>;
+  });
 
 // OS TRÊS CAMINHOS DA COLETA, do desenho do Fundador.
 //
@@ -508,7 +520,8 @@ const ArboriaCasosPage = () => {
                         margin: '8px 0 0', paddingLeft: 16,
                         borderLeft: `1px solid ${F.linha}`, maxWidth: '64ch',
                       }}>
-                        {c.citacao ?? c.descricao}
+                        <span style={{ color: F.acc, fontWeight: 700 }}>{dia(c.quando)}</span>
+                        {'  '}{c.citacao ?? c.descricao}
                         <span style={{ color: 'rgba(169,174,188,.6)' }}> · {c.quem}</span>
                       </p>
                     ))}
@@ -627,8 +640,14 @@ const ArboriaCasosPage = () => {
                       <span style={{ color: F.claro2, fontSize: 11.5 }}> · {dia(s.voltou_em)}</span>
                     </p>
                   ) : (
+                    /* "Escrita e não entregue" é um estado diferente de "sem
+                       volta": um espera o Fundador, o outro espera a professora.
+                       Confundir os dois faz o painel mentir sobre quem está
+                       devendo. */
                     <p style={{ fontSize: 11.5, color: F.claro2, margin: '14px 0 0' }}>
-                      enviada em {dia(s.enviada_em)}, ainda sem volta
+                      {s.entregue_em
+                        ? `entregue em ${dia(s.entregue_em)}, ainda sem volta`
+                        : `escrita em ${dia(s.enviada_em)}, ainda não entregue`}
                     </p>
                   )}
                 </div>
@@ -678,16 +697,32 @@ const ArboriaCasosPage = () => {
                       border: `1px solid ${F.linha}`, borderRadius: 12,
                       padding: '16px 18px', margin: '0 0 10px',
                     }}>
+                      {/* A data em turquesa, igual à folha: é por ela que o olho
+                          entra numa lista de cenas. A fonte e o quem ficam em
+                          cinza, porque são contexto e não âncora. */}
                       <p style={{
                         fontSize: 10.5, letterSpacing: '.2em', textTransform: 'uppercase',
-                        fontWeight: 800, margin: '0 0 8px',
-                        color: c.fonte === 'casa' ? F.acc : F.claro2,
+                        fontWeight: 800, margin: '0 0 8px', color: F.claro2,
                       }}>
-                        {c.fonte === 'casa' ? 'casa' : 'escola'} · {c.quem} · {dia(c.quando)}
+                        <span style={{ color: F.acc }}>{dia(c.quando)}</span>
+                        {'  ·  '}{c.fonte === 'casa' ? 'casa' : 'escola'} · {c.quem}
                       </p>
+
+                      {/* A AULA. O que a criança fez só é notável CONTRA o que
+                          foi pedido: "ele entregou um campeonato" muda de peso
+                          quando se sabe que a aula era "O Convite". */}
+                      {c.aula && (
+                        <p style={{
+                          fontSize: 13.5, margin: '0 0 8px', fontWeight: 700,
+                          color: F.acc,
+                        }}>
+                          Aula · {c.aula}
+                        </p>
+                      )}
+
                       {/* O CONTEXTO. Sem ele a cena é frase solta, e quem lê não
                           tem como pesar o que está lendo: não sabe qual pergunta
-                          a mãe respondia, nem em que aula a professora estava. */}
+                          a mãe respondia, nem em que fase a professora estava. */}
                       {c.contexto && (
                         <p style={{
                           fontSize: 12, lineHeight: 1.45, margin: '0 0 10px',
