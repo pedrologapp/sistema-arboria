@@ -420,42 +420,53 @@ const ArboriaCasosPage = () => {
   }
 
   // ================================================== A LISTA
+  // A mesma pele da folha. A lista e o sumario do caderno: numero e nome, mais
+  // nada. Contagem de acervo e estado sao coisas do laboratorio, e aqui elas so
+  // enchiam a linha entre o Fundador e a crianca que ele quer abrir.
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-1" style={{ color: t.text }}>Casos</h1>
-      <p className="text-[13px] mb-6 max-w-2xl" style={{ color: t.textMuted, lineHeight: 1.55 }}>
-        Investigação, não diagnóstico. Cada caso persegue uma pergunta sobre uma
-        criança, com hipótese, rival e o que derrubaria as duas. Nome de
-        inteligência não aparece aqui de propósito: o nome fecha a investigação, e
-        quem observa para de olhar.
-      </p>
+    <div style={{
+      position: 'relative', overflow: 'hidden',
+      background: F.preto, color: F.claro, borderRadius: 18,
+      padding: '38px 40px 30px',
+      boxShadow: '0 18px 60px rgba(8,8,12,.28)',
+    }}>
+      <div aria-hidden style={{
+        position: 'absolute', left: '50%', top: '-24%', width: '150%', height: '62%',
+        transform: 'translateX(-50%)', pointerEvents: 'none',
+        background: 'radial-gradient(closest-side, rgba(94,224,208,.16), transparent 70%)',
+      }} />
 
-      <div className="flex flex-col gap-2">
-        {casos.map((c) => {
-          const fino = (c.mecanismos ?? 0) < 3;
-          return (
+      <div style={{ position: 'relative' }}>
+        <p style={{ fontWeight: 800, letterSpacing: '-.045em', fontSize: 30, lineHeight: 1, margin: 0 }}>
+          Arb<span style={{ color: F.acc }}>oria</span>
+        </p>
+        <p style={{
+          fontSize: 10.5, letterSpacing: '.3em', textTransform: 'uppercase',
+          color: F.acc, fontWeight: 800, margin: '8px 0 0',
+        }}>Casos</p>
+        <p style={{ fontSize: 13.5, color: F.claro2, margin: '14px 0 30px' }}>
+          Investigação, não diagnóstico.
+        </p>
+
+        <div>
+          {casos.map((c, k) => (
             <button key={c.id} onClick={() => void abrir(c)}
-              className="rounded-2xl px-4 py-3.5 flex items-start gap-3.5 text-left w-full"
-              style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}>
-              <span className="flex-1 min-w-0">
-                <b className="block text-[15.5px] font-bold mb-0.5" style={{ color: t.text }}>
-                  <span style={{ color: t.textFaint }}>#{c.numero}</span>{' '}
-                  {nomeCurto(c.nome ?? c.quem ?? '')}
-                </b>
-                <span className="block text-[13px] mb-1" style={{ color: t.textMuted }}>{c.titulo}</span>
-                <span className="text-[11.5px]" style={{ color: t.textFaint }}>
-                  {c.turma ? `${c.turma} · ` : ''}
-                  {c.cenas} no acervo · {c.mecanismos} mecanismos · {c.apostas} apostas
-                  {fino && ' · material fino'}
-                </span>
-              </span>
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap"
-                style={{ backgroundColor: t.accentSoft, color: t.accentText }}>
-                {ESTADO_NOME[c.estado] ?? c.estado}
+              style={{
+                display: 'flex', alignItems: 'baseline', gap: 18, width: '100%',
+                textAlign: 'left', background: 'none', border: 0,
+                borderTop: k === 0 ? 'none' : `1px solid ${F.linha}`,
+                padding: '17px 2px', color: F.claro, cursor: 'pointer',
+              }}>
+              <span style={{
+                color: F.acc, fontWeight: 800, fontSize: 13,
+                fontVariantNumeric: 'tabular-nums', minWidth: 26,
+              }}>#{c.numero}</span>
+              <span style={{ fontFamily: F.serif, fontSize: 22, lineHeight: 1.2 }}>
+                {nomeCurto(c.nome ?? c.quem ?? '')}
               </span>
             </button>
-          );
-        })}
+          ))}
+        </div>
       </div>
     </div>
   );
