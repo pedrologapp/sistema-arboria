@@ -62,16 +62,13 @@ const ESTADO_NOME: Record<string, string> = {
   aberto: 'aberto', sondando: 'sondando', em_espera: 'em espera', encerrado: 'encerrado',
 };
 
-// O caso é conhecido pelo primeiro nome, igual às pastas em privado/casos.
-// Nome composto leva duas palavras, senão Maria Cecília e Maria Helena viram a
-// mesma "Maria" e o número passa a ser a única diferença entre elas.
-const COMPOSTOS = new Set(['maria', 'ana', 'joão', 'joao', 'josé', 'jose', 'luiz',
-  'luís', 'luis', 'pedro', 'antônio', 'antonio', 'carlos', 'paulo', 'francisco']);
-const nomeCurto = (n: string) => {
-  const p = n.replace(/,.*/, '').trim().split(/\s+/);
-  if (p.length < 2) return p[0] ?? '';
-  return COMPOSTOS.has(p[0].toLowerCase()) ? `${p[0]} ${p[1]}` : p[0];
-};
+// NOME E SOBRENOME, sempre as duas primeiras palavras.
+//
+// Só o primeiro nome não bastava: Maria Cecília e Maria Helena viravam a mesma
+// "Maria" na lista, e o número passava a ser a única diferença entre as duas.
+// Duas palavras também resolvem o nome composto sem precisar de lista de nomes.
+const nomeCurto = (n: string) =>
+  n.replace(/,.*/, '').trim().split(/\s+/).filter(Boolean).slice(0, 2).join(' ');
 
 // Idade em anos cheios. Aparece logo abaixo do nome porque muda o que cada
 // cena quer dizer: repetir a mesma historia aos tres anos e o esperado, aos dez
@@ -128,6 +125,10 @@ const ArboriaCasosPage = () => {
   const [sondagens, setSondagens] = useState<Sondagem[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [verAcervo, setVerAcervo] = useState(false);
+
+  // O perfil guarda a série ("5º Ano") e a turma ("A") em campos separados.
+  // Sozinha, a turma é uma letra e não diz nada.
+  const turmaCheia = (c: Caso) => [c.serie, c.turma].filter(Boolean).join(' ') || undefined;
 
   useEffect(() => { void carregarLista(); }, []);
 
@@ -225,7 +226,7 @@ const ArboriaCasosPage = () => {
               fontSize: 10.5, letterSpacing: '.3em', textTransform: 'uppercase',
               color: F.acc, fontWeight: 800, margin: '8px 0 0',
             }}>
-              Caso #{aberto.numero}
+              Caso #{aberto.numero} · {nomeCurto(aberto.nome ?? aberto.quem ?? '')}
             </p>
 
             <h1 style={{
@@ -242,7 +243,7 @@ const ArboriaCasosPage = () => {
             <p style={{ fontSize: 13.5, color: F.claro2, margin: '0 0 26px' }}>
               {[
                 idade(aberto.nascimento) !== null ? `${idade(aberto.nascimento)} anos` : null,
-                aberto.turma,
+                turmaCheia(aberto),
               ].filter(Boolean).join('  ·  ')}
             </p>
 
@@ -496,9 +497,12 @@ const ArboriaCasosPage = () => {
                 borderTop: k === 0 ? 'none' : `1px solid ${F.linha}`,
                 padding: '17px 2px', color: F.claro, cursor: 'pointer',
               }}>
+              {/* O número no mesmo tamanho do nome: os dois juntos são o
+                  identificador do caso, e um miúdo ao lado do outro fazia o
+                  número parecer marcador de lista. */}
               <span style={{
-                color: F.acc, fontWeight: 800, fontSize: 13,
-                fontVariantNumeric: 'tabular-nums', minWidth: 26,
+                color: F.acc, fontFamily: F.serif, fontSize: 22, lineHeight: 1.2,
+                fontVariantNumeric: 'tabular-nums', minWidth: 34,
               }}>#{c.numero}</span>
               <span style={{ fontFamily: F.serif, fontSize: 22, lineHeight: 1.2 }}>
                 {nomeCurto(c.nome ?? c.quem ?? '')}
