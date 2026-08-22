@@ -40,7 +40,8 @@ interface Caso {
   id: string; numero: number; aluno_id: string | null; quem: string | null;
   titulo: string; pergunta: string | null; estado: string;
   aberto_em: string; ultima_atividade: string;
-  nome?: string; turma?: string; serie?: string;
+  resumo: string | null; gostos: string[];
+  nome?: string; turma?: string; serie?: string; nascimento?: string | null;
   cenas?: number; mecanismos?: number; apostas?: number;
 }
 interface Cena {
@@ -70,6 +71,19 @@ const nomeCurto = (n: string) => {
   const p = n.replace(/,.*/, '').trim().split(/\s+/);
   if (p.length < 2) return p[0] ?? '';
   return COMPOSTOS.has(p[0].toLowerCase()) ? `${p[0]} ${p[1]}` : p[0];
+};
+
+// Idade em anos cheios. Aparece logo abaixo do nome porque muda o que cada
+// cena quer dizer: repetir a mesma historia aos tres anos e o esperado, aos dez
+// e outra coisa.
+const idade = (nasc: string | null | undefined) => {
+  if (!nasc) return null;
+  const n = new Date(nasc + 'T00:00:00');
+  const h = new Date();
+  let a = h.getFullYear() - n.getFullYear();
+  const m = h.getMonth() - n.getMonth();
+  if (m < 0 || (m === 0 && h.getDate() < n.getDate())) a--;
+  return a;
 };
 
 const dia = (iso: string | null) =>
@@ -119,7 +133,7 @@ const ArboriaCasosPage = () => {
 
   async function carregarLista() {
     const { data, error } = await tabela('casos')
-      .select('id, numero, aluno_id, quem, titulo, pergunta, estado, aberto_em, ultima_atividade')
+      .select('id, numero, aluno_id, quem, titulo, pergunta, estado, resumo, gostos, aberto_em, ultima_atividade')
       .order('numero');
     if (error) { toast.error('Não consegui carregar os casos'); setCasos([]); return; }
     const lista = (data ?? []) as Caso[];
@@ -128,7 +142,7 @@ const ArboriaCasosPage = () => {
     // para quem for investigado, e o Fundador quis ser o primeiro.
     const ids = lista.map((c) => c.aluno_id).filter(Boolean);
     const { data: pes } = ids.length
-      ? await tabela('profiles').select('id, full_name, serie, turma').in('id', ids)
+      ? await tabela('profiles').select('id, full_name, serie, turma, data_nascimento').in('id', ids)
       : { data: [] };
     const porId = new Map((pes ?? []).map((p: Record<string, string>) => [p.id, p]));
 
@@ -143,7 +157,8 @@ const ArboriaCasosPage = () => {
 
     setCasos(lista.map((c, k) => {
       const p = porId.get(c.aluno_id ?? '') as Record<string, string> | undefined;
-      return { ...c, nome: p?.full_name, serie: p?.serie, turma: p?.turma, ...contagens[k] };
+      return { ...c, nome: p?.full_name, serie: p?.serie, turma: p?.turma,
+               nascimento: p?.data_nascimento, ...contagens[k] };
     }));
   }
 
@@ -163,7 +178,6 @@ const ArboriaCasosPage = () => {
     setCarregando(false);
   }
 
-  const interesses = useMemo(() => cenas.filter((c) => c.tipo === 'interesse'), [cenas]);
   const doLado = useMemo(() => ({
     casa: cenas.filter((c) => c.fonte === 'casa').length,
     escola: cenas.filter((c) => c.fonte === 'escola').length,
@@ -211,62 +225,78 @@ const ArboriaCasosPage = () => {
               fontSize: 10.5, letterSpacing: '.3em', textTransform: 'uppercase',
               color: F.acc, fontWeight: 800, margin: '8px 0 0',
             }}>
-              Caso #{aberto.numero} · {ESTADO_NOME[aberto.estado] ?? aberto.estado}
+              Caso #{aberto.numero}
             </p>
 
             <h1 style={{
               fontFamily: F.serif, fontSize: 38, lineHeight: 1.04, letterSpacing: '-.02em',
-              fontWeight: 400, margin: '26px 0 10px',
+              fontWeight: 400, margin: '24px 0 8px',
             }}>
               {aberto.nome ?? aberto.quem}
             </h1>
 
+            {/* Idade, série e turma, e mais nada. Contagem de acervo saiu daqui:
+                a folha abria em "6 de casa · 4 da escola" e o Fundador leu e não
+                entendeu, com razão. Número de fonte é coisa do fim, quando já se
+                sabe de quem se trata. */}
             <p style={{ fontSize: 13.5, color: F.claro2, margin: '0 0 26px' }}>
-              {aberto.turma ? `${aberto.turma} · ` : ''}
-              <Home size={12} style={{ display: 'inline', verticalAlign: -1 }} /> {doLado.casa} de casa
-              {'  ·  '}
-              <School size={12} style={{ display: 'inline', verticalAlign: -1 }} /> {doLado.escola} da escola
-              {(doLado.casa === 0 || doLado.escola === 0) && (
-                <span style={{ color: F.acc }}>{'  ·  '}só um lado</span>
-              )}
+              {[
+                idade(aberto.nascimento) !== null ? `${idade(aberto.nascimento)} anos` : null,
+                aberto.turma,
+              ].filter(Boolean).join('  ·  ')}
             </p>
 
-            {/* A pergunta do caso, no destaque de barra que a folha usa. */}
-            <div style={{ borderLeft: `3px solid ${F.acc}`, padding: '4px 0 4px 22px', margin: '0 0 38px' }}>
-              <p style={{ fontFamily: F.serif, fontSize: 21, lineHeight: 1.35, margin: 0 }}>
-                {aberto.titulo}
+            {/* QUEM É, antes de qualquer pergunta. Descreve o que a criança FAZ,
+                com cena concreta, e nunca o que ela é. */}
+            {aberto.resumo && (
+              <p style={{
+                fontSize: 16, lineHeight: 1.62, margin: '0 0 30px',
+                maxWidth: '66ch', color: F.claro,
+              }}>
+                {aberto.resumo}
               </p>
-              {aberto.pergunta && (
-                <p style={{ fontSize: 13.5, color: F.claro2, lineHeight: 1.55, margin: '10px 0 0', maxWidth: '62ch' }}>
-                  {aberto.pergunta}
+            )}
+
+            {aberto.gostos.length > 0 && (
+              <div style={{ margin: '0 0 34px' }}>
+                <Selo>O que ele procura sozinho</Selo>
+                <ul style={{ margin: 0, padding: 0 }}>
+                  {aberto.gostos.map((g) => (
+                    <li key={g} style={{
+                      listStyle: 'none', position: 'relative', paddingLeft: 34,
+                      margin: '0 0 10px', fontSize: 15, lineHeight: 1.45,
+                    }}>
+                      <span aria-hidden style={{
+                        position: 'absolute', left: 0, top: 10, width: 20, height: 1.4, background: F.acc,
+                      }} />
+                      {g}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Só agora a pergunta faz sentido, porque já se sabe de quem ela é. */}
+            <div style={{
+              borderTop: `1px solid ${F.linha}`, paddingTop: 30, margin: '0 0 38px',
+            }}>
+              <Selo>A pergunta do caso</Selo>
+              <div style={{ borderLeft: `3px solid ${F.acc}`, padding: '4px 0 4px 22px' }}>
+                <p style={{ fontFamily: F.serif, fontSize: 21, lineHeight: 1.35, margin: 0 }}>
+                  {aberto.titulo}
                 </p>
-              )}
+                {aberto.pergunta && (
+                  <p style={{ fontSize: 14, color: F.claro2, lineHeight: 1.6, margin: '12px 0 0', maxWidth: '62ch' }}>
+                    {aberto.pergunta}
+                  </p>
+                )}
+              </div>
             </div>
 
             {carregando && (
               <p style={{ color: F.claro2, fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Loader2 size={15} className="animate-spin" /> abrindo o laboratório
               </p>
-            )}
-
-            {/* ------------------------------------- o que ele procura */}
-            {interesses.length > 0 && (
-              <Secao titulo="O que ele procura sozinho" n={interesses.length}
-                nota="O mais durável do caso, e o que alimenta a escolha de atividade.">
-                <ul style={{ margin: 0, padding: 0 }}>
-                  {interesses.map((c) => (
-                    <li key={c.id} style={{
-                      listStyle: 'none', position: 'relative', paddingLeft: 34,
-                      margin: '0 0 12px', fontSize: 15, lineHeight: 1.45,
-                    }}>
-                      <span aria-hidden style={{
-                        position: 'absolute', left: 0, top: 10, width: 20, height: 1.4, background: F.acc,
-                      }} />
-                      {c.descricao}
-                    </li>
-                  ))}
-                </ul>
-              </Secao>
             )}
 
             {/* ---------------------------------- mecanismos visíveis */}
@@ -384,7 +414,7 @@ const ArboriaCasosPage = () => {
                   color: F.acc, fontWeight: 800, background: 'none', border: 0, padding: 0,
                 }}>
                 {verAcervo ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-                O acervo, cru · {cenas.length}
+                O acervo, cru · {doLado.casa} de casa · {doLado.escola} da escola
               </button>
               <p style={{ fontSize: 12.5, color: F.claro2, lineHeight: 1.55, margin: '10px 0 0', maxWidth: '64ch' }}>
                 Tudo que entrou, com data e fonte. Nada aqui se apaga nem se reescreve.
@@ -413,6 +443,15 @@ const ArboriaCasosPage = () => {
                 </div>
               )}
             </section>
+
+            {/* A assinatura da folha, igual à do documento impresso: fecha a
+                página dizendo em que pé a investigação está. */}
+            <p style={{
+              marginTop: 30, paddingTop: 18, borderTop: `1px solid ${F.linha}`,
+              fontSize: 12, color: F.claro2,
+            }}>
+              Caso aberto em {dia(aberto.aberto_em)} · {ESTADO_NOME[aberto.estado] ?? aberto.estado}
+            </p>
           </div>
         </div>
       </div>
