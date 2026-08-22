@@ -63,6 +63,18 @@ interface Sondagem {
   enviada_em: string; volta: string | null; voltou_em: string | null;
 }
 interface Ligacao { mecanismo_id: string; cena_id: string; papel: string }
+interface Leitura {
+  id: string; quando: string; titulo: string | null;
+  texto: string; o_que_mudou: string | null;
+}
+
+// A leitura é escrita em prosa, com **negrito** onde a frase vira o argumento.
+// Não vale a pena um renderizador de markdown inteiro para um marcador só.
+const comNegrito = (texto: string) =>
+  texto.split(/(\*\*[^*]+\*\*)/g).map((p, k) =>
+    p.startsWith('**') && p.endsWith('**')
+      ? <b key={k} style={{ fontWeight: 700, color: '#fff' }}>{p.slice(2, -2)}</b>
+      : <span key={k}>{p}</span>);
 
 // OS TRÊS CAMINHOS DA COLETA, do desenho do Fundador.
 //
@@ -145,6 +157,7 @@ const ArboriaCasosPage = () => {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [sondagens, setSondagens] = useState<Sondagem[]>([]);
   const [ligacoes, setLigacoes] = useState<Ligacao[]>([]);
+  const [leituras, setLeituras] = useState<Leitura[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [verAcervo, setVerAcervo] = useState(false);
 
@@ -209,6 +222,14 @@ const ArboriaCasosPage = () => {
           .in('mecanismo_id', listaMecs.map((m) => m.id))
       : { data: [] };
     setLigacoes((lig ?? []) as Ligacao[]);
+
+    // As leituras, da mais nova para a mais velha. Nunca se corrigem: a de
+    // ontem fica exatamente como estava, e a de hoje diz o que mudou.
+    const { data: lei } = await tabela('caso_leitura')
+      .select('id, quando, titulo, texto, o_que_mudou')
+      .eq('caso_id', c.id)
+      .order('quando', { ascending: false });
+    setLeituras((lei ?? []) as Leitura[]);
     setCarregando(false);
   }
 
@@ -354,29 +375,58 @@ const ArboriaCasosPage = () => {
               </div>
             </div>
 
-            {/* ============================== O QUE ESTAMOS VENDO */}
-            {aberto.o_que_estamos_vendo && (
-              <div style={{ margin: '0 0 34px' }}>
-                <Selo>O que estamos vendo</Selo>
-                <p style={{ fontSize: 16, lineHeight: 1.62, margin: 0, maxWidth: '66ch' }}>
-                  {aberto.o_que_estamos_vendo}
-                </p>
-              </div>
-            )}
+            {/* ==================== A LEITURA, DATADA E ACUMULADA
+                Nada aqui se corrige. A leitura de hoje fica exatamente como
+                está, e a de amanhã entra por cima dizendo o que mudou. É por
+                isso que o Fundador chamava de diário: a visão de hoje precisa
+                sobreviver à visão de amanhã.
 
-            {/* ============================ A PONTE: O QUE NÃO FECHA
-                Sem ela, "quem é" e "o que perguntamos" ficavam como dois
-                cartazes lado a lado sem fio entre um e outro. Ninguém abre
-                investigação porque a criança é interessante: abre porque alguma
-                coisa não encaixa, e é a tensão que gera a pergunta. */}
-            {aberto.o_que_nao_fecha && (
-              <div style={{ margin: '0 0 34px' }}>
-                <Selo>O que não fecha</Selo>
-                <p style={{ fontSize: 16, lineHeight: 1.62, margin: 0, maxWidth: '66ch' }}>
-                  {aberto.o_que_nao_fecha}
-                </p>
+                A prosa vem na ordem que convence, a mesma da folha que já vai
+                para a professora: as cenas com data, o que não combina, por que
+                não combina, e só então o que se quer descobrir. */}
+            {leituras.map((l, k) => (
+              <div key={l.id} style={{
+                margin: '0 0 30px',
+                opacity: k === 0 ? 1 : 0.62,
+                borderLeft: k === 0 ? `3px solid ${F.acc}` : `1px solid ${F.linha}`,
+                paddingLeft: 22,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+                  <span style={{
+                    fontSize: 10.5, letterSpacing: '.26em', textTransform: 'uppercase',
+                    color: k === 0 ? F.acc : F.claro2, fontWeight: 800,
+                  }}>
+                    {k === 0 ? 'A leitura de hoje' : 'Leitura de ' + dia(l.quando)}
+                  </span>
+                  {k === 0 && (
+                    <span style={{ fontSize: 11.5, color: F.claro2 }}>{dia(l.quando)}</span>
+                  )}
+                </div>
+
+                {l.titulo && (
+                  <p style={{
+                    fontFamily: F.serif, fontSize: 25, lineHeight: 1.24,
+                    margin: '14px 0 18px', letterSpacing: '-.015em',
+                  }}>{l.titulo}</p>
+                )}
+
+                {l.o_que_mudou && (
+                  <p style={{
+                    fontSize: 13.5, lineHeight: 1.55, margin: '0 0 18px',
+                    color: F.acc, maxWidth: '62ch',
+                  }}>
+                    O que mudou desde a última: {l.o_que_mudou}
+                  </p>
+                )}
+
+                {l.texto.split(/\n\n+/).map((par, i) => (
+                  <p key={i} style={{
+                    fontSize: 16, lineHeight: 1.68, margin: '0 0 16px',
+                    maxWidth: '64ch', color: F.claro,
+                  }}>{comNegrito(par)}</p>
+                ))}
               </div>
-            )}
+            ))}
 
             {/* Agora a pergunta chega puxada pela tensão, e não do céu. */}
             <div style={{
@@ -543,20 +593,6 @@ const ArboriaCasosPage = () => {
                 }}>a próxima peça que a gente procura</p>
                 <p style={{ fontSize: 16, lineHeight: 1.6, margin: 0, maxWidth: '64ch' }}>
                   {aberto.proxima_peca}
-                </p>
-              </div>
-            )}
-
-            {/* ================================== A ANÁLISE E OS PASSOS */}
-            {aberto.analise && (
-              <div style={{
-                border: `1px solid ${F.acc}`, borderRadius: 12,
-                padding: '22px 24px', margin: '0 0 20px',
-                background: 'rgba(94,224,208,.05)',
-              }}>
-                <Selo>Análise</Selo>
-                <p style={{ fontSize: 16, lineHeight: 1.62, margin: 0, maxWidth: '64ch' }}>
-                  {aberto.analise}
                 </p>
               </div>
             )}
