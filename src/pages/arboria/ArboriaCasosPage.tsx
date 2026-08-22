@@ -362,11 +362,13 @@ const ArboriaCasosPage = () => {
               <div style={{ display: 'flex', gap: 1, background: F.linha, borderRadius: 12, overflow: 'hidden' }}>
                 {CAMINHOS.map((cam) => {
                   const doCaminho = cenas.filter((c) => caminhoDa(c) === cam.id);
-                  // O que ESTE caminho, sozinho, deixa ver: os mecanismos que
-                  // bebem dele. É a "análise" de cada coluna do desenho.
-                  const ids = new Set(doCaminho.map((c) => c.id));
-                  const mecsDaqui = mecs.filter((m) =>
-                    ligacoes.some((l) => l.mecanismo_id === m.id && ids.has(l.cena_id)));
+                  // A COLUNA MOSTRA O QUE VEIO POR ALI, e não os mecanismos.
+                  //
+                  // Antes ela listava os mecanismos que bebem daquele caminho, e
+                  // isso repetia: um mecanismo nasce de uma cena de casa e uma de
+                  // aula, então aparecia nas duas colunas por construção, e a
+                  // coluna deixava de discriminar. O mecanismo é o CRUZAMENTO, e
+                  // o lugar dele é depois, na seção dele.
                   return (
                     <div key={cam.id} style={{ flex: 1, background: F.preto, padding: '18px 16px', minWidth: 0 }}>
                       <p style={{
@@ -380,18 +382,19 @@ const ArboriaCasosPage = () => {
                         <p style={{ fontSize: 12, color: 'rgba(169,174,188,.6)', margin: 0, fontStyle: 'italic' }}>
                           nada veio por aqui
                         </p>
-                      ) : mecsDaqui.length === 0 ? (
-                        <p style={{ fontSize: 12, color: 'rgba(169,174,188,.6)', margin: 0, fontStyle: 'italic' }}>
-                          ainda não cruzou com nada
-                        </p>
                       ) : (
                         <ul style={{ margin: 0, padding: 0 }}>
-                          {mecsDaqui.map((m) => (
-                            <li key={m.id} style={{
+                          {doCaminho.slice(0, 5).map((c) => (
+                            <li key={c.id} style={{
                               listStyle: 'none', fontSize: 12.5, lineHeight: 1.4,
                               color: F.claro2, margin: '0 0 7px',
-                            }}>{m.descricao}</li>
+                            }}>{c.descricao}</li>
                           ))}
+                          {doCaminho.length > 5 && (
+                            <li style={{ listStyle: 'none', fontSize: 12, color: 'rgba(169,174,188,.6)' }}>
+                              e mais {doCaminho.length - 5}
+                            </li>
+                          )}
                         </ul>
                       )}
                     </div>
@@ -513,9 +516,14 @@ const ArboriaCasosPage = () => {
               {mecs.length === 0 ? <Vazio>Nada cruzado ainda.</Vazio> : mecs.map((m) => {
                 const suas = cenas.filter((c) =>
                   ligacoes.some((l) => l.mecanismo_id === m.id && l.cena_id === c.id));
+                // O SINAL MAIS VALIOSO DA PÁGINA: mecanismo que se sustenta nos
+                // DOIS lados. Casa e escola descrevendo a mesma coisa sem
+                // combinarem é o que dá peso de verdade, e estava invisível.
+                const lados = new Set(suas.map((c) => (c.fonte === 'casa' ? 'casa' : 'escola')));
+                const cruzado = lados.size > 1;
                 return (
                   <div key={m.id} style={{ margin: '0 0 20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
                       <span style={{
                         fontSize: 10.5, fontWeight: 800, letterSpacing: '.14em',
                         textTransform: 'uppercase', whiteSpace: 'nowrap',
@@ -525,6 +533,14 @@ const ArboriaCasosPage = () => {
                           : suas.length === 1 ? '1 cena · anedota'
                           : `${suas.length} cenas`}
                       </span>
+                      {cruzado && (
+                        <span style={{
+                          fontSize: 10, fontWeight: 800, letterSpacing: '.12em',
+                          textTransform: 'uppercase', whiteSpace: 'nowrap',
+                          padding: '3px 9px', borderRadius: 999,
+                          background: F.acc, color: F.preto,
+                        }}>casa + escola</span>
+                      )}
                       <p style={{ fontSize: 15.5, lineHeight: 1.4, margin: 0 }}>{m.descricao}</p>
                     </div>
                     {suas.map((c) => (
