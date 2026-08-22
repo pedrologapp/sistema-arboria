@@ -149,3 +149,67 @@ ACHADO INDEPENDENTE DO QUESTIONARIO (Dados): `observacoes.inteligencia_expressa`
 
 ADVOGADO LICENCIADO (nao substituido por este parecer): termo de consentimento art. 14 destacado, retencao dos 12 anos incluindo as respostas de questionario, DPA do provedor de IA. Este setor escreve o texto honesto; nao assina conformidade.
 Relacionado: [[project_questionario_pais_professor]], [[project_doutrina_3_segmentos]], [[project_arboria_investivel]].
+
+---
+
+## 22/08/2026 · A aba de CASOS · parecer de Riscos, Privacidade e Compliance
+
+Convocada pelo Fundador para visão 360 sobre o instrumento construído no mesmo
+dia e já em produção. Onze riscos, três vetos suspensivos.
+
+**R-CAS-01 · CRÍTICO.** O termo aceito pelas famílias diz "por quanto tempo
+fica: enquanto ele(a) estudar aqui". Não existe expurgo nem gatilho de saída.
+Aluno que sai é desativado, não apagado, e o caso vive para sempre em violação
+literal do que a família aceitou.
+
+**R-CAS-02 · CRÍTICO.** O termo promete apagar "a qualquer momento, falando com
+a secretaria". `caso_cena.citacao` guarda cópia literal do texto da mãe e
+`origem_id` não tem chave estrangeira: apagar a resposta deixa a cópia órfã e
+invisível. O direito de eliminação não propaga.
+
+**R-CAS-03 · CRÍTICO.** "Quem lê: a professora e a coordenação. Mais ninguém."
+Isso veda mandar cena, mecanismo ou aposta para IA externa, que é exatamente o
+próximo item do roadmap.
+
+**R-CAS-04 · ALTO.** RLS `for all` a admin sem escopo por instituição, ao
+contrário de todo o resto do sistema. E `for all` dá UPDATE e DELETE sobre um
+acervo que a tela declara imutável.
+
+**R-CAS-05 · ALTO.** Zero autoria e zero log de acesso. Hipótese sobre criança,
+guardada por anos, sem quem escreveu e sem quem leu.
+
+**R-CAS-06 · ALTO.** A semente ligou caso a aluno por nome completo.
+*CONFERIDO EM 22/08 pelo CEO: os 7 casos batem por matrícula, zero homônimos.
+O risco de método continua para as próximas sementes.*
+
+**R-CAS-07 · ALTO.** `privado/casos/` vive em OneDrive pessoal do Fundador,
+fora de controle da escola. O gitignore protege do GitHub, não do sync.
+
+**R-CAS-08 · ALTO.** O resumo do caso #3 carrega juízo de personalidade da
+professora ("perto de personalidade forte ela não se sobressai") no campo cujo
+próprio comentário proíbe adjetivo de personalidade.
+
+**R-CAS-09 · MÉDIO.** Contradição: o SQL diz "a criança nunca, em nenhuma
+idade"; o LEIA-ME diz "um dia ela lê". Aos 18 o titular tem direito de acesso, e
+a doutrina não revoga a lei.
+
+**R-CAS-10 · MÉDIO/ALTO.** A criança do Maternal 3 que não virou caso: decisão
+correta, registro nenhum do encaminhamento.
+
+**R-CAS-11 · MÉDIO.** Pré-existente: `"Pai atualiza o proprio envio"` é update
+para anon sem checagem de posse. Quem tiver um envio_id aberto reescreve
+aluno_id e aceite_termo.
+
+### OS TRÊS VETOS
+
+**V1.** Nenhum caso novo e nenhuma saída de caso (PDF, impressão,
+compartilhamento) até existirem expurgo na saída da escola e propagação da
+eliminação. Os 8 casos existentes seguem vivos e internos.
+**V2.** Proibida segunda instituição e proibida demonstração da aba a terceiro
+(investidor, outra escola, família) até escopo por instituição, log de acesso e
+imutabilidade.
+**V3.** Proibido enviar texto de cena, mecanismo ou aposta para qualquer IA
+externa até o termo v2 declarar subprocessador de IA.
+
+Exige advogado, não a mesa: termo v2, contrato controlador/operador entre
+Amadeus e Arboria Tech, e base legal do dado derivado depois da saída da criança.

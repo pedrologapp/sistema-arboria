@@ -201,3 +201,40 @@ Relacionado: [[project_costura_segmentos]], [[project_casa_pertencimento]], [[pr
 **(2) A DESCRICAO DO SITE E' RASCUNHADA PELA IA (decisao do Fundador).** A IA le a missao geral que os proprios alunos enviaram e devolve o rascunho nas 4 perguntas da Arena; o mentor edita; o que ficar vai ao site. Fecha o item 4 da lista de decisoes pendentes. **REQUISITO NOVO DESCOBERTO NA LEITURA: a IA precisa de leitura MULTIMODAL, nao extracao de texto.** Dos 10 anexos abertos, um e' PDF composto so de imagens e outro usa fonte embutida com subset cujo mapeamento nao decodifica: extracao de texto retornaria vazio nos dois. Dois dos dez finalistas ficariam em branco. A peca precisa renderizar a pagina e ver.
 
 **(3) ENTREGA ORFA DO 8oA CORRIGIDA (migracao 20260812000001).** A entrega coletiva do grupo 1 de "O atleta do futuro" do 8o Ano A foi enviada em 06/08 com `grupo_ref` no formato ANTIGO (papel_id::grupo, sem a turma). O backfill de 04/08 so alcancou as linhas que ja existiam; esta nasceu depois, de um cliente com a versao velha em cache. Efeito: a entrega existia mas nao casava com nenhum grupo, e os 7 membros apareciam como "nao entregou". Corrigido para turma_id::papel_id::grupo, com backup `_bkp_20260812_entrega_thales` e guarda contra violacao do indice unico. Status mantido em 'pendente', que e' o estado das outras 33 coletivas desde 10/08 ("missao de grupo nao avalia, apenas recebe"): entregue = a linha existir. Entrega estava dentro do prazo (06/08). LICAO: o backfill de um formato de chave precisa vir junto com a garantia de que nenhum cliente antigo ainda escreve no formato velho, senao o problema volta em pingos. Relacionado: [[project_incidente_entrega_grupo]], [[project_arena_competicao_site]], [[project_doutrina_3_segmentos]].
+
+## 2026-08-13 - As 70 missoes individuais da Arena analisadas e pontuadas
+Ordem do Fundador. 75 entregas individuais analisadas e aprovadas, 5.480 pontos lancados, ranking das Casas recalculado. REGRA NOVA DA DEVOLUTIVA (ordem do Fundador, 12/08): a `justificativa_aluno` NAO menciona nota nem valor, porque o aluno recebe em PONTOS. Ela justifica o que faltou diante do que a missao pediu e diz como melhorar. Isso CONTRARIA o prompt oficial em `docs/prompt_ia_analise_missao.md`, que manda justificar so a nota sem conselho: o prompt precisa ser corrigido no n8n, senao o proximo lote sai no formato velho. O doc tambem esta desatualizado por outro motivo: nao tem os campos `mecanismo_esperado`, `atendeu_ao_mecanismo`, `mecanismo_leitura` e `caso_especial`, que a producao ja devolve.
+
+DISTRIBUICAO: 10 (2), 9 (15), 8 (18), 7 (18), 6 (14), 5 (7), 4 (1). Media 7,4.
+RANKING APOS: Musical 1o (77,1 por membro), Intrapessoal 2o, Logico-Matematica 3o, Espacial 4o, Naturalista 5o, Interpessoal 6o, Corporal 7o, Linguistica 8o. O pódio nao mudou: a view ordena por MEDIA POR MEMBRO, entao Casa grande nao leva vantagem, e so Naturalista e Interpessoal trocaram entre 5o e 6o, exatamente como projetado antes de rodar.
+
+UMA ENTREGA FICOU PENDENTE DE PROPOSITO: Alice (7oA, entrega 04bbfa8d) enviou em 05/08 com texto vazio, itens vazios e sem anexo. Ha relato registrado por outro grupo de instabilidade da plataforma no envio desta mesma missao, entao atribuir zero seria injusto. Decisao do Fundador pendente: zerar, ou reabrir para ela refazer.
+
+ACHADO DE METODO: `caso_especial` passou a distinguir tres silencios que antes colapsariam num so. `entrega_minima` (respondeu tudo em poucas palavras), `resposta_generica` (frases completas e nenhuma informacao especifica do projeto, caso do Lucas 7oB) e `canal_incompativel` (a crianca construiu o objeto e o texto nao carrega nada, caso do Vitor 9oA, que soldou alto-falantes e escreveu "Montar"). Os tres exigem sondagem oral antes de qualquer leitura, e nenhum deles autoriza ler ausencia de mecanismo. 28 das 75 cairam em `nao_da_para_ler`: nao e' falha da IA, e' o que a entrega escrita comporta.
+Relacionado: [[project_arena_competicao_site]], [[project_visao_ia_investigadora]].
+
+---
+
+## 22/08/2026 · Casos: modelo aprovado com correções (Dados e Analytics)
+
+A cadeia caso → cena → mecanismo → aposta está correta e não produz score nem
+ranking. Correções acordadas, em ordem:
+
+1. `caso_mecanismo.cenas uuid[]` vira `caso_mecanismo_cena(mecanismo_id,
+   cena_id, papel: sustenta|contradiz|qualifica)`. **Agora, porque os 25 arrays
+   estão vazios e a migração custa zero.** O array não guardava o papel da cena,
+   e a doutrina diz que divergência é dado: sem `papel`, não há como registrar
+   que uma cena CONTRADIZ o mecanismo.
+2. `caso_cena.origem_tipo/origem_id` polimórfico vira três chaves estrangeiras
+   nuláveis com check de exatamente-uma, apontando para `observacoes` (canônica,
+   tem `excluida_em` e `atividade_id`) e não para o espelho
+   `arboria_observacoes`. `casos.aluno_id` passa de `cascade` para `restrict`.
+3. Toda estação ganha `criado_por`, e entra `caso_evento` como log de transição,
+   porque `estado` sobrescrito não sustenta leitura longitudinal.
+
+**Constatado:** os 22 de 338 com os dois lados são cobertura fina (o esperado
+por acaso era ~21), e não erro de ligação. O erro de ligação real é
+`arboria_observacoes.lovable_aluno_id` sem perfil em **114 de 361 linhas**,
+recuperável por matrícula. A duplicação entre as duas tabelas de observação (229
+textos em ambas) não gerou cena duplicada, e se resolve por view unificada sem
+apagar nada.

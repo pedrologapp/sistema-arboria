@@ -41,6 +41,7 @@ interface Caso {
   titulo: string; pergunta: string | null; estado: string;
   aberto_em: string; ultima_atividade: string;
   resumo: string | null; gostos: string[];
+  o_que_estamos_vendo: string | null; analise: string | null; proximos_passos: string[];
   nome?: string; turma?: string; serie?: string; nascimento?: string | null;
   cenas?: number; mecanismos?: number; apostas?: number;
 }
@@ -57,6 +58,22 @@ interface Sondagem {
   id: string; pedido: string; pergunta: string; para_quem: string | null;
   enviada_em: string; volta: string | null; voltou_em: string | null;
 }
+interface Ligacao { mecanismo_id: string; cena_id: string; papel: string }
+
+// OS TRÊS CAMINHOS DA COLETA, do desenho do Fundador.
+//
+// "Professores" e "Aula" são os dois lados da escola e não são a mesma coisa:
+// o que a professora CONTA (conversa, entrevista, memória) e o que ficou
+// REGISTRADO durante uma atividade. A diferença importa: relato de memória não
+// tem data do fato, e registro de aula tem.
+const CAMINHOS = [
+  { id: 'pais', rotulo: 'Pais' },
+  { id: 'professores', rotulo: 'Professores' },
+  { id: 'aula', rotulo: 'Aula' },
+] as const;
+
+const caminhoDa = (c: Cena) =>
+  c.fonte === 'casa' ? 'pais' : c.origem_tipo ? 'aula' : 'professores';
 
 const ESTADO_NOME: Record<string, string> = {
   aberto: 'aberto', sondando: 'sondando', em_espera: 'em espera', encerrado: 'encerrado',
@@ -123,6 +140,7 @@ const ArboriaCasosPage = () => {
   const [mecs, setMecs] = useState<Mecanismo[]>([]);
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [sondagens, setSondagens] = useState<Sondagem[]>([]);
+  const [ligacoes, setLigacoes] = useState<Ligacao[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [verAcervo, setVerAcervo] = useState(false);
 
@@ -134,7 +152,7 @@ const ArboriaCasosPage = () => {
 
   async function carregarLista() {
     const { data, error } = await tabela('casos')
-      .select('id, numero, aluno_id, quem, titulo, pergunta, estado, resumo, gostos, aberto_em, ultima_atividade')
+      .select('id, numero, aluno_id, quem, titulo, pergunta, estado, resumo, gostos, o_que_estamos_vendo, analise, proximos_passos, aberto_em, ultima_atividade')
       .order('numero');
     if (error) { toast.error('Não consegui carregar os casos'); setCasos([]); return; }
     const lista = (data ?? []) as Caso[];
@@ -172,10 +190,21 @@ const ArboriaCasosPage = () => {
       tabela('caso_aposta').select('*').eq('caso_id', c.id).order('data_aposta', { ascending: false }),
       tabela('caso_sondagem').select('*').eq('caso_id', c.id).order('enviada_em', { ascending: false }),
     ]);
-    setCenas((a.data ?? []) as Cena[]);
-    setMecs((b.data ?? []) as Mecanismo[]);
+    const listaCenas = (a.data ?? []) as Cena[];
+    const listaMecs = (b.data ?? []) as Mecanismo[];
+    setCenas(listaCenas);
+    setMecs(listaMecs);
     setApostas((d.data ?? []) as Aposta[]);
     setSondagens((e.data ?? []) as Sondagem[]);
+
+    // As ligações mecanismo↔cena. É o que dá lastro ao mecanismo: sem elas,
+    // "Cria estrutura e povoa com gente" é uma afirmação sem prova nenhuma.
+    const { data: lig } = listaMecs.length
+      ? await tabela('caso_mecanismo_cena')
+          .select('mecanismo_id, cena_id, papel')
+          .in('mecanismo_id', listaMecs.map((m) => m.id))
+      : { data: [] };
+    setLigacoes((lig ?? []) as Ligacao[]);
     setCarregando(false);
   }
 
@@ -277,6 +306,60 @@ const ArboriaCasosPage = () => {
               </div>
             )}
 
+            {/* ================================ OS TRÊS CAMINHOS DA COLETA */}
+            <div style={{ borderTop: `1px solid ${F.linha}`, paddingTop: 30, margin: '0 0 34px' }}>
+              <Selo>Coleta de dados</Selo>
+              <div style={{ display: 'flex', gap: 1, background: F.linha, borderRadius: 12, overflow: 'hidden' }}>
+                {CAMINHOS.map((cam) => {
+                  const doCaminho = cenas.filter((c) => caminhoDa(c) === cam.id);
+                  // O que ESTE caminho, sozinho, deixa ver: os mecanismos que
+                  // bebem dele. É a "análise" de cada coluna do desenho.
+                  const ids = new Set(doCaminho.map((c) => c.id));
+                  const mecsDaqui = mecs.filter((m) =>
+                    ligacoes.some((l) => l.mecanismo_id === m.id && ids.has(l.cena_id)));
+                  return (
+                    <div key={cam.id} style={{ flex: 1, background: F.preto, padding: '18px 16px', minWidth: 0 }}>
+                      <p style={{
+                        fontSize: 10.5, letterSpacing: '.2em', textTransform: 'uppercase',
+                        fontWeight: 800, color: doCaminho.length ? F.acc : F.claro2, margin: '0 0 10px',
+                      }}>{cam.rotulo}</p>
+                      <p style={{ fontFamily: F.serif, fontSize: 30, lineHeight: 1, margin: '0 0 12px' }}>
+                        {doCaminho.length}
+                      </p>
+                      {doCaminho.length === 0 ? (
+                        <p style={{ fontSize: 12, color: 'rgba(169,174,188,.6)', margin: 0, fontStyle: 'italic' }}>
+                          nada veio por aqui
+                        </p>
+                      ) : mecsDaqui.length === 0 ? (
+                        <p style={{ fontSize: 12, color: 'rgba(169,174,188,.6)', margin: 0, fontStyle: 'italic' }}>
+                          ainda não cruzou com nada
+                        </p>
+                      ) : (
+                        <ul style={{ margin: 0, padding: 0 }}>
+                          {mecsDaqui.map((m) => (
+                            <li key={m.id} style={{
+                              listStyle: 'none', fontSize: 12.5, lineHeight: 1.4,
+                              color: F.claro2, margin: '0 0 7px',
+                            }}>{m.descricao}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ============================== O QUE ESTAMOS VENDO */}
+            {aberto.o_que_estamos_vendo && (
+              <div style={{ margin: '0 0 34px' }}>
+                <Selo>O que estamos vendo</Selo>
+                <p style={{ fontSize: 16, lineHeight: 1.62, margin: 0, maxWidth: '66ch' }}>
+                  {aberto.o_que_estamos_vendo}
+                </p>
+              </div>
+            )}
+
             {/* Só agora a pergunta faz sentido, porque já se sabe de quem ela é. */}
             <div style={{
               borderTop: `1px solid ${F.linha}`, paddingTop: 30, margin: '0 0 38px',
@@ -301,24 +384,44 @@ const ArboriaCasosPage = () => {
             )}
 
             {/* ---------------------------------- mecanismos visíveis */}
+            {/* SEM NUMERAÇÃO E SEM RANKING. A versão anterior numerava de 1 a 4
+                e dizia "do mais sustentado para o menos" com os vínculos VAZIOS:
+                era ranking sem prova, e com a forma de um perfil de
+                predominância. Agora cada mecanismo mostra de quantas cenas ele
+                nasceu, e as cenas ficam embaixo dele. Uma cena só aparece
+                marcada como anedota, porque é isso que ela é. */}
             <Secao titulo="Mecanismos visíveis" n={mecs.length}
-              nota="Do mais sustentado para o menos. Uma cena sozinha é anedota; duas que se encaixam viram mecanismo.">
-              {mecs.length === 0 ? <Vazio>Nada cruzado ainda.</Vazio> : (
-                <ul style={{ margin: 0, padding: 0 }}>
-                  {mecs.map((m, k) => (
-                    <li key={m.id} style={{
-                      listStyle: 'none', position: 'relative', paddingLeft: 34,
-                      margin: '0 0 13px', fontSize: 15.5, lineHeight: 1.45,
-                    }}>
-                      <span aria-hidden style={{
-                        position: 'absolute', left: 0, top: 11, width: 20, height: 1.4, background: F.acc,
-                      }} />
-                      <b style={{ color: F.acc, fontWeight: 700, marginRight: 8 }}>{k + 1}</b>
-                      {m.descricao}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              nota="Uma cena sozinha é anedota. Duas que se encaixam viram mecanismo, e por isso cada um mostra de onde nasceu.">
+              {mecs.length === 0 ? <Vazio>Nada cruzado ainda.</Vazio> : mecs.map((m) => {
+                const suas = cenas.filter((c) =>
+                  ligacoes.some((l) => l.mecanismo_id === m.id && l.cena_id === c.id));
+                return (
+                  <div key={m.id} style={{ margin: '0 0 20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                      <span style={{
+                        fontSize: 10.5, fontWeight: 800, letterSpacing: '.14em',
+                        textTransform: 'uppercase', whiteSpace: 'nowrap',
+                        color: suas.length >= 2 ? F.acc : 'rgba(169,174,188,.7)',
+                      }}>
+                        {suas.length === 0 ? 'sem lastro'
+                          : suas.length === 1 ? '1 cena · anedota'
+                          : `${suas.length} cenas`}
+                      </span>
+                      <p style={{ fontSize: 15.5, lineHeight: 1.4, margin: 0 }}>{m.descricao}</p>
+                    </div>
+                    {suas.map((c) => (
+                      <p key={c.id} style={{
+                        fontSize: 13, lineHeight: 1.5, color: F.claro2,
+                        margin: '8px 0 0', paddingLeft: 16,
+                        borderLeft: `1px solid ${F.linha}`, maxWidth: '64ch',
+                      }}>
+                        {c.citacao ?? c.descricao}
+                        <span style={{ color: 'rgba(169,174,188,.6)' }}> · {c.quem}</span>
+                      </p>
+                    ))}
+                  </div>
+                );
+              })}
             </Secao>
 
             {/* -------------------------------------------- apostas */}
@@ -358,6 +461,31 @@ const ArboriaCasosPage = () => {
                 </div>
               ))}
             </Secao>
+
+            {/* ================================== A ANÁLISE E OS PASSOS */}
+            {aberto.analise && (
+              <div style={{
+                border: `1px solid ${F.acc}`, borderRadius: 12,
+                padding: '22px 24px', margin: '0 0 20px',
+                background: 'rgba(94,224,208,.05)',
+              }}>
+                <Selo>Análise</Selo>
+                <p style={{ fontSize: 16, lineHeight: 1.62, margin: 0, maxWidth: '64ch' }}>
+                  {aberto.analise}
+                </p>
+              </div>
+            )}
+
+            {aberto.proximos_passos.length > 0 && (
+              <Secao titulo="Próximos passos" n={aberto.proximos_passos.length}
+                nota="Cabem no dia normal da professora. Sondagem que pede atividade nova não é feita.">
+                <ol style={{ margin: 0, paddingLeft: 20 }}>
+                  {aberto.proximos_passos.map((p) => (
+                    <li key={p} style={{ fontSize: 15, lineHeight: 1.5, margin: '0 0 10px' }}>{p}</li>
+                  ))}
+                </ol>
+              </Secao>
+            )}
 
             {/* ------------------------------------------- sondagem */}
             <Secao titulo="Em sondagem" n={sondagens.filter((s) => !s.voltou_em).length}
