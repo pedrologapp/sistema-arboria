@@ -1,32 +1,40 @@
 // A ABA #CASOS · o chão da fábrica
 //
-// A lista enumera os casos. Abrir um caso é entrar no laboratório daquela
-// criança, e o laboratório é a linha de produção parada: dá para ver o que
-// chegou, o que já cruzou, no que a gente apostou, o que foi perguntado e ainda
-// não voltou, e o que morreu.
+// A lista enumera os casos, clara, dentro do painel. Abrir um caso troca a pele:
+// vira a FOLHA do Arboria, com a mesma cara do documento que a gente já leva
+// para a professora (privado/casos/#1_Ayrton). Preto, turquesa, marca em cima,
+// nome em serifa grande, rótulos em caixa alta espaçada.
 //
-// A ORDEM DAS SEÇÕES NÃO É ESTÉTICA, É A LINHA:
+// Não é enfeite. É o mesmo objeto em dois estados: na tela ele tem
+// funcionalidade, no papel ele vira folha, e a professora reconhece um do outro
+// sem ninguém explicar.
+//
+// A ORDEM DAS SEÇÕES NÃO É ESTÉTICA, É A LINHA DA FÁBRICA:
 //   interesses → mecanismos → apostas → sondagem → o que caiu → acervo
 //
 // O acervo fica por último e fechado. Ele existe (nada se perde) e não fica no
-// caminho, porque o Fundador foi explícito: "não como um repositório, mas como
-// algo que eu possa entender melhor esse aluno".
+// caminho, porque ninguém entende uma criança lendo arquivo.
 //
-// E em lugar nenhum desta tela aparece nome de inteligência. O nome fecha a
-// investigação: no instante em que se escreve "interpessoal", quem observa para
-// de olhar. O mecanismo é descrito pelo que se vê, e o nome, se vier, vem por
-// último e quase nunca é necessário.
+// E em lugar nenhum aparece nome de inteligência. O nome fecha a investigação:
+// no instante em que se escreve "interpessoal", quem observa para de olhar.
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { infantilTheme as t } from '@/styles/infantilTheme';
-import {
-  Loader2, ArrowLeft, ChevronDown, ChevronRight, Home, School,
-  Beaker, Scale, Send, Archive, XCircle,
-} from 'lucide-react';
+import { Loader2, ArrowLeft, ChevronDown, ChevronRight, Home, School } from 'lucide-react';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const tabela = (nome: string): any => (supabase as any).from(nome);
+
+// A paleta da folha, igual à do documento impresso.
+const F = {
+  preto: '#08080C',
+  acc: '#5EE0D0',
+  claro: '#F3F2F8',
+  claro2: '#A9AEBC',
+  linha: 'rgba(255,255,255,.14)',
+  serif: '"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif',
+};
 
 interface Caso {
   id: string; numero: number; aluno_id: string | null; quem: string | null;
@@ -37,8 +45,7 @@ interface Caso {
 }
 interface Cena {
   id: string; tipo: string; descricao: string; citacao: string | null;
-  fonte: string; quem: string | null; quando: string | null;
-  origem_tipo: string | null;
+  fonte: string; quem: string | null; quando: string | null; origem_tipo: string | null;
 }
 interface Mecanismo { id: string; descricao: string; ordem: number; cenas: string[] }
 interface Aposta {
@@ -50,52 +57,52 @@ interface Sondagem {
   enviada_em: string; volta: string | null; voltou_em: string | null;
 }
 
-const ESTADO_COR: Record<string, { fundo: string; letra: string }> = {
-  aberto:    { fundo: t.accentSoft, letra: t.accentText },
-  sondando:  { fundo: '#FFF2D9', letra: '#8A6A1F' },
-  em_espera: { fundo: t.surfaceSunken, letra: t.textFaint },
-  encerrado: { fundo: t.surfaceSunken, letra: t.textFaint },
-};
 const ESTADO_NOME: Record<string, string> = {
-  aberto: 'aberto', sondando: 'sondando',
-  em_espera: 'em espera', encerrado: 'encerrado',
+  aberto: 'aberto', sondando: 'sondando', em_espera: 'em espera', encerrado: 'encerrado',
 };
 
-// O caso e conhecido pelo primeiro nome, igual as pastas em privado/casos.
-// Nomes compostos comuns levam duas palavras, senao Maria Cecilia e Maria Helena
-// viram a mesma "Maria" na lista e o numero passa a ser a unica diferenca.
-const COMPOSTOS = new Set(['maria','ana','joao','josé','jose','luiz','luís','luis','pedro','antonio','antônio','carlos','paulo','francisco','marco','marcos','joão']);
+// O caso é conhecido pelo primeiro nome, igual às pastas em privado/casos.
+// Nome composto leva duas palavras, senão Maria Cecília e Maria Helena viram a
+// mesma "Maria" e o número passa a ser a única diferença entre elas.
+const COMPOSTOS = new Set(['maria', 'ana', 'joão', 'joao', 'josé', 'jose', 'luiz',
+  'luís', 'luis', 'pedro', 'antônio', 'antonio', 'carlos', 'paulo', 'francisco']);
 const nomeCurto = (n: string) => {
-  const p = n.trim().split(/\s+/);
+  const p = n.replace(/,.*/, '').trim().split(/\s+/);
   if (p.length < 2) return p[0] ?? '';
-  const primeiro = p[0].toLowerCase();
-  return COMPOSTOS.has(primeiro) ? p[0] + ' ' + p[1] : p[0];
+  return COMPOSTOS.has(p[0].toLowerCase()) ? `${p[0]} ${p[1]}` : p[0];
 };
 
-const dia = (iso: string | null) => {
-  if (!iso) return '';
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-};
+const dia = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '';
 
-// Uma seção do laboratório. O contador no título é o que diz, de longe, onde a
-// linha está cheia e onde está vazia.
-const Estacao = ({ icone, titulo, nota, n, children }: {
-  icone: React.ReactNode; titulo: string; nota?: string; n?: number; children: React.ReactNode;
+// O rótulo de seção da folha: caixa alta, muito espaçado, turquesa.
+const Selo = ({ children, n }: { children: React.ReactNode; n?: number }) => (
+  <p style={{
+    fontSize: 11, letterSpacing: '.26em', textTransform: 'uppercase',
+    color: F.acc, fontWeight: 800, margin: '0 0 12px',
+  }}>
+    {children}{n !== undefined && <span style={{ color: F.claro2, fontWeight: 700 }}> · {n}</span>}
+  </p>
+);
+
+const Secao = ({ titulo, n, nota, children }: {
+  titulo: string; n?: number; nota?: string; children: React.ReactNode;
 }) => (
-  <section className="mb-7">
-    <div className="flex items-center gap-2 mb-1">
-      <span style={{ color: t.textFaint, display: 'flex' }}>{icone}</span>
-      <h3 className="text-[13px] font-bold m-0" style={{ color: t.text, letterSpacing: '.02em' }}>
-        {titulo}
-      </h3>
-      {n !== undefined && (
-        <span className="text-[11px] font-bold px-1.5 rounded-full"
-          style={{ backgroundColor: t.surfaceSunken, color: t.textFaint }}>{n}</span>
-      )}
-    </div>
-    {nota && <p className="text-[11.5px] mb-3 mt-0" style={{ color: t.textFaint, lineHeight: 1.5 }}>{nota}</p>}
+  <section style={{ margin: '0 0 34px' }}>
+    <Selo n={n}>{titulo}</Selo>
+    {nota && (
+      <p style={{ fontSize: 12.5, color: F.claro2, lineHeight: 1.55, margin: '-6px 0 14px', maxWidth: '64ch' }}>
+        {nota}
+      </p>
+    )}
     {children}
   </section>
+);
+
+const Vazio = ({ children }: { children: React.ReactNode }) => (
+  <p style={{ fontSize: 13.5, color: 'rgba(169,174,188,.65)', margin: 0, fontStyle: 'italic' }}>
+    {children}
+  </p>
 );
 
 const ArboriaCasosPage = () => {
@@ -142,6 +149,7 @@ const ArboriaCasosPage = () => {
 
   async function abrir(c: Caso) {
     setAberto(c); setCarregando(true); setVerAcervo(false);
+    window.scrollTo(0, 0);
     const [a, b, d, e] = await Promise.all([
       tabela('caso_cena').select('*').eq('caso_id', c.id).order('quando', { ascending: false }),
       tabela('caso_mecanismo').select('*').eq('caso_id', c.id).order('ordem'),
@@ -169,12 +177,10 @@ const ArboriaCasosPage = () => {
     );
   }
 
-  // ==================================================== O LABORATÓRIO
+  // ============================================ A FOLHA DE UM CASO
   if (aberto) {
     const vivas = apostas.filter((a) => a.estado !== 'derrubada');
     const caidas = apostas.filter((a) => a.estado === 'derrubada');
-    const abertas = sondagens.filter((s) => !s.voltou_em);
-    const voltaram = sondagens.filter((s) => s.voltou_em);
 
     return (
       <div>
@@ -184,195 +190,236 @@ const ArboriaCasosPage = () => {
           <ArrowLeft size={15} /> voltar aos casos
         </button>
 
-        <div className="flex items-baseline gap-2.5 flex-wrap">
-          <span className="text-[13px] font-bold" style={{ color: t.textFaint }}>#{aberto.numero}</span>
-          <h2 className="text-xl font-bold m-0" style={{ color: t.text }}>
-            {aberto.nome ?? aberto.quem}
-          </h2>
-          {aberto.turma && (
-            <span className="text-[13px]" style={{ color: t.textMuted }}>{aberto.turma}</span>
-          )}
-        </div>
+        <div style={{
+          position: 'relative', overflow: 'hidden',
+          background: F.preto, color: F.claro, borderRadius: 18,
+          padding: '38px 40px 42px',
+          boxShadow: '0 18px 60px rgba(8,8,12,.28)',
+        }}>
+          {/* O brilho do alto, igual ao da folha impressa. */}
+          <div aria-hidden style={{
+            position: 'absolute', left: '50%', top: '-24%', width: '150%', height: '62%',
+            transform: 'translateX(-50%)', pointerEvents: 'none',
+            background: 'radial-gradient(closest-side, rgba(94,224,208,.16), transparent 70%)',
+          }} />
 
-        <p className="text-[15px] mt-1 mb-1" style={{ color: t.text, fontWeight: 600 }}>{aberto.titulo}</p>
-        {aberto.pergunta && (
-          <p className="text-[13.5px] m-0" style={{ color: t.textMuted, lineHeight: 1.5, maxWidth: '68ch' }}>
-            {aberto.pergunta}
-          </p>
-        )}
+          <div style={{ position: 'relative' }}>
+            <p style={{ fontWeight: 800, letterSpacing: '-.045em', fontSize: 30, lineHeight: 1, margin: 0 }}>
+              Arb<span style={{ color: F.acc }}>oria</span>
+            </p>
+            <p style={{
+              fontSize: 10.5, letterSpacing: '.3em', textTransform: 'uppercase',
+              color: F.acc, fontWeight: 800, margin: '8px 0 0',
+            }}>
+              Caso #{aberto.numero} · {ESTADO_NOME[aberto.estado] ?? aberto.estado}
+            </p>
 
-        <div className="flex gap-2 flex-wrap mt-4 mb-7">
-          <span className="text-[11.5px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"
-            style={{ backgroundColor: t.surface, color: t.textMuted, border: `1px solid ${t.border}` }}>
-            <Home size={12} /> {doLado.casa} de casa
-          </span>
-          <span className="text-[11.5px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"
-            style={{ backgroundColor: t.surface, color: t.textMuted, border: `1px solid ${t.border}` }}>
-            <School size={12} /> {doLado.escola} da escola
-          </span>
-          {(doLado.casa === 0 || doLado.escola === 0) && (
-            <span className="text-[11.5px] font-bold px-2.5 py-1 rounded-full"
-              style={{ backgroundColor: '#FFF2D9', color: '#8A6A1F' }}>
-              só um lado
-            </span>
-          )}
-        </div>
+            <h1 style={{
+              fontFamily: F.serif, fontSize: 38, lineHeight: 1.04, letterSpacing: '-.02em',
+              fontWeight: 400, margin: '26px 0 10px',
+            }}>
+              {aberto.nome ?? aberto.quem}
+            </h1>
 
-        {carregando && (
-          <div className="flex items-center gap-2 text-sm mb-6" style={{ color: t.textMuted }}>
-            <Loader2 size={15} className="animate-spin" /> abrindo o laboratório
-          </div>
-        )}
+            <p style={{ fontSize: 13.5, color: F.claro2, margin: '0 0 26px' }}>
+              {aberto.turma ? `${aberto.turma} · ` : ''}
+              <Home size={12} style={{ display: 'inline', verticalAlign: -1 }} /> {doLado.casa} de casa
+              {'  ·  '}
+              <School size={12} style={{ display: 'inline', verticalAlign: -1 }} /> {doLado.escola} da escola
+              {(doLado.casa === 0 || doLado.escola === 0) && (
+                <span style={{ color: F.acc }}>{'  ·  '}só um lado</span>
+              )}
+            </p>
 
-        {/* ---------------------------------------------- o que ele procura */}
-        {interesses.length > 0 && (
-          <Estacao icone={<Beaker size={14} />} titulo="O que ele procura sozinho" n={interesses.length}
-            nota="O mais durável do caso, e o que alimenta a escolha de atividade.">
-            <div className="flex flex-col gap-1.5">
-              {interesses.map((c) => (
-                <div key={c.id} className="rounded-xl px-3.5 py-2.5"
-                  style={{ backgroundColor: t.accentSoft, border: `1px solid ${t.accentBorder}` }}>
-                  <p className="text-[14px] m-0" style={{ color: t.text }}>{c.descricao}</p>
-                </div>
-              ))}
+            {/* A pergunta do caso, no destaque de barra que a folha usa. */}
+            <div style={{ borderLeft: `3px solid ${F.acc}`, padding: '4px 0 4px 22px', margin: '0 0 38px' }}>
+              <p style={{ fontFamily: F.serif, fontSize: 21, lineHeight: 1.35, margin: 0 }}>
+                {aberto.titulo}
+              </p>
+              {aberto.pergunta && (
+                <p style={{ fontSize: 13.5, color: F.claro2, lineHeight: 1.55, margin: '10px 0 0', maxWidth: '62ch' }}>
+                  {aberto.pergunta}
+                </p>
+              )}
             </div>
-          </Estacao>
-        )}
 
-        {/* ------------------------------------------- mecanismos visíveis */}
-        <Estacao icone={<Beaker size={14} />} titulo="Mecanismos visíveis" n={mecs.length}
-          nota="Do mais sustentado para o menos. Uma cena sozinha é anedota; duas que se encaixam viram mecanismo.">
-          {mecs.length === 0
-            ? <p className="text-[13px]" style={{ color: t.silencio }}>Nada cruzado ainda.</p>
-            : (
-              <div className="flex flex-col gap-1.5">
-                {mecs.map((m, k) => (
-                  <div key={m.id} className="rounded-xl px-4 py-3 flex items-start gap-3"
-                    style={{ backgroundColor: t.surface, border: `1px solid ${t.border}` }}>
-                    <span className="text-[11px] font-bold mt-0.5" style={{ color: t.textFaint }}>{k + 1}</span>
-                    <p className="text-[14.5px] m-0 flex-1" style={{ color: t.text, lineHeight: 1.4 }}>
-                      {m.descricao}
-                    </p>
-                  </div>
-                ))}
-              </div>
+            {carregando && (
+              <p style={{ color: F.claro2, fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Loader2 size={15} className="animate-spin" /> abrindo o laboratório
+              </p>
             )}
-        </Estacao>
 
-        {/* ------------------------------------------------------ apostas */}
-        <Estacao icone={<Scale size={14} />} titulo="As apostas" n={vivas.length}
-          nota="Hipótese nunca anda sozinha. O banco recusa aposta sem rival e sem o que a derrubaria.">
-          {vivas.length === 0
-            ? <p className="text-[13px]" style={{ color: t.silencio }}>Nenhuma aposta feita ainda.</p>
-            : vivas.map((a) => (
-              <div key={a.id} className="rounded-2xl p-4 mb-2.5"
-                style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}>
-                <p className="text-[11px] font-bold uppercase mb-1" style={{ color: t.accentText, letterSpacing: '.1em' }}>
-                  hipótese
-                </p>
-                <p className="text-[14.5px] m-0 mb-3.5" style={{ color: t.text, lineHeight: 1.45 }}>{a.hipotese}</p>
+            {/* ------------------------------------- o que ele procura */}
+            {interesses.length > 0 && (
+              <Secao titulo="O que ele procura sozinho" n={interesses.length}
+                nota="O mais durável do caso, e o que alimenta a escolha de atividade.">
+                <ul style={{ margin: 0, padding: 0 }}>
+                  {interesses.map((c) => (
+                    <li key={c.id} style={{
+                      listStyle: 'none', position: 'relative', paddingLeft: 34,
+                      margin: '0 0 12px', fontSize: 15, lineHeight: 1.45,
+                    }}>
+                      <span aria-hidden style={{
+                        position: 'absolute', left: 0, top: 10, width: 20, height: 1.4, background: F.acc,
+                      }} />
+                      {c.descricao}
+                    </li>
+                  ))}
+                </ul>
+              </Secao>
+            )}
 
-                <p className="text-[11px] font-bold uppercase mb-1" style={{ color: t.textFaint, letterSpacing: '.1em' }}>
-                  rival
-                </p>
-                <p className="text-[14px] m-0 mb-3.5" style={{ color: t.textMuted, lineHeight: 1.45 }}>{a.rival}</p>
+            {/* ---------------------------------- mecanismos visíveis */}
+            <Secao titulo="Mecanismos visíveis" n={mecs.length}
+              nota="Do mais sustentado para o menos. Uma cena sozinha é anedota; duas que se encaixam viram mecanismo.">
+              {mecs.length === 0 ? <Vazio>Nada cruzado ainda.</Vazio> : (
+                <ul style={{ margin: 0, padding: 0 }}>
+                  {mecs.map((m, k) => (
+                    <li key={m.id} style={{
+                      listStyle: 'none', position: 'relative', paddingLeft: 34,
+                      margin: '0 0 13px', fontSize: 15.5, lineHeight: 1.45,
+                    }}>
+                      <span aria-hidden style={{
+                        position: 'absolute', left: 0, top: 11, width: 20, height: 1.4, background: F.acc,
+                      }} />
+                      <b style={{ color: F.acc, fontWeight: 700, marginRight: 8 }}>{k + 1}</b>
+                      {m.descricao}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Secao>
 
-                <p className="text-[11px] font-bold uppercase mb-1" style={{ color: t.textFaint, letterSpacing: '.1em' }}>
-                  o que derrubaria
-                </p>
-                <p className="text-[14px] m-0" style={{ color: t.textMuted, lineHeight: 1.45 }}>{a.o_que_derrubaria}</p>
+            {/* -------------------------------------------- apostas */}
+            <Secao titulo="As apostas" n={vivas.length}
+              nota="Hipótese nunca anda sozinha. O banco recusa aposta sem rival e sem o que a derrubaria.">
+              {vivas.length === 0 ? <Vazio>Nenhuma aposta feita ainda.</Vazio> : vivas.map((a) => (
+                <div key={a.id} style={{
+                  border: `1px solid ${F.linha}`, borderRadius: 12,
+                  padding: '20px 22px', margin: '0 0 12px',
+                  background: 'rgba(94,224,208,.045)',
+                }}>
+                  <Selo>hipótese</Selo>
+                  <p style={{ fontFamily: F.serif, fontSize: 17.5, lineHeight: 1.4, margin: '0 0 22px' }}>
+                    {a.hipotese}
+                  </p>
 
-                <p className="text-[11px] mt-3.5 mb-0" style={{ color: t.textFaint }}>
-                  apostada em {dia(a.data_aposta)}
-                  {a.checada_em ? ` · checada em ${dia(a.checada_em)}` : ' · nunca checada'}
-                </p>
-              </div>
-            ))}
-        </Estacao>
+                  <p style={{
+                    fontSize: 10.5, letterSpacing: '.26em', textTransform: 'uppercase',
+                    color: F.claro2, fontWeight: 800, margin: '0 0 8px',
+                  }}>rival</p>
+                  <p style={{ fontSize: 14.5, lineHeight: 1.5, margin: '0 0 22px', color: F.claro }}>
+                    {a.rival}
+                  </p>
 
-        {/* ----------------------------------------------------- sondagem */}
-        <Estacao icone={<Send size={14} />} titulo="Em sondagem" n={abertas.length}
-          nota="Uma coisa por vez. Pergunta que só pode confirmar não entra.">
-          {sondagens.length === 0
-            ? <p className="text-[13px]" style={{ color: t.silencio }}>Nada foi perguntado ainda.</p>
-            : sondagens.map((s) => (
-              <div key={s.id} className="rounded-2xl p-4 mb-2.5"
-                style={{ backgroundColor: t.surface, border: `1px solid ${s.voltou_em ? t.accentBorder : t.border}` }}>
-                <p className="text-[14px] m-0 mb-2" style={{ color: t.text, lineHeight: 1.45 }}>{s.pedido}</p>
-                <p className="text-[14px] m-0 font-semibold" style={{ color: t.accentText }}>{s.pergunta}</p>
-                {s.volta
-                  ? <p className="text-[14px] mt-3 mb-0 pl-3" style={{ color: t.textMuted, borderLeft: `2px solid ${t.accentBorder}` }}>
-                      {s.volta} <span className="text-[11px]" style={{ color: t.textFaint }}>· {dia(s.voltou_em)}</span>
-                    </p>
-                  : <p className="text-[11.5px] mt-3 mb-0" style={{ color: t.textFaint }}>
-                      enviada em {dia(s.enviada_em)}, ainda sem volta
-                    </p>}
-              </div>
-            ))}
-          <p className="text-[11.5px] mt-1" style={{ color: t.textFaint }}>
-            {voltaram.length} já voltaram
-          </p>
-        </Estacao>
+                  <p style={{
+                    fontSize: 10.5, letterSpacing: '.26em', textTransform: 'uppercase',
+                    color: F.claro2, fontWeight: 800, margin: '0 0 8px',
+                  }}>o que derrubaria</p>
+                  <p style={{ fontSize: 14.5, lineHeight: 1.5, margin: 0, color: F.claro }}>
+                    {a.o_que_derrubaria}
+                  </p>
 
-        {/* ------------------------------------------------- o que caiu */}
-        {caidas.length > 0 && (
-          <Estacao icone={<XCircle size={14} />} titulo="O que caiu" n={caidas.length}
-            nota="Fica escrito. Sem isto, a IA reencontra a hipótese antiga e confirma para sempre.">
-            {caidas.map((a) => (
-              <div key={a.id} className="rounded-xl px-4 py-3 mb-2"
-                style={{ backgroundColor: t.surfaceSunken, border: `1px solid ${t.border}` }}>
-                <p className="text-[14px] m-0" style={{ color: t.textMuted, textDecoration: 'line-through' }}>
-                  {a.hipotese}
-                </p>
-                {a.motivo_queda && (
-                  <p className="text-[13px] mt-1.5 mb-0" style={{ color: t.text }}>{a.motivo_queda}</p>
-                )}
-              </div>
-            ))}
-          </Estacao>
-        )}
-
-        {/* ---------------------------------------------------- o acervo */}
-        <section style={{ borderTop: `1px solid ${t.border}`, paddingTop: 18 }}>
-          <button onClick={() => setVerAcervo((v) => !v)}
-            className="inline-flex items-center gap-2 text-[13px] font-bold"
-            style={{ color: t.textMuted }}>
-            {verAcervo ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-            <Archive size={14} /> O acervo, cru ({cenas.length})
-          </button>
-          <p className="text-[11.5px] mt-1 mb-3" style={{ color: t.textFaint, lineHeight: 1.5 }}>
-            Tudo que entrou, com data e fonte. Nada aqui se apaga nem se reescreve.
-            Fica fechado porque ninguém entende uma criança lendo arquivo.
-          </p>
-
-          {verAcervo && (
-            <div className="flex flex-col gap-2">
-              {cenas.map((c) => (
-                <div key={c.id} className="rounded-xl px-4 py-3"
-                  style={{ backgroundColor: t.surface, border: `1px solid ${t.border}` }}>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1"
-                      style={c.fonte === 'casa'
-                        ? { backgroundColor: t.accentSoft, color: t.accentText }
-                        : { backgroundColor: t.surfaceSunken, color: t.textMuted }}>
-                      {c.fonte === 'casa' ? <Home size={10} /> : <School size={10} />}
-                      {c.quem}
-                    </span>
-                    <span className="text-[11px]" style={{ color: t.textFaint }}>{dia(c.quando)}</span>
-                  </div>
-                  <p className="text-[14px] m-0" style={{ color: t.text, lineHeight: 1.45 }}>
-                    {c.citacao ?? c.descricao}
+                  <p style={{ fontSize: 11.5, color: F.claro2, margin: '20px 0 0' }}>
+                    apostada em {dia(a.data_aposta)}
+                    {a.checada_em ? ` · checada em ${dia(a.checada_em)}` : ' · nunca checada'}
                   </p>
                 </div>
               ))}
-            </div>
-          )}
-        </section>
+            </Secao>
+
+            {/* ------------------------------------------- sondagem */}
+            <Secao titulo="Em sondagem" n={sondagens.filter((s) => !s.voltou_em).length}
+              nota="Uma coisa por vez. Pergunta que só pode confirmar não entra.">
+              {sondagens.length === 0 ? <Vazio>Nada foi perguntado ainda.</Vazio> : sondagens.map((s) => (
+                <div key={s.id} style={{
+                  border: `1px solid ${F.linha}`, borderRadius: 12,
+                  padding: '18px 20px', margin: '0 0 12px',
+                }}>
+                  <p style={{ fontSize: 14.5, lineHeight: 1.5, margin: '0 0 10px' }}>{s.pedido}</p>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: F.acc, margin: 0 }}>{s.pergunta}</p>
+                  {s.volta ? (
+                    <p style={{
+                      fontSize: 14.5, lineHeight: 1.5, margin: '16px 0 0',
+                      paddingLeft: 16, borderLeft: `2px solid ${F.acc}`, color: F.claro,
+                    }}>
+                      {s.volta}
+                      <span style={{ color: F.claro2, fontSize: 11.5 }}> · {dia(s.voltou_em)}</span>
+                    </p>
+                  ) : (
+                    <p style={{ fontSize: 11.5, color: F.claro2, margin: '14px 0 0' }}>
+                      enviada em {dia(s.enviada_em)}, ainda sem volta
+                    </p>
+                  )}
+                </div>
+              ))}
+            </Secao>
+
+            {/* ---------------------------------------- o que caiu */}
+            {caidas.length > 0 && (
+              <Secao titulo="O que caiu" n={caidas.length}
+                nota="Fica escrito. Sem isto, a leitura reencontra a hipótese antiga e confirma para sempre.">
+                {caidas.map((a) => (
+                  <div key={a.id} style={{
+                    border: `1px solid ${F.linha}`, borderRadius: 12,
+                    padding: '16px 20px', margin: '0 0 10px', opacity: .75,
+                  }}>
+                    <p style={{ fontSize: 14.5, margin: 0, color: F.claro2, textDecoration: 'line-through' }}>
+                      {a.hipotese}
+                    </p>
+                    {a.motivo_queda && (
+                      <p style={{ fontSize: 13.5, margin: '8px 0 0', color: F.claro }}>{a.motivo_queda}</p>
+                    )}
+                  </div>
+                ))}
+              </Secao>
+            )}
+
+            {/* ------------------------------------------- o acervo */}
+            <section style={{ borderTop: `1px solid ${F.linha}`, paddingTop: 24 }}>
+              <button onClick={() => setVerAcervo((v) => !v)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  fontSize: 11, letterSpacing: '.26em', textTransform: 'uppercase',
+                  color: F.acc, fontWeight: 800, background: 'none', border: 0, padding: 0,
+                }}>
+                {verAcervo ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                O acervo, cru · {cenas.length}
+              </button>
+              <p style={{ fontSize: 12.5, color: F.claro2, lineHeight: 1.55, margin: '10px 0 0', maxWidth: '64ch' }}>
+                Tudo que entrou, com data e fonte. Nada aqui se apaga nem se reescreve.
+                Fica fechado porque ninguém entende uma criança lendo arquivo.
+              </p>
+
+              {verAcervo && (
+                <div style={{ marginTop: 18 }}>
+                  {cenas.map((c) => (
+                    <div key={c.id} style={{
+                      border: `1px solid ${F.linha}`, borderRadius: 12,
+                      padding: '16px 18px', margin: '0 0 10px',
+                    }}>
+                      <p style={{
+                        fontSize: 10.5, letterSpacing: '.2em', textTransform: 'uppercase',
+                        fontWeight: 800, margin: '0 0 8px',
+                        color: c.fonte === 'casa' ? F.acc : F.claro2,
+                      }}>
+                        {c.fonte === 'casa' ? 'casa' : 'escola'} · {c.quem} · {dia(c.quando)}
+                      </p>
+                      <p style={{ fontSize: 14.5, lineHeight: 1.5, margin: 0 }}>
+                        {c.citacao ?? c.descricao}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // ========================================================= A LISTA
+  // ================================================== A LISTA
   return (
     <div>
       <h1 className="text-xl font-bold mb-1" style={{ color: t.text }}>Casos</h1>
@@ -385,30 +432,25 @@ const ArboriaCasosPage = () => {
 
       <div className="flex flex-col gap-2">
         {casos.map((c) => {
-          const cor = ESTADO_COR[c.estado] ?? ESTADO_COR.aberto;
-          const soUmLado = (c.cenas ?? 0) > 0 && (c.mecanismos ?? 0) < 3;
+          const fino = (c.mecanismos ?? 0) < 3;
           return (
             <button key={c.id} onClick={() => void abrir(c)}
               className="rounded-2xl px-4 py-3.5 flex items-start gap-3.5 text-left w-full"
               style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowSm }}>
               <span className="flex-1 min-w-0">
-                {/* "#1 Ayrton". O numero e o primeiro nome sao o identificador do
-                    caso, do jeito que a gente fala dele em voz alta. O nome
-                    completo aparece dentro, quando ja se sabe de quem se trata. */}
                 <b className="block text-[15.5px] font-bold mb-0.5" style={{ color: t.text }}>
                   <span style={{ color: t.textFaint }}>#{c.numero}</span>{' '}
                   {nomeCurto(c.nome ?? c.quem ?? '')}
                 </b>
                 <span className="block text-[13px] mb-1" style={{ color: t.textMuted }}>{c.titulo}</span>
                 <span className="text-[11.5px]" style={{ color: t.textFaint }}>
-                  {c.turma ? c.turma + ' · ' : ''}
+                  {c.turma ? `${c.turma} · ` : ''}
                   {c.cenas} no acervo · {c.mecanismos} mecanismos · {c.apostas} apostas
-                  {soUmLado && ' · material fino'}
+                  {fino && ' · material fino'}
                 </span>
               </span>
-
               <span className="text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap"
-                style={{ backgroundColor: cor.fundo, color: cor.letra }}>
+                style={{ backgroundColor: t.accentSoft, color: t.accentText }}>
                 {ESTADO_NOME[c.estado] ?? c.estado}
               </span>
             </button>
