@@ -138,6 +138,7 @@ const ArboriaTrilhaPage = lazy(() => import("./pages/arboria/ArboriaTrilhaPage")
 const ArboriaCoordenadoresPage = lazy(() => import("./pages/arboria/ArboriaCoordenadoresPage"));
 const ArboriaColetaPage = lazy(() => import("./pages/arboria/ArboriaColetaPage"));
 const ArboriaCasosPage = lazy(() => import("./pages/arboria/ArboriaCasosPage"));
+const ArboriaFolhaCaso = lazy(() => import("./pages/arboria/ArboriaFolhaCaso"));
 const QuestionarioPaisPreview = lazy(() => import("./pages/arboria/QuestionarioPaisPreview"));
 const MissoesSeriePage = lazy(() => import("./pages/professor/MissoesSeriePage"));
 const MissoesSemanaPage = lazy(() => import("./pages/professor/MissoesSemanaPage"));
@@ -261,6 +262,13 @@ const App = () => (
                 <ArboriaAdminLayout>
                   <ArboriaCasosPage />
                 </ArboriaAdminLayout>
+              </ProtectedRoute>
+            } />
+            {/* A folha da professora: tela cheia, SEM o layout do admin, porque
+                ela existe para virar papel. */}
+            <Route path="/arboria/casos/:numero/folha" element={
+              <ProtectedRoute requireSuperAdmin>
+                <ArboriaFolhaCaso />
               </ProtectedRoute>
             } />
             {/* prototipo do questionario dos pais: tela cheia, SEM o layout do admin,

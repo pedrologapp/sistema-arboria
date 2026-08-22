@@ -21,7 +21,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { infantilTheme as t } from '@/styles/infantilTheme';
-import { Loader2, ArrowLeft, ChevronDown, ChevronRight, Home, School } from 'lucide-react';
+import { Loader2, ArrowLeft, ChevronDown, ChevronRight, Home, School, FileText } from 'lucide-react';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const tabela = (nome: string): any => (supabase as any).from(nome);
@@ -265,11 +265,24 @@ const ArboriaCasosPage = () => {
 
     return (
       <div>
-        <button onClick={() => setAberto(null)}
-          className="inline-flex items-center gap-1.5 text-[13px] font-semibold mb-4"
-          style={{ color: t.accentText }}>
-          <ArrowLeft size={15} /> voltar aos casos
-        </button>
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
+          <button onClick={() => setAberto(null)}
+            className="inline-flex items-center gap-1.5 text-[13px] font-semibold"
+            style={{ color: t.accentText }}>
+            <ArrowLeft size={15} /> voltar aos casos
+          </button>
+
+          {/* A folha da professora. Duas páginas: o Arboria falando, e onde ela
+              escreve. Não leva a hipótese, de propósito. */}
+          <a href={`/arboria/casos/${aberto.numero}/folha`} target="_blank" rel="noreferrer"
+            className="inline-flex items-center gap-2 text-[12.5px] font-bold ml-auto"
+            style={{
+              padding: '8px 16px', borderRadius: 999,
+              backgroundColor: F.preto, color: F.acc,
+            }}>
+            <FileText size={14} /> Folha da professora
+          </a>
+        </div>
 
         <div style={{
           position: 'relative', overflow: 'hidden',
