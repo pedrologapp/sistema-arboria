@@ -42,6 +42,8 @@ interface Caso {
   aberto_em: string; ultima_atividade: string;
   resumo: string | null; gostos: string[];
   o_que_estamos_vendo: string | null; analise: string | null; proximos_passos: string[];
+  o_que_nao_fecha: string | null; o_que_muda: string | null; tipo_tensao: string | null;
+  pergunta_veio_de: string | null;
   nome?: string; turma?: string; serie?: string; nascimento?: string | null;
   cenas?: number; mecanismos?: number; apostas?: number;
 }
@@ -152,7 +154,7 @@ const ArboriaCasosPage = () => {
 
   async function carregarLista() {
     const { data, error } = await tabela('casos')
-      .select('id, numero, aluno_id, quem, titulo, pergunta, estado, resumo, gostos, o_que_estamos_vendo, analise, proximos_passos, aberto_em, ultima_atividade')
+      .select('id, numero, aluno_id, quem, titulo, pergunta, estado, resumo, gostos, o_que_estamos_vendo, analise, proximos_passos, o_que_nao_fecha, o_que_muda, tipo_tensao, pergunta_veio_de, aberto_em, ultima_atividade')
       .order('numero');
     if (error) { toast.error('Não consegui carregar os casos'); setCasos([]); return; }
     const lista = (data ?? []) as Caso[];
@@ -360,13 +362,27 @@ const ArboriaCasosPage = () => {
               </div>
             )}
 
-            {/* Só agora a pergunta faz sentido, porque já se sabe de quem ela é. */}
+            {/* ============================ A PONTE: O QUE NÃO FECHA
+                Sem ela, "quem é" e "o que perguntamos" ficavam como dois
+                cartazes lado a lado sem fio entre um e outro. Ninguém abre
+                investigação porque a criança é interessante: abre porque alguma
+                coisa não encaixa, e é a tensão que gera a pergunta. */}
+            {aberto.o_que_nao_fecha && (
+              <div style={{ margin: '0 0 34px' }}>
+                <Selo>O que não fecha</Selo>
+                <p style={{ fontSize: 16, lineHeight: 1.62, margin: 0, maxWidth: '66ch' }}>
+                  {aberto.o_que_nao_fecha}
+                </p>
+              </div>
+            )}
+
+            {/* Agora a pergunta chega puxada pela tensão, e não do céu. */}
             <div style={{
               borderTop: `1px solid ${F.linha}`, paddingTop: 30, margin: '0 0 38px',
             }}>
-              <Selo>A pergunta do caso</Selo>
+              <Selo>Por isso a gente quer entender</Selo>
               <div style={{ borderLeft: `3px solid ${F.acc}`, padding: '4px 0 4px 22px' }}>
-                <p style={{ fontFamily: F.serif, fontSize: 21, lineHeight: 1.35, margin: 0 }}>
+                <p style={{ fontFamily: F.serif, fontSize: 23, lineHeight: 1.3, margin: 0 }}>
                   {aberto.titulo}
                 </p>
                 {aberto.pergunta && (
@@ -374,7 +390,32 @@ const ArboriaCasosPage = () => {
                     {aberto.pergunta}
                   </p>
                 )}
+                {aberto.pergunta_veio_de && (
+                  <p style={{ fontSize: 11.5, color: 'rgba(169,174,188,.7)', margin: '14px 0 0' }}>
+                    {aberto.pergunta_veio_de === 'professora'
+                      ? 'Quem levantou foi a professora. A resposta já tem quem a queira.'
+                      : aberto.pergunta_veio_de === 'familia'
+                      ? 'Quem levantou foi a família.'
+                      : 'Quem levantou foi o Arboria, no cruzamento. Ninguém pediu, então o bilhete precisa dar antes de pedir.'}
+                  </p>
+                )}
               </div>
+
+              {/* O FREIO. Se ninguém consegue escrever o que muda, o caso não
+                  deveria existir. É o que impede virar coleção de curiosidade
+                  sobre criança, e é a regra do próprio Fundador de que nem tudo
+                  precisa ser investigado. */}
+              {aberto.o_que_muda && (
+                <div style={{ marginTop: 26 }}>
+                  <p style={{
+                    fontSize: 10.5, letterSpacing: '.26em', textTransform: 'uppercase',
+                    color: F.claro2, fontWeight: 800, margin: '0 0 10px',
+                  }}>e o que muda se a gente entender</p>
+                  <p style={{ fontSize: 15, lineHeight: 1.6, margin: 0, maxWidth: '64ch', color: F.claro }}>
+                    {aberto.o_que_muda}
+                  </p>
+                </div>
+              )}
             </div>
 
             {carregando && (
