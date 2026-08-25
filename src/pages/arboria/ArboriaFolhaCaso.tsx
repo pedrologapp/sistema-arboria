@@ -40,7 +40,7 @@ const ArboriaFolhaCaso = () => {
   useEffect(() => {
     (async () => {
       const { data: cs } = await tabela('casos')
-        .select('id, numero, titulo, pergunta, o_que_muda, proxima_peca, aluno_id, quem')
+        .select('id, numero, titulo, pergunta, o_que_muda, proxima_peca, aluno_id, quem, contexto_abertura')
         .eq('numero', Number(numero)).limit(1);
       const c = (cs ?? [])[0];
       if (!c) { setErro('Caso não encontrado.'); return; }
@@ -60,7 +60,11 @@ const ArboriaFolhaCaso = () => {
         numero: c.numero, titulo: c.titulo, pergunta: c.pergunta,
         o_que_muda: c.o_que_muda, proxima_peca: c.proxima_peca,
         nome: perfil?.full_name ?? c.quem ?? '',
-        turma: perfil ? [perfil.serie, perfil.turma].filter(Boolean).join(' ') : null,
+        // A folha é impressa e guardada, então ela leva a turma e o ANO em que o
+        // caso foi aberto, e não a turma de hoje. Papel achado numa gaveta em
+        // 2028 precisa dizer de quando ele é.
+        turma: c.contexto_abertura
+          ?? (perfil ? [perfil.serie, perfil.turma].filter(Boolean).join(' ') : null),
         leitura: (le ?? [])[0] ?? null,
         sondagem: (so ?? [])[0] ?? null,
       });
@@ -186,10 +190,11 @@ const ArboriaFolhaCaso = () => {
         <div className="pg escura">
           <div className="brilho" />
           <p className="marca">Arb<span>oria</span></p>
-          <p className="selo">Sobre um aluno seu</p>
+          {/* O #0 não é aluno de ninguém: a folha dele não pode dizer que é. */}
+          <p className="selo">{d.turma ? 'Sobre um aluno seu' : 'Sobre você'}</p>
 
           <h1>{d.leitura?.titulo ?? d.titulo}</h1>
-          <p className="quem">{d.nome}{d.turma ? ` · ${d.turma}` : ''}</p>
+          <p className="quem">{d.nome}{d.turma ? ` - ${d.turma}` : ''}</p>
 
           {paragrafos.length === 0 ? (
             <p className="par falta">

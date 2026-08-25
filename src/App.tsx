@@ -139,6 +139,7 @@ const ArboriaCoordenadoresPage = lazy(() => import("./pages/arboria/ArboriaCoord
 const ArboriaColetaPage = lazy(() => import("./pages/arboria/ArboriaColetaPage"));
 const ArboriaCasosPage = lazy(() => import("./pages/arboria/ArboriaCasosPage"));
 const ArboriaFolhaCaso = lazy(() => import("./pages/arboria/ArboriaFolhaCaso"));
+const ArboriaAtividadeCaso = lazy(() => import("./pages/arboria/ArboriaAtividadeCaso"));
 const QuestionarioPaisPreview = lazy(() => import("./pages/arboria/QuestionarioPaisPreview"));
 const MissoesSeriePage = lazy(() => import("./pages/professor/MissoesSeriePage"));
 const MissoesSemanaPage = lazy(() => import("./pages/professor/MissoesSemanaPage"));
@@ -269,6 +270,14 @@ const App = () => (
             <Route path="/arboria/casos/:numero/folha" element={
               <ProtectedRoute requireSuperAdmin>
                 <ArboriaFolhaCaso />
+              </ProtectedRoute>
+            } />
+            {/* A atividade investigativa: a turma inteira faz, e a intenção é
+                investigar a criança do caso. Também vira papel, e por isso
+                também fica fora do layout do admin. */}
+            <Route path="/arboria/casos/:numero/atividade" element={
+              <ProtectedRoute requireSuperAdmin>
+                <ArboriaAtividadeCaso />
               </ProtectedRoute>
             } />
             {/* prototipo do questionario dos pais: tela cheia, SEM o layout do admin,

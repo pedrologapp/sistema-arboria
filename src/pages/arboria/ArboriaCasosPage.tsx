@@ -21,7 +21,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { infantilTheme as t } from '@/styles/infantilTheme';
-import { Loader2, ArrowLeft, ChevronDown, ChevronRight, Home, School, FileText } from 'lucide-react';
+import { Loader2, ArrowLeft, ChevronDown, ChevronRight, Home, School, FileText, FlaskConical } from 'lucide-react';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const tabela = (nome: string): any => (supabase as any).from(nome);
@@ -45,6 +45,10 @@ interface Caso {
   o_que_nao_fecha: string | null; o_que_muda: string | null; tipo_tensao: string | null;
   pergunta_veio_de: string | null;
   pecas_soltas: string[]; proxima_peca: string | null;
+  // Série, turma e ano CONGELADOS na abertura. Não sai de profiles de propósito:
+  // a criança muda de turma no ano que vem e o caso passaria a dizer de onde ela
+  // está hoje, e não de onde ela estava quando foi observada.
+  contexto_abertura: string | null;
   nome?: string; turma?: string; serie?: string; nascimento?: string | null;
   cenas?: number; mecanismos?: number; apostas?: number;
 }
@@ -100,8 +104,16 @@ const CAMINHOS = [
   { id: 'aula', rotulo: 'Aula' },
 ] as const;
 
+// O CASO #0 NÃO TEM TRÊS CAMINHOS, e forçá-los seria mentira de tela: as três
+// colunas existem porque uma criança é observada por gente diferente. No caso
+// do Fundador o sujeito é a própria fonte, então a coleta tem um caminho só,
+// e a tela precisa dizer isso em vez de jogar tudo em "Professores".
+const CAMINHOS_PROPRIO = [{ id: 'proprio', rotulo: 'Ele mesmo' }] as const;
+
 const caminhoDa = (c: Cena) =>
-  c.fonte === 'casa' ? 'pais' : c.origem_tipo ? 'aula' : 'professores';
+  c.fonte === 'outro' ? 'proprio'
+    : c.fonte === 'casa' ? 'pais'
+      : c.origem_tipo ? 'aula' : 'professores';
 
 const ESTADO_NOME: Record<string, string> = {
   aberto: 'aberto', sondando: 'sondando', em_espera: 'em espera', encerrado: 'encerrado',
@@ -181,7 +193,7 @@ const ArboriaCasosPage = () => {
 
   async function carregarLista() {
     const { data, error } = await tabela('casos')
-      .select('id, numero, aluno_id, quem, titulo, pergunta, estado, resumo, gostos, o_que_estamos_vendo, analise, proximos_passos, o_que_nao_fecha, o_que_muda, tipo_tensao, pergunta_veio_de, pecas_soltas, proxima_peca, aberto_em, ultima_atividade')
+      .select('id, numero, aluno_id, quem, titulo, pergunta, estado, resumo, gostos, o_que_estamos_vendo, analise, proximos_passos, o_que_nao_fecha, o_que_muda, tipo_tensao, pergunta_veio_de, pecas_soltas, proxima_peca, contexto_abertura, aberto_em, ultima_atividade')
       .order('numero');
     if (error) { toast.error('Não consegui carregar os casos'); setCasos([]); return; }
     const lista = (data ?? []) as Caso[];
@@ -282,6 +294,19 @@ const ArboriaCasosPage = () => {
             }}>
             <FileText size={14} /> Folha da professora
           </a>
+
+          {/* A atividade investigativa. Vai ao lado da folha porque as duas são
+              papel do mesmo caso, e a diferença é para quem cada uma fala: a
+              folha vai para a professora sem a hipótese, a atividade fica com
+              quem investiga e leva tudo. */}
+          <a href={`/arboria/casos/${aberto.numero}/atividade`} target="_blank" rel="noreferrer"
+            className="inline-flex items-center gap-2 text-[12.5px] font-bold"
+            style={{
+              padding: '8px 16px', borderRadius: 999,
+              border: `1px solid ${F.acc}`, color: F.acc,
+            }}>
+            <FlaskConical size={14} /> Atividade investigativa
+          </a>
         </div>
 
         <div style={{
@@ -306,6 +331,7 @@ const ArboriaCasosPage = () => {
               color: F.acc, fontWeight: 800, margin: '8px 0 0',
             }}>
               Caso #{aberto.numero} · {nomeCurto(aberto.nome ?? aberto.quem ?? '')}
+              {aberto.contexto_abertura ? ` - ${aberto.contexto_abertura}` : ''}
             </p>
 
             <h1 style={{
@@ -360,7 +386,8 @@ const ArboriaCasosPage = () => {
             <div style={{ borderTop: `1px solid ${F.linha}`, paddingTop: 30, margin: '0 0 34px' }}>
               <Selo>Coleta de dados</Selo>
               <div style={{ display: 'flex', gap: 1, background: F.linha, borderRadius: 12, overflow: 'hidden' }}>
-                {CAMINHOS.map((cam) => {
+                {([...(cenas.some((c) => c.fonte === 'outro') ? CAMINHOS_PROPRIO : CAMINHOS)] as
+                  { id: string; rotulo: string }[]).map((cam) => {
                   const doCaminho = cenas.filter((c) => caminhoDa(c) === cam.id);
                   // A COLUNA MOSTRA O QUE VEIO POR ALI, e não os mecanismos.
                   //
@@ -826,8 +853,24 @@ const ArboriaCasosPage = () => {
                 color: F.acc, fontFamily: F.serif, fontSize: 22, lineHeight: 1.2,
                 fontVariantNumeric: 'tabular-nums', minWidth: 34,
               }}>#{c.numero}</span>
-              <span style={{ fontFamily: F.serif, fontSize: 22, lineHeight: 1.2 }}>
+              {/* NOME EM CAIXA ALTA E A TURMA NA MESMA LINHA, na ordem que o
+                  Fundador pediu: #1 AYRTON CASSIO - 5º Ano A - 2026.
+                  A caixa alta ganha um pouco de espaçamento porque serifada em
+                  maiúscula sem tracking fecha demais e vira bloco. E a turma fica
+                  menor e cinza: as duas partes são o identificador, mas quem
+                  entra primeiro é o nome. */}
+              <span style={{
+                fontFamily: F.serif, fontSize: 21, lineHeight: 1.2,
+                textTransform: 'uppercase', letterSpacing: '.015em',
+              }}>
                 {nomeCurto(c.nome ?? c.quem ?? '')}
+                {c.contexto_abertura && (
+                  <span style={{
+                    fontFamily: 'inherit', fontSize: 14, letterSpacing: '.02em',
+                    color: F.claro2, textTransform: 'none',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}>{' - '}{c.contexto_abertura}</span>
+                )}
               </span>
             </button>
           ))}
