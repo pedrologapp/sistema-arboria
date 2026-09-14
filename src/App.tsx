@@ -138,6 +138,7 @@ const ArboriaTrilhaPage = lazy(() => import("./pages/arboria/ArboriaTrilhaPage")
 const ArboriaCoordenadoresPage = lazy(() => import("./pages/arboria/ArboriaCoordenadoresPage"));
 const ArboriaColetaPage = lazy(() => import("./pages/arboria/ArboriaColetaPage"));
 const ArboriaCasosPage = lazy(() => import("./pages/arboria/ArboriaCasosPage"));
+const ArenaVotosPage = lazy(() => import("./pages/arboria/ArenaVotosPage"));
 const ArboriaFolhaCaso = lazy(() => import("./pages/arboria/ArboriaFolhaCaso"));
 const ArboriaAtividadeCaso = lazy(() => import("./pages/arboria/ArboriaAtividadeCaso"));
 const QuestionarioPaisPreview = lazy(() => import("./pages/arboria/QuestionarioPaisPreview"));
@@ -307,6 +308,16 @@ const App = () => ehOSiteDaArena() ? <SiteDaArena /> : (
               <ProtectedRoute requireSuperAdmin>
                 <ArboriaAdminLayout>
                   <ArboriaCasosPage />
+                </ArboriaAdminLayout>
+              </ProtectedRoute>
+            } />
+            {/* O placar da votacao da Arena. So' o dono enxerga: a funcao de
+                apuracao recusa quem nao for super_admin, e a tabela de votos
+                nao e' legivel por ninguem. */}
+            <Route path="/arboria/arena" element={
+              <ProtectedRoute requireSuperAdmin>
+                <ArboriaAdminLayout>
+                  <ArenaVotosPage />
                 </ArboriaAdminLayout>
               </ProtectedRoute>
             } />
