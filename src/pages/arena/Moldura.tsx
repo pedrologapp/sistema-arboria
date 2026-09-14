@@ -1,0 +1,50 @@
+// ============================================================
+// Moldura — o casco compartilhado das duas telas do site da Arena.
+//
+// Injeta o CSS uma vez so', pinta o fundo e segura o rodape'. Existe para a
+// galeria e a sala do projeto nao repetirem o mesmo cabecalho, e para o dia em
+// que este site sair do app: leva-se esta pasta inteira e mais nada.
+// ============================================================
+import { useEffect } from 'react';
+import { CSS_ARENA } from './estiloArena';
+
+const ID_ESTILO = 'ar-estilo';
+
+export function Moldura({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    if (document.getElementById(ID_ESTILO)) return;
+    const tag = document.createElement('style');
+    tag.id = ID_ESTILO;
+    tag.textContent = CSS_ARENA;
+    document.head.appendChild(tag);
+  }, []);
+
+  useEffect(() => {
+    const antes = document.title;
+    return () => { document.title = antes; };
+  }, []);
+
+  return (
+    <div className="ar-raiz" lang="pt-BR">
+      <div className="ar-fundo" aria-hidden="true" />
+      {children}
+    </div>
+  );
+}
+
+// O RODAPE SAIU por decisao do Fundador em 10/09. Fica registrado o que ele
+// carregava, porque duas dessas coisas sao exigencia do parecer de Riscos e
+// precisam voltar, em alguma forma, ANTES de o site ir ao ar: dizer que o
+// responsavel pela publicacao e' o Centro Educacional Amadeus, e oferecer um
+// caminho visivel para uma familia pedir a retirada de um projeto. A terceira,
+// explicar o que e' a Arena, e' escolha editorial e pode ficar de fora.
+
+export function Seta({ tamanho = 16 }: { tamanho?: number }) {
+  return (
+    <svg width={tamanho} height={tamanho} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true">
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  );
+}

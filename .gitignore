@@ -35,3 +35,6 @@ n8n/
 
 # Arquivos com nome de crianca ou avaliacao individual: nunca vao para o GitHub
 privado/
+
+# Ambiente local da funcao da Arena: contem a chave de administracao.
+supabase/functions/.env.local

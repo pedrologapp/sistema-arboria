@@ -213,3 +213,69 @@ externa até o termo v2 declarar subprocessador de IA.
 
 Exige advogado, não a mesa: termo v2, contrato controlador/operador entre
 Amadeus e Arboria Tech, e base legal do dado derivado depois da saída da criança.
+
+---
+
+## 2026-09-10 · SITE PÚBLICO DA ARENA (V1 sem votação): 3 vetos suspensivos, arquitetura liberada com 3 correções
+
+Objeto: rota pública `/arena` sem login, com os projetos da 2ª fase (missão
+`ddaf54d2-7781-4ab6-b3e7-2a54749329a5`). Conferido no banco em 10/09: **14
+entregas que são 11 projetos** (um grupo do 8º A enviou quatro vezes), cerca de
+70 imagens, 13 vídeos e a prosa escrita pelos próprios alunos. Público externo à
+escola.
+
+### OS TRÊS VETOS
+
+**V1.** Publicar sem autorização específica e destacada do responsável de cada
+integrante. O enunciado da missão ("isso vai para fora da escola") é instrução a
+adolescente, não consentimento do titular; há alunos de 11 anos nos 6º anos, e
+para eles vale o Art. 14 §1 literal. Obra coletiva: recusa de um integrante
+barra o projeto inteiro.
+
+**V2.** Publicar apontando para a pasta viva do aluno. As policies de
+`arena-2fase` (migração 20260817000001, linhas 44 a 60) dão ao aluno UPDATE e
+DELETE sem trava de prazo. Aprovar um caminho não é aprovar um arquivo: o aluno
+troca a foto depois da conferência e o site publica o que ninguém revisou.
+
+**V3.** Publicar qualquer arquivo sem conferência humana registrada, um a um,
+com o vídeo assistido inteiro e com áudio. Dois pares de olhos, um deles de
+quem conhece os alunos de vista.
+
+### CORREÇÕES DE ARQUITETURA (o descarte do bucket público foi confirmado)
+
+(a) O que vai ao ar é uma **cópia sanitizada** (re-encode, EXIF zerado, caminho
+novo sem `aluno_id`) em bucket privado separado, imutável. (b) A Edge Function
+pública **não recebe caminho, id nem filtro** do navegador: lê a tabela de
+publicação e assina só o que estiver lá; CORS restrito, `verify_jwt=false`
+declarado, nenhuma policy `anon` na tabela nova. (c) `/arena` sem `supabase-js`
+e em chunk isolado.
+
+### ALTOS
+
+EXIF com GPS entrega a casa da criança e derrota o anonimato sem aparecer nada
+na tela. Voz de criança nos 13 vídeos. Terceiros sem consentimento dentro do
+projeto. Integridade da obra do menor quando o texto é editado: editar só por
+supressão. Despublicar não mata signed URL já emitida, então takedown é apagar o
+objeto derivado e não desligar a flag. Sem `noindex`, revogação de consentimento
+é inexecutável. Totais e ordem viram mérito e viram ausência: 18 grupos
+convidados e 11 projetos publicáveis, então **nada de "N de M" e nada de
+contagem**. Os 7 que faltam são 23 alunos, e 5 deles são do 9º A. Suspeita
+de autoria externa num projeto do 7º A (registro de 12/08) fica fora da V1.
+Falta autorização formal do Amadeus como controlador. `service_role` vazada
+ainda não rotacionada e R-CAS-11 aberto enquanto se divulga uma URL pública.
+
+### MÉDIOS
+
+Egresso: 649 MB de vídeo, o maior com 298 MB, servidos a público aberto sem
+limite de taxa. Log de IP do visitante sem finalidade nem prazo. Zero rastreador
+e zero cookie na V1. OG image expondo mídia em CDN de terceiro: preview
+genérico. Texto público rascunhado por IA reabre a dívida do DPA (C7).
+
+**PARÂMETRO TRAVADO:** signed URL de 60 minutos, JSON `no-store`, refetch no
+erro e no retorno de foco. Nunca 24h, nunca 7 dias.
+
+**Exige advogado licenciado, não a mesa:** termo de autorização de publicação,
+encaixe com o pacote Art. 14 aberto desde 12/07, prazo de despublicação, e o
+contrato controlador/operador entre Amadeus e Arboria Tech.
+
+Relacionado: R-CAS-11, R18/R46/R51, R-SERVICEROLE-01.

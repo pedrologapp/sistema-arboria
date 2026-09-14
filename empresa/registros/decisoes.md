@@ -238,3 +238,61 @@ por acaso era ~21), e não erro de ligação. O erro de ligação real é
 recuperável por matrícula. A duplicação entre as duas tabelas de observação (229
 textos em ambas) não gerou cena duplicada, e se resolve por view unificada sem
 apagar nada.
+
+---
+
+## 2026-09-10 · ARENA: o site construído e o método de voto (revoga o e-mail de 28/07)
+
+**(1) O SITE EXISTE.** Rota `/arenaarboria`, galeria de faixas iguais mais uma
+página por projeto. Endereço final: `arboria.escolaamadeus.com/arenaarboria`.
+Decisões de desenho do Fundador nesta sessão: sem número de projeto visível, as
+fotos vêm logo depois do vídeo e antes do texto, botão de voltar no canto
+esquerdo, e a foto aparece inteira com o vazio preenchido por uma cópia
+desfocada dela mesma, em vez de ser cortada.
+
+**São 11 projetos, não 14 nem 17.** Foram 18 grupos convidados para a 2ª fase.
+As 14 entregas incluem um grupo do 8º A que enviou quatro vezes. Os 7 grupos que
+não entregaram somam 23 alunos, e 5 desses grupos são do 9º A, que já tinha
+entregado 1 de 6 na 1ª fase. O buraco tem forma de turma.
+
+**(2) O MÉTODO DE VOTO MUDOU E REVOGA A DECISÃO DE 28/07** (confirmação por
+e-mail, hash do e-mail, 5 votos por IP). Método novo, decidido pelo Fundador:
+sem cadastro, sem login, sem e-mail e sem documento; marca no aparelho; teto
+alto por rede só para barrar robô; janela com hora de abrir e de fechar; voto
+FINAL, com tela de confirmação antes. Razões da virada, todas do Fundador:
+adolescente cria vários e-mails; a confirmação exigiria contratar serviço de
+envio; e o atrito derruba a participação honesta sem segurar a desonesta. CPF
+foi descartado pela segunda vez: só se confere o formato, existe gerador de CPF
+válido, e criaria coleta de documento da comunidade inteira.
+
+**(3) O ACHADO QUE MUDA A COMPETIÇÃO.** "A nota é o cofre" é falso com voto
+bruto. A nota anda entre 7 e 10, varia três vezes; o voto varia em ordem de
+grandeza. Do jeito combinado em julho, vence quem mobiliza mais família e a nota
+vira enfeite. **Ordem do Fundador: o site conta os votos, e a ponderação pelas
+notas é decidida depois.** Consequência registrada: a regra do resultado precisa
+estar escrita e publicada ANTES de a janela abrir, mesmo que as notas venham
+depois. Definir como o voto pesa depois de ver os votos é o que torna um
+resultado contestável.
+
+**Nenhum dos 11 finalistas tem nota lançada. Zero de onze.** Por isso a nota
+deixou de ser pré-requisito para publicar e virou pré-requisito para FECHAR a
+apuração.
+
+**(4) O ESQUEMA** está em `supabase/migrations/20260910000001_arena_votacao.sql`,
+não aplicado. Sete tabelas novas. O voto aponta para uma linha de publicação com
+id próprio, nunca para a tupla derivada nem para a entrega. `capitulo_arena_projeto`
+não foi estendida: o `turma_id` dela cai em cascata a partir de `turmas`, então a
+virada de ano apagaria o projeto e levaria o voto junto. A tabela do voto guarda
+só dois resumos embaralhados, com verificação de formato que impede que um dia
+entre e-mail, endereço ou nome na coluna. Voto nunca é apagado nem migra de
+projeto. Ninguém lê a tabela de votos direto: a apuração sai por função com dono,
+ordenada por número e nunca por desempenho.
+
+**(5) O QUE TRAVA A ABERTURA**, somando os dois pareceres de hoje: termo dos
+responsáveis mencionando votação, resultado e vencedor; autorização da direção
+do Amadeus; conferência humana dos 11 projetos, arquivo por arquivo; regulamento
+publicado; fórmula do resultado escrita; e a `service_role` vazada rotacionada,
+que com um caminho de escrita público deixa de ser risco alto e passa a ser
+inaceitável.
+
+Relacionado: [[project_arena_competicao_site]], [[project_arena_site_construido]].

@@ -59,3 +59,10 @@ verify_jwt = false
 
 [functions.create-aluno-manual]
 verify_jwt = false
+
+# O site publico da Arena. verify_jwt = false porque quem abre a pagina nao tem
+# login nenhum: e' esse o proposito. A protecao nao esta' no token, esta' em a
+# funcao nao aceitar parametro nenhum, so' ler, e nascer travada pelo segredo
+# ARENA_NO_AR, que precisa valer '1' para ela responder qualquer coisa.
+[functions.arena-site]
+verify_jwt = false

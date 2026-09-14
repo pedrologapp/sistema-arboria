@@ -141,6 +141,10 @@ const ArboriaCasosPage = lazy(() => import("./pages/arboria/ArboriaCasosPage"));
 const ArboriaFolhaCaso = lazy(() => import("./pages/arboria/ArboriaFolhaCaso"));
 const ArboriaAtividadeCaso = lazy(() => import("./pages/arboria/ArboriaAtividadeCaso"));
 const QuestionarioPaisPreview = lazy(() => import("./pages/arboria/QuestionarioPaisPreview"));
+// O site publico da Arena. Chunk proprio de proposito: quando ele for ao ar,
+// quem abre nao tem vinculo nenhum com a escola e nao precisa baixar o app.
+const ArenaGaleria = lazy(() => import("./pages/arena/ArenaGaleria"));
+const ArenaProjeto = lazy(() => import("./pages/arena/ArenaProjeto"));
 const MissoesSeriePage = lazy(() => import("./pages/professor/MissoesSeriePage"));
 const MissoesSemanaPage = lazy(() => import("./pages/professor/MissoesSemanaPage"));
 const MissoesListaPage = lazy(() => import("./pages/professor/MissoesListaPage"));
@@ -198,6 +202,13 @@ const App = () => (
                 Quem controla o acesso aqui e saber o nome da crianca E a data de
                 nascimento dela, as duas coisas juntas. */}
             <Route path="/familia" element={<QuestionarioPaisPreview />} />
+            {/* A GALERIA DA ARENA. PREVIA, ainda nao publicada: hoje ela le' o
+                banco autenticada e so' abre para professor, coordenador e admin.
+                Riscos suspendeu a publicacao em 10/09/2026 ate' o termo dos
+                responsaveis, a copia sanitizada e a conferencia arquivo a
+                arquivo. Ver empresa/registros/riscos.md. */}
+            <Route path="/arenaarboria" element={<ArenaGaleria />} />
+            <Route path="/arenaarboria/p/:numero" element={<ArenaProjeto />} />
             <Route path="/setup" element={<Setup />} />
             <Route path="/recuperar-admin" element={<RecoverAdmin />} />
             <Route path="/redefinir-senha" element={<ResetPassword />} />
