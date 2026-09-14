@@ -21,7 +21,7 @@ import { Link, useParams } from 'react-router-dom';
 import {
   carregarArena, votar, votoGuardado, guardarVoto, type ProjetoArena,
 } from './fonteArena';
-import { Moldura } from './Moldura';
+import { Moldura, caminhoGaleria, caminhoProjeto } from './Moldura';
 import { DESTAQUES, MAX_DESTAQUES } from './destaques';
 
 /**
@@ -144,7 +144,7 @@ export default function ArenaProjeto() {
         <div className="ar-sala">
           <h1 style={{ fontSize: 28 }}>Projeto não encontrado</h1>
           <p style={{ color: '#A6A5B8', marginTop: 14 }}>
-            <Link to="/arenaarboria" style={{ color: '#5EE0D0' }}>Voltar para a galeria</Link>
+            <Link to={caminhoGaleria()} style={{ color: '#5EE0D0' }}>Voltar para a galeria</Link>
           </p>
         </div>
       </Moldura>
@@ -168,7 +168,7 @@ export default function ArenaProjeto() {
         {/* Botao de voltar no canto esquerdo. Quem chega por link direto nao
             passou pela galeria e precisa de uma porta visivel para ela. */}
         <nav className="ar-barra">
-          <Link to="/arenaarboria" className="ar-voltar">
+          <Link to={caminhoGaleria()} className="ar-voltar">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M19 12H5M11 18l-6-6 6-6" />
@@ -399,12 +399,12 @@ export default function ArenaProjeto() {
 
             <div className="ar-passos">
               {anterior ? (
-                <Link to={`/arenaarboria/p/${anterior.numero}`}>
+                <Link to={caminhoProjeto(anterior.numero)}>
                   <span>Anterior: {anterior.titulo}</span>
                 </Link>
               ) : <span />}
               {proximo ? (
-                <Link to={`/arenaarboria/p/${proximo.numero}`} className="ar-fim">
+                <Link to={caminhoProjeto(proximo.numero)} className="ar-fim">
                   <span>Próximo: {proximo.titulo}</span>
                 </Link>
               ) : <span />}

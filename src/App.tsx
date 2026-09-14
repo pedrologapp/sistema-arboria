@@ -184,7 +184,41 @@ const PageLoader = () => (
 
 const queryClient = new QueryClient();
 
-const App = () => (
+/**
+ * O SITE DA ARENA MORA NUM ENDERECO PROPRIO: arenaarboria.escolaamadeus.com.
+ *
+ * Nesse endereco o app nao existe. Nao ha' AuthProvider, nao ha' sessao, nao
+ * ha' rota de aluno, de professor nem de admin, e o navegador de quem entra
+ * nao baixa nada disso. Quem abre a Arena e' gente sem vinculo nenhum com a
+ * escola, e nao ha' razao para entregar a ela o mapa do sistema.
+ *
+ * O parecer de Riscos de 10/09 pedia origem separada e aceitava, na falta
+ * dela, um pedaco isolado dentro do app. Com o subdominio, ficou a separacao
+ * de verdade.
+ */
+function ehOSiteDaArena(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.location.hostname.startsWith('arenaarboria.');
+}
+
+const SiteDaArena = () => (
+  <BrowserRouter>
+    <ErrorBoundary>
+      <ScrollToTop />
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={<ArenaGaleria />} />
+          <Route path="/p/:numero" element={<ArenaProjeto />} />
+          {/* No endereco da Arena nao existe pagina de erro do app: qualquer
+              caminho desconhecido volta para a galeria. */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
+  </BrowserRouter>
+);
+
+const App = () => ehOSiteDaArena() ? <SiteDaArena /> : (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />

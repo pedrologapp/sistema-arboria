@@ -18,7 +18,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { carregarArena, votoGuardado, type ProjetoArena } from './fonteArena';
-import { Moldura, Seta } from './Moldura';
+import { Moldura, Seta, caminhoProjeto } from './Moldura';
 
 /**
  * Sorteia a ordem. Roda a cada vez que a galeria e' aberta, entao a lista
@@ -121,7 +121,7 @@ export default function ArenaGaleria() {
             {ordenados.map((p) => (
               <Link
                 key={p.numero}
-                to={`/arenaarboria/p/${p.numero}`}
+                to={caminhoProjeto(p.numero)}
                 className="ar-faixa"
                 style={{ ['--ar-cor' as string]: p.cor }}
               >

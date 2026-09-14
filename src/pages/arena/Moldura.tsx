@@ -10,6 +10,25 @@ import { CSS_ARENA } from './estiloArena';
 
 const ID_ESTILO = 'ar-estilo';
 
+/**
+ * A Arena vive em dois enderecos e os caminhos internos mudam com ele.
+ *
+ * No endereco proprio (arenaarboria.escolaamadeus.com) ela ocupa a raiz: a
+ * galeria e' "/" e um projeto e' "/p/7". Dentro do app da escola ela e' uma
+ * rota entre outras: "/arenaarboria" e "/arenaarboria/p/7".
+ *
+ * Sem isto, o botao de voltar levaria para um endereco que nao existe naquele
+ * dominio, e o link que uma equipe manda para a familia quebraria.
+ */
+export function noSiteProprio(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.location.hostname.startsWith('arenaarboria.');
+}
+
+export const caminhoGaleria = () => (noSiteProprio() ? '/' : '/arenaarboria');
+export const caminhoProjeto = (numero: number) =>
+  (noSiteProprio() ? `/p/${numero}` : `/arenaarboria/p/${numero}`);
+
 export function Moldura({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (document.getElementById(ID_ESTILO)) return;
