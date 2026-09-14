@@ -21,7 +21,7 @@ import { Link, useParams } from 'react-router-dom';
 import {
   carregarArena, votar, votoGuardado, guardarVoto, type ProjetoArena,
 } from './fonteArena';
-import { Moldura, caminhoGaleria, caminhoProjeto } from './Moldura';
+import { Moldura, Seta, caminhoGaleria, caminhoProjeto } from './Moldura';
 import { DESTAQUES, MAX_DESTAQUES } from './destaques';
 
 /**
@@ -397,15 +397,21 @@ export default function ArenaProjeto() {
               <p className="ar-aviso">Obrigado. Seu voto foi registrado.</p>
             )}
 
+            {/* A seta fica do lado para onde se anda, e o rotulo em cima do
+                nome. No celular os dois viram um par lado a lado: empilhados,
+                eles pareciam continuacao do botao de votar, que e' outra coisa
+                inteiramente. */}
             <div className="ar-passos">
               {anterior ? (
-                <Link to={caminhoProjeto(anterior.numero)}>
-                  <span>Anterior: {anterior.titulo}</span>
+                <Link to={caminhoProjeto(anterior.numero)} className="ar-passo">
+                  <i className="ar-volta"><Seta tamanho={15} /></i>
+                  <span><b>Anterior</b>{anterior.titulo}</span>
                 </Link>
               ) : <span />}
               {proximo ? (
-                <Link to={caminhoProjeto(proximo.numero)} className="ar-fim">
-                  <span>Próximo: {proximo.titulo}</span>
+                <Link to={caminhoProjeto(proximo.numero)} className="ar-passo ar-fim">
+                  <span><b>Próximo</b>{proximo.titulo}</span>
+                  <i><Seta tamanho={15} /></i>
                 </Link>
               ) : <span />}
             </div>

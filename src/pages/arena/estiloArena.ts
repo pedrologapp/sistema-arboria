@@ -198,13 +198,30 @@ export const CSS_ARENA = `
   color:var(--ar-ink2);background:transparent}
 .ar-desistir:hover{color:var(--ar-ink)}
 .ar-botoes{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.ar-passos{display:flex;justify-content:space-between;gap:14px;margin-top:26px}
-.ar-passos a{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:10px;min-height:48px;
-  color:var(--ar-ink2);text-decoration:none;font-size:13.5px;
-  border:1px solid var(--ar-line);border-radius:14px;padding:10px 14px}
-.ar-passos a:hover{color:var(--ar-ink);border-color:var(--ar-line2)}
-.ar-passos a.ar-fim{justify-content:flex-end;text-align:right}
-.ar-passos a span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ar-passos{display:flex;justify-content:space-between;gap:12px;margin-top:28px}
+.ar-passo{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:12px;min-height:56px;
+  color:var(--ar-ink2);text-decoration:none;
+  border:1px solid var(--ar-line);border-radius:16px;padding:10px 14px;
+  background:rgba(255,255,255,0.02);
+  transition:border-color .25s var(--ar-ease),background .25s var(--ar-ease)}
+.ar-passo:hover{border-color:rgba(var(--ar-cor),.5);background:rgba(255,255,255,0.045)}
+.ar-passo:focus-visible{outline:2px solid rgb(var(--ar-cor));outline-offset:2px}
+/* A seta num disco proprio: e' o que diferencia "andar para o lado" de um link
+   de texto qualquer, e da' o alvo de toque sem depender do tamanho da frase. */
+.ar-passo i{flex:0 0 auto;width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(var(--ar-cor),.14);color:rgb(var(--ar-cor));
+  transition:transform .25s var(--ar-ease)}
+.ar-volta{transform:rotate(180deg)}
+.ar-passo:hover i{transform:translateX(3px)}
+.ar-passo:hover .ar-volta{transform:rotate(180deg) translateX(3px)}
+.ar-passo span{min-width:0;display:flex;flex-direction:column;gap:2px;
+  font-size:14px;font-weight:700;color:var(--ar-ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ar-passo span b{font-size:10.5px;font-weight:700;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--ar-mut)}
+.ar-passo.ar-fim{justify-content:flex-end;text-align:right}
+.ar-passo.ar-fim span{align-items:flex-end}
 .ar-sobre{margin-top:40px;color:var(--ar-mut);font-size:13.5px;max-width:62ch;line-height:1.7}
 
 /* ---------------------------------------------------------------- visor */
@@ -238,7 +255,12 @@ export const CSS_ARENA = `
   .ar-titulo{font-size:22px}
   .ar-gancho{font-size:15.5px;-webkit-line-clamp:2}
   .ar-acao{flex-wrap:wrap;height:auto;gap:10px}
-  .ar-hero{padding:16px 0 18px}
+  /* No celular a marca toma a largura toda. E' a unica coisa na primeira tela,
+     entao ela e' a primeira tela. O 25vw faz "Arboria", que e' a palavra mais
+     longa, encostar nas duas bordas sem estourar. */
+  .ar-hero{padding:10px 0 16px}
+  .ar-wordmark{font-size:25vw;line-height:.86;margin-top:6px}
+  .ar-tagline{margin-top:16px}
   .ar-grade{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;
     padding-bottom:6px;padding-right:34px;-webkit-overflow-scrolling:touch;
     scrollbar-width:none}
@@ -252,7 +274,14 @@ export const CSS_ARENA = `
     pointer-events:none;
     background:linear-gradient(90deg,rgba(8,8,12,0),rgba(8,8,12,.92))}
   .ar-visor{padding:16px}
-  .ar-passos{flex-direction:column}
+  /* No celular eles continuam LADO A LADO. Empilhados, viravam duas linhas
+     logo abaixo do botao de votar e pareciam parte dele. O nome do projeto
+     encolhe e corta; a seta e o rotulo seguram o sentido. */
+  .ar-passos{gap:10px}
+  .ar-passo{padding:8px 10px;min-height:52px;gap:9px}
+  .ar-passo i{width:30px;height:30px}
+  .ar-passo span{font-size:12.5px}
+  .ar-passo span b{font-size:9.5px;letter-spacing:.16em}
   .ar-fecho{padding:22px}
 }
 

@@ -88,7 +88,6 @@ export default function ArenaGaleria() {
         </div>
 
         <header className="ar-hero">
-          <div className="ar-sobrenome">Projetos do Fundamental 2</div>
           <div className="ar-wordmark"><b>Arena</b><b>Arboria</b></div>
           <p className="ar-tagline">Vote no seu projeto preferido.</p>
         </header>
