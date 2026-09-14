@@ -250,6 +250,12 @@ export const CSS_ARENA = `
    para quem nao a distingue. */
 .ar-marcada{border-color:rgb(var(--ar-cor))}
 .ar-opcao-foto{position:relative;display:block;width:100%;aspect-ratio:4/3;overflow:hidden}
+/* Na grade a foto PREENCHE o quadro, mesmo cortando. Vale a regra que ja' vale
+   na galeria: fechado corta para uniformizar, aberto mostra inteiro. Foto em
+   pe' dentro de quadro deitado, se coubesse inteira, viraria uma tirinha no
+   meio com desfoque nos dois lados, e o projeto sumia. A foto completa
+   continua na pagina do projeto. */
+.ar-opcao-foto img{object-fit:cover}
 .ar-marcada .ar-opcao-foto::after{content:'\\2713';position:absolute;top:10px;right:10px;z-index:2;
   width:30px;height:30px;border-radius:50%;background:rgb(var(--ar-cor));color:#0a0a10;
   display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800}
