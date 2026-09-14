@@ -224,6 +224,68 @@ export const CSS_ARENA = `
 .ar-passo.ar-fim span{align-items:flex-end}
 .ar-sobre{margin-top:40px;color:var(--ar-mut);font-size:13.5px;max-width:62ch;line-height:1.7}
 
+/* ------------------------------------------------------------- a votacao */
+.ar-votacao{position:fixed;inset:0;z-index:70;overflow-y:auto;
+  background:rgba(6,6,10,.94);backdrop-filter:blur(14px);
+  display:flex;flex-direction:column;gap:22px;padding:26px 22px 30px;
+  animation:ar-sobe .35s var(--ar-ease)}
+@keyframes ar-sobe{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.ar-votacao-topo{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  max-width:1120px;width:100%;margin:0 auto}
+.ar-votacao-topo h2{margin:0;font-size:clamp(23px,4vw,34px);font-weight:800;letter-spacing:-.02em}
+.ar-votacao-topo p{margin:8px 0 0;font-size:14px;color:var(--ar-ink2)}
+.ar-fechar-votacao{flex:0 0 auto;width:44px;height:44px;border-radius:50%;cursor:pointer;
+  border:1px solid var(--ar-line2);background:transparent;color:var(--ar-ink);font-size:22px}
+.ar-fechar-votacao:hover{background:rgba(255,255,255,.06)}
+
+.ar-grade-votos{display:grid;gap:14px;max-width:1120px;width:100%;margin:0 auto;
+  grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.ar-opcao{padding:0;border:2px solid var(--ar-line);border-radius:18px;overflow:hidden;
+  background:rgba(255,255,255,.025);cursor:pointer;text-align:left;
+  display:flex;flex-direction:column;
+  transition:border-color .25s var(--ar-ease),transform .25s var(--ar-ease)}
+.ar-opcao:hover{border-color:rgba(var(--ar-cor),.55);transform:translateY(-2px)}
+.ar-opcao:focus-visible{outline:2px solid rgb(var(--ar-cor));outline-offset:2px}
+/* A marcada muda BORDA e ganha um sinal, e nao so' cor: cor sozinha nao serve
+   para quem nao a distingue. */
+.ar-marcada{border-color:rgb(var(--ar-cor))}
+.ar-opcao-foto{position:relative;display:block;width:100%;aspect-ratio:4/3;overflow:hidden}
+.ar-marcada .ar-opcao-foto::after{content:'\\2713';position:absolute;top:10px;right:10px;z-index:2;
+  width:30px;height:30px;border-radius:50%;background:rgb(var(--ar-cor));color:#0a0a10;
+  display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800}
+.ar-opcao-nome{display:block;padding:12px 14px 14px;font-size:14.5px;font-weight:800;
+  color:var(--ar-ink);line-height:1.25}
+
+.ar-votacao-pe{max-width:1120px;width:100%;margin:0 auto;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:4px}
+.ar-votacao-pe .ar-votar:disabled{opacity:.4;cursor:not-allowed;transform:none;filter:none}
+.ar-confirma{margin:0;font-size:17px;font-weight:700;color:var(--ar-ink)}
+.ar-recusa{margin:0 0 6px;font-size:14px;color:#F5B84B;max-width:52ch}
+
+/* ------------------------------------------------------------ a comemoracao */
+.ar-festa{margin:auto;text-align:center;display:flex;flex-direction:column;align-items:center;
+  gap:10px;animation:ar-brota .45s var(--ar-ease)}
+@keyframes ar-brota{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+.ar-festa h2{margin:10px 0 0;font-size:clamp(26px,5vw,40px);font-weight:800;letter-spacing:-.02em}
+.ar-festa p{margin:0;font-size:16px;color:var(--ar-ink2);max-width:40ch}
+.ar-festa .ar-miudo{font-size:13px;color:var(--ar-mut);margin-top:6px}
+.ar-certo{width:132px;height:132px}
+.ar-certo circle,.ar-certo path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.ar-certo-anel{stroke:var(--ar-acc);stroke-width:4;opacity:.35;
+  stroke-dasharray:327;stroke-dashoffset:327;
+  animation:ar-traco .7s var(--ar-ease) forwards}
+.ar-certo-traco{stroke:var(--ar-acc);stroke-width:9;
+  stroke-dasharray:80;stroke-dashoffset:80;
+  animation:ar-traco .45s .55s var(--ar-ease) forwards}
+@keyframes ar-traco{to{stroke-dashoffset:0}}
+
+@media (max-width:860px){
+  .ar-grade-votos{grid-template-columns:repeat(2,1fr);gap:10px}
+  .ar-opcao-nome{padding:10px;font-size:13px}
+  .ar-votacao{padding:18px 16px 24px;gap:18px}
+  .ar-certo{width:108px;height:108px}
+}
+
 /* ---------------------------------------------------------------- visor */
 .ar-visor{position:fixed;inset:0;z-index:60;background:rgba(4,4,8,.94);
   display:flex;align-items:center;justify-content:center;padding:44px 64px}

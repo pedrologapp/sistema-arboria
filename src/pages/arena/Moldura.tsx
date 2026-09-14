@@ -25,6 +25,19 @@ export function noSiteProprio(): boolean {
   return window.location.hostname.startsWith('arenaarboria.');
 }
 
+/**
+ * Volta a pagina ao topo.
+ *
+ * window.scrollTo NAO serve aqui: quem rola nao e' a janela, e' o container
+ * .ar-raiz, que e' position:fixed com overflow proprio. Chamar a janela nao
+ * fazia nada, e trocar de projeto mantinha a rolagem onde estava, no meio do
+ * texto do projeto anterior.
+ */
+export function voltarAoTopo() {
+  document.querySelector('.ar-raiz')?.scrollTo({ top: 0, behavior: 'auto' });
+  window.scrollTo(0, 0);
+}
+
 export const caminhoGaleria = () => (noSiteProprio() ? '/' : '/arenaarboria');
 export const caminhoProjeto = (numero: number) =>
   (noSiteProprio() ? `/p/${numero}` : `/arenaarboria/p/${numero}`);

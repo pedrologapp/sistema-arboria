@@ -19,9 +19,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-  carregarArena, votar, votoGuardado, guardarVoto, type ProjetoArena,
+  carregarArena, votoGuardado, guardarVoto, type ProjetoArena,
 } from './fonteArena';
-import { Moldura, Seta, caminhoGaleria, caminhoProjeto } from './Moldura';
+import { Moldura, Seta, caminhoGaleria, caminhoProjeto, voltarAoTopo } from './Moldura';
+import VotarModal from './VotarModal';
 import { DESTAQUES, MAX_DESTAQUES } from './destaques';
 
 /**
@@ -61,9 +62,6 @@ function comDestaques(texto: string, termos: string[], usados: Set<string>) {
       : <b key={i} className="ar-chave">{p.chave}</b>);
 }
 
-/** rascunho: ainda nao clicou | confirmando: perguntou se tem certeza */
-type PassoVoto = 'rascunho' | 'confirmando' | 'enviando' | 'pronto' | 'recusado';
-
 export default function ArenaProjeto() {
   const { numero } = useParams<{ numero: string }>();
   const [projetos, setProjetos] = useState<ProjetoArena[] | null>(null);
@@ -74,8 +72,7 @@ export default function ArenaProjeto() {
   const refVideo = useRef<HTMLVideoElement | null>(null);
   const [progresso, setProgresso] = useState(0);
   const [visor, setVisor] = useState<number | null>(null);
-  const [passo, setPasso] = useState<PassoVoto>('rascunho');
-  const [recusa, setRecusa] = useState<string | null>(null);
+  const [escolhendo, setEscolhendo] = useState(false);
   const [votadoEm, setVotadoEm] = useState<number | null>(votoGuardado());
 
   useEffect(() => {
@@ -104,26 +101,8 @@ export default function ArenaProjeto() {
   // isto o video do projeto anterior continuaria montado no proximo.
   useEffect(() => {
     setTocando(false); setQuadroPronto(false); setProgresso(0);
-    setVisor(null); window.scrollTo(0, 0);
-    setPasso('rascunho'); setRecusa(null);
+    setVisor(null); voltarAoTopo();
   }, [numero]);
-
-  async function confirmarVoto(projeto: ProjetoArena) {
-    if (!projeto.id) { setRecusa('projeto_indisponivel'); setPasso('recusado'); return; }
-    setPasso('enviando');
-    const r = await votar(projeto.id);
-    if (r.ok) {
-      guardarVoto(projeto.numero);
-      setVotadoEm(projeto.numero);
-      setPasso('pronto');
-      return;
-    }
-    // 'ja_votou' nao e' erro: e' a trava funcionando. Guarda 0, e nao o numero
-    // deste projeto, porque o voto anterior pode ter sido em outro.
-    if (r.motivo === 'ja_votou') { guardarVoto(0); setVotadoEm(0); }
-    setRecusa(r.motivo ?? 'falhou');
-    setPasso('recusado');
-  }
 
   const fechar = useCallback(() => setVisor(null), []);
 
@@ -314,16 +293,24 @@ export default function ArenaProjeto() {
           <div className="ar-fecho">
             {!votacaoAberta && <p>Vote no seu projeto preferido.</p>}
 
-            {/* Logo depois de votar quem fala e' o agradecimento, mais abaixo.
-                Esta linha e' para quem VOLTA ao projeto em que ja' votou. */}
-            {votacaoAberta && votadoEm === projeto.numero && passo !== 'pronto' && (
+            {/* O botao NAO vota: ele abre a grade com os onze. Votar na pagina
+                do projeto e' votar no que esta' na frente, e quem acabou de ler
+                um projeto tende a escolher ele por estar ali. */}
+            {votacaoAberta && votadoEm === null && (
+              <>
+                <p>Qual deles você escolhe?</p>
+                <button type="button" className="ar-votar" onClick={() => setEscolhendo(true)}>
+                  Votar
+                </button>
+              </>
+            )}
+
+            {votacaoAberta && votadoEm === projeto.numero && (
               <p>Seu voto está neste projeto.</p>
             )}
 
             {/* Quem ja' votou precisa ver isso em QUALQUER projeto que abrir,
-                senao fica procurando o botao que nao vai aparecer. O 0 e' o
-                caso em que o banco disse que ja' havia voto mas nao sabemos
-                em qual projeto: por isso a frase nao nomeia nenhum. */}
+                senao fica procurando o botao que nao vai aparecer. */}
             {votacaoAberta && votadoEm !== null && votadoEm !== projeto.numero && (
               <>
                 <p>Seu voto já foi computado.</p>
@@ -333,68 +320,6 @@ export default function ArenaProjeto() {
                     : 'Você votou em outro projeto, e o voto não pode ser trocado.'}
                 </p>
               </>
-            )}
-
-            {votacaoAberta && votadoEm === null && (
-              <>
-                {passo === 'rascunho' && (
-                  <>
-                    <p>Este é o seu preferido?</p>
-                    <button type="button" className="ar-votar"
-                      onClick={() => setPasso('confirmando')}>
-                      Votar neste projeto
-                    </button>
-                  </>
-                )}
-
-                {/* A tela de confirmacao existe porque o voto e' FINAL. Poder
-                    trocar depois obrigaria a guardar quem votou, e a tabela
-                    deixaria de ser anonima so' para oferecer uma comodidade. */}
-                {passo === 'confirmando' && (
-                  <>
-                    <p>Votar em {projeto.titulo}?</p>
-                    {/* Diz "por aparelho" e nao "por pessoa" de proposito. A
-                        trava e' uma marca neste navegador: ela segura o clique
-                        repetido, nao a pessoa determinada. Prometer na tela uma
-                        garantia que o sistema nao tem seria entregar o
-                        argumento pronto a quem quiser contestar o resultado. */}
-                    <p className="ar-aviso">
-                      É um voto só por aparelho, e ele não pode ser trocado depois.
-                    </p>
-                    <div className="ar-botoes">
-                      <button type="button" className="ar-votar"
-                        onClick={() => void confirmarVoto(projeto)}>
-                        Confirmar meu voto
-                      </button>
-                      <button type="button" className="ar-desistir"
-                        onClick={() => setPasso('rascunho')}>
-                        Ainda não
-                      </button>
-                    </div>
-                  </>
-                )}
-
-                {/* O desafio antirrobo roda aqui dentro, e leva um instante.
-                    O texto fala de verificacao para a espera nao parecer
-                    travamento. */}
-                {passo === 'enviando' && <p>Verificando e registrando o seu voto...</p>}
-
-                {passo === 'recusado' && (
-                  <>
-                    <p>Não deu para registrar.</p>
-                    <p className="ar-aviso">
-                      {recusa === 'fora_da_janela' ? 'A votação não está aberta agora.'
-                        : recusa === 'projeto_indisponivel' ? 'Este projeto não está recebendo votos.'
-                        : recusa === 'teto_da_rede' ? 'Muitos votos vieram desta rede em pouco tempo. Tente daqui a pouco.'
-                        : 'Tente de novo daqui a pouco.'}
-                    </p>
-                  </>
-                )}
-              </>
-            )}
-
-            {votacaoAberta && passo === 'pronto' && (
-              <p className="ar-aviso">Obrigado. Seu voto foi registrado.</p>
             )}
 
             {/* A seta fica do lado para onde se anda, e o rotulo em cima do
@@ -418,6 +343,15 @@ export default function ArenaProjeto() {
           </div>
 
         </article>
+
+        {escolhendo && projetos && (
+          <VotarModal
+            projetos={projetos}
+            sugerido={projeto.numero}
+            aoFechar={() => setEscolhendo(false)}
+            aoVotar={(n) => { guardarVoto(n); setVotadoEm(n); }}
+          />
+        )}
 
         {visor !== null && (
           <div className="ar-visor" role="dialog" aria-modal="true" aria-label="Foto do projeto"
