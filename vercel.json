@@ -1,5 +1,7 @@
 {
   "rewrites": [
+    { "source": "/mundo", "destination": "https://eventos.escolaamadeus.com/mundo" },
+    { "source": "/mundo/(.*)", "destination": "https://eventos.escolaamadeus.com/mundo/$1" },
     { "source": "/(.*)", "destination": "/" }
   ],
   "headers": [
